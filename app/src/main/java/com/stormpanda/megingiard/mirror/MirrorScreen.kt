@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -99,30 +101,6 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        var isTwoFingerSwipe = false
-                        var startX = 0f
-                        do {
-                            val event = awaitPointerEvent()
-                            if (event.changes.size == 2 && !isTwoFingerSwipe) {
-                                isTwoFingerSwipe = true
-                                startX = event.changes[0].position.x
-                            }
-                            if (isTwoFingerSwipe) {
-                                val currentX = event.changes[0].position.x
-                                if (java.lang.Math.abs(currentX - startX) > 200f) {
-                                    AppStateManager.currentMode.value = AppMode.MEDIA
-                                    event.changes.forEach { it.consume() }
-                                    break
-                                }
-                            }
-                        } while (event.changes.any { it.pressed })
-                    }
-                }
-            }
     ) {
         if (!isCapturing) {
             Text(
@@ -136,18 +114,32 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
-            IconButton(
-                onClick = { /* TODO: freeze frame functionality to be implemented in Service */ },
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.CameraAlt,
-                    contentDescription = "Einfrieren",
-                    tint = Color.White
-                )
+            Box(modifier = Modifier.fillMaxSize()) {
+                IconButton(
+                    onClick = { AppStateManager.prevMode() },
+                    modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                ) {
+                    Icon(imageVector = Icons.Filled.ChevronLeft, contentDescription = "Vorheriges Tool", tint = Color.White)
+                }
+
+                IconButton(
+                    onClick = { AppStateManager.nextMode() },
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                ) {
+                    Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = "Nächstes Tool", tint = Color.White)
+                }
+
+                IconButton(
+                    onClick = { /* TODO: freeze frame functionality to be implemented in Service */ },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                ) {
+                    Icon(imageVector = Icons.Filled.CameraAlt, contentDescription = "Einfrieren", tint = Color.White)
+                }
             }
         }
     }
