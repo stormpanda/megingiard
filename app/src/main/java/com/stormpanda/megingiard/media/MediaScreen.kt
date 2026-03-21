@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,8 +36,27 @@ fun MediaScreen(modifier: Modifier = Modifier) {
     val progress by MediaState.currentProgress.collectAsState()
     val maxProgress by MediaState.maxProgress.collectAsState()
     
+    var localProgress by remember { mutableStateOf(progress) }
+
+    LaunchedEffect(progress) {
+        localProgress = progress
+    }
+
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            while (true) {
+                val state = MediaState.activeController?.playbackState
+                if (state != null && state.state == android.media.session.PlaybackState.STATE_PLAYING) {
+                    val timeDiff = android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
+                    localProgress = state.position + (timeDiff * state.playbackSpeed).toLong()
+                }
+                kotlinx.coroutines.delay(500)
+            }
+        }
+    }
+    
     var scrubPosition by remember { mutableStateOf<Long?>(null) }
-    val displayProgress = scrubPosition ?: progress
+    val displayProgress = scrubPosition ?: localProgress
 
     Column(
         modifier = modifier
@@ -92,7 +112,7 @@ fun MediaScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = formatTime(progress), color = Color.White)
+            Text(text = formatTime(localProgress), color = Color.White)
             
             Slider(
                 value = if (maxProgress > 0) displayProgress.toFloat() / maxProgress.toFloat() else 0f,
