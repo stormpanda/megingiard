@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
     var showControls by remember { mutableStateOf(false) }
+    var interactionTime by remember { mutableStateOf(0L) }
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
@@ -52,7 +53,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val animOffsetX = remember { Animatable(0f) }
     val animOffsetY = remember { Animatable(0f) }
 
-    LaunchedEffect(showControls) {
+    LaunchedEffect(showControls, interactionTime) {
         if (showControls) {
             delay(3000)
             showControls = false
@@ -74,13 +75,18 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         coroutineScope.launch { animScale.animateTo(1f) }
                         coroutineScope.launch { animOffsetX.animateTo(0f) }
                         coroutineScope.launch { animOffsetY.animateTo(0f) }
+                        interactionTime = System.currentTimeMillis()
                     },
-                    onTap = { showControls = !showControls }
+                    onTap = { 
+                        showControls = !showControls 
+                        interactionTime = System.currentTimeMillis()
+                    }
                 )
             }
             .pointerInput(Unit) {
                 while (true) {
                     detectTransformGestures { _, pan, zoom, _ ->
+                        interactionTime = System.currentTimeMillis()
                         coroutineScope.launch {
                             val newScale = (animScale.value * zoom).coerceIn(1f, 5f)
                             animScale.snapTo(newScale)
@@ -124,7 +130,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     onClick = { AppStateManager.prevMode() },
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
                         .size(72.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
                 ) {
                     Icon(imageVector = Icons.Filled.ChevronLeft, contentDescription = "Vorheriges Tool", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
@@ -133,7 +139,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     onClick = { AppStateManager.nextMode() },
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
                         .size(72.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
                 ) {
                     Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = "Nächstes Tool", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
@@ -142,7 +148,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     onClick = { ScreenCaptureManager.isFrozen.value = !ScreenCaptureManager.isFrozen.value },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
                         .size(72.dp)
-                        .background(if (isFrozen) Color.Red.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                        .background(if (isFrozen) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
                 ) {
                     Icon(
                         imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause, 
