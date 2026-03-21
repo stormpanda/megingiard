@@ -31,8 +31,17 @@ class MirrorPresentation(
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
 
     var onSurfaceReady: ((Surface) -> Unit)? = null
+    var onSurfaceDestroyed: (() -> Unit)? = null
     private var surfaceView: SurfaceView? = null
     private val scope = CoroutineScope(Dispatchers.Main + Job())
+
+    override fun onBackPressed() {
+        AppStateManager.currentMode.value = AppMode.MEDIA
+    }
+
+    override fun cancel() {
+        AppStateManager.currentMode.value = AppMode.MEDIA
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +78,9 @@ class MirrorPresentation(
         }
         
         android.util.Log.d("MegingiardMirror", "MirrorPresentation Ratio scaling: Source $srcWidth x $srcHeight -> Scaled $finalWidth x $finalHeight in Target $targetWidth x $targetHeight")
+
+        ScreenCaptureManager.surfaceWidth.value = finalWidth.toFloat()
+        ScreenCaptureManager.surfaceHeight.value = finalHeight.toFloat()
 
         val container = FrameLayout(context).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -110,19 +122,20 @@ class MirrorPresentation(
             }
             override fun surfaceDestroyed(holder: SurfaceHolder) {
                 android.util.Log.d("MegingiardMirror", "SurfaceView surfaceDestroyed")
+                onSurfaceDestroyed?.invoke()
             }
         })
 
-        bindStateFlows(container, sv)
+        bindStateFlows(sv)
     }
 
-    private fun bindStateFlows(container: FrameLayout, sv: SurfaceView) {
+    private fun bindStateFlows(sv: SurfaceView) {
         scope.launch {
             AppStateManager.currentMode.collect { mode ->
                 if (mode == AppMode.MEDIA) {
-                    container.visibility = android.view.View.GONE
+                    this@MirrorPresentation.hide()
                 } else {
-                    container.visibility = android.view.View.VISIBLE
+                    this@MirrorPresentation.show()
                 }
             }
         }

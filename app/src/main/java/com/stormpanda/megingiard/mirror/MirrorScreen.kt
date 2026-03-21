@@ -27,15 +27,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.rememberCoroutineScope
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
     var showControls by remember { mutableStateOf(false) }
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
+    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+
+    val animScale = remember { Animatable(1f) }
+    val animOffsetX = remember { Animatable(0f) }
+    val animOffsetY = remember { Animatable(0f) }
 
     LaunchedEffect(showControls) {
         if (showControls) {
@@ -44,24 +54,49 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    LaunchedEffect(animScale.value, animOffsetX.value, animOffsetY.value) {
+        ScreenCaptureManager.scale.value = animScale.value
+        ScreenCaptureManager.offsetX.value = animOffsetX.value
+        ScreenCaptureManager.offsetY.value = animOffsetY.value
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = {
-                        ScreenCaptureManager.scale.value = 1f
-                        ScreenCaptureManager.offsetX.value = 0f
-                        ScreenCaptureManager.offsetY.value = 0f
+                        coroutineScope.launch { animScale.animateTo(1f) }
+                        coroutineScope.launch { animOffsetX.animateTo(0f) }
+                        coroutineScope.launch { animOffsetY.animateTo(0f) }
                     },
                     onTap = { showControls = !showControls }
                 )
             }
             .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    ScreenCaptureManager.scale.value = (ScreenCaptureManager.scale.value * zoom).coerceIn(1f, 5f)
-                    ScreenCaptureManager.offsetX.value += pan.x * ScreenCaptureManager.scale.value
-                    ScreenCaptureManager.offsetY.value += pan.y * ScreenCaptureManager.scale.value
+                while (true) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        coroutineScope.launch {
+                            val newScale = (animScale.value * zoom).coerceIn(1f, 5f)
+                            animScale.snapTo(newScale)
+
+                            // Constraint boundaries for gallery-style panning
+                            val maxX = (surfaceWidth * (newScale - 1f)) / 2f
+                            val maxY = (surfaceHeight * (newScale - 1f)) / 2f
+
+                            val newX = (animOffsetX.value + pan.x).coerceIn(-maxX, maxX)
+                            val newY = (animOffsetY.value + pan.y).coerceIn(-maxY, maxY)
+
+                            animOffsetX.snapTo(newX)
+                            animOffsetY.snapTo(newY)
+                        }
+                    }
+                    // Snap back if scale drops below a comfortable threshold
+                    if (animScale.value < 1.15f) {
+                        coroutineScope.launch { animScale.animateTo(1f) }
+                        coroutineScope.launch { animOffsetX.animateTo(0f) }
+                        coroutineScope.launch { animOffsetY.animateTo(0f) }
+                    }
                 }
             }
             .pointerInput(Unit) {

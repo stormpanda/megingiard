@@ -74,19 +74,28 @@ class ScreenCaptureService : Service() {
             val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
             mirrorPresentation = presentation
 
+            presentation.onSurfaceDestroyed = {
+                Log.d("MegingiardMirror", "Presentation Surface destroyed, releasing VirtualDisplay")
+                virtualDisplay?.release()
+                virtualDisplay = null
+            }
+
             // Wait for the Presentation's SurfaceView to be ready, then hook up VirtualDisplay
             presentation.onSurfaceReady = { surface ->
                 Log.d("MegingiardMirror", "MirrorPresentation onSurfaceReady callback fired! Surface=$surface")
-                try {
-                    virtualDisplay = mediaProjection?.createVirtualDisplay(
-                        "ScreenCapture",
-                        srcWidth, srcHeight, dpi,
-                        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                        surface, null, null
-                    )
-                    Log.d("MegingiardMirror", "VirtualDisplay created successfully: $virtualDisplay")
-                } catch (e: Exception) {
-                    Log.e("MegingiardMirror", "Exception creating VirtualDisplay: ", e)
+                virtualDisplay?.release()
+                if (com.stormpanda.megingiard.AppStateManager.currentMode.value == com.stormpanda.megingiard.AppMode.MIRROR) {
+                    try {
+                        virtualDisplay = mediaProjection?.createVirtualDisplay(
+                            "ScreenCapture",
+                            srcWidth, srcHeight, dpi,
+                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                            surface, null, null
+                        )
+                        Log.d("MegingiardMirror", "VirtualDisplay created successfully: $virtualDisplay")
+                    } catch (e: Exception) {
+                        Log.e("MegingiardMirror", "Exception creating VirtualDisplay: ", e)
+                    }
                 }
             }
 
