@@ -21,6 +21,15 @@ This document outlines the detailed requirements and feature sets for Megingiard
 - **Media vs. Mirroring:** A user MUST be able to quickly switch between the mirroring view and standard Jetpack Compose UI elements (e.g., a Media Dashboard) without resetting recording permissions.
 - **Carousel Navigation:** Tapping the touchscreen MUST trigger navigation arrows (Chevrons) on the left and right edges for 3 seconds. The user can infinitely cycle through the app modes using this generic carousel logic.
 
+### 1.5 Media Player Dashboard
+- **Standard Controls:** Traditional play, pause, and skip navigation (Next/Previous) MUST operate smoothly with visible feedback.
+- **Micro-Jump Actions:** Discrete buttons MUST be available to instantly skip forward or backward by `10 seconds`.
+- **Feedback-Delay Scrubbing Slider:** 
+  - The progress slider MUST separate continuous drag states from execution. 
+  - Dragging the slider MUST draw position labels detailing the targeted time (e.g., "Scrubbing to: 01:23") without immediately seeking the hardware/media. 
+  - Standard seek-to operations MUST delay execution to the EXACT release event (`onValueChangeFinished`).
+- **Static Time Context:** Timestamps MUST align to the slider track displaying the current stream context (Left: Current Elapsed, Right: Absolute Total Track Length).
+
 ## 2. Non-Functional Requirements
 - **Battery Efficiency:** The continuous loop required by the `MediaProjection` API must be implemented in a CPU-friendly manner. When leaving the mirror view, the `VirtualDisplay` must be stopped or hidden to conserve computing power and battery life.
 - **Code Quality:** State management must be centrally orchestrated via asynchronous Kotlin flows (`MutableStateFlow`) to maintain a strict separation of concerns between the UI and the Background Service.

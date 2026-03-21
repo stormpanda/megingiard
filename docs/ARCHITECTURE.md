@@ -31,3 +31,13 @@ The Freeze Frame mechanic avoids traditional massively expensive `Bitmap` memory
 When toggling to `MediaScreen` via Carousel navigation, the `Presentation` circumvents complete destruction by intercepting standard `cancel()` and `onBackPressed()` signals.
 - Setting view visibility to `GONE` leaves the Dialog Window trapped in Android's window manager, blocking touches from reaching the Activity beneath.
 - Utilizing the actual `Presentation.hide()` natively strips the window out of the Z-Order, while correctly suspending the `VirtualDisplay`. `Presentation.show()` awakens the flow instantly without re-instantiating the Foreground Service.
+
+## 6. Buffered Media Scrubbing
+Continuous updates typically force high frequency playback `seekTo()` cycles that can stutter audio/video threads.
+- **State Separation:** `MediaScreen` separates the `progress` state (driven by the background controller) from a local `scrubPosition` (`MutableState`).
+- **Deferred Execution:** Visual updates (timestamps) listen to `scrubPosition` for instant dragging feedback, but the binding back to the hardware player strictly awaits the `onValueChangeFinished` callback inside the Compose `Slider` node, minimizing threading bottleneck under constant gesture drag cycles.
+
+## 7. Reactive Overlay Timeouts
+Control overlays must remain visible during continuous interactions (such as active panning/zooming) and timeout smoothly thereafter.
+- **The Pitfall:** Static `LaunchedEffect(showControls)` structures fail to reset cleanly if the values don’t change back and forth directly, leading to race-condition premature hide triggers.
+- **The Setup:** Introducing an absolute `interactionTime = System.currentTimeMillis()` trigger key in conjunction with pointer-event triggers. Feeding this key back into the `LaunchedEffect(showControls, interactionTime)` forces the coroutine scope to flawlessly cancel and reschedule the standard `delay(3000)` timeline from the tail of the latest interaction.
