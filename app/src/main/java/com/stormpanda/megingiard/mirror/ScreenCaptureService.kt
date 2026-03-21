@@ -17,6 +17,8 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
@@ -70,6 +72,18 @@ class ScreenCaptureService : Service() {
             val dpi = metrics.densityDpi
             Log.d("MegingiardMirror", "Primary display mapped: ${srcWidth}x${srcHeight} at ${dpi}dpi. Secondary display: ${secondaryDisplay.displayId}")
 
+            var currentSurface: android.view.Surface? = null
+            val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.Job())
+            scope.launch {
+                com.stormpanda.megingiard.mirror.ScreenCaptureManager.isFrozen.collect { frozen ->
+                    if (frozen) {
+                        virtualDisplay?.surface = null
+                    } else {
+                        virtualDisplay?.surface = currentSurface
+                    }
+                }
+            }
+
             // Create a Presentation on the secondary display, strongly typed to main display bounds
             val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
             mirrorPresentation = presentation
@@ -83,6 +97,7 @@ class ScreenCaptureService : Service() {
             // Wait for the Presentation's SurfaceView to be ready, then hook up VirtualDisplay
             presentation.onSurfaceReady = { surface ->
                 Log.d("MegingiardMirror", "MirrorPresentation onSurfaceReady callback fired! Surface=$surface")
+                currentSurface = surface
                 virtualDisplay?.release()
                 if (com.stormpanda.megingiard.AppStateManager.currentMode.value == com.stormpanda.megingiard.AppMode.MIRROR) {
                     try {

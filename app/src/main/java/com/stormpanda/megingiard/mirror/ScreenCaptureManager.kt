@@ -11,4 +11,5 @@ object ScreenCaptureManager {
     val offsetY = MutableStateFlow(0f)
     val surfaceWidth = MutableStateFlow(0f)
     val surfaceHeight = MutableStateFlow(0f)
+    val isFrozen = MutableStateFlow(false)
 }

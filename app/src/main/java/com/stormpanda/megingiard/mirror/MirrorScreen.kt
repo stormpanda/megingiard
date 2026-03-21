@@ -9,11 +9,13 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -43,6 +45,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
+    val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     val animScale = remember { Animatable(1f) }
@@ -120,25 +123,33 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 IconButton(
                     onClick = { AppStateManager.prevMode() },
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
+                        .size(72.dp)
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
                 ) {
-                    Icon(imageVector = Icons.Filled.ChevronLeft, contentDescription = "Vorheriges Tool", tint = Color.White)
+                    Icon(imageVector = Icons.Filled.ChevronLeft, contentDescription = "Vorheriges Tool", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
 
                 IconButton(
                     onClick = { AppStateManager.nextMode() },
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+                        .size(72.dp)
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
                 ) {
-                    Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = "Nächstes Tool", tint = Color.White)
+                    Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = "Nächstes Tool", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
 
                 IconButton(
-                    onClick = { /* TODO: freeze frame functionality to be implemented in Service */ },
+                    onClick = { ScreenCaptureManager.isFrozen.value = !ScreenCaptureManager.isFrozen.value },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                        .size(72.dp)
+                        .background(if (isFrozen) Color.Red.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
                 ) {
-                    Icon(imageVector = Icons.Filled.CameraAlt, contentDescription = "Einfrieren", tint = Color.White)
+                    Icon(
+                        imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause, 
+                        contentDescription = "Frozen", 
+                        tint = Color.White, 
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
         }

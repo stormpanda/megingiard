@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
 import com.stormpanda.megingiard.media.MediaScreen
 import kotlinx.coroutines.delay
 
@@ -74,17 +75,19 @@ fun MainAppScreen() {
                 IconButton(
                     onClick = { AppStateManager.prevMode() },
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
+                        .size(72.dp)
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
                 ) {
-                    Icon(imageVector = Icons.Filled.ChevronLeft, contentDescription = "Vorheriges Tool", tint = Color.White)
+                    Icon(imageVector = Icons.Filled.ChevronLeft, contentDescription = "Vorheriges Tool", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
 
                 IconButton(
                     onClick = { AppStateManager.nextMode() },
                     modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+                        .size(72.dp)
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
                 ) {
-                    Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = "Nächstes Tool", tint = Color.White)
+                    Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = "Nächstes Tool", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
             }
         }
