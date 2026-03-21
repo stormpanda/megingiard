@@ -10,7 +10,18 @@ import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
+import com.stormpanda.megingiard.AppMode
+import com.stormpanda.megingiard.AppStateManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 class MirrorPresentation(
     context: Context, 
@@ -21,10 +32,22 @@ class MirrorPresentation(
 
     var onSurfaceReady: ((Surface) -> Unit)? = null
     private var surfaceView: SurfaceView? = null
+    private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         android.util.Log.d("MegingiardMirror", "MirrorPresentation onCreate launched")
+
+        val lifecycleOwner = MirrorPresentationLifecycleOwner()
+        window?.decorView?.apply {
+            setViewTreeLifecycleOwner(lifecycleOwner)
+            setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+        }
+
+        setOnDismissListener {
+            scope.cancel()
+            lifecycleOwner.destroy()
+        }
 
         val metrics = android.util.DisplayMetrics()
         display.getRealMetrics(metrics)
@@ -64,6 +87,17 @@ class MirrorPresentation(
         surfaceView = sv
 
         container.addView(sv)
+
+        val composeView = ComposeView(context).apply {
+            setContent {
+                MirrorScreen()
+            }
+        }
+        container.addView(composeView, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+
         setContentView(container)
 
         sv.holder.addCallback(object : SurfaceHolder.Callback {
@@ -78,5 +112,31 @@ class MirrorPresentation(
                 android.util.Log.d("MegingiardMirror", "SurfaceView surfaceDestroyed")
             }
         })
+
+        bindStateFlows(container, sv)
+    }
+
+    private fun bindStateFlows(container: FrameLayout, sv: SurfaceView) {
+        scope.launch {
+            AppStateManager.currentMode.collect { mode ->
+                if (mode == AppMode.MEDIA) {
+                    container.visibility = android.view.View.GONE
+                } else {
+                    container.visibility = android.view.View.VISIBLE
+                }
+            }
+        }
+        scope.launch {
+            ScreenCaptureManager.scale.collect { 
+                sv.scaleX = it
+                sv.scaleY = it
+            }
+        }
+        scope.launch {
+            ScreenCaptureManager.offsetX.collect { sv.translationX = it }
+        }
+        scope.launch {
+            ScreenCaptureManager.offsetY.collect { sv.translationY = it }
+        }
     }
 }

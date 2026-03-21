@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,14 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.awaitFirstDown
+import com.stormpanda.megingiard.AppMode
+import com.stormpanda.megingiard.AppStateManager
 import kotlinx.coroutines.delay
 
-/**
- * MirrorScreen is the UI placeholder shown in our app on the bottom display.
- * The actual mirrored content is rendered by [MirrorPresentation] at GPU/system level,
- * which appears underneath our Compose layer on the same physical screen.
- * This composable just handles the control overlay (freeze button etc).
- */
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
     var showControls by remember { mutableStateOf(false) }
@@ -50,7 +48,45 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTapGestures(onTap = { showControls = !showControls })
+                detectTapGestures(
+                    onDoubleTap = {
+                        ScreenCaptureManager.scale.value = 1f
+                        ScreenCaptureManager.offsetX.value = 0f
+                        ScreenCaptureManager.offsetY.value = 0f
+                    },
+                    onTap = { showControls = !showControls }
+                )
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    ScreenCaptureManager.scale.value = (ScreenCaptureManager.scale.value * zoom).coerceIn(1f, 5f)
+                    ScreenCaptureManager.offsetX.value += pan.x * ScreenCaptureManager.scale.value
+                    ScreenCaptureManager.offsetY.value += pan.y * ScreenCaptureManager.scale.value
+                }
+            }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var isTwoFingerSwipe = false
+                        var startX = 0f
+                        do {
+                            val event = awaitPointerEvent()
+                            if (event.changes.size == 2 && !isTwoFingerSwipe) {
+                                isTwoFingerSwipe = true
+                                startX = event.changes[0].position.x
+                            }
+                            if (isTwoFingerSwipe) {
+                                val currentX = event.changes[0].position.x
+                                if (java.lang.Math.abs(currentX - startX) > 200f) {
+                                    AppStateManager.currentMode.value = AppMode.MEDIA
+                                    event.changes.forEach { it.consume() }
+                                    break
+                                }
+                            }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
             }
     ) {
         if (!isCapturing) {
@@ -68,7 +104,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
         ) {
             IconButton(
-                onClick = { /* TODO: freeze frame by stopping new frames */ },
+                onClick = { /* TODO: freeze frame functionality to be implemented in Service */ },
                 modifier = Modifier
                     .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
             ) {
