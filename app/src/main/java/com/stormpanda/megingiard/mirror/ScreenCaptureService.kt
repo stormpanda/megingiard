@@ -61,11 +61,13 @@ class ScreenCaptureService : Service() {
                 return START_NOT_STICKY
             }
 
-            // Pick the primary display for capture dimensions
+            // Pick the primary display for capture dimensions, accounting for real-time rotation
             val primaryDisplay = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
-            val srcWidth = primaryDisplay.mode.physicalWidth
-            val srcHeight = primaryDisplay.mode.physicalHeight
-            val dpi = resources.displayMetrics.densityDpi
+            val metrics = android.util.DisplayMetrics()
+            primaryDisplay.getRealMetrics(metrics)
+            val srcWidth = metrics.widthPixels
+            val srcHeight = metrics.heightPixels
+            val dpi = metrics.densityDpi
             Log.d("MegingiardMirror", "Primary display mapped: ${srcWidth}x${srcHeight} at ${dpi}dpi. Secondary display: ${secondaryDisplay.displayId}")
 
             // Create a Presentation on the secondary display, strongly typed to main display bounds
