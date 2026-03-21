@@ -36,6 +36,16 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <activity
+            android:name=".CaptureRequestActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true" />
+
+        <service
+            android:name=".mirror.ScreenCaptureService"
+            android:foregroundServiceType="mediaProjection"
+            android:exported="false" />
+
         <service
             android:name=".media.MegingiardNotificationListener"
             android:label="Megingiard Media Control"

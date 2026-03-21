@@ -1,13 +1,10 @@
 package com.stormpanda.megingiard.mirror
 
-import android.view.SurfaceHolder
-import android.view.SurfaceView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,46 +13,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
-import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.delay
 
+/**
+ * MirrorScreen is the UI placeholder shown in our app on the bottom display.
+ * The actual mirrored content is rendered by [MirrorPresentation] at GPU/system level,
+ * which appears underneath our Compose layer on the same physical screen.
+ * This composable just handles the control overlay (freeze button etc).
+ */
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
     var showControls by remember { mutableStateOf(false) }
-
-    val bitmapState by ScreenCaptureManager.bitmapFlow.collectAsState()
-
-    DisposableEffect(Unit) {
-        ScreenCaptureManager.isCapturing.value = true
-        onDispose {
-            ScreenCaptureManager.isCapturing.value = false
-        }
-    }
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
     LaunchedEffect(showControls) {
         if (showControls) {
-            delay(3000) // Auto-hide after 3 seconds
+            delay(3000)
             showControls = false
         }
     }
@@ -63,48 +49,14 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .clipToBounds()
             .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        showControls = !showControls
-                    }
-                )
-            }
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(1f, 5f)
-                    val scaledPanX = pan.x * scale
-                    val scaledPanY = pan.y * scale
-                    
-                    if (scale > 1f) {
-                        offsetX += scaledPanX
-                        offsetY += scaledPanY
-                    } else {
-                        offsetX = 0f
-                        offsetY = 0f
-                    }
-                }
+                detectTapGestures(onTap = { showControls = !showControls })
             }
     ) {
-        val bitmap = bitmapState
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Screen Mirror",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY
-                    )
-            )
-        } else {
+        if (!isCapturing) {
             Text(
-                text = "Warte auf Bilddaten vom Hauptbildschirm...",
-                color = androidx.compose.ui.graphics.Color.White,
+                text = "Warte auf Bildschirmfreigabe...",
+                color = Color.White,
                 modifier = Modifier.align(Alignment.Center)
             )
         }
@@ -113,24 +65,18 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
         ) {
-            Box(
+            IconButton(
+                onClick = { /* TODO: freeze frame by stopping new frames */ },
                 modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                    .padding(8.dp)
+                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
             ) {
-                IconButton(onClick = { 
-                    // Freeze action 
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Freeze Screen",
-                        tint = Color.White
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Filled.CameraAlt,
+                    contentDescription = "Einfrieren",
+                    tint = Color.White
+                )
             }
         }
     }
