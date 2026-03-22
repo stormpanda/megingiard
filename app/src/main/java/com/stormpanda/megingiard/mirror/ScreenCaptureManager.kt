@@ -12,4 +12,5 @@ object ScreenCaptureManager {
     val surfaceWidth = MutableStateFlow(0f)
     val surfaceHeight = MutableStateFlow(0f)
     val isFrozen = MutableStateFlow(false)
+    val frozenBitmap = MutableStateFlow<android.graphics.Bitmap?>(null)
 }

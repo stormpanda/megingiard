@@ -157,5 +157,31 @@ class MirrorPresentation(
         scope.launch {
             ScreenCaptureManager.offsetY.collect { sv.translationY = it }
         }
+        scope.launch {
+            ScreenCaptureManager.isFrozen.collect { frozen ->
+                if (frozen && sv.width > 0 && sv.height > 0) {
+                    try {
+                        val bitmap = android.graphics.Bitmap.createBitmap(sv.width, sv.height, android.graphics.Bitmap.Config.ARGB_8888)
+                        android.view.PixelCopy.request(
+                            sv,
+                            bitmap,
+                            { result ->
+                                if (result == android.view.PixelCopy.SUCCESS) {
+                                    android.util.Log.d("MegingiardMirror", "PixelCopy success! Saving frozen bitmap.")
+                                    ScreenCaptureManager.frozenBitmap.value = bitmap
+                                } else {
+                                    android.util.Log.e("MegingiardMirror", "PixelCopy failed with code: $result")
+                                }
+                            },
+                            android.os.Handler(android.os.Looper.getMainLooper())
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("MegingiardMirror", "PixelCopy exception: ", e)
+                    }
+                } else if (!frozen) {
+                    ScreenCaptureManager.frozenBitmap.value = null
+                }
+            }
+        }
     }
 }

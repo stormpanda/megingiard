@@ -101,13 +101,14 @@ class ScreenCaptureService : Service() {
                 virtualDisplay?.release()
                 if (com.stormpanda.megingiard.AppStateManager.currentMode.value == com.stormpanda.megingiard.AppMode.MIRROR) {
                     try {
+                        val isFrozen = com.stormpanda.megingiard.mirror.ScreenCaptureManager.isFrozen.value
                         virtualDisplay = mediaProjection?.createVirtualDisplay(
                             "ScreenCapture",
                             srcWidth, srcHeight, dpi,
                             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                            surface, null, null
+                            if (isFrozen) null else surface, null, null
                         )
-                        Log.d("MegingiardMirror", "VirtualDisplay created successfully: $virtualDisplay")
+                        Log.d("MegingiardMirror", "VirtualDisplay created successfully: $virtualDisplay (isFrozen=$isFrozen)")
                     } catch (e: Exception) {
                         Log.e("MegingiardMirror", "Exception creating VirtualDisplay: ", e)
                     }

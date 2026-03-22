@@ -40,6 +40,8 @@ import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
@@ -113,6 +115,24 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 }
             }
     ) {
+        val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
+        val scale by ScreenCaptureManager.scale.collectAsState()
+        val offsetX by ScreenCaptureManager.offsetX.collectAsState()
+        val offsetY by ScreenCaptureManager.offsetY.collectAsState()
+
+        if (isFrozen && frozenBitmap != null) {
+            androidx.compose.foundation.Image(
+                bitmap = frozenBitmap!!.asImageBitmap(),
+                contentDescription = "Frozen Stream Image",
+                modifier = Modifier.fillMaxSize().graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offsetX,
+                    translationY = offsetY
+                )
+            )
+        }
+
         if (!isCapturing) {
             Text(
                 text = "Warte auf Bildschirmfreigabe...",
