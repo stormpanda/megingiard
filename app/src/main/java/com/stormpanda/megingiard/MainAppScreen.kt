@@ -37,6 +37,12 @@ fun MainAppScreen() {
     val currentMode by AppStateManager.currentMode.collectAsState()
     var showControls by remember { mutableStateOf(false) }
     var interactionTime by remember { mutableStateOf(0L) }
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val displayId = context.display?.displayId ?: android.view.Display.DEFAULT_DISPLAY
+    LaunchedEffect(displayId) {
+        AppStateManager.isOnValidScreen.value = (displayId != android.view.Display.DEFAULT_DISPLAY)
+    }
 
     LaunchedEffect(showControls, interactionTime) {
         if (showControls) {
@@ -62,7 +68,21 @@ fun MainAppScreen() {
     ) {
         Crossfade(targetState = currentMode, label = "Mode Switch") { mode ->
             when (mode) {
-                AppMode.MIRROR -> Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                AppMode.MIRROR -> {
+                    val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
+                    if (isValidScreen) {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.Text(
+                                text = "Mirroring is only supported when Megingiard is running on the bottom screen.",
+                                color = Color.White,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.padding(32.dp)
+                            )
+                        }
+                    }
+                }
                 AppMode.MEDIA -> MediaScreen()
             }
         }

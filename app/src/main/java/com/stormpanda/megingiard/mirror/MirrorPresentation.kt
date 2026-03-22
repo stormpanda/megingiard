@@ -133,9 +133,10 @@ class MirrorPresentation(
         scope.launch {
             kotlinx.coroutines.flow.combine(
                 AppStateManager.currentMode,
-                AppStateManager.isActivityResumed
-            ) { mode, isResumed ->
-                mode != AppMode.MEDIA && isResumed
+                AppStateManager.isActivityResumed,
+                AppStateManager.isOnValidScreen
+            ) { mode, isResumed, isValid ->
+                mode != AppMode.MEDIA && isResumed && isValid
             }.collect { shouldShow ->
                 if (shouldShow) {
                     this@MirrorPresentation.show()
