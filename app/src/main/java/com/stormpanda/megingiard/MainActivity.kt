@@ -60,10 +60,17 @@ class MainActivity : ComponentActivity() {
             val lifecycleOwner = LocalLifecycleOwner.current
             LaunchedEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        hasNotificationAccess = isNotificationListenerEnabled(this@MainActivity)
-                        // If user cancelled the dialog, allow retrying
-                        if (!isCapturing) promptInFlight = false
+                    when (event) {
+                        Lifecycle.Event.ON_RESUME -> {
+                            hasNotificationAccess = isNotificationListenerEnabled(this@MainActivity)
+                            if (!isCapturing) promptInFlight = false
+                            AppStateManager.isActivityResumed.value = true
+                        }
+                        Lifecycle.Event.ON_STOP -> {
+                            // Track that activity went into background
+                            AppStateManager.isActivityResumed.value = false
+                        }
+                        else -> {}
                     }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)

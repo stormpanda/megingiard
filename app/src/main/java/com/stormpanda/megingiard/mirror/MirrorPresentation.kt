@@ -131,11 +131,16 @@ class MirrorPresentation(
 
     private fun bindStateFlows(sv: SurfaceView) {
         scope.launch {
-            AppStateManager.currentMode.collect { mode ->
-                if (mode == AppMode.MEDIA) {
-                    this@MirrorPresentation.hide()
-                } else {
+            kotlinx.coroutines.flow.combine(
+                AppStateManager.currentMode,
+                AppStateManager.isActivityResumed
+            ) { mode, isResumed ->
+                mode != AppMode.MEDIA && isResumed
+            }.collect { shouldShow ->
+                if (shouldShow) {
                     this@MirrorPresentation.show()
+                } else {
+                    this@MirrorPresentation.hide()
                 }
             }
         }

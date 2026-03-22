@@ -6,6 +6,7 @@ enum class AppMode { MIRROR, MEDIA }
 
 object AppStateManager {
     val currentMode = MutableStateFlow(AppMode.MIRROR)
+    val isActivityResumed = MutableStateFlow(true)
     
     fun nextMode() {
         val values = AppMode.values()
