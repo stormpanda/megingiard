@@ -28,7 +28,11 @@ class CaptureRequestActivity : ComponentActivity() {
                     startService(serviceIntent)
                 }
                 ScreenCaptureManager.isCapturing.value = true
+                com.stormpanda.megingiard.AppStateManager.userDeclinedCapture.value = false
+            } else {
+                com.stormpanda.megingiard.AppStateManager.userDeclinedCapture.value = true
             }
+            com.stormpanda.megingiard.AppStateManager.promptInFlight.value = false
             finish()
         }
 

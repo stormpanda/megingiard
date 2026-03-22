@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -144,18 +146,37 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     Icon(imageVector = Icons.Filled.ChevronRight, contentDescription = "Nächstes Tool", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
 
-                IconButton(
-                    onClick = { ScreenCaptureManager.isFrozen.value = !ScreenCaptureManager.isFrozen.value },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-                        .size(72.dp)
-                        .background(if (isFrozen) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause, 
-                        contentDescription = "Frozen", 
-                        tint = Color.White, 
-                        modifier = Modifier.size(36.dp)
-                    )
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    IconButton(
+                        onClick = {
+                            context.stopService(android.content.Intent(context, com.stormpanda.megingiard.mirror.ScreenCaptureService::class.java))
+                            ScreenCaptureManager.isCapturing.value = false
+                            com.stormpanda.megingiard.AppStateManager.userDeclinedCapture.value = true
+                        },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color.Red.copy(alpha = 0.6f), RoundedCornerShape(50))
+                    ) {
+                        Icon(imageVector = Icons.Filled.Stop, contentDescription = "Stop Mirroring", tint = Color.White, modifier = Modifier.size(36.dp))
+                    }
+
+                    IconButton(
+                        onClick = { ScreenCaptureManager.isFrozen.value = !ScreenCaptureManager.isFrozen.value },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(if (isFrozen) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+                    ) {
+                        Icon(
+                            imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause, 
+                            contentDescription = "Frozen", 
+                            tint = Color.White, 
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
             }
         }

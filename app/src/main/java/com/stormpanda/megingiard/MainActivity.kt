@@ -54,8 +54,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             var hasNotificationAccess by remember { mutableStateOf(isNotificationListenerEnabled(this@MainActivity)) }
-            var promptInFlight by remember { mutableStateOf(false) }
             val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+            val promptInFlight by AppStateManager.promptInFlight.collectAsState()
 
             val lifecycleOwner = LocalLifecycleOwner.current
             LaunchedEffect(lifecycleOwner) {
@@ -63,7 +63,6 @@ class MainActivity : ComponentActivity() {
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
                             hasNotificationAccess = isNotificationListenerEnabled(this@MainActivity)
-                            if (!isCapturing) promptInFlight = false
                             AppStateManager.isActivityResumed.value = true
                         }
                         Lifecycle.Event.ON_STOP -> {
@@ -76,10 +75,22 @@ class MainActivity : ComponentActivity() {
                 lifecycleOwner.lifecycle.addObserver(observer)
             }
 
+            // Synchronous display evaluation gets correct value on frame 0
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val currentDisplayId = context.display?.displayId ?: android.view.Display.DEFAULT_DISPLAY
+            val isOnValidScreenLocal = currentDisplayId != android.view.Display.DEFAULT_DISPLAY
+
+            // Update global state for other components
+            LaunchedEffect(isOnValidScreenLocal) {
+                AppStateManager.isOnValidScreen.value = isOnValidScreenLocal
+            }
+
+            val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
+
             // Once notification access is granted and we're not yet capturing, launch proxy on main screen
-            LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight) {
-                if (hasNotificationAccess && !isCapturing && !promptInFlight) {
-                    promptInFlight = true
+            LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
+                if (hasNotificationAccess && !isCapturing && !promptInFlight && isOnValidScreenLocal && !userDeclinedCapture) {
+                    AppStateManager.promptInFlight.value = true
                     val options = android.app.ActivityOptions.makeBasic()
                     options.setLaunchDisplayId(android.view.Display.DEFAULT_DISPLAY)
                     val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {

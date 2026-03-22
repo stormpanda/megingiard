@@ -8,6 +8,8 @@ object AppStateManager {
     val currentMode = MutableStateFlow(AppMode.MIRROR)
     val isActivityResumed = MutableStateFlow(true)
     val isOnValidScreen = MutableStateFlow(true)
+    val userDeclinedCapture = MutableStateFlow(false)
+    val promptInFlight = MutableStateFlow(false)
     
     fun nextMode() {
         val values = AppMode.values()
