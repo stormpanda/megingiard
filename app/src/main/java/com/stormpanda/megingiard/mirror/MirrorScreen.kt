@@ -175,6 +175,8 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         onClick = {
                             context.stopService(android.content.Intent(context, com.stormpanda.megingiard.mirror.ScreenCaptureService::class.java))
                             ScreenCaptureManager.isCapturing.value = false
+                            ScreenCaptureManager.isFrozen.value = false
+                            ScreenCaptureManager.frozenBitmap.value = null
                             com.stormpanda.megingiard.AppStateManager.userDeclinedCapture.value = true
                         },
                         modifier = Modifier
