@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
+import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -13,18 +14,24 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
+import android.util.DisplayMetrics
 import android.util.Log
+import android.view.Display
+import android.view.Surface
+import com.stormpanda.megingiard.AppMode
+import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.collect
 
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mirrorPresentation: MirrorPresentation? = null
-    private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -36,55 +43,48 @@ class ScreenCaptureService : Service() {
             return START_NOT_STICKY
         }
 
-        val resultCode = intent?.getIntExtra("RESULT_CODE", android.app.Activity.RESULT_CANCELED) ?: android.app.Activity.RESULT_CANCELED
+        val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
+            ?: Activity.RESULT_CANCELED
         @Suppress("DEPRECATION")
-        val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent?.getParcelableExtra("DATA", Intent::class.java)
         } else {
             intent?.getParcelableExtra("DATA")
         }
 
-        startForegroundService()
+        startForegroundNotification()
 
         Log.d("MegingiardMirror", "ScreenCaptureService checking resultCode=$resultCode, data=$data")
-        if (resultCode == android.app.Activity.RESULT_OK && data != null) {
+        if (resultCode == Activity.RESULT_OK && data != null) {
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
             Log.d("MegingiardMirror", "MediaProjection acquired: $mediaProjection")
 
-            // Find the secondary (bottom) display — display ID != DEFAULT_DISPLAY
             val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-            val displays = displayManager.getDisplays()
-            val secondaryDisplay = displays.firstOrNull { it.displayId != android.view.Display.DEFAULT_DISPLAY }
+            val secondaryDisplay = displayManager.getDisplays()
+                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
             if (secondaryDisplay == null) {
-                Log.e("ScreenCaptureService", "No secondary display found!")
+                Log.e("MegingiardMirror", "No secondary display found!")
                 stopSelf()
                 return START_NOT_STICKY
             }
 
-            // Pick the primary display for capture dimensions, accounting for real-time rotation
-            val primaryDisplay = displayManager.getDisplay(android.view.Display.DEFAULT_DISPLAY)
-            val metrics = android.util.DisplayMetrics()
+            val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+            val metrics = DisplayMetrics()
             primaryDisplay.getRealMetrics(metrics)
             val srcWidth = metrics.widthPixels
             val srcHeight = metrics.heightPixels
             val dpi = metrics.densityDpi
-            Log.d("MegingiardMirror", "Primary display mapped: ${srcWidth}x${srcHeight} at ${dpi}dpi. Secondary display: ${secondaryDisplay.displayId}")
+            Log.d("MegingiardMirror", "Primary display: ${srcWidth}x${srcHeight} at ${dpi}dpi. Secondary: ${secondaryDisplay.displayId}")
 
-            var currentSurface: android.view.Surface? = null
-            val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.Job())
+            var currentSurface: Surface? = null
             scope.launch {
-                com.stormpanda.megingiard.mirror.ScreenCaptureManager.isFrozen.collect { frozen ->
-                    if (frozen) {
-                        virtualDisplay?.surface = null
-                    } else {
-                        virtualDisplay?.surface = currentSurface
-                    }
+                ScreenCaptureManager.isFrozen.collect { frozen ->
+                    virtualDisplay?.surface = if (frozen) null else currentSurface
                 }
             }
 
-            // Create a Presentation on the secondary display, strongly typed to main display bounds
             val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
             mirrorPresentation = presentation
 
@@ -94,23 +94,22 @@ class ScreenCaptureService : Service() {
                 virtualDisplay = null
             }
 
-            // Wait for the Presentation's SurfaceView to be ready, then hook up VirtualDisplay
             presentation.onSurfaceReady = { surface ->
-                Log.d("MegingiardMirror", "MirrorPresentation onSurfaceReady callback fired! Surface=$surface")
+                Log.d("MegingiardMirror", "onSurfaceReady fired. Surface=$surface")
                 currentSurface = surface
                 virtualDisplay?.release()
-                if (com.stormpanda.megingiard.AppStateManager.currentMode.value == com.stormpanda.megingiard.AppMode.MIRROR) {
+                if (AppStateManager.currentMode.value == AppMode.MIRROR) {
                     try {
-                        val isFrozen = com.stormpanda.megingiard.mirror.ScreenCaptureManager.isFrozen.value
+                        val isFrozen = ScreenCaptureManager.isFrozen.value
                         virtualDisplay = mediaProjection?.createVirtualDisplay(
                             "ScreenCapture",
                             srcWidth, srcHeight, dpi,
                             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                             if (isFrozen) null else surface, null, null
                         )
-                        Log.d("MegingiardMirror", "VirtualDisplay created successfully: $virtualDisplay (isFrozen=$isFrozen)")
+                        Log.d("MegingiardMirror", "VirtualDisplay created: $virtualDisplay (frozen=$isFrozen)")
                     } catch (e: Exception) {
-                        Log.e("MegingiardMirror", "Exception creating VirtualDisplay: ", e)
+                        Log.e("MegingiardMirror", "Exception creating VirtualDisplay", e)
                     }
                 }
             }
@@ -121,16 +120,14 @@ class ScreenCaptureService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startForegroundService() {
+    private fun startForegroundNotification() {
         val channelId = "screen_capture_channel"
-        val channelName = "Screen Mirroring"
-        val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_LOW)
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(channel)
+        val channel = NotificationChannel(channelId, "Screen Mirroring", NotificationManager.IMPORTANCE_LOW)
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
         val notification = Notification.Builder(this, channelId)
-            .setContentTitle("Megingiard")
-            .setContentText("Mirroring active")
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.notification_mirroring_active))
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .build()
 
@@ -143,6 +140,7 @@ class ScreenCaptureService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        scope.cancel()
         virtualDisplay?.release()
         mediaProjection?.stop()
         mirrorPresentation?.dismiss()

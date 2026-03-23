@@ -16,14 +16,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource
+import com.stormpanda.megingiard.R
+import kotlin.math.max
+import kotlin.math.min
 
 fun formatTime(ms: Long): String {
-    val totalSeconds = java.lang.Math.max(0L, ms / 1000L)
+    val totalSeconds = max(0L, ms / 1000L)
     val seconds = totalSeconds % 60
     val minutes = (totalSeconds / 60) % 60
     val hours = totalSeconds / 3600
     return if (hours > 0) {
-        "${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
+        "$hours:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
     } else {
         "${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
     }
@@ -45,7 +50,7 @@ fun MediaScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
             while (true) {
-                val state = MediaState.activeController?.playbackState
+                val state = MediaState.controller?.playbackState
                 if (state != null && state.state == android.media.session.PlaybackState.STATE_PLAYING) {
                     val timeDiff = android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
                     localProgress = state.position + (timeDiff * state.playbackSpeed).toLong()
@@ -77,17 +82,17 @@ fun MediaScreen(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { MediaState.activeController?.transportControls?.skipToPrevious() }) {
+            IconButton(onClick = { MediaState.controller?.transportControls?.skipToPrevious() }) {
                 Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(48.dp))
             }
-            IconButton(onClick = { MediaState.activeController?.transportControls?.seekTo(java.lang.Math.max(0L, progress - 10000L)) }) {
+            IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(max(0L, progress - 10000L)) }) {
                 Icon(Icons.Default.Replay10, "-10s", tint = Color.White, modifier = Modifier.size(48.dp))
             }
             IconButton(onClick = {
                 if (isPlaying) {
-                    MediaState.activeController?.transportControls?.pause()
+                    MediaState.controller?.transportControls?.pause()
                 } else {
-                    MediaState.activeController?.transportControls?.play()
+                    MediaState.controller?.transportControls?.play()
                 }
             }) {
                 Icon(
@@ -97,10 +102,10 @@ fun MediaScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.size(64.dp)
                 )
             }
-            IconButton(onClick = { MediaState.activeController?.transportControls?.seekTo(java.lang.Math.min(maxProgress, progress + 10000L)) }) {
+            IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(min(maxProgress, progress + 10000L)) }) {
                 Icon(Icons.Default.Forward10, "+10s", tint = Color.White, modifier = Modifier.size(48.dp))
             }
-            IconButton(onClick = { MediaState.activeController?.transportControls?.skipToNext() }) {
+            IconButton(onClick = { MediaState.controller?.transportControls?.skipToNext() }) {
                 Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(48.dp))
             }
         }
@@ -121,7 +126,7 @@ fun MediaScreen(modifier: Modifier = Modifier) {
                 },
                 onValueChangeFinished = {
                     scrubPosition?.let {
-                        MediaState.activeController?.transportControls?.seekTo(it)
+                        MediaState.controller?.transportControls?.seekTo(it)
                         scrubPosition = null
                     }
                 },
@@ -133,14 +138,14 @@ fun MediaScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f).padding(horizontal = 16.dp)
             )
             
-            Text(text = formatTime(java.lang.Math.max(0L, maxProgress)), color = Color.White)
+            Text(text = formatTime(max(0L, maxProgress)), color = Color.White)
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
         if (scrubPosition != null) {
             Text(
-                text = "Scrubbing to: ${formatTime(scrubPosition!!)}",
+                text = stringResource(R.string.media_scrubbing_to, formatTime(scrubPosition!!)),
                 color = Color.LightGray,
                 style = MaterialTheme.typography.bodyMedium
             )

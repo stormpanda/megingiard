@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -63,11 +64,10 @@ class MainActivity : ComponentActivity() {
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
                             hasNotificationAccess = isNotificationListenerEnabled(this@MainActivity)
-                            AppStateManager.isActivityResumed.value = true
+                            AppStateManager.setActivityResumed(true)
                         }
                         Lifecycle.Event.ON_STOP -> {
-                            // Track that activity went into background
-                            AppStateManager.isActivityResumed.value = false
+                            AppStateManager.setActivityResumed(false)
                         }
                         else -> {}
                     }
@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
 
             // Update global state for other components
             LaunchedEffect(isOnValidScreenLocal) {
-                AppStateManager.isOnValidScreen.value = isOnValidScreenLocal
+                AppStateManager.setOnValidScreen(isOnValidScreenLocal)
             }
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
             // Once notification access is granted and we're not yet capturing, launch proxy on main screen
             LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
                 if (hasNotificationAccess && !isCapturing && !promptInFlight && isOnValidScreenLocal && !userDeclinedCapture) {
-                    AppStateManager.promptInFlight.value = true
+                    AppStateManager.setPromptInFlight(true)
                     val options = android.app.ActivityOptions.makeBasic()
                     options.setLaunchDisplayId(android.view.Display.DEFAULT_DISPLAY)
                     val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {
@@ -108,11 +108,11 @@ class MainActivity : ComponentActivity() {
                     if (!hasNotificationAccess) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Notification Access required for Media Control", color = Color.White)
+                                Text(stringResource(R.string.notification_listener_required), color = Color.White)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Button(onClick = {
                                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                                }) { Text("Grant Permission") }
+                                }) { Text(stringResource(R.string.grant_permission)) }
                             }
                         }
                     } else {

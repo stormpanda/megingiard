@@ -2,26 +2,32 @@ package com.stormpanda.megingiard.mirror
 
 import android.app.Presentation
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.DisplayMetrics
+import android.util.Log
 import android.view.Display
 import android.view.Gravity
+import android.view.PixelCopy
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.ComposeView
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 class MirrorPresentation(
     context: Context, 
@@ -29,24 +35,22 @@ class MirrorPresentation(
     private val srcWidth: Int, 
     private val srcHeight: Int
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
-
     var onSurfaceReady: ((Surface) -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
     private var surfaceView: SurfaceView? = null
-    private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBackPressed() {
-        AppStateManager.currentMode.value = AppMode.MEDIA
+        AppStateManager.setMode(AppMode.MEDIA)
     }
 
     override fun cancel() {
-        AppStateManager.currentMode.value = AppMode.MEDIA
+        AppStateManager.setMode(AppMode.MEDIA)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        android.util.Log.d("MegingiardMirror", "MirrorPresentation onCreate launched")
-
+        Log.d("MegingiardMirror", "MirrorPresentation onCreate launched")
         val lifecycleOwner = MirrorPresentationLifecycleOwner()
         window?.decorView?.apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
@@ -58,7 +62,7 @@ class MirrorPresentation(
             lifecycleOwner.destroy()
         }
 
-        val metrics = android.util.DisplayMetrics()
+        val metrics = DisplayMetrics()
         display.getRealMetrics(metrics)
         val targetWidth = metrics.widthPixels
         val targetHeight = metrics.heightPixels
@@ -77,10 +81,9 @@ class MirrorPresentation(
             finalWidth = (targetHeight * srcRatio).toInt()
         }
         
-        android.util.Log.d("MegingiardMirror", "MirrorPresentation Ratio scaling: Source $srcWidth x $srcHeight -> Scaled $finalWidth x $finalHeight in Target $targetWidth x $targetHeight")
+        Log.d("MegingiardMirror", "Ratio scaling: source ${srcWidth}x${srcHeight} -> scaled ${finalWidth}x${finalHeight} in target ${targetWidth}x${targetHeight}")
 
-        ScreenCaptureManager.surfaceWidth.value = finalWidth.toFloat()
-        ScreenCaptureManager.surfaceHeight.value = finalHeight.toFloat()
+        ScreenCaptureManager.setSurfaceSize(finalWidth.toFloat(), finalHeight.toFloat())
 
         val container = FrameLayout(context).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -114,14 +117,14 @@ class MirrorPresentation(
 
         sv.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                android.util.Log.d("MegingiardMirror", "SurfaceView surfaceCreated fired")
+                Log.d("MegingiardMirror", "SurfaceView surfaceCreated fired")
                 onSurfaceReady?.invoke(holder.surface)
             }
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-                android.util.Log.d("MegingiardMirror", "SurfaceView surfaceChanged to ${width}x${height}")
+                Log.d("MegingiardMirror", "SurfaceView surfaceChanged to ${width}x${height}")
             }
             override fun surfaceDestroyed(holder: SurfaceHolder) {
-                android.util.Log.d("MegingiardMirror", "SurfaceView surfaceDestroyed")
+                Log.d("MegingiardMirror", "SurfaceView surfaceDestroyed")
                 onSurfaceDestroyed?.invoke()
             }
         })
@@ -131,18 +134,14 @@ class MirrorPresentation(
 
     private fun bindStateFlows(sv: SurfaceView) {
         scope.launch {
-            kotlinx.coroutines.flow.combine(
+            combine(
                 AppStateManager.currentMode,
                 AppStateManager.isActivityResumed,
                 AppStateManager.isOnValidScreen
             ) { mode, isResumed, isValid ->
                 mode != AppMode.MEDIA && isResumed && isValid
             }.collect { shouldShow ->
-                if (shouldShow) {
-                    this@MirrorPresentation.show()
-                } else {
-                    this@MirrorPresentation.hide()
-                }
+                if (shouldShow) show() else hide()
             }
         }
         scope.launch {
@@ -161,25 +160,26 @@ class MirrorPresentation(
             ScreenCaptureManager.isFrozen.collect { frozen ->
                 if (frozen && sv.width > 0 && sv.height > 0) {
                     try {
-                        val bitmap = android.graphics.Bitmap.createBitmap(sv.width, sv.height, android.graphics.Bitmap.Config.ARGB_8888)
-                        android.view.PixelCopy.request(
+                        val bitmap = Bitmap.createBitmap(sv.width, sv.height, Bitmap.Config.ARGB_8888)
+                        PixelCopy.request(
                             sv,
                             bitmap,
                             { result ->
-                                if (result == android.view.PixelCopy.SUCCESS) {
-                                    android.util.Log.d("MegingiardMirror", "PixelCopy success! Saving frozen bitmap.")
-                                    ScreenCaptureManager.frozenBitmap.value = bitmap
+                                if (result == PixelCopy.SUCCESS) {
+                                    Log.d("MegingiardMirror", "PixelCopy success! Saving frozen bitmap.")
+                                    ScreenCaptureManager.setFrozenBitmap(bitmap)
                                 } else {
-                                    android.util.Log.e("MegingiardMirror", "PixelCopy failed with code: $result")
+                                    Log.e("MegingiardMirror", "PixelCopy failed with code: $result")
+                                    bitmap.recycle()
                                 }
                             },
-                            android.os.Handler(android.os.Looper.getMainLooper())
+                            Handler(Looper.getMainLooper())
                         )
                     } catch (e: Exception) {
-                        android.util.Log.e("MegingiardMirror", "PixelCopy exception: ", e)
+                        Log.e("MegingiardMirror", "PixelCopy exception: ", e)
                     }
                 } else if (!frozen) {
-                    ScreenCaptureManager.frozenBitmap.value = null
+                    ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }
         }

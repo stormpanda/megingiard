@@ -1,3 +1,18 @@
 <resources>
     <string name="app_name">Megingiard</string>
+    <string name="mirror_waiting_permission">Waiting for screen permission\u2026</string>
+    <string name="mirror_wrong_screen">Mirroring is only supported when Megingiard is running on the bottom screen.</string>
+    <string name="mirror_start_button">Start mirroring</string>
+    <string name="cd_previous_tool">Previous tool</string>
+    <string name="cd_next_tool">Next tool</string>
+    <string name="cd_stop_mirroring">Stop Mirroring</string>
+    <string name="cd_freeze">Freeze</string>
+    <string name="cd_unfreeze">Unfreeze</string>
+    <string name="cd_frozen_image">Frozen Stream Image</string>
+    <string name="media_no_media">No Media</string>
+    <string name="media_unknown_title">Unknown Title</string>
+    <string name="media_scrubbing_to">Scrubbing to: %s</string>
+    <string name="notification_listener_required">Notification Access required for Media Control</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="notification_mirroring_active">Mirroring active</string>
 </resources>
