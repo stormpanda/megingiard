@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
 import android.view.Gravity
@@ -15,8 +14,12 @@ import android.view.PixelCopy
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
+import android.window.OnBackInvokedCallback
+import android.window.OnBackInvokedDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -40,7 +43,7 @@ class MirrorPresentation(
     private var surfaceView: SurfaceView? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    override fun onBackPressed() {
+    private val onBackCallback = OnBackInvokedCallback {
         AppStateManager.setMode(AppMode.MEDIA)
     }
 
@@ -50,6 +53,10 @@ class MirrorPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackInvokedDispatcher.registerOnBackInvokedCallback(
+            OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+            onBackCallback
+        )
         val lifecycleOwner = MirrorPresentationLifecycleOwner()
         window?.decorView?.apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
@@ -61,10 +68,11 @@ class MirrorPresentation(
             lifecycleOwner.destroy()
         }
 
-        val metrics = DisplayMetrics()
-        display.getRealMetrics(metrics)
-        val targetWidth = metrics.widthPixels
-        val targetHeight = metrics.heightPixels
+        val windowContext = context.createWindowContext(display, WindowManager.LayoutParams.TYPE_APPLICATION, null)
+        val windowMetrics = windowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
+        val targetBounds = windowMetrics.bounds
+        val targetWidth = targetBounds.width()
+        val targetHeight = targetBounds.height()
 
         val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
         val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()
@@ -162,6 +170,7 @@ class MirrorPresentation(
                             { result ->
                                 if (result == PixelCopy.SUCCESS) {
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
+                                    sv.visibility = View.INVISIBLE
                                 } else {
                                     Log.e("MegingiardMirror", "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
@@ -173,6 +182,7 @@ class MirrorPresentation(
                         Log.e("MegingiardMirror", "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
+                    sv.visibility = View.VISIBLE
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }

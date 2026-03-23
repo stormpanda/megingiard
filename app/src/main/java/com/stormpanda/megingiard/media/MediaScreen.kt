@@ -1,10 +1,30 @@
 package com.stormpanda.megingiard.media
 
+import android.media.session.PlaybackState
+import android.os.SystemClock
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Forward10
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -17,10 +37,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.delay
+
+private const val PROGRESS_POLL_INTERVAL_MS = 500L
+private const val SEEK_STEP_MS = 10_000L
+private val MEDIA_CONTENT_PADDING = 32.dp
+private val TRANSPORT_BUTTON_GAP = 24.dp
+private val TRANSPORT_ICON_SIZE = 48.dp
+private val PLAY_PAUSE_ICON_SIZE = 64.dp
+private val SLIDER_HORIZONTAL_PADDING = 16.dp
+private const val SLIDER_WIDTH_FRACTION = 0.9f
+private val SCRUB_HINT_SPACING = 16.dp
 
 fun formatTime(ms: Long): String {
     val totalSeconds = max(0L, ms / 1000L)
@@ -51,11 +81,11 @@ fun MediaScreen(modifier: Modifier = Modifier) {
         if (isPlaying) {
             while (true) {
                 val state = MediaState.controller?.playbackState
-                if (state != null && state.state == android.media.session.PlaybackState.STATE_PLAYING) {
-                    val timeDiff = android.os.SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
+                if (state != null && state.state == PlaybackState.STATE_PLAYING) {
+                    val timeDiff = SystemClock.elapsedRealtime() - state.lastPositionUpdateTime
                     localProgress = state.position + (timeDiff * state.playbackSpeed).toLong()
                 }
-                kotlinx.coroutines.delay(500)
+                delay(PROGRESS_POLL_INTERVAL_MS)
             }
         }
     }
@@ -67,7 +97,7 @@ fun MediaScreen(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            .padding(32.dp),
+            .padding(MEDIA_CONTENT_PADDING),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -76,17 +106,17 @@ fun MediaScreen(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White
         )
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(MEDIA_CONTENT_PADDING))
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(TRANSPORT_BUTTON_GAP),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { MediaState.controller?.transportControls?.skipToPrevious() }) {
-                Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(48.dp))
+                Icon(Icons.Default.SkipPrevious, stringResource(R.string.cd_skip_previous), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
-            IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(max(0L, progress - 10000L)) }) {
-                Icon(Icons.Default.Replay10, "-10s", tint = Color.White, modifier = Modifier.size(48.dp))
+            IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(max(0L, progress - SEEK_STEP_MS)) }) {
+                Icon(Icons.Default.Replay10, stringResource(R.string.cd_replay_10), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = {
                 if (isPlaying) {
@@ -97,23 +127,23 @@ fun MediaScreen(modifier: Modifier = Modifier) {
             }) {
                 Icon(
                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    "Play/Pause",
+                    stringResource(R.string.cd_play_pause),
                     tint = Color.White,
-                    modifier = Modifier.size(64.dp)
+                    modifier = Modifier.size(PLAY_PAUSE_ICON_SIZE)
                 )
             }
-            IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(min(maxProgress, progress + 10000L)) }) {
-                Icon(Icons.Default.Forward10, "+10s", tint = Color.White, modifier = Modifier.size(48.dp))
+            IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(min(maxProgress, progress + SEEK_STEP_MS)) }) {
+                Icon(Icons.Default.Forward10, stringResource(R.string.cd_forward_10), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = { MediaState.controller?.transportControls?.skipToNext() }) {
-                Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(48.dp))
+                Icon(Icons.Default.SkipNext, stringResource(R.string.cd_skip_next), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(MEDIA_CONTENT_PADDING))
         
         Row(
-            modifier = Modifier.fillMaxWidth(0.9f),
+            modifier = Modifier.fillMaxWidth(SLIDER_WIDTH_FRACTION),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -135,13 +165,13 @@ fun MediaScreen(modifier: Modifier = Modifier) {
                     activeTrackColor = Color.LightGray,
                     inactiveTrackColor = Color.DarkGray
                 ),
-                modifier = Modifier.weight(1f).padding(horizontal = 16.dp)
+                modifier = Modifier.weight(1f).padding(horizontal = SLIDER_HORIZONTAL_PADDING)
             )
             
             Text(text = formatTime(max(0L, maxProgress)), color = Color.White)
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(SCRUB_HINT_SPACING))
         
         if (scrubPosition != null) {
             Text(

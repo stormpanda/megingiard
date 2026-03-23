@@ -13,7 +13,7 @@
 | **Package**       | `com.stormpanda.megingiard`                               |
 | **Language**      | Kotlin 2.0+ (no Java files)                               |
 | **UI Framework**  | Jetpack Compose (Material 3, BOM-managed)                 |
-| **Min SDK**       | 26 — **must not be raised**                               |
+| **Min SDK**       | 33 — **must not be raised**                               |
 | **Target SDK**    | 35                                                        |
 | **Build System**  | Gradle (Kotlin DSL), version catalog `libs.versions.toml` |
 | **Device Target** | AYN Thor dual-screen Android handheld                     |
@@ -36,21 +36,21 @@
 
 \`\`\`
 com.stormpanda.megingiard
-├── AppStateManager.kt          # Global app-level state (mode, lifecycle flags)
-├── CaptureRequestActivity.kt   # MediaProjection consent dialog (transparent Activity)
-├── MainActivity.kt             # Entry point, permission checks, display detection
-├── MainAppScreen.kt            # Top-level Composable (Crossfade + carousel overlay)
+├── AppStateManager.kt # Global app-level state (mode, lifecycle flags)
+├── CaptureRequestActivity.kt # MediaProjection consent dialog (transparent Activity)
+├── MainActivity.kt # Entry point, permission checks, display detection
+├── MainAppScreen.kt # Top-level Composable (Crossfade + carousel overlay)
 ├── media/
-│   ├── MegingiardNotificationListener.kt  # NotificationListenerService + MediaState
-│   └── MediaScreen.kt                     # Media dashboard Composable
+│ ├── MegingiardNotificationListener.kt # NotificationListenerService + MediaState
+│ └── MediaScreen.kt # Media dashboard Composable
 ├── mirror/
-│   ├── MirrorPresentation.kt              # android.app.Presentation on secondary display
-│   ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
-│   ├── MirrorScreen.kt                    # Mirror Composable (pan/zoom/freeze controls)
-│   ├── ScreenCaptureManager.kt            # Mirror state flows (scale, offset, freeze, etc.)
-│   └── ScreenCaptureService.kt            # Foreground Service managing MediaProjection
+│ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
+│ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
+│ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze controls)
+│ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, etc.)
+│ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
 └── ui/
-    └── CarouselOverlay.kt      # Shared overlay components (auto-hide, chevron nav)
+└── CarouselOverlay.kt # Shared overlay components (auto-hide, chevron nav)
 \`\`\`
 
 **Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`.
@@ -66,15 +66,16 @@ State is managed by **`object` singletons** (`AppStateManager`, `ScreenCaptureMa
 \`\`\`kotlin
 // ✅ Correct pattern
 object FooManager {
-    private val _bar = MutableStateFlow(0)
-    val bar: StateFlow<Int> = _bar.asStateFlow()
+private val \_bar = MutableStateFlow(0)
+val bar: StateFlow<Int> = \_bar.asStateFlow()
 
     fun setBar(value: Int) { _bar.value = value }
+
 }
 
 // ❌ Never expose MutableStateFlow
 object FooManager {
-    val bar = MutableStateFlow(0)   // WRONG
+val bar = MutableStateFlow(0) // WRONG
 }
 \`\`\`
 
@@ -101,11 +102,11 @@ local call site **must** recycle it immediately, since the manager never receive
 
 \`\`\`kotlin
 PixelCopy.request(sv, bitmap, { result ->
-    if (result == PixelCopy.SUCCESS) {
-        ScreenCaptureManager.setFrozenBitmap(bitmap) // manager takes ownership
-    } else {
-        bitmap.recycle() // manager never got it, local cleanup required
-    }
+if (result == PixelCopy.SUCCESS) {
+ScreenCaptureManager.setFrozenBitmap(bitmap) // manager takes ownership
+} else {
+bitmap.recycle() // manager never got it, local cleanup required
+}
 }, Handler(Looper.getMainLooper()))
 \`\`\`
 
@@ -151,9 +152,9 @@ PixelCopy.request(sv, bitmap, { result ->
 \`\`\`kotlin
 @Suppress("DEPRECATION")
 val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-    intent?.getParcelableExtra("DATA", Intent::class.java)
+intent?.getParcelableExtra("DATA", Intent::class.java)
 } else {
-    intent?.getParcelableExtra("DATA")
+intent?.getParcelableExtra("DATA")
 }
 \`\`\`
 
@@ -170,13 +171,13 @@ val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 \`\`\`kotlin
 // ✅ Correct – single launch, reactive collection
 LaunchedEffect(Unit) {
-    snapshotFlow { animScale.value }
-        .collectLatest { scale -> manager.setScale(scale) }
+snapshotFlow { animScale.value }
+.collectLatest { scale -> manager.setScale(scale) }
 }
 
 // ❌ Wrong – restarts coroutine on every animation frame
 LaunchedEffect(animScale.value) {
-    manager.setScale(animScale.value)
+manager.setScale(animScale.value)
 }
 \`\`\`
 
@@ -217,8 +218,8 @@ LaunchedEffect(animScale.value) {
 private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 override fun onDestroy() {
-    scope.cancel()
-    super.onDestroy()
+scope.cancel()
+super.onDestroy()
 }
 \`\`\`
 
@@ -301,8 +302,8 @@ startActivity(intent, options.toBundle())
 
 \`\`\`kotlin
 setOnDismissListener {
-    scope.cancel()
-    lifecycleOwner.destroy()
+scope.cancel()
+lifecycleOwner.destroy()
 }
 \`\`\`
 
@@ -332,7 +333,7 @@ setOnDismissListener {
 
 These constraints are non-negotiable:
 
-1. **`minSdk = 26`** — the device ships with this API level.
+1. **`minSdk = 33`** — the device ships with this API level.
 2. **`targetSdk = 35`** — keep in sync with `compileSdk`.
 3. **All existing user-facing functionality** must be preserved across
    refactors. No feature removals without explicit human approval.

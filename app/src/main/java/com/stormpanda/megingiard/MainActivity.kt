@@ -1,10 +1,12 @@
 package com.stormpanda.megingiard
 
+import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -76,9 +79,9 @@ class MainActivity : ComponentActivity() {
             }
 
             // Synchronous display evaluation gets correct value on frame 0
-            val context = androidx.compose.ui.platform.LocalContext.current
-            val currentDisplayId = context.display?.displayId ?: android.view.Display.DEFAULT_DISPLAY
-            val isOnValidScreenLocal = currentDisplayId != android.view.Display.DEFAULT_DISPLAY
+            val context = LocalContext.current
+            val currentDisplayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
+            val isOnValidScreenLocal = currentDisplayId != Display.DEFAULT_DISPLAY
 
             // Update global state for other components
             LaunchedEffect(isOnValidScreenLocal) {
@@ -91,8 +94,8 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
                 if (hasNotificationAccess && !isCapturing && !promptInFlight && isOnValidScreenLocal && !userDeclinedCapture) {
                     AppStateManager.setPromptInFlight(true)
-                    val options = android.app.ActivityOptions.makeBasic()
-                    options.setLaunchDisplayId(android.view.Display.DEFAULT_DISPLAY)
+                    val options = ActivityOptions.makeBasic()
+                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
                     val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
                     }

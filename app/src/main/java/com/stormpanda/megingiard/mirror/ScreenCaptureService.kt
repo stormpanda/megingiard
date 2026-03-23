@@ -12,12 +12,11 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
-import android.os.Build
 import android.os.IBinder
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Display
 import android.view.Surface
+import android.view.WindowManager
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -43,12 +42,7 @@ class ScreenCaptureService : Service() {
 
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
             ?: Activity.RESULT_CANCELED
-        @Suppress("DEPRECATION")
-        val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent?.getParcelableExtra("DATA", Intent::class.java)
-        } else {
-            intent?.getParcelableExtra("DATA")
-        }
+        val data: Intent? = intent?.getParcelableExtra("DATA", Intent::class.java)
 
         startForegroundNotification()
 
@@ -67,11 +61,12 @@ class ScreenCaptureService : Service() {
             }
 
             val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
-            val metrics = DisplayMetrics()
-            primaryDisplay.getRealMetrics(metrics)
-            val srcWidth = metrics.widthPixels
-            val srcHeight = metrics.heightPixels
-            val dpi = metrics.densityDpi
+            val windowContext = createWindowContext(primaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
+            val windowMetrics = windowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
+            val bounds = windowMetrics.bounds
+            val srcWidth = bounds.width()
+            val srcHeight = bounds.height()
+            val dpi = windowContext.resources.configuration.densityDpi
 
             var currentSurface: Surface? = null
             scope.launch {
@@ -122,11 +117,7 @@ class ScreenCaptureService : Service() {
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
-        } else {
-            startForeground(1, notification)
-        }
+        startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
     }
 
     override fun onDestroy() {
