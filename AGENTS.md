@@ -1,116 +1,6 @@
 # AGENTS.md – AI Agent Coding Guidelines for Megingiard
 
-> This file instructs AI coding agents (GitHub Copilot, Cursor, Cli### 5.4 Logging
-
-- \*\*No `Log.d` / `Log### 4.3 Bitmap Lifecycle
-
-`ScreenCaptureManager.setFrozenBitmap(bitmap)` **always calls `recycle()` on the
-previous bitmap** before assigning the new one. Never call `recycle()` at call
-sites — the## 13 Checklist for Every Change
-
-Before marking a task as done, verify:
-
-- [ ] No `MutableStateFlow` exposed outside its owning singleton
-- [ ] No FQN references inline — all moved to imports
-- [ ] No magic numbers — all extracted to named constants
-- [ ] No `Log.d` / `Log.v` in committed code
-- [ ] All user-visible strings in `strings.xml`
-- [ ] All Icons have `contentDescription` (string resource or `null`)
-- [ ] `SupervisorJob()` used (not `Job()`) for class-level scopes
-- [ ] Scope cancelled in `onDestroy()`
-- [ ] Bitmap recycling handled by the manager, not call sites (see §4.3 for the PixelCopy exception)
-- [ ] `snapshotFlow` imported from `androidx.compose.runtime`
-- [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
-- [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] `Presentation` mode switching uses `hide()`/`show()`, not `dismiss()` (except in `onDestroy()`)
-- [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
-- [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
-- [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] Zero compiler errors confirmed via IDE or `./gradlew compileDebugKotlin`he lifecycle.
-
-**Exception:** If a `Bitmap` was just created but the operation that was meant to
-hand it to the manager fails (e.g. `PixelCopy` returns a non-SUCCESS result), the
-local call site **must** recycle it immediately, since the manager never received it.
-
-````kotlin
-PixelCopy.request(sv, bitmap, { result ->
-    if (result == PixelCopy.SUCCESS) {
-        ScreenCaptureManager.setFrozenBitmap(bitmap) // manager takes ownership
-    } else {
-        bitmap.recycle() // manager never got it, local cleanup required
-    }
-}, Handler(Looper.getMainLooper()))
-```alls in committed code.** Remove debug logging
-  before committing. `Log.w` / `L### 9.2  VirtualDisplay / MediaProjection
-
-- Detach `VirtualDisplay.surface = null` to freeze; reassign to resume.
-  Never recreate the VirtualDisplay to toggle freeze.
-- Use `Presentation.hide()` / `Presentation.show()` for mode switching;
-  never `dismiss()`, which destroys the window permanently.
-- **Exception:** In `Service.onDestroy()` (full teardown), calling `dismiss()`
-  is correct — the process is being destroyed anyway. The `hide()` vs `dismiss()`
-  rule only applies to in-session mode switching.
-
-### 9.3  SurfaceView Layer Order
-
-- The `SurfaceView` that receives the `VirtualDisplay` output **must** call
-  `setZOrderMediaOverlay(true)`. Without it, the hardware buffer renders behind
-  the window background, producing a black screen.
-- The `ComposeView` overlay is then layered on top of the `SurfaceView` by
-  standard `FrameLayout` z-ordering.
-
-### 9.4  Foreground Service
-
-- Use `START_NOT_STICKY` as the return value in `onStartCommand()`.
-  The service must not be auto-restarted by the system after being killed —
-  re-acquiring `MediaProjection` requires a fresh user consent.
-- Always call `startForeground()` / `startForegroundNotification()` before any
-  `MediaProjection` work starts to avoid ANR on API 29+.
-
-### 9.5  Multi-Display Activity Launching
-
-- When launching an `Activity` that must appear on the primary screen
-  (e.g. `CaptureRequestActivity`), use `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`.
-  Without this, the activity inherits the display of the calling context,
-  which on the AYN Thor is the secondary display.
-
-```kotlin
-val options = ActivityOptions.makeBasic()
-options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-startActivity(intent, options.toBundle())
-````
-
-### 9.6 MirrorPresentationLifecycleOwner Teardown
-
-- `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
-  Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
-  event that cleans up all Compose state registered against the owner.
-
-````kotlin
-setOnDismissListener {
-    scope.cancel()
-    lifecycleOwner.destroy()
-}
-```for genuine runtime warnings only.
-- `ScreenCaptureService` and `MirrorPresentation` currently retain some `Log.d`
-  calls for hardware pipeline diagnostics — these are a known technical debt item
-  and should be cleaned up before any production release.
-
-### 5.5  API-Level Branching
-
-- When calling APIs that changed signature across SDK versions, use
-  `if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.XYZ)` branching with
-  `@Suppress("DEPRECATION")` on the legacy branch — never silently call the
-  deprecated path without the annotation.
-
-```kotlin
-@Suppress("DEPRECATION")
-val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-    intent?.getParcelableExtra("DATA", Intent::class.java)
-} else {
-    intent?.getParcelableExtra("DATA")
-}
-```etc.) on the
+> This file instructs AI coding agents (GitHub Copilot, Cursor, Cline, etc.) on the
 > conventions, patterns, and constraints that govern this project. Treat every rule
 > as mandatory unless the human operator explicitly overrides it.
 
@@ -144,26 +34,24 @@ val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 
 ## 3 Package Structure
 
-````
-
+\`\`\`
 com.stormpanda.megingiard
-├── AppStateManager.kt # Global app-level state (mode, lifecycle flags)
-├── CaptureRequestActivity.kt # MediaProjection consent dialog (transparent Activity)
-├── MainActivity.kt # Entry point, permission checks, display detection
-├── MainAppScreen.kt # Top-level Composable (Crossfade + carousel overlay)
+├── AppStateManager.kt          # Global app-level state (mode, lifecycle flags)
+├── CaptureRequestActivity.kt   # MediaProjection consent dialog (transparent Activity)
+├── MainActivity.kt             # Entry point, permission checks, display detection
+├── MainAppScreen.kt            # Top-level Composable (Crossfade + carousel overlay)
 ├── media/
-│ ├── MegingiardNotificationListener.kt # NotificationListenerService + MediaState
-│ └── MediaScreen.kt # Media dashboard Composable
+│   ├── MegingiardNotificationListener.kt  # NotificationListenerService + MediaState
+│   └── MediaScreen.kt                     # Media dashboard Composable
 ├── mirror/
-│ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
-│ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
-│ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze controls)
-│ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, etc.)
-│ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
+│   ├── MirrorPresentation.kt              # android.app.Presentation on secondary display
+│   ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
+│   ├── MirrorScreen.kt                    # Mirror Composable (pan/zoom/freeze controls)
+│   ├── ScreenCaptureManager.kt            # Mirror state flows (scale, offset, freeze, etc.)
+│   └── ScreenCaptureService.kt            # Foreground Service managing MediaProjection
 └── ui/
-└── CarouselOverlay.kt # Shared overlay components (auto-hide, chevron nav)
-
-````
+    └── CarouselOverlay.kt      # Shared overlay components (auto-hide, chevron nav)
+\`\`\`
 
 **Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`.
 
@@ -175,7 +63,7 @@ com.stormpanda.megingiard
 
 State is managed by **`object` singletons** (`AppStateManager`, `ScreenCaptureManager`, `MediaState`) that expose **read-only `StateFlow`** and keep all `MutableStateFlow` backing fields **`private`**.
 
-```kotlin
+\`\`\`kotlin
 // ✅ Correct pattern
 object FooManager {
     private val _bar = MutableStateFlow(0)
@@ -188,7 +76,7 @@ object FooManager {
 object FooManager {
     val bar = MutableStateFlow(0)   // WRONG
 }
-````
+\`\`\`
 
 ### 4.2 Visibility Rules
 
@@ -206,6 +94,20 @@ extension property `MediaState.controller`.
 `ScreenCaptureManager.setFrozenBitmap(bitmap)` **always calls `recycle()` on the
 previous bitmap** before assigning the new one. Never call `recycle()` at call
 sites — the manager owns the lifecycle.
+
+**Exception:** If a `Bitmap` was just created but the operation that was meant to
+hand it to the manager fails (e.g. `PixelCopy` returns a non-SUCCESS result), the
+local call site **must** recycle it immediately, since the manager never received it.
+
+\`\`\`kotlin
+PixelCopy.request(sv, bitmap, { result ->
+    if (result == PixelCopy.SUCCESS) {
+        ScreenCaptureManager.setFrozenBitmap(bitmap) // manager takes ownership
+    } else {
+        bitmap.recycle() // manager never got it, local cleanup required
+    }
+}, Handler(Looper.getMainLooper()))
+\`\`\`
 
 ---
 
@@ -239,6 +141,22 @@ sites — the manager owns the lifecycle.
 - **No `Log.d` / `Log.v` calls in committed code.** Remove debug logging
   before committing. `Log.w` / `Log.e` for genuine runtime warnings only.
 
+### 5.5 API-Level Branching
+
+- When calling APIs that changed signature across SDK versions, use
+  `if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.XYZ)` branching with
+  `@Suppress("DEPRECATION")` on the legacy branch — never silently call the
+  deprecated path without the annotation.
+
+\`\`\`kotlin
+@Suppress("DEPRECATION")
+val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    intent?.getParcelableExtra("DATA", Intent::class.java)
+} else {
+    intent?.getParcelableExtra("DATA")
+}
+\`\`\`
+
 ---
 
 ## 6 Jetpack Compose Rules
@@ -249,7 +167,7 @@ sites — the manager owns the lifecycle.
   If you need to react to animation values or frequently-updating state,
   use `snapshotFlow { ... }.collectLatest { }` inside a `LaunchedEffect(Unit)`.
 
-```kotlin
+\`\`\`kotlin
 // ✅ Correct – single launch, reactive collection
 LaunchedEffect(Unit) {
     snapshotFlow { animScale.value }
@@ -260,7 +178,7 @@ LaunchedEffect(Unit) {
 LaunchedEffect(animScale.value) {
     manager.setScale(animScale.value)
 }
-```
+\`\`\`
 
 - `snapshotFlow` is in `androidx.compose.runtime`, **not** `kotlinx.coroutines`.
 
@@ -295,14 +213,14 @@ LaunchedEffect(animScale.value) {
   This prevents a single child failure from cancelling unrelated siblings.
 - **Cancel the scope** in `onDestroy()` / teardown:
 
-```kotlin
+\`\`\`kotlin
 private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 override fun onDestroy() {
     scope.cancel()
     super.onDestroy()
 }
-```
+\`\`\`
 
 ### 7.2 No Duplicate Scopes
 
@@ -342,6 +260,51 @@ override fun onDestroy() {
   Never recreate the VirtualDisplay to toggle freeze.
 - Use `Presentation.hide()` / `Presentation.show()` for mode switching;
   never `dismiss()`, which destroys the window permanently.
+- **Exception:** In `Service.onDestroy()` (full teardown), calling `dismiss()`
+  is correct — the process is being destroyed anyway. The `hide()` vs `dismiss()`
+  rule only applies to in-session mode switching.
+
+### 9.3 SurfaceView Layer Order
+
+- The `SurfaceView` that receives the `VirtualDisplay` output **must** call
+  `setZOrderMediaOverlay(true)`. Without it, the hardware buffer renders behind
+  the window background, producing a black screen.
+- The `ComposeView` overlay is then layered on top of the `SurfaceView` by
+  standard `FrameLayout` z-ordering.
+
+### 9.4 Foreground Service
+
+- Use `START_NOT_STICKY` as the return value in `onStartCommand()`.
+  The service must not be auto-restarted by the system after being killed —
+  re-acquiring `MediaProjection` requires a fresh user consent.
+- Always call `startForeground()` / `startForegroundNotification()` before any
+  `MediaProjection` work starts to avoid ANR on API 29+.
+
+### 9.5 Multi-Display Activity Launching
+
+- When launching an `Activity` that must appear on the primary screen
+  (e.g. `CaptureRequestActivity`), use `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`.
+  Without this, the activity inherits the display of the calling context,
+  which on the AYN Thor is the secondary display.
+
+\`\`\`kotlin
+val options = ActivityOptions.makeBasic()
+options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+startActivity(intent, options.toBundle())
+\`\`\`
+
+### 9.6 MirrorPresentationLifecycleOwner Teardown
+
+- `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
+  Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
+  event that cleans up all Compose state registered against the owner.
+
+\`\`\`kotlin
+setOnDismissListener {
+    scope.cancel()
+    lifecycleOwner.destroy()
+}
+\`\`\`
 
 ---
 
@@ -393,6 +356,12 @@ Before marking a task as done, verify:
 - [ ] All Icons have `contentDescription` (string resource or `null`)
 - [ ] `SupervisorJob()` used (not `Job()`) for class-level scopes
 - [ ] Scope cancelled in `onDestroy()`
-- [ ] Bitmap recycling handled by the manager, not call sites
+- [ ] Bitmap recycling handled by the manager, not call sites (see §4.3 for the PixelCopy exception)
 - [ ] `snapshotFlow` imported from `androidx.compose.runtime`
+- [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
+- [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
+- [ ] `Presentation` mode switching uses `hide()`/`show()`, not `dismiss()` (except in `onDestroy()`)
+- [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
+- [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
+- [ ] Service `onStartCommand` returns `START_NOT_STICKY`
 - [ ] Zero compiler errors confirmed via IDE or `./gradlew compileDebugKotlin`

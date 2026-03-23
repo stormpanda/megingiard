@@ -50,7 +50,6 @@ class MirrorPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("MegingiardMirror", "MirrorPresentation onCreate launched")
         val lifecycleOwner = MirrorPresentationLifecycleOwner()
         window?.decorView?.apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
@@ -80,8 +79,6 @@ class MirrorPresentation(
             // Source is taller than target. Fit height, calculate width.
             finalWidth = (targetHeight * srcRatio).toInt()
         }
-        
-        Log.d("MegingiardMirror", "Ratio scaling: source ${srcWidth}x${srcHeight} -> scaled ${finalWidth}x${finalHeight} in target ${targetWidth}x${targetHeight}")
 
         ScreenCaptureManager.setSurfaceSize(finalWidth.toFloat(), finalHeight.toFloat())
 
@@ -117,14 +114,12 @@ class MirrorPresentation(
 
         sv.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                Log.d("MegingiardMirror", "SurfaceView surfaceCreated fired")
                 onSurfaceReady?.invoke(holder.surface)
             }
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-                Log.d("MegingiardMirror", "SurfaceView surfaceChanged to ${width}x${height}")
+                // no-op
             }
             override fun surfaceDestroyed(holder: SurfaceHolder) {
-                Log.d("MegingiardMirror", "SurfaceView surfaceDestroyed")
                 onSurfaceDestroyed?.invoke()
             }
         })
@@ -166,17 +161,16 @@ class MirrorPresentation(
                             bitmap,
                             { result ->
                                 if (result == PixelCopy.SUCCESS) {
-                                    Log.d("MegingiardMirror", "PixelCopy success! Saving frozen bitmap.")
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
                                 } else {
-                                    Log.e("MegingiardMirror", "PixelCopy failed with code: $result")
+                                    Log.e("MegingiardMirror", "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
                                 }
                             },
                             Handler(Looper.getMainLooper())
                         )
                     } catch (e: Exception) {
-                        Log.e("MegingiardMirror", "PixelCopy exception: ", e)
+                        Log.e("MegingiardMirror", "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
                     ScreenCaptureManager.setFrozenBitmap(null)

@@ -36,9 +36,7 @@ class ScreenCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("MegingiardMirror", "ScreenCaptureService onStartCommand triggered")
         if (intent?.action == "STOP") {
-            Log.d("MegingiardMirror", "ScreenCaptureService STOP intent received")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -54,11 +52,9 @@ class ScreenCaptureService : Service() {
 
         startForegroundNotification()
 
-        Log.d("MegingiardMirror", "ScreenCaptureService checking resultCode=$resultCode, data=$data")
         if (resultCode == Activity.RESULT_OK && data != null) {
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-            Log.d("MegingiardMirror", "MediaProjection acquired: $mediaProjection")
 
             val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             val secondaryDisplay = displayManager.getDisplays()
@@ -76,7 +72,6 @@ class ScreenCaptureService : Service() {
             val srcWidth = metrics.widthPixels
             val srcHeight = metrics.heightPixels
             val dpi = metrics.densityDpi
-            Log.d("MegingiardMirror", "Primary display: ${srcWidth}x${srcHeight} at ${dpi}dpi. Secondary: ${secondaryDisplay.displayId}")
 
             var currentSurface: Surface? = null
             scope.launch {
@@ -89,13 +84,11 @@ class ScreenCaptureService : Service() {
             mirrorPresentation = presentation
 
             presentation.onSurfaceDestroyed = {
-                Log.d("MegingiardMirror", "Presentation Surface destroyed, releasing VirtualDisplay")
                 virtualDisplay?.release()
                 virtualDisplay = null
             }
 
             presentation.onSurfaceReady = { surface ->
-                Log.d("MegingiardMirror", "onSurfaceReady fired. Surface=$surface")
                 currentSurface = surface
                 virtualDisplay?.release()
                 if (AppStateManager.currentMode.value == AppMode.MIRROR) {
@@ -107,14 +100,12 @@ class ScreenCaptureService : Service() {
                             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                             if (isFrozen) null else surface, null, null
                         )
-                        Log.d("MegingiardMirror", "VirtualDisplay created: $virtualDisplay (frozen=$isFrozen)")
                     } catch (e: Exception) {
                         Log.e("MegingiardMirror", "Exception creating VirtualDisplay", e)
                     }
                 }
             }
 
-            Log.d("MegingiardMirror", "Executing presentation.show()")
             presentation.show()
         }
         return START_NOT_STICKY
