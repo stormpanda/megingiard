@@ -1,25 +1,18 @@
 package com.stormpanda.megingiard.touchpad
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
 enum class TouchAction { DOWN, MOVE, UP }
 
 object TouchpadManager {
-    private val _primaryDisplayWidth = MutableStateFlow(0)
-    val primaryDisplayWidth: StateFlow<Int> = _primaryDisplayWidth.asStateFlow()
-
-    private val _primaryDisplayHeight = MutableStateFlow(0)
-    val primaryDisplayHeight: StateFlow<Int> = _primaryDisplayHeight.asStateFlow()
+    private var primaryDisplayWidth: Int = 0
+    private var primaryDisplayHeight: Int = 0
 
     /**
      * Call once the primary display dimensions are known (and whenever they
      * change). Restarts the shell bridge targeted at [displayId].
      */
     fun setPrimaryDisplaySize(width: Int, height: Int, displayId: Int = 0) {
-        _primaryDisplayWidth.value = width
-        _primaryDisplayHeight.value = height
+        primaryDisplayWidth = width
+        primaryDisplayHeight = height
         if (ShellInputInjector.isRunning) ShellInputInjector.stop()
         ShellInputInjector.start(displayId)
     }
@@ -34,8 +27,8 @@ object TouchpadManager {
      * @param normalizedY  0.0 (top edge) … 1.0 (bottom edge) of the touch area
      */
     fun injectTouch(action: TouchAction, normalizedX: Float, normalizedY: Float) {
-        val absX = normalizedX * _primaryDisplayWidth.value
-        val absY = normalizedY * _primaryDisplayHeight.value
+        val absX = normalizedX * primaryDisplayWidth
+        val absY = normalizedY * primaryDisplayHeight
         ShellInputInjector.injectTouch(action, absX, absY)
     }
 }

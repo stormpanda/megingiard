@@ -25,6 +25,7 @@ object ShellInputInjector {
     @Volatile private var targetDisplay: Int = 0
 
     /** Must be called before the first [injectTouch] call (or after [stop]). */
+    @Synchronized
     fun start(displayId: Int) {
         targetDisplay = displayId
         if (process?.isAlive == true) return
@@ -32,18 +33,17 @@ object ShellInputInjector {
             val p = Runtime.getRuntime().exec("sh")
             process = p
             writer = BufferedWriter(OutputStreamWriter(p.outputStream))
-            Log.i(TAG, "Shell bridge started for display $displayId")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start shell bridge: $e")
         }
     }
 
+    @Synchronized
     fun stop() {
         try { writer?.close() } catch (_: Exception) {}
         try { process?.destroy() } catch (_: Exception) {}
         writer = null
         process = null
-        Log.i(TAG, "Shell bridge stopped")
     }
 
     val isRunning: Boolean

@@ -6,9 +6,9 @@ import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -88,7 +88,7 @@ private fun TouchSurface(onInteraction: () -> Unit) {
     var touchPos by remember { mutableStateOf<Offset?>(null) }
 
     val density = LocalDensity.current
-    val indicatorSizePx = with(density) { TOUCH_INDICATOR_SIZE.toPx() }
+    val indicatorSizePx = remember(density) { with(density) { TOUCH_INDICATOR_SIZE.toPx() } }
 
     Box(
         modifier = Modifier
