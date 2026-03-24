@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.touchpad
 
 import android.hardware.display.DisplayManager
+import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowManager
 import androidx.compose.foundation.background
@@ -57,14 +58,12 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) {
         val dm = context.getSystemService(DisplayManager::class.java)
         val primaryDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY)
-        val primaryContext = context.createDisplayContext(primaryDisplay)
-        val primaryWm = primaryContext.getSystemService(WindowManager::class.java)
-        val primaryBounds = primaryWm.maximumWindowMetrics.bounds
-        TouchpadManager.setPrimaryDisplaySize(
-            primaryBounds.width(),
-            primaryBounds.height(),
-            Display.DEFAULT_DISPLAY
-        )
+        // getRealMetrics() returns the post-rotation logical dimensions that
+        // the `input` command uses as its coordinate space (cur= in dumpsys).
+        // This is 1920×1080 at ROTATION_90, matching what the shell bridge needs.
+        @Suppress("DEPRECATION")
+        val metrics = DisplayMetrics().also { primaryDisplay.getRealMetrics(it) }
+        TouchpadManager.setPrimaryDisplaySize(metrics.widthPixels, metrics.heightPixels, Display.DEFAULT_DISPLAY)
     }
 
     val (showControls, onInteraction) = rememberAutoHideState()
