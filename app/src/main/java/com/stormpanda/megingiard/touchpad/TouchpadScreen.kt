@@ -1,9 +1,5 @@
 package com.stormpanda.megingiard.touchpad
 
-import android.hardware.display.DisplayManager
-import android.util.DisplayMetrics
-import android.view.Display
-import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -53,17 +49,10 @@ private val TOUCH_AREA_CORNER_RADIUS = 4.dp
 fun TouchpadScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
-    // Update primary display size whenever the screen is composed.
-    // The primary display dimensions are fetched once from the WindowManager.
+    // Deploy and start the native touch injector once per session.
+    // Coordinates are hardware constants — no display-size query needed.
     LaunchedEffect(Unit) {
-        val dm = context.getSystemService(DisplayManager::class.java)
-        val primaryDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY)
-        // getRealMetrics() returns the post-rotation logical dimensions that
-        // the `input` command uses as its coordinate space (cur= in dumpsys).
-        // This is 1920×1080 at ROTATION_90, matching what the shell bridge needs.
-        @Suppress("DEPRECATION")
-        val metrics = DisplayMetrics().also { primaryDisplay.getRealMetrics(it) }
-        TouchpadManager.setPrimaryDisplaySize(metrics.widthPixels, metrics.heightPixels, Display.DEFAULT_DISPLAY)
+        TouchpadManager.start(context)
     }
 
     val (showControls, onInteraction) = rememberAutoHideState()

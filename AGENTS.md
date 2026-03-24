@@ -28,6 +28,7 @@
 | `PRD.md`                  | Product requirements (German, authoritative)      |
 | `docs/REQUIREMENTS.md`    | Detailed functional & non-functional requirements |
 | `docs/ARCHITECTURE.md`    | Hardware-level architecture decisions & rationale |
+| `docs/BUILD_NATIVE.md`    | How to rebuild the native touch-injector binary   |
 | `AGENTS.md` _(this file)_ | AI agent coding conventions & constraints         |
 
 ---
