@@ -1,29 +1,22 @@
 package com.stormpanda.megingiard.touchpad
 
-import android.content.Intent
 import android.hardware.display.DisplayManager
-import android.provider.Settings
 import android.view.Display
 import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,13 +46,10 @@ private const val TOUCH_AREA_ASPECT_RATIO = 16f / 9f
 private val TOUCH_AREA_BORDER_WIDTH = 1.dp
 private val TOUCH_INDICATOR_SIZE = 24.dp
 private val TOUCH_INDICATOR_ALPHA = 0.5f
-private val PERMISSION_HINT_PADDING = 32.dp
-private val PERMISSION_BUTTON_TOP_SPACING = 16.dp
 private val TOUCH_AREA_CORNER_RADIUS = 4.dp
 
 @Composable
 fun TouchpadScreen(modifier: Modifier = Modifier) {
-    val isAccessibilityEnabled by TouchpadManager.isAccessibilityEnabled.collectAsState()
     val context = LocalContext.current
 
     // Update primary display size whenever the screen is composed.
@@ -70,7 +60,11 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
         val primaryContext = context.createDisplayContext(primaryDisplay)
         val primaryWm = primaryContext.getSystemService(WindowManager::class.java)
         val primaryBounds = primaryWm.maximumWindowMetrics.bounds
-        TouchpadManager.setPrimaryDisplaySize(primaryBounds.width(), primaryBounds.height())
+        TouchpadManager.setPrimaryDisplaySize(
+            primaryBounds.width(),
+            primaryBounds.height(),
+            Display.DEFAULT_DISPLAY
+        )
     }
 
     val (showControls, onInteraction) = rememberAutoHideState()
@@ -79,33 +73,7 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize().background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
-        if (!isAccessibilityEnabled) {
-            // Permission gate — identical UX pattern to NotificationListener
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(PERMISSION_HINT_PADDING)
-            ) {
-                Text(
-                    text = stringResource(R.string.touchpad_accessibility_required),
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(PERMISSION_BUTTON_TOP_SPACING))
-                Button(onClick = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                    )
-                }) {
-                    Text(stringResource(R.string.touchpad_grant_permission))
-                }
-            }
-        } else {
-            TouchSurface(onInteraction = onInteraction)
-        }
-
+        TouchSurface(onInteraction = onInteraction)
         CarouselOverlay(visible = showControls)
     }
 }
