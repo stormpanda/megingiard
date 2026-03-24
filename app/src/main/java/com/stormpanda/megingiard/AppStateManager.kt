@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class AppMode { MIRROR, MEDIA }
+enum class AppMode { MIRROR, MEDIA, TOUCHPAD }
 
 object AppStateManager {
     private val _currentMode = MutableStateFlow(AppMode.MIRROR)

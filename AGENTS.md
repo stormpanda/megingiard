@@ -49,6 +49,10 @@ com.stormpanda.megingiard
 │ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze controls)
 │ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, etc.)
 │ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
+├── touchpad/
+│ ├── MegingiardAccessibilityService.kt # AccessibilityService dispatching gestures to primary display
+│ ├── TouchpadManager.kt # Touchpad state flows + coordinate mapping
+│ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
 └── ui/
 └── CarouselOverlay.kt # Shared overlay components (auto-hide, chevron nav)
 \`\`\`
@@ -307,6 +311,20 @@ lifecycleOwner.destroy()
 }
 \`\`\`
 
+### 9.7 AccessibilityService Touch Injection (Touchpad)
+
+- `MegingiardAccessibilityService` holds a `companion object` static `instance`
+  reference. Set `instance = this` in `onServiceConnected()` and `instance = null`
+  in `onDestroy()`.
+- Touch injection uses `GestureDescription.StrokeDescription` with
+  `willContinue = true` for DOWN/MOVE events and `willContinue = false` for UP.
+  This keeps the kernel touch-stream open for the entire drag, producing smooth
+  continuous scrolling. Never dispatch a separate complete gesture per MOVE event.
+- The `MirrorPresentation` show/hide condition **must** use `mode == AppMode.MIRROR`
+  (not `mode != AppMode.MEDIA`) so the Presentation is also hidden in `TOUCHPAD` mode.
+- `TouchpadManager.setPrimaryDisplaySize()` must be called before the first touch
+  injection. It is called once from `TouchpadScreen` via `LaunchedEffect(Unit)`.
+
 ---
 
 ## 10 Build & Dependencies
@@ -365,4 +383,6 @@ Before marking a task as done, verify:
 - [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
 - [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
+- [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR` (not `mode != AppMode.MEDIA`)
+- [ ] `MegingiardAccessibilityService.instance` set in `onServiceConnected`, cleared in `onDestroy`
 - [ ] Zero compiler errors confirmed via IDE or `./gradlew compileDebugKotlin`

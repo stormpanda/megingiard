@@ -4,5 +4,5 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
     android:canRetrieveWindowContent="false"
-    android:canTakeScreenshot="true"
-    android:description="@string/app_name" />
+    android:canPerformGestures="true"
+    android:description="@string/accessibility_service_description" />

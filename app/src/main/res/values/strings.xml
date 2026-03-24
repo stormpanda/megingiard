@@ -20,4 +20,10 @@
     <string name="cd_play_pause">Play / Pause</string>
     <string name="cd_forward_10">Forward 10 seconds</string>
     <string name="cd_skip_next">Next track</string>
+    <string name="touchpad_accessibility_required">Accessibility Access required for Touchpad</string>
+    <string name="touchpad_grant_permission">Grant Accessibility Permission</string>
+    <string name="touchpad_hint">Touch here to control the top screen</string>
+    <string name="touchpad_cd_touch_surface">Touch surface</string>
+    <string name="touchpad_cd_touch_indicator">Touch indicator</string>
+    <string name="accessibility_service_description">Megingiard Touchpad: Forwards touch input from the bottom screen to the top screen.</string>
 </resources>
