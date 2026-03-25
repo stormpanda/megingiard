@@ -70,6 +70,12 @@ class MainActivity : ComponentActivity() {
                         Lifecycle.Event.ON_RESUME -> {
                             hasNotificationAccess = isNotificationListenerEnabled(this@MainActivity)
                             AppStateManager.setActivityResumed(true)
+                            // Auto-start: treat each app resume as a fresh opportunity.
+                            // Only clear the decline flag here — not in the LaunchedEffect,
+                            // so a decline within a session is respected until the next resume.
+                            if (SettingsManager.autoStartCapture.value) {
+                                AppStateManager.setUserDeclinedCapture(false)
+                            }
                         }
                         Lifecycle.Event.ON_STOP -> {
                             AppStateManager.setActivityResumed(false)
@@ -91,13 +97,13 @@ class MainActivity : ComponentActivity() {
             }
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
-            val autoStartCapture by SettingsManager.autoStartCapture.collectAsState()
 
             // Once notification access is granted and we're not yet capturing, launch proxy on main screen.
             // With autoStartCapture=false (default) the user must tap "Start mirroring" manually.
-            // With autoStartCapture=true the prompt fires automatically whenever conditions are met.
-            LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture, autoStartCapture) {
-                val shouldTrigger = if (autoStartCapture) !isCapturing else !isCapturing && !userDeclinedCapture
+            // With autoStartCapture=true the prompt fires once per app session (on resume);
+            // declining within a session is respected — the dialog will not re-appear until the next resume.
+            LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
+                val shouldTrigger = !isCapturing && !userDeclinedCapture
                 if (hasNotificationAccess && !promptInFlight && isOnValidScreenLocal && shouldTrigger) {
                     AppStateManager.setPromptInFlight(true)
                     val options = ActivityOptions.makeBasic()
