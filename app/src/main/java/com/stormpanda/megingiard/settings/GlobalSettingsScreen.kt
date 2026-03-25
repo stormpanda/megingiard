@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
 import kotlin.math.roundToInt
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 private val GS_BG = Color(0xFF121212)
 private val GS_SURFACE = Color(0xFF1C1C1E)
@@ -54,6 +56,7 @@ private val GS_TEXT = Color.White
 private val GS_TEXT_SECONDARY = Color.White.copy(alpha = 0.6f)
 private val GS_DIVIDER = Color.White.copy(alpha = 0.08f)
 private val GS_TOP_BAR = Color(0xFF1C1C1E)
+private val GS_SURFACE_DRAGGING = Color(0xFF2C2C2E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +67,14 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val accentColor by SettingsManager.accentColor.collectAsState()
 
     var showColorPicker by remember { mutableStateOf(false) }
+
+    val lazyListState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        val offset = 1 // header item before tool rows
+        val newOrder = toolOrder.toMutableList()
+        newOrder.add(to.index - offset, newOrder.removeAt(from.index - offset))
+        SettingsManager.setToolOrder(newOrder)
+    }
 
     if (showColorPicker) {
         ColorWheelPicker(
@@ -105,6 +116,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
             }
         ) { paddingValues ->
             LazyColumn(
+                state = lazyListState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
@@ -116,34 +128,26 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                         accentColor = accentColor
                     )
                 }
-                itemsIndexed(toolOrder) { index, tool ->
+                itemsIndexed(toolOrder, key = { _, tool -> tool.name }) { _, tool ->
                     val isEnabled = tool in enabledTools
-                    ToolOrderRow(
-                        tool = tool,
-                        isEnabled = isEnabled,
-                        canMoveUp = index > 0,
-                        canMoveDown = index < toolOrder.size - 1,
-                        canDisable = enabledTools.size > 1 || !isEnabled,
-                        accentColor = accentColor,
-                        onToggle = { checked ->
-                            val newEnabled = if (checked) enabledTools + tool else enabledTools - tool
-                            if (newEnabled.isNotEmpty()) SettingsManager.setEnabledTools(newEnabled)
-                        },
-                        onMoveUp = {
-                            val newOrder = toolOrder.toMutableList()
-                            newOrder.add(index - 1, newOrder.removeAt(index))
-                            SettingsManager.setToolOrder(newOrder)
-                        },
-                        onMoveDown = {
-                            val newOrder = toolOrder.toMutableList()
-                            newOrder.add(index + 1, newOrder.removeAt(index))
-                            SettingsManager.setToolOrder(newOrder)
-                        }
-                    )
-                    HorizontalDivider(
-                        color = GS_DIVIDER,
-                        modifier = Modifier.padding(start = 56.dp)
-                    )
+                    ReorderableItem(reorderState, key = tool.name) { isDragging ->
+                        ToolOrderRow(
+                            tool = tool,
+                            isEnabled = isEnabled,
+                            isDragging = isDragging,
+                            canDisable = enabledTools.size > 1 || !isEnabled,
+                            accentColor = accentColor,
+                            onToggle = { checked ->
+                                val newEnabled = if (checked) enabledTools + tool else enabledTools - tool
+                                if (newEnabled.isNotEmpty()) SettingsManager.setEnabledTools(newEnabled)
+                            },
+                            dragHandleModifier = Modifier.draggableHandle()
+                        )
+                        HorizontalDivider(
+                            color = GS_DIVIDER,
+                            modifier = Modifier.padding(start = 56.dp)
+                        )
+                    }
                 }
 
                 // General section
@@ -194,18 +198,16 @@ private fun SettingsCategoryHeader(text: String, accentColor: Color) {
 private fun ToolOrderRow(
     tool: AppMode,
     isEnabled: Boolean,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
+    isDragging: Boolean,
     canDisable: Boolean,
     accentColor: Color,
     onToggle: (Boolean) -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    dragHandleModifier: Modifier
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(GS_SURFACE)
+            .background(if (isDragging) GS_SURFACE_DRAGGING else GS_SURFACE)
             .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -228,26 +230,14 @@ private fun ToolOrderRow(
                 .weight(1f)
                 .padding(start = 4.dp)
         )
-        IconButton(
-            onClick = onMoveUp,
-            enabled = canMoveUp
-        ) {
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowUp,
-                contentDescription = stringResource(R.string.settings_move_up),
-                tint = if (canMoveUp) GS_TEXT else GS_TEXT_SECONDARY
-            )
-        }
-        IconButton(
-            onClick = onMoveDown,
-            enabled = canMoveDown
-        ) {
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.settings_move_down),
-                tint = if (canMoveDown) GS_TEXT else GS_TEXT_SECONDARY
-            )
-        }
+        Icon(
+            imageVector = Icons.Filled.DragHandle,
+            contentDescription = stringResource(R.string.cd_drag_reorder),
+            tint = GS_TEXT_SECONDARY,
+            modifier = Modifier
+                .padding(12.dp)
+                .then(dragHandleModifier)
+        )
     }
 }
 

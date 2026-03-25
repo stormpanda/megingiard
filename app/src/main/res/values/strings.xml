@@ -33,6 +33,7 @@
     <string name="cd_open_settings">Open settings</string>
     <string name="cd_open_global_settings">Open global settings</string>
     <string name="settings_all_settings">All settings</string>
+    <string name="cd_drag_reorder">Drag to reorder</string>
     <string name="settings_section_tools">Tools</string>
     <string name="settings_section_general">General</string>
     <string name="settings_section_appearance">Appearance</string>
