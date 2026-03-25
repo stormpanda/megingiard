@@ -368,7 +368,22 @@ These constraints are non-negotiable:
 
 ---
 
-## 13 Checklist for Every Change
+## 13 Commit Message Proposal
+
+After completing every set of changes, propose a ready-to-use commit message that covers **all staged and unstaged changes not yet committed** (i.e. the full diff since the last commit). Use Conventional Commits format:
+
+```
+<type>: <short imperative summary>
+
+- bullet describing change 1
+- bullet describing change 2
+```
+
+The proposal must be copy-paste ready — no placeholders. Present it as a code block so the user can copy it directly.
+
+---
+
+## 14 Checklist for Every Change
 
 Before marking a task as done, verify:
 

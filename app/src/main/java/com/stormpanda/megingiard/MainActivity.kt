@@ -35,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.SettingsManager
 
 class MainActivity : ComponentActivity() {
 
@@ -55,6 +56,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SettingsManager.init(this)
         enableEdgeToEdge()
         setContent {
             var hasNotificationAccess by remember { mutableStateOf(isNotificationListenerEnabled(this@MainActivity)) }
@@ -68,6 +70,12 @@ class MainActivity : ComponentActivity() {
                         Lifecycle.Event.ON_RESUME -> {
                             hasNotificationAccess = isNotificationListenerEnabled(this@MainActivity)
                             AppStateManager.setActivityResumed(true)
+                            // Auto-start: treat each app resume as a fresh opportunity.
+                            // Only clear the decline flag here — not in the LaunchedEffect,
+                            // so a decline within a session is respected until the next resume.
+                            if (SettingsManager.autoStartCapture.value) {
+                                AppStateManager.setUserDeclinedCapture(false)
+                            }
                         }
                         Lifecycle.Event.ON_STOP -> {
                             AppStateManager.setActivityResumed(false)
@@ -90,9 +98,13 @@ class MainActivity : ComponentActivity() {
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
 
-            // Once notification access is granted and we're not yet capturing, launch proxy on main screen
+            // Once notification access is granted and we're not yet capturing, launch proxy on main screen.
+            // With autoStartCapture=false (default) the user must tap "Start mirroring" manually.
+            // With autoStartCapture=true the prompt fires once per app session (on resume);
+            // declining within a session is respected — the dialog will not re-appear until the next resume.
             LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
-                if (hasNotificationAccess && !isCapturing && !promptInFlight && isOnValidScreenLocal && !userDeclinedCapture) {
+                val shouldTrigger = !isCapturing && !userDeclinedCapture
+                if (hasNotificationAccess && !promptInFlight && isOnValidScreenLocal && shouldTrigger) {
                     AppStateManager.setPromptInFlight(true)
                     val options = ActivityOptions.makeBasic()
                     options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)

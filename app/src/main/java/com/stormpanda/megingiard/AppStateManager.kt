@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,20 +17,27 @@ object AppStateManager {
     private val _isOnValidScreen = MutableStateFlow(true)
     val isOnValidScreen: StateFlow<Boolean> = _isOnValidScreen.asStateFlow()
 
-    private val _userDeclinedCapture = MutableStateFlow(false)
+    // Defaults to true so the mirror tool starts in idle state (no auto-capture on launch)
+    private val _userDeclinedCapture = MutableStateFlow(true)
     val userDeclinedCapture: StateFlow<Boolean> = _userDeclinedCapture.asStateFlow()
 
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
     fun nextMode() {
-        val values = AppMode.entries
-        _currentMode.value = values[(_currentMode.value.ordinal + 1) % values.size]
+        val active = SettingsManager.activeTools.value
+        if (active.size <= 1) return
+        val currentIndex = active.indexOf(_currentMode.value)
+        if (currentIndex == -1) { _currentMode.value = active.first(); return }
+        _currentMode.value = active[(currentIndex + 1) % active.size]
     }
 
     fun prevMode() {
-        val values = AppMode.entries
-        _currentMode.value = values[(_currentMode.value.ordinal - 1 + values.size) % values.size]
+        val active = SettingsManager.activeTools.value
+        if (active.size <= 1) return
+        val currentIndex = active.indexOf(_currentMode.value)
+        if (currentIndex == -1) { _currentMode.value = active.first(); return }
+        _currentMode.value = active[(currentIndex - 1 + active.size) % active.size]
     }
 
     fun setMode(mode: AppMode) { _currentMode.value = mode }

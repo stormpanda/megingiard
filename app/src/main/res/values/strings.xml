@@ -21,4 +21,31 @@
     <string name="cd_forward_10">Forward 10 seconds</string>
     <string name="cd_skip_next">Next track</string>
     <string name="touchpad_hint">Touch here to control the top screen</string>
+
+    <!-- Tool display names -->
+    <string name="tool_name_mirror">Mirror</string>
+    <string name="tool_name_media">Media</string>
+    <string name="tool_name_touchpad">Touchpad</string>
+
+    <!-- Settings screen -->
+    <string name="settings_close">Close</string>
+    <string name="cd_open_settings">Open settings</string>
+    <string name="cd_open_global_settings">Open global settings</string>
+    <string name="cd_drag_reorder">Drag to reorder</string>
+    <string name="settings_section_tools">Tools</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_move_up">Move up</string>
+    <string name="settings_move_down">Move down</string>
+    <string name="settings_auto_start_capture">Auto-start mirroring</string>
+    <string name="settings_auto_start_capture_desc">Automatically request screen capture permission when the app opens</string>
+    <string name="settings_overlay_timeout">Controls hide after: %ds</string>
+    <string name="settings_no_tool_settings">No settings available for this tool.</string>
+    <string name="settings_global_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_accent_color">Accent color</string>
+    <string name="settings_accent_color_picker_title">Pick accent color</string>
+    <string name="settings_color_brightness">Brightness</string>
+    <string name="settings_color_cancel">Cancel</string>
+    <string name="settings_color_apply">Apply</string>
 </resources>
