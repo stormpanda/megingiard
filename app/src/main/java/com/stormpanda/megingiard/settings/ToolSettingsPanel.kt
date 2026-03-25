@@ -1,13 +1,16 @@
 package com.stormpanda.megingiard.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -56,23 +59,14 @@ fun ToolSettingsPanel(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 4.dp, end = 4.dp, top = 4.dp),
+                    .padding(start = 16.dp, end = 4.dp, top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onOpenGlobalSettings) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = stringResource(R.string.cd_open_global_settings),
-                        tint = PANEL_TEXT
-                    )
-                }
                 Text(
                     text = stringResource(currentMode.displayNameResId()),
                     color = PANEL_TEXT,
                     fontSize = 18.sp,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 4.dp)
+                    modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
@@ -103,6 +97,41 @@ fun ToolSettingsPanel(
                         )
                     }
                 }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = PANEL_PADDING),
+                color = PANEL_DIVIDER
+            )
+
+            // Footer: navigate to global settings
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenGlobalSettings)
+                    .padding(horizontal = PANEL_PADDING, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = null,
+                    tint = PANEL_TEXT_SECONDARY,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = stringResource(R.string.settings_all_settings),
+                    color = PANEL_TEXT_SECONDARY,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp)
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = PANEL_TEXT_SECONDARY,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
