@@ -90,7 +90,7 @@ fun MainAppScreen() {
                     }
                 }
                 AppMode.MEDIA -> MediaScreen()
-                AppMode.TOUCHPAD -> TouchpadScreen()
+                AppMode.TOUCHPAD -> TouchpadScreen(onInteraction = onInteraction)
             }
         }
 

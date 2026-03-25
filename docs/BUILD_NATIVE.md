@@ -20,10 +20,10 @@ installation**. Rebuild only if you change `touchinjector.c`.
 
 ## Prerequisites
 
-| Tool | Version used | Notes |
-|------|-------------|-------|
-| Android NDK | **r27c** | Standalone, not managed by AGP |
-| Host OS | macOS (darwin-x86_64) | Adjust toolchain path for Linux |
+| Tool        | Version used          | Notes                           |
+| ----------- | --------------------- | ------------------------------- |
+| Android NDK | **r27c**              | Standalone, not managed by AGP  |
+| Host OS     | macOS (darwin-x86_64) | Adjust toolchain path for Linux |
 
 ### Download NDK r27c (if not present)
 
@@ -79,11 +79,11 @@ runtime and sets `chmod +x` before first use.
 
 The binary accepts commands on **stdin** and signals readiness on **stdout**.
 
-| Line sent to stdin | Meaning |
-|--------------------|---------|
+| Line sent to stdin | Meaning                                             |
+| ------------------ | --------------------------------------------------- |
 | `D <x> <y>\n`      | Finger DOWN at physical portrait coordinates (x, y) |
-| `M <x> <y>\n`      | Finger MOVE to (x, y) |
-| `U <x> <y>\n`      | Finger UP |
+| `M <x> <y>\n`      | Finger MOVE to (x, y)                               |
+| `U <x> <y>\n`      | Finger UP                                           |
 
 On startup the binary writes `R\n` to stdout once the `/dev/input/event6`
 file descriptor is open and ready.
@@ -121,14 +121,14 @@ no dynamic linker path issues when running from `filesDir`.
 
 ## Device specifics (AYN Thor)
 
-| Property | Value |
-|----------|-------|
-| Input node | `/dev/input/event6` |
-| Driver | `fts_ts` |
-| Permissions | `crw-rw-rw-` (no root required) |
-| MT protocol | Type B (slot-based) |
-| Physical size | 1080 × 1920 (portrait) |
-| Display rotation at runtime | ROTATION_270 |
+| Property                    | Value                           |
+| --------------------------- | ------------------------------- |
+| Input node                  | `/dev/input/event6`             |
+| Driver                      | `fts_ts`                        |
+| Permissions                 | `crw-rw-rw-` (no root required) |
+| MT protocol                 | Type B (slot-based)             |
+| Physical size               | 1080 × 1920 (portrait)          |
+| Display rotation at runtime | ROTATION_270                    |
 
 This approach is **AYN Thor-specific**. On standard Android devices
 `/dev/input/` is not world-writable and the binary will fail to open

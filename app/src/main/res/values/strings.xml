@@ -21,6 +21,4 @@
     <string name="cd_forward_10">Forward 10 seconds</string>
     <string name="cd_skip_next">Next track</string>
     <string name="touchpad_hint">Touch here to control the top screen</string>
-    <string name="touchpad_cd_touch_surface">Touch surface</string>
-    <string name="touchpad_cd_touch_indicator">Touch indicator</string>
 </resources>

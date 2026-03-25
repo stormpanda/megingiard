@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,8 +36,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.CarouselOverlay
-import com.stormpanda.megingiard.ui.rememberAutoHideState
 import kotlin.math.roundToInt
 
 private const val TOUCH_AREA_ASPECT_RATIO = 16f / 9f
@@ -46,7 +45,7 @@ private val TOUCH_INDICATOR_ALPHA = 0.5f
 private val TOUCH_AREA_CORNER_RADIUS = 4.dp
 
 @Composable
-fun TouchpadScreen(modifier: Modifier = Modifier) {
+fun TouchpadScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     // Deploy and start the native touch injector once per session.
@@ -55,14 +54,17 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
         TouchpadManager.start(context)
     }
 
-    val (showControls, onInteraction) = rememberAutoHideState()
+    // Stop the injector process when leaving TOUCHPAD mode so it doesn't
+    // linger across mode switches. MainAppScreen handles the CarouselOverlay.
+    DisposableEffect(Unit) {
+        onDispose { TouchpadManager.stop() }
+    }
 
     Box(
         modifier = modifier.fillMaxSize().background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
         TouchSurface(onInteraction = onInteraction)
-        CarouselOverlay(visible = showControls)
     }
 }
 
