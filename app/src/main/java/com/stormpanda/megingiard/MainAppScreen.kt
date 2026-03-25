@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.media.MediaScreen
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.rememberAutoHideState
@@ -36,6 +37,7 @@ fun MainAppScreen() {
     val currentMode by AppStateManager.currentMode.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
+    val accentColor by SettingsManager.accentColor.collectAsState()
 
     val (showControls, onInteraction) = rememberAutoHideState()
 
@@ -66,7 +68,7 @@ fun MainAppScreen() {
                                 Button(
                                     onClick = { AppStateManager.setUserDeclinedCapture(false) },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.Red.copy(alpha = 0.6f)
+                                        containerColor = accentColor.copy(alpha = 0.6f)
                                     ),
                                     modifier = Modifier.padding(16.dp).height(72.dp)
                                 ) {

@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,8 +32,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.settings.SettingsScreen
+import com.stormpanda.megingiard.settings.ToolSettingsPanel
 import kotlinx.coroutines.delay
 
 private val OVERLAY_BUTTON_SIZE = 72.dp
@@ -67,75 +70,95 @@ fun rememberAutoHideState(): Pair<Boolean, () -> Unit> {
 }
 
 /**
- * Translucent carousel navigation overlay that fades in/out.
- * Shows left/right chevrons when more than one tool is active.
- * Always shows a settings gear button at the top-right corner.
+ * Carousel navigation overlay with auto-hide.
+ * Gear button (TopEnd) opens [ToolSettingsPanel] which in turn can open [GlobalSettingsScreen].
  */
 @Composable
 fun CarouselOverlay(visible: Boolean, modifier: Modifier = Modifier) {
     val activeTools by SettingsManager.activeTools.collectAsState()
-    var showSettings by remember { mutableStateOf(false) }
+    var showToolPanel by remember { mutableStateOf(false) }
+    var showGlobalSettings by remember { mutableStateOf(false) }
 
-    if (showSettings) {
-        SettingsScreen(onDismiss = { showSettings = false })
+    // ToolSettingsPanel renders as a floating Dialog window – outside the Box hierarchy
+    if (showToolPanel) {
+        ToolSettingsPanel(
+            onDismiss = { showToolPanel = false },
+            onOpenGlobalSettings = {
+                showToolPanel = false
+                showGlobalSettings = true
+            }
+        )
     }
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = modifier.fillMaxSize()
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (activeTools.size > 1) {
-                IconButton(
-                    onClick = { AppStateManager.prevMode() },
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = OVERLAY_PADDING)
-                        .size(OVERLAY_BUTTON_SIZE)
-                        .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.ChevronLeft,
-                        contentDescription = stringResource(R.string.cd_previous_tool),
-                        tint = Color.White,
-                        modifier = Modifier.size(OVERLAY_ICON_SIZE)
-                    )
+    Box(modifier = modifier.fillMaxSize()) {
+        // Auto-hide overlay: chevrons + gear button
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (activeTools.size > 1) {
+                    IconButton(
+                        onClick = { AppStateManager.prevMode() },
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = OVERLAY_PADDING)
+                            .size(OVERLAY_BUTTON_SIZE)
+                            .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ChevronLeft,
+                            contentDescription = stringResource(R.string.cd_previous_tool),
+                            tint = Color.White,
+                            modifier = Modifier.size(OVERLAY_ICON_SIZE)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { AppStateManager.nextMode() },
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = OVERLAY_PADDING)
+                            .size(OVERLAY_BUTTON_SIZE)
+                            .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ChevronRight,
+                            contentDescription = stringResource(R.string.cd_next_tool),
+                            tint = Color.White,
+                            modifier = Modifier.size(OVERLAY_ICON_SIZE)
+                        )
+                    }
                 }
 
                 IconButton(
-                    onClick = { AppStateManager.nextMode() },
+                    onClick = { showToolPanel = true },
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = OVERLAY_PADDING)
-                        .size(OVERLAY_BUTTON_SIZE)
+                        .align(Alignment.TopEnd)
+                        .padding(top = OVERLAY_PADDING, end = OVERLAY_PADDING)
+                        .size(SETTINGS_BUTTON_SIZE)
                         .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ChevronRight,
-                        contentDescription = stringResource(R.string.cd_next_tool),
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.cd_open_settings),
                         tint = Color.White,
-                        modifier = Modifier.size(OVERLAY_ICON_SIZE)
+                        modifier = Modifier.size(SETTINGS_ICON_SIZE)
                     )
                 }
             }
+        }
 
-            IconButton(
-                onClick = { showSettings = true },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = OVERLAY_PADDING, end = OVERLAY_PADDING)
-                    .size(SETTINGS_BUTTON_SIZE)
-                    .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = stringResource(R.string.cd_open_settings),
-                    tint = Color.White,
-                    modifier = Modifier.size(SETTINGS_ICON_SIZE)
-                )
-            }
+        // Global settings screen slides up over the entire window
+        AnimatedVisibility(
+            visible = showGlobalSettings,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            GlobalSettingsScreen(onBack = { showGlobalSettings = false })
         }
     }
 }

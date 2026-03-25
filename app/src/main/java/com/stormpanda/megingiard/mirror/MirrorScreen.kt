@@ -41,7 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.CarouselOverlay
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.rememberAutoHideState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -61,6 +61,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
+    val accentColor by SettingsManager.accentColor.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     val animScale = remember { Animatable(ZOOM_MIN) }
@@ -150,8 +151,6 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxSize()
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                CarouselOverlay(visible = true)
-
                 val context = LocalContext.current
                 Row(
                     modifier = Modifier
@@ -169,7 +168,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         },
                         modifier = Modifier
                             .size(CONTROL_BUTTON_SIZE)
-                            .background(Color.Red.copy(alpha = 0.6f), RoundedCornerShape(50))
+                            .background(accentColor.copy(alpha = 0.6f), RoundedCornerShape(50))
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Stop,
@@ -184,7 +183,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .size(CONTROL_BUTTON_SIZE)
                             .background(
-                                color = if (isFrozen) Color.Red.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.3f),
+                                color = if (isFrozen) accentColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.3f),
                                 shape = RoundedCornerShape(50)
                             )
                     ) {

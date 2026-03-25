@@ -1,15 +1,20 @@
 package com.stormpanda.megingiard.settings
 
 import android.content.Context
+import android.graphics.Color as AndroidColor
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,11 +32,14 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
     name = SETTINGS_DATASTORE_NAME
 )
 
+private val DEFAULT_ACCENT_COLOR: Int = AndroidColor.argb(255, 204, 0, 0)
+
 object SettingsManager {
     private val KEY_ENABLED_TOOLS = stringPreferencesKey("enabled_tools")
     private val KEY_TOOL_ORDER = stringPreferencesKey("tool_order")
     private val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
     private val KEY_OVERLAY_TIMEOUT_MS = longPreferencesKey("overlay_timeout_ms")
+    private val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
 
     private val scope = CoroutineScope(SupervisorJob())
     private lateinit var dataStore: DataStore<Preferences>
@@ -51,6 +59,9 @@ object SettingsManager {
 
     private val _activeTools = MutableStateFlow(AppMode.entries.toList())
     val activeTools: StateFlow<List<AppMode>> = _activeTools.asStateFlow()
+
+    private val _accentColor = MutableStateFlow(Color(DEFAULT_ACCENT_COLOR))
+    val accentColor: StateFlow<Color> = _accentColor.asStateFlow()
 
     fun init(context: Context) {
         if (initialized) return
@@ -78,6 +89,7 @@ object SettingsManager {
 
                 _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
                 _overlayTimeoutMs.value = prefs[KEY_OVERLAY_TIMEOUT_MS] ?: DEFAULT_OVERLAY_TIMEOUT_MS
+                _accentColor.value = Color(prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR)
             }
         }
 
@@ -127,4 +139,19 @@ object SettingsManager {
             }
         }
     }
+
+    fun setAccentColor(color: Color) {
+        _accentColor.value = color
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_ACCENT_COLOR] = color.toArgb()
+            }
+        }
+    }
+}
+
+internal fun AppMode.displayNameResId(): Int = when (this) {
+    AppMode.MIRROR -> R.string.tool_name_mirror
+    AppMode.MEDIA -> R.string.tool_name_media
+    AppMode.TOUCHPAD -> R.string.tool_name_touchpad
 }
