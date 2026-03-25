@@ -68,7 +68,7 @@ fun MainAppScreen() {
                                 Button(
                                     onClick = { AppStateManager.setUserDeclinedCapture(false) },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = accentColor.copy(alpha = 0.6f)
+                                        containerColor = accentColor
                                     ),
                                     modifier = Modifier.padding(16.dp).height(72.dp)
                                 ) {

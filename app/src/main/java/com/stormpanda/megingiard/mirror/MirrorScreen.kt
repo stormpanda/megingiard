@@ -168,7 +168,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         },
                         modifier = Modifier
                             .size(CONTROL_BUTTON_SIZE)
-                            .background(accentColor.copy(alpha = 0.6f), RoundedCornerShape(50))
+                            .background(accentColor, RoundedCornerShape(50))
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Stop,
@@ -183,7 +183,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .size(CONTROL_BUTTON_SIZE)
                             .background(
-                                color = if (isFrozen) accentColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.3f),
+                                color = if (isFrozen) accentColor else Color.White.copy(alpha = 0.3f),
                                 shape = RoundedCornerShape(50)
                             )
                     ) {

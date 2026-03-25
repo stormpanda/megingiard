@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -153,6 +154,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     )
                     OverlayTimeoutRow(
                         overlayTimeoutMs = overlayTimeoutMs,
+                        accentColor = accentColor,
                         onTimeoutChanged = { SettingsManager.setOverlayTimeoutMs(it) }
                     )
                     HorizontalDivider(color = GS_DIVIDER)
@@ -215,7 +217,7 @@ private fun ToolOrderRow(
                 checkedColor = accentColor,
                 checkmarkColor = Color.White,
                 uncheckedColor = GS_TEXT_SECONDARY,
-                disabledCheckedColor = accentColor.copy(alpha = 0.4f)
+                disabledCheckedColor = accentColor
             )
         )
         Text(
@@ -252,6 +254,7 @@ private fun ToolOrderRow(
 @Composable
 private fun OverlayTimeoutRow(
     overlayTimeoutMs: Long,
+    accentColor: Color,
     onTimeoutChanged: (Long) -> Unit
 ) {
     val seconds = (overlayTimeoutMs / 1000L).toInt()
@@ -273,6 +276,10 @@ private fun OverlayTimeoutRow(
                 onTimeoutChanged(snapped)
             },
             valueRange = 1000f..15000f,
+            colors = SliderDefaults.colors(
+                thumbColor = accentColor,
+                activeTrackColor = accentColor
+            ),
             modifier = Modifier.fillMaxWidth()
         )
     }
