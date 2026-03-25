@@ -20,6 +20,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -110,7 +111,9 @@ class MirrorPresentation(
 
         val composeView = ComposeView(context).apply {
             setContent {
-                MirrorScreen()
+                MaterialTheme {
+                    MirrorScreen()
+                }
             }
         }
         container.addView(composeView, FrameLayout.LayoutParams(

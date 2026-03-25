@@ -35,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.SettingsManager
 
 class MainActivity : ComponentActivity() {
 
@@ -55,6 +56,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SettingsManager.init(this)
         enableEdgeToEdge()
         setContent {
             var hasNotificationAccess by remember { mutableStateOf(isNotificationListenerEnabled(this@MainActivity)) }
@@ -89,10 +91,14 @@ class MainActivity : ComponentActivity() {
             }
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
+            val autoStartCapture by SettingsManager.autoStartCapture.collectAsState()
 
-            // Once notification access is granted and we're not yet capturing, launch proxy on main screen
-            LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
-                if (hasNotificationAccess && !isCapturing && !promptInFlight && isOnValidScreenLocal && !userDeclinedCapture) {
+            // Once notification access is granted and we're not yet capturing, launch proxy on main screen.
+            // With autoStartCapture=false (default) the user must tap "Start mirroring" manually.
+            // With autoStartCapture=true the prompt fires automatically whenever conditions are met.
+            LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture, autoStartCapture) {
+                val shouldTrigger = if (autoStartCapture) !isCapturing else !isCapturing && !userDeclinedCapture
+                if (hasNotificationAccess && !promptInFlight && isOnValidScreenLocal && shouldTrigger) {
                     AppStateManager.setPromptInFlight(true)
                     val options = ActivityOptions.makeBasic()
                     options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)

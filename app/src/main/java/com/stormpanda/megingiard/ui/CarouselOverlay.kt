@@ -12,38 +12,46 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.SettingsScreen
 import kotlinx.coroutines.delay
 
 private val OVERLAY_BUTTON_SIZE = 72.dp
 private val OVERLAY_ICON_SIZE = 36.dp
 private val OVERLAY_PADDING = 16.dp
-private val OVERLAY_TIMEOUT_MS = 3_000L
+private val SETTINGS_BUTTON_SIZE = 48.dp
+private val SETTINGS_ICON_SIZE = 24.dp
 
 /**
  * Remembers a pair of (showControls, onInteraction) where calling onInteraction()
- * shows the controls and resets the auto-hide timer to [timeoutMs] milliseconds.
+ * shows the controls and resets the auto-hide timer. The timeout is read from
+ * [SettingsManager.overlayTimeoutMs].
  */
 @Composable
-fun rememberAutoHideState(timeoutMs: Long = OVERLAY_TIMEOUT_MS): Pair<Boolean, () -> Unit> {
+fun rememberAutoHideState(): Pair<Boolean, () -> Unit> {
+    val timeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
     var showControls by rememberSaveable { mutableStateOf(false) }
     var interactionTime by rememberSaveable { mutableStateOf(0L) }
 
-    LaunchedEffect(showControls, interactionTime) {
+    LaunchedEffect(showControls, interactionTime, timeoutMs) {
         if (showControls) {
             delay(timeoutMs)
             showControls = false
@@ -59,11 +67,19 @@ fun rememberAutoHideState(timeoutMs: Long = OVERLAY_TIMEOUT_MS): Pair<Boolean, (
 }
 
 /**
- * Translucent left/right carousel navigation overlay that fades in/out.
- * Calls [AppStateManager.prevMode] / [AppStateManager.nextMode] on tap.
+ * Translucent carousel navigation overlay that fades in/out.
+ * Shows left/right chevrons when more than one tool is active.
+ * Always shows a settings gear button at the top-right corner.
  */
 @Composable
 fun CarouselOverlay(visible: Boolean, modifier: Modifier = Modifier) {
+    val activeTools by SettingsManager.activeTools.collectAsState()
+    var showSettings by remember { mutableStateOf(false) }
+
+    if (showSettings) {
+        SettingsScreen(onDismiss = { showSettings = false })
+    }
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(),
@@ -71,35 +87,53 @@ fun CarouselOverlay(visible: Boolean, modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize()
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            IconButton(
-                onClick = { AppStateManager.prevMode() },
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = OVERLAY_PADDING)
-                    .size(OVERLAY_BUTTON_SIZE)
-                    .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.ChevronLeft,
-                    contentDescription = stringResource(R.string.cd_previous_tool),
-                    tint = Color.White,
-                    modifier = Modifier.size(OVERLAY_ICON_SIZE)
-                )
+            if (activeTools.size > 1) {
+                IconButton(
+                    onClick = { AppStateManager.prevMode() },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = OVERLAY_PADDING)
+                        .size(OVERLAY_BUTTON_SIZE)
+                        .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ChevronLeft,
+                        contentDescription = stringResource(R.string.cd_previous_tool),
+                        tint = Color.White,
+                        modifier = Modifier.size(OVERLAY_ICON_SIZE)
+                    )
+                }
+
+                IconButton(
+                    onClick = { AppStateManager.nextMode() },
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = OVERLAY_PADDING)
+                        .size(OVERLAY_BUTTON_SIZE)
+                        .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ChevronRight,
+                        contentDescription = stringResource(R.string.cd_next_tool),
+                        tint = Color.White,
+                        modifier = Modifier.size(OVERLAY_ICON_SIZE)
+                    )
+                }
             }
 
             IconButton(
-                onClick = { AppStateManager.nextMode() },
+                onClick = { showSettings = true },
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = OVERLAY_PADDING)
-                    .size(OVERLAY_BUTTON_SIZE)
+                    .align(Alignment.TopEnd)
+                    .padding(top = OVERLAY_PADDING, end = OVERLAY_PADDING)
+                    .size(SETTINGS_BUTTON_SIZE)
                     .background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(50))
             ) {
                 Icon(
-                    imageVector = Icons.Filled.ChevronRight,
-                    contentDescription = stringResource(R.string.cd_next_tool),
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.cd_open_settings),
                     tint = Color.White,
-                    modifier = Modifier.size(OVERLAY_ICON_SIZE)
+                    modifier = Modifier.size(SETTINGS_ICON_SIZE)
                 )
             }
         }
