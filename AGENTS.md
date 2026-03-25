@@ -28,6 +28,7 @@
 | `PRD.md`                  | Product requirements (German, authoritative)      |
 | `docs/REQUIREMENTS.md`    | Detailed functional & non-functional requirements |
 | `docs/ARCHITECTURE.md`    | Hardware-level architecture decisions & rationale |
+| `docs/BUILD_NATIVE.md`    | How to rebuild the native touch-injector binary   |
 | `AGENTS.md` _(this file)_ | AI agent coding conventions & constraints         |
 
 ---
@@ -49,6 +50,10 @@ com.stormpanda.megingiard
 │ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze controls)
 │ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, etc.)
 │ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
+├── touchpad/
+│ ├── ShellInputInjector.kt # Native binary lifecycle, writer thread, MOVE coalescing
+│ ├── TouchpadManager.kt # Normalised → physical coordinate transform
+│ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
 └── ui/
 └── CarouselOverlay.kt # Shared overlay components (auto-hide, chevron nav)
 \`\`\`
@@ -307,6 +312,24 @@ lifecycleOwner.destroy()
 }
 \`\`\`
 
+### 9.7 Native Touch Injection (Touchpad)
+
+- `ShellInputInjector` manages the lifecycle of the `touchinjector_arm64`
+  native helper binary (bundled in `assets/`). On `start()`, the binary is
+  copied to `filesDir`, made executable, and launched via `ProcessBuilder`.
+  It opens `/dev/input/event6` once and stays alive for the session.
+- The binary is driven via **stdin** (`"D x y\n"` / `"M x y\n"` / `"U x y\n"`)
+  and signals readiness with `"R\n"` on stdout. A dedicated writer thread
+  coalesces pending MOVE events (keep-latest) to prevent backlog.
+- `TouchpadManager.injectTouch()` converts normalised Compose coordinates to
+  the sensor's physical portrait space:
+  `sensor_x = (1 − normalizedY) * 1080`, `sensor_y = normalizedX * 1920`.
+- `ShellInputInjector.stop()` **must** be called when leaving `TOUCHPAD` mode.
+  In `TouchpadScreen` this is done via `DisposableEffect(Unit) { onDispose { TouchpadManager.stop() } }`.
+- The device node `/dev/input/event6` is `crw-rw-rw-` on the AYN Thor —
+  no root or special permission required beyond the standard shell UID (2000).
+  See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
+
 ---
 
 ## 10 Build & Dependencies
@@ -365,4 +388,6 @@ Before marking a task as done, verify:
 - [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
 - [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
+- [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR` (not `mode != AppMode.MEDIA`)
+- [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Zero compiler errors confirmed via IDE or `./gradlew compileDebugKotlin`

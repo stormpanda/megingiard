@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.media.MediaScreen
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.rememberAutoHideState
 
@@ -89,6 +90,7 @@ fun MainAppScreen() {
                     }
                 }
                 AppMode.MEDIA -> MediaScreen()
+                AppMode.TOUCHPAD -> TouchpadScreen(onInteraction = onInteraction)
             }
         }
 

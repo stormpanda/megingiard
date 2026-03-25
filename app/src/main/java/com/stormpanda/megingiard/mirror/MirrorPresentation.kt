@@ -142,7 +142,7 @@ class MirrorPresentation(
                 AppStateManager.isActivityResumed,
                 AppStateManager.isOnValidScreen
             ) { mode, isResumed, isValid ->
-                mode != AppMode.MEDIA && isResumed && isValid
+                mode == AppMode.MIRROR && isResumed && isValid
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }
