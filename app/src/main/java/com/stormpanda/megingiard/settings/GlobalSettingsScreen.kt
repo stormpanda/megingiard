@@ -34,9 +34,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import java.util.Locale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -183,7 +185,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
 @Composable
 private fun SettingsCategoryHeader(text: String, accentColor: Color) {
     Text(
-        text = text.uppercase(),
+        text = text.uppercase(Locale.ROOT),
         color = accentColor,
         fontSize = 11.sp,
         letterSpacing = 1.sp,
@@ -247,7 +249,8 @@ private fun OverlayTimeoutRow(
     accentColor: Color,
     onTimeoutChanged: (Long) -> Unit
 ) {
-    val seconds = (overlayTimeoutMs / 1000L).toInt()
+    var sliderValue by remember { mutableFloatStateOf(overlayTimeoutMs.toFloat()) }
+    val seconds = (sliderValue / 1000f).roundToInt()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -260,9 +263,10 @@ private fun OverlayTimeoutRow(
             fontSize = 14.sp
         )
         Slider(
-            value = overlayTimeoutMs.toFloat(),
-            onValueChange = {
-                val snapped = (it / 1000f).roundToInt().toLong().coerceIn(1L, 15L) * 1000L
+            value = sliderValue,
+            onValueChange = { sliderValue = it },
+            onValueChangeFinished = {
+                val snapped = (sliderValue / 1000f).roundToInt().toLong().coerceIn(1L, 15L) * 1000L
                 onTimeoutChanged(snapped)
             },
             valueRange = 1000f..15000f,

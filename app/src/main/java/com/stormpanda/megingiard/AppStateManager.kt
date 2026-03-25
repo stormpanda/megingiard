@@ -27,14 +27,16 @@ object AppStateManager {
     fun nextMode() {
         val active = SettingsManager.activeTools.value
         if (active.size <= 1) return
-        val currentIndex = active.indexOf(_currentMode.value).coerceAtLeast(0)
+        val currentIndex = active.indexOf(_currentMode.value)
+        if (currentIndex == -1) { _currentMode.value = active.first(); return }
         _currentMode.value = active[(currentIndex + 1) % active.size]
     }
 
     fun prevMode() {
         val active = SettingsManager.activeTools.value
         if (active.size <= 1) return
-        val currentIndex = active.indexOf(_currentMode.value).coerceAtLeast(0)
+        val currentIndex = active.indexOf(_currentMode.value)
+        if (currentIndex == -1) { _currentMode.value = active.first(); return }
         _currentMode.value = active[(currentIndex - 1 + active.size) % active.size]
     }
 

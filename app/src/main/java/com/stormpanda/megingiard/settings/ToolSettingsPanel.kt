@@ -119,7 +119,7 @@ fun ToolSettingsPanel(
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = stringResource(R.string.settings_all_settings),
+                    text = stringResource(R.string.cd_open_global_settings),
                     color = PANEL_TEXT_SECONDARY,
                     fontSize = 14.sp,
                     modifier = Modifier
