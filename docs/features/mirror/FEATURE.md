@@ -51,6 +51,25 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Stopping MUST release the `MediaProjection` and cease all capture activity.
 - After stopping, the primary display shows a "Start Mirroring" button to re-initiate capture with a new consent flow.
 
+### FR-M6: View Lock
+
+- A **Lock** button MUST be available in the controls overlay.
+- When locked, all pan and zoom gestures MUST be disabled, including double-tap reset.
+- Unlocking MUST restore full pan/zoom functionality.
+- If **Touch Projection** is active when the user taps the Lock button (to unlock), Touch Projection MUST also be deactivated.
+
+### FR-M7: Touch Projection
+
+- A **Touch Projection** button MUST be available in the controls overlay.
+- When active, all touch events on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
+- The projected touch position MUST account for the current **zoom level and pan offset**: a user touching a zoomed-in area MUST interact with the correct pixel on the primary display, not the raw viewport pixel.
+- Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the overlay.
+- When the user's finger moves outside the visible content area (due to zoom), an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
+- Activating Touch Projection MUST automatically activate View Lock (zoom/pan during forwarding is not supported).
+- While Touch Projection is active, normal touches (outside the edge zone) MUST NOT show the control button row — only edge-swipe reveals the buttons, reducing visual distraction during precise input.
+- A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
+- All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
+
 ---
 
 ## Technical Implementation
@@ -158,6 +177,48 @@ combine(currentMode, isActivityResumed, isOnValidScreen) { mode, resumed, valid 
 - Class-level scope: `CoroutineScope(SupervisorJob() + Dispatchers.Main)`.
 - `onDestroy()` cancels the scope, calls `virtualDisplay?.release()`, `mediaProjection?.stop()`, and `mirrorPresentation?.dismiss()`.
 
+### View Lock & Touch Projection
+
+**State (`ScreenCaptureManager`):**
+
+| Flow                      | Type                 | Default | Description                |
+| ------------------------- | -------------------- | ------- | -------------------------- |
+| `isLocked`                | `StateFlow<Boolean>` | `false` | Pan/zoom gestures disabled |
+| `isTouchProjectionActive` | `StateFlow<Boolean>` | `false` | Touch forwarding active    |
+
+**`setTouchProjectionActive(active: Boolean)`** auto-enables lock when `active = true`. **`toggleLocked()`** also deactivates touch projection when unlocking.
+
+**View Lock implementation:** The `detectTransformGestures` and `detectTapGestures (onDoubleTap)` `pointerInput` blocks use `isLocked` as a key. When the lock engages, the transform-gesture block returns immediately (`return@pointerInput`); the block restarts unlocked when the key changes back to `false`.
+
+**Touch Projection implementation:**
+
+A fourth `pointerInput` block, placed last in the modifier chain (innermost = first at `PointerEventPass.Main`), intercepts touch events:
+
+1. **Edge-zone exclusion**: gestures beginning within 40 dp of the overlay edge are flagged (`gestureInEdgeZone = true`) and let fall through to the swipe handler.
+2. **Coordinate inversion**: maps the raw touch back through the current zoom/pan transform to content-normalised coordinates:
+   ```
+   contentX = (touchX − centerX − offsetX) / scale + centerX
+   normalizedX = contentX / surfaceWidth
+   ```
+   If the result is outside [0, 1], `projectCoordinates()` returns `null` — the touch is inside a letterbox bar and is discarded (or an UP is sent if a gesture was in progress).
+3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command.
+
+**Shared injection infrastructure** (`input/` package):
+
+| File                    | Role                                                                   |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `TouchAction.kt`        | Shared `DOWN / MOVE / UP` enum                                         |
+| `ShellInputInjector.kt` | Native binary lifecycle, writer thread, MOVE coalescing                |
+| `TouchInjector.kt`      | `start / stop / injectTouch` facade with hardware coordinate transform |
+
+Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both features; only one can be active at a time by design (they correspond to separate `AppMode` values).
+
+**Lifecycle:**
+
+- `LaunchedEffect(isTouchProjectionActive)` starts the injector when projection is enabled and stops it when disabled.
+- `DisposableEffect(Unit)` stops the injector unconditionally when `MirrorScreen` leaves composition (mode switch).
+- `resetMirrorSessionState()` resets `isLocked`, `isTouchProjectionActive`, and `isFrozen` atomically — called from the Stop button.
+
 ### Source Files
 
 | File                                  | Responsibility                                                                          |
@@ -165,5 +226,7 @@ combine(currentMode, isActivityResumed, isOnValidScreen) { mode, resumed, valid 
 | `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                 |
 | `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic |
 | `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` for Compose-in-Presentation      |
-| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze state, frozen bitmap                             |
-| `MirrorScreen.kt`                     | Compose UI: gesture handling, freeze/stop controls, `CarouselOverlay`                   |
+| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap     |
+| `MirrorScreen.kt`                     | Compose UI: gesture handling, 4 control buttons, touch projection, `CarouselOverlay`    |
+| `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                         |
+| `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                        |

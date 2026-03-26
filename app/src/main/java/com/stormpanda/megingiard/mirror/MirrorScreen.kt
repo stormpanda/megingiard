@@ -13,16 +13,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,42 +40,55 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private val CONTROL_BUTTON_SIZE = 72.dp
 private val CONTROL_ICON_SIZE = 36.dp
 private val CONTROL_BUTTON_GAP = 16.dp
 private val MR_SWIPE_EDGE_ZONE = 40.dp
 private val MR_SWIPE_THRESHOLD = 25.dp
+private val MR_TOUCH_INDICATOR_SIZE = 24.dp
+private const val MR_TOUCH_INDICATOR_ALPHA = 0.5f
 private const val ZOOM_MIN = 1f
 private const val ZOOM_MAX = 5f
 private const val SNAP_BACK_THRESHOLD = 1.15f
 
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
+    val isLocked by ScreenCaptureManager.isLocked.collectAsState()
+    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
 
     val animScale = remember { Animatable(ZOOM_MIN) }
     val animOffsetX = remember { Animatable(0f) }
@@ -77,17 +96,42 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val density = LocalDensity.current
     val edgeZonePx = with(density) { MR_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { MR_SWIPE_THRESHOLD.toPx() }
 
-    // Local visibility for stop/pause buttons — shown on any touch, independent of carousel
+    // Local visibility for the control button row — shown on any touch (or edge-swipe
+    // when touch projection is active), independently of the carousel overlay timer.
     var showButtons by remember { mutableStateOf(false) }
     var buttonTriggerCount by remember { mutableIntStateOf(0) }
     val isTouchingState by AppStateManager.isTouching.collectAsState()
     val overlayTimeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
 
-    // Auto-hide for mirror stop/pause buttons (independent of carousel overlay timer)
+    // Visual indicator dot that follows the finger during touch projection.
+    var touchIndicatorPos by remember { mutableStateOf<Offset?>(null) }
+
+    // Measured pixel size of the gesture Box, used for touch projection
+    // coordinate mapping and edge-zone calculations inside pointerInput blocks.
+    var gestureBoxSize by remember { mutableStateOf(IntSize.Zero) }
+
+    // Start / stop the native touch injector when projection is toggled.
+    // LaunchedEffect fires once on first composition too, so if projecting when
+    // returning to MIRROR mode after a carousel switch the injector auto-restarts.
+    LaunchedEffect(isTouchProjectionActive) {
+        if (isTouchProjectionActive) {
+            TouchInjector.start(context)
+        } else {
+            TouchInjector.stop()
+            touchIndicatorPos = null
+        }
+    }
+
+    // Ensure the injector is stopped whenever MirrorScreen leaves the composition
+    // (e.g. carousel switch away from MIRROR mode).
+    DisposableEffect(Unit) {
+        onDispose { TouchInjector.stop() }
+    }
+
+    // Auto-hide timer for the control button row (independent of carousel overlay timer).
     LaunchedEffect(buttonTriggerCount, isTouchingState, overlayTimeoutMs) {
         if (showButtons) {
             if (isTouchingState) return@LaunchedEffect
@@ -96,25 +140,27 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // Sync animated values to ScreenCaptureManager state flows via snapshotFlow,
-    // avoiding excessive LaunchedEffect restarts on every animation frame.
+    // Sync animated transform values to ScreenCaptureManager so MirrorPresentation's
+    // SurfaceView can apply the same transform.
     LaunchedEffect(Unit) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
-            .collectLatest { snapshot ->
-                ScreenCaptureManager.setScale(snapshot.first)
-                ScreenCaptureManager.setOffsetX(snapshot.second)
-                ScreenCaptureManager.setOffsetY(snapshot.third)
+            .collectLatest { (scale, ox, oy) ->
+                ScreenCaptureManager.setScale(scale)
+                ScreenCaptureManager.setOffsetX(ox)
+                ScreenCaptureManager.setOffsetY(oy)
             }
     }
 
-    // Outer Box: holds the gesture surface and the overlay as independent siblings so
-    // that CarouselOverlay pointer events are not intercepted by the gesture detectors.
+    // Outer Box: gesture surface and CarouselOverlay are siblings so overlay touch
+    // events are not intercepted by the gesture detectors below.
     Box(modifier = modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // Raw press/release observer: tracks isTouching + shows buttons + detects edge swipe
-                .pointerInput(overlayAtBottom) {
+                .onGloballyPositioned { coords -> gestureBoxSize = coords.size }
+                // Pass 1 — Initial pass: tracks isTouching, shows control buttons (with
+                // touch-projection-aware logic), and detects edge-zone swipe for overlay.
+                .pointerInput(overlayAtBottom, isTouchProjectionActive) {
                     awaitPointerEventScope {
                         var swipeStartY = Float.NaN
                         var swipeTriggered = false
@@ -123,13 +169,18 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             when (event.type) {
                                 PointerEventType.Press -> {
                                     AppStateManager.setTouching(true)
-                                    showButtons = true
-                                    buttonTriggerCount++
                                     val y = event.changes.firstOrNull()?.position?.y ?: 0f
                                     val nearEdge = if (overlayAtBottom) {
                                         y >= size.height - edgeZonePx
                                     } else {
                                         y <= edgeZonePx
+                                    }
+                                    // When touch projection is active, only edge-zone
+                                    // touches reveal the control buttons — normal touches
+                                    // are forwarded to the primary display silently.
+                                    if (!isTouchProjectionActive || nearEdge) {
+                                        showButtons = true
+                                        buttonTriggerCount++
                                     }
                                     swipeStartY = if (nearEdge) y else Float.NaN
                                     swipeTriggered = false
@@ -149,8 +200,6 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     }
                                 }
                                 PointerEventType.Release -> {
-                                    // Only clear touching when all pointers are up
-                                    // (multi-touch: one finger may release while another is still down)
                                     if (!event.changes.any { it.pressed }) {
                                         AppStateManager.setTouching(false)
                                         AppStateManager.setPillExpanded(false)
@@ -163,34 +212,130 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         }
                     }
                 }
-                .pointerInput(Unit) {
+                // Pass 2 — Double-tap resets zoom/pan; blocked when locked.
+                .pointerInput(isLocked) {
                     detectTapGestures(
                         onDoubleTap = {
-                            coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
-                            coroutineScope.launch { animOffsetX.animateTo(0f) }
-                            coroutineScope.launch { animOffsetY.animateTo(0f) }
+                            if (!isLocked) {
+                                coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
+                                coroutineScope.launch { animOffsetX.animateTo(0f) }
+                                coroutineScope.launch { animOffsetY.animateTo(0f) }
+                            }
                         }
                     )
                 }
-                .pointerInput(Unit) {
+                // Pass 3 — Pinch-zoom and pan; entirely disabled when locked.
+                // Using isLocked as key so the block exits immediately when lock is engaged.
+                .pointerInput(isLocked) {
+                    if (isLocked) return@pointerInput
                     while (true) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             coroutineScope.launch {
                                 val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
                                 animScale.snapTo(newScale)
-
-                                // Gallery-style hard-edge bounding
                                 val maxX = (surfaceWidth * (newScale - 1f)) / 2f
                                 val maxY = (surfaceHeight * (newScale - 1f)) / 2f
                                 animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
                                 animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
                             }
                         }
-                        // Snap back when a pinch-out drops below the comfortable threshold
+                        // Snap back to 1× when a pinch-out drops below the comfort threshold.
                         if (animScale.value < SNAP_BACK_THRESHOLD) {
                             coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
                             coroutineScope.launch { animOffsetX.animateTo(0f) }
                             coroutineScope.launch { animOffsetY.animateTo(0f) }
+                        }
+                    }
+                }
+                // Pass 4 — Touch projection: intercepts Main-pass events and forwards them
+                // to the primary display via the native touch injector.  Because this block
+                // is last in the modifier chain it processes Main-pass events FIRST, before
+                // the pinch/tap detectors above, and can consume them selectively.
+                // Touches inside the edge zone are never forwarded — the user needs that zone
+                // to trigger the overlay and turn off projection / lock.
+                .pointerInput(isTouchProjectionActive, overlayAtBottom) {
+                    if (!isTouchProjectionActive) return@pointerInput
+                    awaitPointerEventScope {
+                        var gestureInEdgeZone = false
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val pointer = event.changes.firstOrNull() ?: continue
+                            if (gestureBoxSize == IntSize.Zero) continue
+
+                            val touchY = pointer.position.y
+                            val touchX = pointer.position.x
+
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    val nearEdge = if (overlayAtBottom) {
+                                        touchY >= gestureBoxSize.height - edgeZonePx
+                                    } else {
+                                        touchY <= edgeZonePx
+                                    }
+                                    gestureInEdgeZone = nearEdge
+                                    if (nearEdge) continue
+
+                                    val (nx, ny) = projectCoordinates(
+                                        touchX, touchY,
+                                        ScreenCaptureManager.surfaceWidth.value,
+                                        ScreenCaptureManager.surfaceHeight.value,
+                                        ScreenCaptureManager.scale.value,
+                                        ScreenCaptureManager.offsetX.value,
+                                        ScreenCaptureManager.offsetY.value
+                                    ) ?: continue
+                                    touchIndicatorPos = pointer.position
+                                    TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
+                                    pointer.consume()
+                                }
+                                PointerEventType.Move -> {
+                                    if (gestureInEdgeZone) continue
+
+                                    val coords = projectCoordinates(
+                                        touchX, touchY,
+                                        ScreenCaptureManager.surfaceWidth.value,
+                                        ScreenCaptureManager.surfaceHeight.value,
+                                        ScreenCaptureManager.scale.value,
+                                        ScreenCaptureManager.offsetX.value,
+                                        ScreenCaptureManager.offsetY.value
+                                    )
+                                    if (coords == null) {
+                                        // Finger moved out of content area — send UP so the
+                                        // target app doesn't have a dangling touch.
+                                        touchIndicatorPos = null
+                                        val clamped = Pair(
+                                            (touchX / ScreenCaptureManager.surfaceWidth.value).coerceIn(0f, 1f),
+                                            (touchY / ScreenCaptureManager.surfaceHeight.value).coerceIn(0f, 1f)
+                                        )
+                                        TouchInjector.injectTouch(TouchAction.UP, clamped.first, clamped.second)
+                                        pointer.consume()
+                                        continue
+                                    }
+                                    val (nx, ny) = coords
+                                    touchIndicatorPos = pointer.position
+                                    TouchInjector.injectTouch(TouchAction.MOVE, nx, ny)
+                                    pointer.consume()
+                                }
+                                PointerEventType.Release -> {
+                                    touchIndicatorPos = null
+                                    if (!gestureInEdgeZone) {
+                                        // Always send UP so the target app cleans up its state.
+                                        val coords = projectCoordinates(
+                                            touchX, touchY,
+                                            ScreenCaptureManager.surfaceWidth.value,
+                                            ScreenCaptureManager.surfaceHeight.value,
+                                            ScreenCaptureManager.scale.value,
+                                            ScreenCaptureManager.offsetX.value,
+                                            ScreenCaptureManager.offsetY.value
+                                        )
+                                        val nx = coords?.first ?: (touchX / ScreenCaptureManager.surfaceWidth.value).coerceIn(0f, 1f)
+                                        val ny = coords?.second ?: (touchY / ScreenCaptureManager.surfaceHeight.value).coerceIn(0f, 1f)
+                                        TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+                                        pointer.consume()
+                                    }
+                                    gestureInEdgeZone = false
+                                }
+                                else -> Unit
+                            }
                         }
                     }
                 }
@@ -220,6 +365,23 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 )
             }
 
+            // Touch indicator dot: follows the finger while touch projection is active.
+            val indicatorPos = touchIndicatorPos
+            if (indicatorPos != null) {
+                val indicatorSizePx = with(density) { MR_TOUCH_INDICATOR_SIZE.toPx() }
+                Box(
+                    modifier = Modifier
+                        .size(MR_TOUCH_INDICATOR_SIZE)
+                        .offset {
+                            IntOffset(
+                                x = (indicatorPos.x - indicatorSizePx / 2f).roundToInt(),
+                                y = (indicatorPos.y - indicatorSizePx / 2f).roundToInt()
+                            )
+                        }
+                        .background(Color.White.copy(alpha = MR_TOUCH_INDICATOR_ALPHA), CircleShape)
+                )
+            }
+
             AnimatedVisibility(
                 visible = (showControls || showButtons) && isCapturing,
                 enter = fadeIn(),
@@ -227,18 +389,16 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxSize()
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    val context = LocalContext.current
                     Row(
-                        modifier = Modifier
-                            .align(Alignment.Center),
+                        modifier = Modifier.align(Alignment.Center),
                         horizontalArrangement = Arrangement.spacedBy(CONTROL_BUTTON_GAP)
                     ) {
+                        // Stop
                         IconButton(
                             onClick = {
                                 context.stopService(Intent(context, ScreenCaptureService::class.java))
                                 ScreenCaptureManager.setCapturing(false)
-                                ScreenCaptureManager.setFrozen(false)
-                                ScreenCaptureManager.setFrozenBitmap(null)
+                                ScreenCaptureManager.resetMirrorSessionState()
                                 AppStateManager.setUserDeclinedCapture(true)
                             },
                             modifier = Modifier
@@ -253,6 +413,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
+                        // Freeze / Unfreeze
                         IconButton(
                             onClick = { ScreenCaptureManager.toggleFrozen() },
                             modifier = Modifier
@@ -264,7 +425,51 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         ) {
                             Icon(
                                 imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                                contentDescription = stringResource(if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze),
+                                contentDescription = stringResource(
+                                    if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze
+                                ),
+                                tint = Color.White,
+                                modifier = Modifier.size(CONTROL_ICON_SIZE)
+                            )
+                        }
+
+                        // Lock / Unlock (also deactivates touch projection when unlocking,
+                        // since projection requires lock as a precondition).
+                        IconButton(
+                            onClick = { ScreenCaptureManager.toggleLocked() },
+                            modifier = Modifier
+                                .size(CONTROL_BUTTON_SIZE)
+                                .background(
+                                    color = if (isLocked) accentColor else Color.White.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(50)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = if (isLocked) Icons.Filled.Lock else Icons.Filled.LockOpen,
+                                contentDescription = stringResource(
+                                    if (isLocked) R.string.cd_unlock_view else R.string.cd_lock_view
+                                ),
+                                tint = Color.White,
+                                modifier = Modifier.size(CONTROL_ICON_SIZE)
+                            )
+                        }
+
+                        // Touch Projection on / off
+                        IconButton(
+                            onClick = { ScreenCaptureManager.toggleTouchProjection() },
+                            modifier = Modifier
+                                .size(CONTROL_BUTTON_SIZE)
+                                .background(
+                                    color = if (isTouchProjectionActive) accentColor else Color.White.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(50)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.TouchApp,
+                                contentDescription = stringResource(
+                                    if (isTouchProjectionActive) R.string.cd_touch_projection_off
+                                    else R.string.cd_touch_projection_on
+                                ),
                                 tint = Color.White,
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
@@ -281,4 +486,44 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         // MainAppScreen's CarouselOverlay would be invisible while mirroring.
         CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
     }
+}
+
+/**
+ * Maps a raw touch position on the mirror surface back through the current zoom/pan
+ * transform to obtain the normalised content coordinate [0, 1] that corresponds to
+ * the touched point on the primary display.
+ *
+ * Returns `null` when the touch lands outside the visible content area (e.g. letterbox
+ * bars), in which case the caller should not inject the touch.
+ *
+ * @param touchX   Raw X of the touch on the mirror surface (pixels)
+ * @param touchY   Raw Y of the touch on the mirror surface (pixels)
+ * @param sw       Surface width (pixels)
+ * @param sh       Surface height (pixels)
+ * @param scale    Current zoom scale (1.0 = no zoom)
+ * @param offsetX  Current pan offset X (pixels)
+ * @param offsetY  Current pan offset Y (pixels)
+ * @return Pair(normalizedX, normalizedY) or null if out-of-bounds
+ */
+private fun projectCoordinates(
+    touchX: Float,
+    touchY: Float,
+    sw: Float,
+    sh: Float,
+    scale: Float,
+    offsetX: Float,
+    offsetY: Float
+): Pair<Float, Float>? {
+    if (sw <= 0f || sh <= 0f || scale <= 0f) return null
+    val centerX = sw / 2f
+    val centerY = sh / 2f
+    // Invert the visual transform:
+    //   visual = (content - center) * scale + center + offset
+    //   content = (visual - center - offset) / scale + center
+    val contentX = (touchX - centerX - offsetX) / scale + centerX
+    val contentY = (touchY - centerY - offsetY) / scale + centerY
+    val nx = contentX / sw
+    val ny = contentY / sh
+    if (nx !in 0f..1f || ny !in 0f..1f) return null
+    return Pair(nx, ny)
 }

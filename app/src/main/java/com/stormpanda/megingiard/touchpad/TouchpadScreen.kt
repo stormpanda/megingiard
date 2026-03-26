@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.input.TouchInjector
 import kotlin.math.roundToInt
 
 private const val TOUCH_AREA_ASPECT_RATIO = 16f / 9f
@@ -51,13 +53,13 @@ fun TouchpadScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     // Deploy and start the native touch injector once per session.
     // Coordinates are hardware constants — no display-size query needed.
     LaunchedEffect(Unit) {
-        TouchpadManager.start(context)
+        TouchInjector.start(context)
     }
 
     // Stop the injector process when leaving TOUCHPAD mode so it doesn't
     // linger across mode switches. MainAppScreen handles the CarouselOverlay.
     DisposableEffect(Unit) {
-        onDispose { TouchpadManager.stop() }
+        onDispose { TouchInjector.stop() }
     }
 
     Box(
@@ -102,18 +104,18 @@ private fun TouchSurface(onInteraction: () -> Unit) {
                             PointerEventType.Press -> {
                                 touchPos = pointer.position
                                 onInteraction()
-                                TouchpadManager.injectTouch(TouchAction.DOWN, nx, ny)
+                                TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
                                 pointer.consume()
                             }
                             PointerEventType.Move -> {
                                 touchPos = pointer.position
                                 onInteraction()
-                                TouchpadManager.injectTouch(TouchAction.MOVE, nx, ny)
+                                TouchInjector.injectTouch(TouchAction.MOVE, nx, ny)
                                 pointer.consume()
                             }
                             PointerEventType.Release -> {
                                 touchPos = null
-                                TouchpadManager.injectTouch(TouchAction.UP, nx, ny)
+                                TouchInjector.injectTouch(TouchAction.UP, nx, ny)
                                 pointer.consume()
                             }
                             else -> Unit
