@@ -240,7 +240,8 @@ Users can opt in to persisting specific mirror session states across restarts vi
 An optional setting ("Pinch-to-zoom while projecting", default off) allows the user to use two-finger pinch/pan gestures to adjust the viewport even while Touch Projection is active.
 
 **Behaviour:**
-- When enabled and Touch Projection is active, `pointerInput` Block 3 enters *multi-finger-only* mode.
+
+- When enabled and Touch Projection is active, `pointerInput` Block 3 enters _multi-finger-only_ mode.
 - Events with **≥ 2 pressed pointers** are handled by Block 3 (zoom/pan applied, all changes consumed so Block 4 does not inject them).
 - Events with **1 pressed pointer** are **not consumed** by Block 3 and fall through to Block 4 for normal injection.
 - When a second finger lands while Block 4 has an active injection gesture, Block 4 gracefully sends a `UP` event to the target app before handing off to Block 3.
