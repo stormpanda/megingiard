@@ -30,7 +30,6 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
-import com.stormpanda.megingiard.ui.rememberAutoHideState
 
 @Composable
 fun MainAppScreen() {
@@ -39,7 +38,7 @@ fun MainAppScreen() {
     val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
 
-    val (showControls, onInteraction) = rememberAutoHideState()
+    val showControls by AppStateManager.overlayVisible.collectAsState()
 
     Box(
         modifier = Modifier
@@ -49,7 +48,7 @@ fun MainAppScreen() {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         if (event.type == PointerEventType.Press || event.type == PointerEventType.Move) {
-                            onInteraction()
+                            AppStateManager.triggerOverlay()
                         }
                     }
                 }
@@ -92,11 +91,11 @@ fun MainAppScreen() {
                     }
                 }
                 AppMode.MEDIA -> MediaScreen()
-                AppMode.TOUCHPAD -> TouchpadScreen(onInteraction = onInteraction)
+                AppMode.TOUCHPAD -> TouchpadScreen(onInteraction = { AppStateManager.triggerOverlay() })
             }
         }
 
-        CarouselOverlay(visible = showControls, onInteraction = onInteraction)
+        CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
     }
 }
 

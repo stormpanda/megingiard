@@ -239,7 +239,7 @@ The coroutine is automatically cancelled when the key (`isPlaying`) changes to `
 
 - Reusable Composables (overlay controls, auto-hide timers) belong in `ui/`.
 - Do not duplicate overlay or carousel code across screens. Use
-  `CarouselOverlay` and `rememberAutoHideState()`.
+  `CarouselOverlay` and `AppStateManager.overlayVisible` / `triggerOverlay()`.
 
 ### 6.5 Collecting StateFlows
 

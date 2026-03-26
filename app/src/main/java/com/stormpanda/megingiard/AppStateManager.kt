@@ -1,13 +1,22 @@
 package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 
 enum class AppMode { MIRROR, MEDIA, TOUCHPAD }
 
 object AppStateManager {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     private val _currentMode = MutableStateFlow(AppMode.MIRROR)
     val currentMode: StateFlow<AppMode> = _currentMode.asStateFlow()
 
@@ -23,6 +32,36 @@ object AppStateManager {
 
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
+
+    // ── Global overlay visibility (shared between Activity window and MirrorPresentation)
+    private val _overlayVisible = MutableStateFlow(false)
+    val overlayVisible: StateFlow<Boolean> = _overlayVisible.asStateFlow()
+
+    // Timestamp updated on every interaction to restart the auto-hide timer.
+    private val _overlayInteractionTime = MutableStateFlow(0L)
+
+    init {
+        // Auto-hide coroutine: hides the overlay after the user-configured timeout.
+        // collectLatest restarts whenever visibility, interaction time, or timeout changes.
+        scope.launch {
+            combine(
+                _overlayVisible,
+                _overlayInteractionTime,
+                SettingsManager.overlayTimeoutMs
+            ) { visible, _, timeout -> visible to timeout }
+                .collectLatest { (visible, timeout) ->
+                    if (visible) {
+                        delay(timeout)
+                        _overlayVisible.value = false
+                    }
+                }
+        }
+    }
+
+    fun triggerOverlay() {
+        _overlayVisible.value = true
+        _overlayInteractionTime.value = System.currentTimeMillis()
+    }
 
     fun nextMode() {
         val active = SettingsManager.activeTools.value

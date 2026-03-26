@@ -27,12 +27,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +45,6 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ToolSettingsPanel
-import kotlinx.coroutines.delay
 
 // ── Top mode handle ────────────────────────────────────────────────────────
 private val CO_PILL_TOP_PADDING = 6.dp
@@ -81,32 +78,6 @@ private fun AppMode.nameResId(): Int = when (this) {
     AppMode.MIRROR -> R.string.tool_name_mirror
     AppMode.MEDIA -> R.string.tool_name_media
     AppMode.TOUCHPAD -> R.string.tool_name_touchpad
-}
-
-/**
- * Remembers a pair of (showControls, onInteraction) where calling onInteraction()
- * shows the controls and resets the auto-hide timer. The timeout is read from
- * [SettingsManager.overlayTimeoutMs].
- */
-@Composable
-fun rememberAutoHideState(): Pair<Boolean, () -> Unit> {
-    val timeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
-    var showControls by rememberSaveable { mutableStateOf(false) }
-    var interactionTime by rememberSaveable { mutableStateOf(0L) }
-
-    LaunchedEffect(showControls, interactionTime, timeoutMs) {
-        if (showControls) {
-            delay(timeoutMs)
-            showControls = false
-        }
-    }
-
-    val onInteraction: () -> Unit = {
-        showControls = true
-        interactionTime = System.currentTimeMillis()
-    }
-
-    return showControls to onInteraction
 }
 
 /**

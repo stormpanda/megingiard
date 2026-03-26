@@ -43,7 +43,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
-import com.stormpanda.megingiard.ui.rememberAutoHideState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -69,7 +68,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val animOffsetX = remember { Animatable(0f) }
     val animOffsetY = remember { Animatable(0f) }
 
-    val (showControls, onInteraction) = rememberAutoHideState()
+    val showControls by AppStateManager.overlayVisible.collectAsState()
 
     // Sync animated values to ScreenCaptureManager state flows via snapshotFlow,
     // avoiding excessive LaunchedEffect restarts on every animation frame.
@@ -94,15 +93,15 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
                             coroutineScope.launch { animOffsetX.animateTo(0f) }
                             coroutineScope.launch { animOffsetY.animateTo(0f) }
-                            onInteraction()
+                            AppStateManager.triggerOverlay()
                         },
-                        onTap = { onInteraction() }
+                        onTap = { AppStateManager.triggerOverlay() }
                     )
                 }
                 .pointerInput(Unit) {
                     while (true) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            onInteraction()
+                            AppStateManager.triggerOverlay()
                             coroutineScope.launch {
                                 val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
                                 animScale.snapTo(newScale)
@@ -203,8 +202,11 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // CarouselOverlay is a sibling of the gesture Box so its pointer events are
-        // not intercepted by detectTapGestures / detectTransformGestures above.
-        CarouselOverlay(visible = showControls, onInteraction = onInteraction)
+        // CarouselOverlay is a sibling of the gesture Box so its touch events are
+        // not intercepted by detectTapGestures / detectTransformGestures.
+        // It must live here (inside MirrorPresentation's ComposeView) because
+        // MirrorPresentation is a separate window on top of the Activity window;
+        // MainAppScreen's CarouselOverlay would be invisible while mirroring.
+        CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
     }
 }
