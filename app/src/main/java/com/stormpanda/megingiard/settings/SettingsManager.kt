@@ -43,6 +43,7 @@ object SettingsManager {
     private val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
     private val KEY_OVERLAY_TIMEOUT_MS = longPreferencesKey("overlay_timeout_ms")
     private val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
+    private val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
@@ -65,6 +66,9 @@ object SettingsManager {
 
     private val _accentColor = MutableStateFlow(Color(DEFAULT_ACCENT_COLOR))
     val accentColor: StateFlow<Color> = _accentColor.asStateFlow()
+
+    private val _overlayAtBottom = MutableStateFlow(false)
+    val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
 
     fun init(context: Context) {
         if (initialized) return
@@ -95,6 +99,7 @@ object SettingsManager {
                 _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
                 _overlayTimeoutMs.value = prefs[KEY_OVERLAY_TIMEOUT_MS] ?: DEFAULT_OVERLAY_TIMEOUT_MS
                 _accentColor.value = Color(prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR)
+                _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
             }
         }
 
@@ -150,6 +155,15 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs ->
                 prefs[KEY_ACCENT_COLOR] = color.toArgb()
+            }
+        }
+    }
+
+    fun setOverlayAtBottom(value: Boolean) {
+        _overlayAtBottom.value = value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_OVERLAY_AT_BOTTOM] = value
             }
         }
     }

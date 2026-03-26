@@ -42,6 +42,7 @@
     <string name="settings_global_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_accent_color">Accent color</string>
+    <string name="settings_overlay_position">Place controls at bottom</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>

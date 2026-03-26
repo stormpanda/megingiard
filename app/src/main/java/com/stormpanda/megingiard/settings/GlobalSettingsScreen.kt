@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,6 +69,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val toolOrder by SettingsManager.toolOrder.collectAsState()
     val overlayTimeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
 
     var showColorPicker by remember { mutableStateOf(false) }
 
@@ -162,6 +165,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                         overlayTimeoutMs = overlayTimeoutMs,
                         accentColor = accentColor,
                         onTimeoutChanged = { SettingsManager.setOverlayTimeoutMs(it) }
+                    )
+                    HorizontalDivider(color = GS_DIVIDER)
+                    OverlayPositionRow(
+                        overlayAtBottom = overlayAtBottom,
+                        accentColor = accentColor,
+                        onChanged = { SettingsManager.setOverlayAtBottom(it) }
                     )
                     HorizontalDivider(color = GS_DIVIDER)
                 }
@@ -275,6 +284,36 @@ private fun OverlayTimeoutRow(
                 activeTrackColor = accentColor
             ),
             modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun OverlayPositionRow(
+    overlayAtBottom: Boolean,
+    accentColor: Color,
+    onChanged: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(GS_SURFACE)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.settings_overlay_position),
+            color = GS_TEXT,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = overlayAtBottom,
+            onCheckedChange = onChanged,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = accentColor
+            )
         )
     }
 }

@@ -128,19 +128,21 @@ fun CarouselOverlay(
 ) {
     val activeTools by SettingsManager.activeTools.collectAsState()
     val currentMode by AppStateManager.currentMode.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     var showToolPanel by remember { mutableStateOf(false) }
     var showGlobalSettings by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // Top mode handle ─────────────────────────────────────────────────
+        // Mode handle ─────────────────────────────────────────────────────
         TopModeHandle(
             visible = visible,
             activeTools = activeTools,
             currentMode = currentMode,
+            overlayAtBottom = overlayAtBottom,
             onSettingsClick = { showToolPanel = true },
             onInteraction = onInteraction,
             modifier = Modifier
-                .align(Alignment.TopCenter)
+                .align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter)
                 .fillMaxWidth()
                 .wrapContentHeight()
         )
@@ -183,6 +185,7 @@ private fun TopModeHandle(
     visible: Boolean,
     activeTools: List<AppMode>,
     currentMode: AppMode,
+    overlayAtBottom: Boolean,
     onSettingsClick: () -> Unit,
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier
@@ -191,14 +194,19 @@ private fun TopModeHandle(
     var isExpanded by remember { mutableStateOf(false) }
     var fingerXFraction by remember { mutableStateOf(0f) }
 
+    val overlayEdgeAlignment = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter
+    val overlayExpandFrom = if (overlayAtBottom) Alignment.Bottom else Alignment.Top
     Box(
-        contentAlignment = Alignment.TopCenter,
+        contentAlignment = overlayEdgeAlignment,
         modifier = modifier
     ) {
         // Always-visible idle pull-tab pill (pure affordance, no interaction)
         Box(
             Modifier
-                .padding(top = CO_PILL_TOP_PADDING)
+                .then(
+                    if (overlayAtBottom) Modifier.padding(bottom = CO_PILL_TOP_PADDING)
+                    else Modifier.padding(top = CO_PILL_TOP_PADDING)
+                )
                 .size(width = CO_PILL_IDLE_WIDTH, height = CO_PILL_IDLE_HEIGHT)
                 .background(Color.White.copy(alpha = CO_PILL_IDLE_ALPHA), RoundedCornerShape(50))
         )
@@ -206,8 +214,8 @@ private fun TopModeHandle(
         // Full control row: title | active pill | gear — all vertically centred
         AnimatedVisibility(
             visible = visible,
-            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+            enter = expandVertically(expandFrom = overlayExpandFrom) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = overlayExpandFrom) + fadeOut()
         ) {
             Box(
                 modifier = Modifier
