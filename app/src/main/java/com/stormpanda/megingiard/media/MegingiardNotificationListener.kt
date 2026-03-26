@@ -6,6 +6,7 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.service.notification.NotificationListenerService
+import com.stormpanda.megingiard.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,6 +64,7 @@ class MegingiardNotificationListener : NotificationListenerService() {
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
         mediaSessionManager.removeOnActiveSessionsChangedListener(activeSessionsChangedListener)
+        MediaState.updateTitle(getString(R.string.media_no_media))
         updateActiveSession(null)
     }
 
@@ -73,7 +75,8 @@ class MegingiardNotificationListener : NotificationListenerService() {
         }
 
         override fun onMetadataChanged(metadata: MediaMetadata?) {
-            val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown Title"
+            val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
+                ?: getString(R.string.media_unknown_title)
             val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
             MediaState.updateTitle(if (artist.isNotEmpty()) "$artist – $title" else title)
             MediaState.updateMaxProgress(metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 100L)

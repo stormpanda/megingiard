@@ -48,6 +48,8 @@ import kotlin.math.sqrt
 
 private val PICKER_BG = Color(0xFF1C1C1E)
 private val PICKER_TEXT = Color.White
+private val TITLE_FONT_SIZE = 18.sp
+private val SUBTITLE_FONT_SIZE = 12.sp
 private val PICKER_TEXT_SECONDARY = Color.White.copy(alpha = 0.6f)
 private val PICKER_CORNER = 16.dp
 private val WHEEL_SIZE = 240.dp
@@ -92,7 +94,7 @@ fun ColorWheelPicker(
             Text(
                 text = stringResource(R.string.settings_accent_color_picker_title),
                 color = PICKER_TEXT,
-                fontSize = 18.sp
+                fontSize = TITLE_FONT_SIZE
             )
 
             // HSV color wheel canvas
@@ -158,7 +160,7 @@ fun ColorWheelPicker(
                 Text(
                     text = stringResource(R.string.settings_color_brightness),
                     color = PICKER_TEXT_SECONDARY,
-                    fontSize = 12.sp
+                    fontSize = SUBTITLE_FONT_SIZE
                 )
                 Slider(
                     value = bri,

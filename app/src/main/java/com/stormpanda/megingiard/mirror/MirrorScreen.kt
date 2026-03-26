@@ -82,123 +82,129 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onDoubleTap = {
-                        coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
-                        coroutineScope.launch { animOffsetX.animateTo(0f) }
-                        coroutineScope.launch { animOffsetY.animateTo(0f) }
-                        onInteraction()
-                    },
-                    onTap = { onInteraction() }
-                )
-            }
-            .pointerInput(Unit) {
-                while (true) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        onInteraction()
-                        coroutineScope.launch {
-                            val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
-                            animScale.snapTo(newScale)
+    // Outer Box: holds the gesture surface and the overlay as independent siblings so
+    // that CarouselOverlay pointer events are not intercepted by the gesture detectors.
+    Box(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
+                            coroutineScope.launch { animOffsetX.animateTo(0f) }
+                            coroutineScope.launch { animOffsetY.animateTo(0f) }
+                            onInteraction()
+                        },
+                        onTap = { onInteraction() }
+                    )
+                }
+                .pointerInput(Unit) {
+                    while (true) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            onInteraction()
+                            coroutineScope.launch {
+                                val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
+                                animScale.snapTo(newScale)
 
-                            // Gallery-style hard-edge bounding
-                            val maxX = (surfaceWidth * (newScale - 1f)) / 2f
-                            val maxY = (surfaceHeight * (newScale - 1f)) / 2f
-                            animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
-                            animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
+                                // Gallery-style hard-edge bounding
+                                val maxX = (surfaceWidth * (newScale - 1f)) / 2f
+                                val maxY = (surfaceHeight * (newScale - 1f)) / 2f
+                                animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
+                                animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
+                            }
+                        }
+                        // Snap back when a pinch-out drops below the comfortable threshold
+                        if (animScale.value < SNAP_BACK_THRESHOLD) {
+                            coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
+                            coroutineScope.launch { animOffsetX.animateTo(0f) }
+                            coroutineScope.launch { animOffsetY.animateTo(0f) }
                         }
                     }
-                    // Snap back when a pinch-out drops below the comfortable threshold
-                    if (animScale.value < SNAP_BACK_THRESHOLD) {
-                        coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
-                        coroutineScope.launch { animOffsetX.animateTo(0f) }
-                        coroutineScope.launch { animOffsetY.animateTo(0f) }
-                    }
                 }
-            }
-    ) {
-        val scale by ScreenCaptureManager.scale.collectAsState()
-        val offsetX by ScreenCaptureManager.offsetX.collectAsState()
-        val offsetY by ScreenCaptureManager.offsetY.collectAsState()
-
-        if (isFrozen && frozenBitmap != null) {
-            Image(
-                bitmap = frozenBitmap!!.asImageBitmap(),
-                contentDescription = stringResource(R.string.cd_frozen_image),
-                modifier = Modifier.fillMaxSize().graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offsetX,
-                    translationY = offsetY
-                )
-            )
-        }
-
-        if (!isCapturing) {
-            Text(
-                text = stringResource(R.string.mirror_waiting_permission),
-                color = Color.White,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = showControls,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.fillMaxSize()
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                val context = LocalContext.current
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(CONTROL_PADDING),
-                    horizontalArrangement = Arrangement.spacedBy(CONTROL_BUTTON_GAP)
-                ) {
-                    IconButton(
-                        onClick = {
-                            context.stopService(Intent(context, ScreenCaptureService::class.java))
-                            ScreenCaptureManager.setCapturing(false)
-                            ScreenCaptureManager.setFrozen(false)
-                            ScreenCaptureManager.setFrozenBitmap(null)
-                            AppStateManager.setUserDeclinedCapture(true)
-                        },
-                        modifier = Modifier
-                            .size(CONTROL_BUTTON_SIZE)
-                            .background(accentColor, RoundedCornerShape(50))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Stop,
-                            contentDescription = stringResource(R.string.cd_stop_mirroring),
-                            tint = Color.White,
-                            modifier = Modifier.size(CONTROL_ICON_SIZE)
-                        )
-                    }
+            val scale by ScreenCaptureManager.scale.collectAsState()
+            val offsetX by ScreenCaptureManager.offsetX.collectAsState()
+            val offsetY by ScreenCaptureManager.offsetY.collectAsState()
 
-                    IconButton(
-                        onClick = { ScreenCaptureManager.toggleFrozen() },
+            if (isFrozen && frozenBitmap != null) {
+                Image(
+                    bitmap = frozenBitmap!!.asImageBitmap(),
+                    contentDescription = stringResource(R.string.cd_frozen_image),
+                    modifier = Modifier.fillMaxSize().graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY
+                    )
+                )
+            }
+
+            if (!isCapturing) {
+                Text(
+                    text = stringResource(R.string.mirror_waiting_permission),
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = showControls,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val context = LocalContext.current
+                    Row(
                         modifier = Modifier
-                            .size(CONTROL_BUTTON_SIZE)
-                            .background(
-                                color = if (isFrozen) accentColor else Color.White.copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(50)
-                            )
+                            .align(Alignment.BottomEnd)
+                            .padding(CONTROL_PADDING),
+                        horizontalArrangement = Arrangement.spacedBy(CONTROL_BUTTON_GAP)
                     ) {
-                        Icon(
-                            imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                            contentDescription = stringResource(if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze),
-                            tint = Color.White,
-                            modifier = Modifier.size(CONTROL_ICON_SIZE)
-                        )
+                        IconButton(
+                            onClick = {
+                                context.stopService(Intent(context, ScreenCaptureService::class.java))
+                                ScreenCaptureManager.setCapturing(false)
+                                ScreenCaptureManager.setFrozen(false)
+                                ScreenCaptureManager.setFrozenBitmap(null)
+                                AppStateManager.setUserDeclinedCapture(true)
+                            },
+                            modifier = Modifier
+                                .size(CONTROL_BUTTON_SIZE)
+                                .background(accentColor, RoundedCornerShape(50))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Stop,
+                                contentDescription = stringResource(R.string.cd_stop_mirroring),
+                                tint = Color.White,
+                                modifier = Modifier.size(CONTROL_ICON_SIZE)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { ScreenCaptureManager.toggleFrozen() },
+                            modifier = Modifier
+                                .size(CONTROL_BUTTON_SIZE)
+                                .background(
+                                    color = if (isFrozen) accentColor else Color.White.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(50)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                                contentDescription = stringResource(if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze),
+                                tint = Color.White,
+                                modifier = Modifier.size(CONTROL_ICON_SIZE)
+                            )
+                        }
                     }
                 }
             }
         }
 
+        // CarouselOverlay is a sibling of the gesture Box so its pointer events are
+        // not intercepted by detectTapGestures / detectTransformGestures above.
         CarouselOverlay(visible = showControls)
     }
 }

@@ -33,6 +33,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+private const val TAG = "MirrorPresentation"
+
 class MirrorPresentation(
     context: Context, 
     private val display: Display, 
@@ -175,14 +177,14 @@ class MirrorPresentation(
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
                                     sv.visibility = View.INVISIBLE
                                 } else {
-                                    Log.e("MegingiardMirror", "PixelCopy failed with result code: $result")
+                                    Log.e(TAG, "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
                                 }
                             },
                             Handler(Looper.getMainLooper())
                         )
                     } catch (e: Exception) {
-                        Log.e("MegingiardMirror", "PixelCopy exception", e)
+                        Log.e(TAG, "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
                     sv.visibility = View.VISIBLE

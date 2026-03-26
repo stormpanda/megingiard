@@ -26,6 +26,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
+private const val TAG = "ScreenCaptureService"
+
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
@@ -55,7 +57,7 @@ class ScreenCaptureService : Service() {
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
             if (secondaryDisplay == null) {
-                Log.e("MegingiardMirror", "No secondary display found!")
+                Log.e(TAG, "No secondary display found!")
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -96,7 +98,7 @@ class ScreenCaptureService : Service() {
                             if (isFrozen) null else surface, null, null
                         )
                     } catch (e: Exception) {
-                        Log.e("MegingiardMirror", "Exception creating VirtualDisplay", e)
+                        Log.e(TAG, "Exception creating VirtualDisplay", e)
                     }
                 }
             }

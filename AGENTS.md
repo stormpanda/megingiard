@@ -47,9 +47,14 @@ com.stormpanda.megingiard
 ├── mirror/
 │ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
 │ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
-│ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze controls)
+│ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze controls + carousel nav)
 │ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, etc.)
 │ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
+├── settings/
+│ ├── ColorWheelPicker.kt # HSV color picker Dialog (hue wheel + brightness slider)
+│ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable
+│ ├── SettingsManager.kt # App-wide settings persistence via DataStore
+│ └── ToolSettingsPanel.kt # Per-tool settings Dialog (tool toggle, reorder, accent color)
 ├── touchpad/
 │ ├── ShellInputInjector.kt # Native binary lifecycle, writer thread, MOVE coalescing
 │ ├── TouchpadManager.kt # Normalised → physical coordinate transform
