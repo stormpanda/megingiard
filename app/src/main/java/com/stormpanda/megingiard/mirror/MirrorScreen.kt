@@ -73,7 +73,7 @@ private val CONTROL_ICON_SIZE = 36.dp
 private val CONTROL_BUTTON_GAP = 16.dp
 private val CONTROL_PILL_H_PADDING = 12.dp
 private val CONTROL_PILL_V_PADDING = 10.dp
-private val CONTROL_PILL_BG = Color.Black.copy(alpha = 0.8f)
+private val MR_CONTROL_PILL_BG = Color.Black.copy(alpha = 0.8f)
 private val MR_SWIPE_EDGE_ZONE = 40.dp
 private val MR_SWIPE_THRESHOLD = 25.dp
 private val MR_TOUCH_INDICATOR_SIZE = 24.dp
@@ -168,10 +168,10 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     // SurfaceView can apply the same transform.
     LaunchedEffect(Unit) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
-            .collectLatest { (scale, ox, oy) ->
-                ScreenCaptureManager.setScale(scale)
-                ScreenCaptureManager.setOffsetX(ox)
-                ScreenCaptureManager.setOffsetY(oy)
+            .collectLatest { snapshot ->
+                ScreenCaptureManager.setScale(snapshot.first)
+                ScreenCaptureManager.setOffsetX(snapshot.second)
+                ScreenCaptureManager.setOffsetY(snapshot.third)
             }
     }
 
@@ -351,40 +351,41 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         // Prevents orphaned MOVE/UP injections when a gesture was never started
                         // (e.g. the Press was consumed by a button or landed in the edge zone).
                         var gestureStarted = false
+                        // Track the exact pointer ID that started the gesture so MOVE/UP events
+                        // always use the correct finger position even when multiple pointers are
+                        // present (e.g. pinch-while-projecting second finger arrives).
+                        var activePointerId = -1L
+                        // Last successfully injected normalised position — used as fallback for
+                        // the UP event when a forced cancel happens mid-gesture.
+                        var lastInjectedNx = 0f
+                        var lastInjectedNy = 0f
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Main)
-                            val pointer = event.changes.firstOrNull() ?: continue
                             if (gestureBoxSize == IntSize.Zero) continue
-
-                            val touchX = pointer.position.x
-                            val touchY = pointer.position.y
                             val scW = gestureBoxSize.width.toFloat()
                             val scH = gestureBoxSize.height.toFloat()
 
                             when (event.type) {
                                 PointerEventType.Press -> {
+                                    // Resolve the newly-pressed pointer (a Press event may
+                                    // carry multiple changes; find the one just pressed).
+                                    val newPointer = event.changes
+                                        .firstOrNull { it.pressed && !it.previousPressed }
+                                        ?: event.changes.firstOrNull() ?: continue
+
                                     // If a second finger lands while we have an active injection
                                     // gesture (pinchWhileProjecting mode: Block 3 will take over),
                                     // gracefully cancel the in-flight touch before Block 3 consumes.
                                     if (gestureStarted && event.changes.size > 1) {
                                         touchIndicatorPos = null
-                                        val sw = ScreenCaptureManager.surfaceWidth.value
-                                        val sh = ScreenCaptureManager.surfaceHeight.value
-                                        val sc = ScreenCaptureManager.scale.value
-                                        val ox = ScreenCaptureManager.offsetX.value
-                                        val oy = ScreenCaptureManager.offsetY.value
-                                        val coords = projectCoordinates(
-                                            touchX, touchY, scW, scH, sw, sh, sc, ox, oy
-                                        )
-                                        val nx = coords?.first
-                                            ?: ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
-                                        val ny = coords?.second
-                                            ?: ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
-                                        TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+                                        TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
                                         gestureStarted = false
+                                        activePointerId = -1L
                                         continue
                                     }
+
                                     gestureStarted = false
+                                    val touchY = newPointer.position.y
                                     val nearEdge = if (overlayAtBottom) {
                                         touchY >= gestureBoxSize.height - edgeZonePx
                                     } else {
@@ -393,9 +394,10 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     gestureInEdgeZone = nearEdge
                                     if (nearEdge) continue
                                     // If a button or other child consumed this press, don't forward.
-                                    if (pointer.isConsumed) continue
+                                    if (newPointer.isConsumed) continue
 
-                                    val (nx, ny) = projectCoordinates(
+                                    val touchX = newPointer.position.x
+                                    val projected = projectCoordinates(
                                         touchX, touchY, scW, scH,
                                         ScreenCaptureManager.surfaceWidth.value,
                                         ScreenCaptureManager.surfaceHeight.value,
@@ -403,35 +405,34 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                         ScreenCaptureManager.offsetX.value,
                                         ScreenCaptureManager.offsetY.value
                                     ) ?: continue
-                                    touchIndicatorPos = pointer.position
-                                    TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
-                                    pointer.consume()
+                                    touchIndicatorPos = newPointer.position
+                                    lastInjectedNx = projected.first
+                                    lastInjectedNy = projected.second
+                                    TouchInjector.injectTouch(TouchAction.DOWN, lastInjectedNx, lastInjectedNy)
+                                    newPointer.consume()
+                                    activePointerId = newPointer.id.value
                                     gestureStarted = true
                                 }
                                 PointerEventType.Move -> {
                                     if (gestureInEdgeZone || !gestureStarted) continue
+                                    // Find the tracked pointer by ID for stable position even
+                                    // when multiple fingers are on screen.
+                                    val activePointer = event.changes
+                                        .firstOrNull { it.id.value == activePointerId }
+                                        ?: continue
                                     // If Block 3 (multi-finger transform) consumed this event,
                                     // it means a second finger joined and the gesture was taken
-                                    // over — send UP to cleanly end the injected gesture.
-                                    if (pointer.isConsumed) {
+                                    // over — send UP using the last known good position.
+                                    if (activePointer.isConsumed) {
                                         touchIndicatorPos = null
-                                        val sw = ScreenCaptureManager.surfaceWidth.value
-                                        val sh = ScreenCaptureManager.surfaceHeight.value
-                                        val sc = ScreenCaptureManager.scale.value
-                                        val ox = ScreenCaptureManager.offsetX.value
-                                        val oy = ScreenCaptureManager.offsetY.value
-                                        val coords = projectCoordinates(
-                                            touchX, touchY, scW, scH, sw, sh, sc, ox, oy
-                                        )
-                                        val nx = coords?.first
-                                            ?: ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
-                                        val ny = coords?.second
-                                            ?: ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
-                                        TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+                                        TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
                                         gestureStarted = false
+                                        activePointerId = -1L
                                         continue
                                     }
 
+                                    val touchX = activePointer.position.x
+                                    val touchY = activePointer.position.y
                                     val coords = projectCoordinates(
                                         touchX, touchY, scW, scH,
                                         ScreenCaptureManager.surfaceWidth.value,
@@ -452,16 +453,23 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                         val svX = ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw)
                                         val svY = ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh)
                                         TouchInjector.injectTouch(TouchAction.UP, svX / sw, svY / sh)
-                                        pointer.consume()
+                                        activePointer.consume()
                                         gestureStarted = false
+                                        activePointerId = -1L
                                         continue
                                     }
-                                    val (nx, ny) = coords
-                                    touchIndicatorPos = pointer.position
-                                    TouchInjector.injectTouch(TouchAction.MOVE, nx, ny)
-                                    pointer.consume()
+                                    lastInjectedNx = coords.first
+                                    lastInjectedNy = coords.second
+                                    touchIndicatorPos = activePointer.position
+                                    TouchInjector.injectTouch(TouchAction.MOVE, lastInjectedNx, lastInjectedNy)
+                                    activePointer.consume()
                                 }
                                 PointerEventType.Release -> {
+                                    // Find the tracked pointer by ID; fall back to first if
+                                    // the pointer is already gone from the changes list.
+                                    val activePointer = event.changes
+                                        .firstOrNull { it.id.value == activePointerId }
+                                        ?: event.changes.firstOrNull()
                                     touchIndicatorPos = null
                                     if (!gestureInEdgeZone && gestureStarted) {
                                         // Send UP at the release position so the target app
@@ -472,18 +480,26 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                         val sc = ScreenCaptureManager.scale.value
                                         val ox = ScreenCaptureManager.offsetX.value
                                         val oy = ScreenCaptureManager.offsetY.value
-                                        val coords = projectCoordinates(
-                                            touchX, touchY, scW, scH, sw, sh, sc, ox, oy
-                                        )
-                                        val nx = coords?.first
-                                            ?: ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
-                                        val ny = coords?.second
-                                            ?: ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
-                                        TouchInjector.injectTouch(TouchAction.UP, nx, ny)
-                                        pointer.consume()
+                                        if (activePointer != null) {
+                                            val touchX = activePointer.position.x
+                                            val touchY = activePointer.position.y
+                                            val coords = projectCoordinates(
+                                                touchX, touchY, scW, scH, sw, sh, sc, ox, oy
+                                            )
+                                            val nx = coords?.first
+                                                ?: ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
+                                            val ny = coords?.second
+                                                ?: ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
+                                            TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+                                            activePointer.consume()
+                                        } else {
+                                            // Pointer already left the list — use last known position.
+                                            TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
+                                        }
                                     }
                                     gestureInEdgeZone = false
                                     gestureStarted = false
+                                    activePointerId = -1L
                                 }
                                 else -> Unit
                             }
@@ -543,7 +559,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .background(CONTROL_PILL_BG, RoundedCornerShape(50))
+                            .background(MR_CONTROL_PILL_BG, RoundedCornerShape(50))
                             .padding(
                                 horizontal = CONTROL_PILL_H_PADDING,
                                 vertical = CONTROL_PILL_V_PADDING
