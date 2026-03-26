@@ -496,6 +496,12 @@ This rule applies to all changes, including bug fixes, refactors, and dependency
 
 ## 15 Checklist for Every Change
 
+> **Compilation policy:** The human operator always compiles the project themselves.
+> The agent must **never** run `./gradlew compileDebugKotlin` or any other build
+> command to verify a change. Instead, perform **static analysis only**: check imports,
+> symbol references, type compatibility, and API usage by reading the relevant source
+> files. Flag any suspected compile error as a comment to the operator.
+
 Before marking a task as done, verify:
 
 - [ ] No `MutableStateFlow` exposed outside its owning singleton
@@ -516,4 +522,4 @@ Before marking a task as done, verify:
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
 - [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR` (not `mode != AppMode.MEDIA`)
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
-- [ ] Zero compiler errors confirmed via IDE or `./gradlew compileDebugKotlin`
+- [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)

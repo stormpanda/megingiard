@@ -20,8 +20,13 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.OnBackPressedDispatcherOwner
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppMode
@@ -111,10 +116,22 @@ class MirrorPresentation(
 
         container.addView(sv)
 
+        // BackHandler (used in ToolSettingsPanel) requires LocalOnBackPressedDispatcherOwner.
+        // This is normally provided by ComponentActivity.setContent, but MirrorPresentation is
+        // not an Activity. We create a minimal dispatcher so BackHandler works correctly inside
+        // the Presentation's ComposeView without crashing.
+        val backDispatcher = OnBackPressedDispatcher(null)
+        val backDispatcherOwner = object : OnBackPressedDispatcherOwner {
+            override val lifecycle: Lifecycle get() = lifecycleOwner.lifecycle
+            override val onBackPressedDispatcher: OnBackPressedDispatcher get() = backDispatcher
+        }
+
         val composeView = ComposeView(context).apply {
             setContent {
-                MaterialTheme {
-                    MirrorScreen()
+                CompositionLocalProvider(LocalOnBackPressedDispatcherOwner provides backDispatcherOwner) {
+                    MaterialTheme {
+                        MirrorScreen()
+                    }
                 }
             }
         }

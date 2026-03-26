@@ -253,20 +253,29 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 // the pinch/tap detectors above, and can consume them selectively.
                 // Touches inside the edge zone are never forwarded — the user needs that zone
                 // to trigger the overlay and turn off projection / lock.
+                // Button taps are skipped via pointer.isConsumed (buttons consume at Main pass
+                // before this outer handler receives the event).
                 .pointerInput(isTouchProjectionActive, overlayAtBottom) {
                     if (!isTouchProjectionActive) return@pointerInput
                     awaitPointerEventScope {
                         var gestureInEdgeZone = false
+                        // True only when we successfully forwarded a DOWN to the primary display.
+                        // Prevents orphaned MOVE/UP injections when a gesture was never started
+                        // (e.g. the Press was consumed by a button or landed in the edge zone).
+                        var gestureStarted = false
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Main)
                             val pointer = event.changes.firstOrNull() ?: continue
                             if (gestureBoxSize == IntSize.Zero) continue
 
-                            val touchY = pointer.position.y
                             val touchX = pointer.position.x
+                            val touchY = pointer.position.y
+                            val scW = gestureBoxSize.width.toFloat()
+                            val scH = gestureBoxSize.height.toFloat()
 
                             when (event.type) {
                                 PointerEventType.Press -> {
+                                    gestureStarted = false
                                     val nearEdge = if (overlayAtBottom) {
                                         touchY >= gestureBoxSize.height - edgeZonePx
                                     } else {
@@ -274,9 +283,11 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     }
                                     gestureInEdgeZone = nearEdge
                                     if (nearEdge) continue
+                                    // If a button or other child consumed this press, don't forward.
+                                    if (pointer.isConsumed) continue
 
                                     val (nx, ny) = projectCoordinates(
-                                        touchX, touchY,
+                                        touchX, touchY, scW, scH,
                                         ScreenCaptureManager.surfaceWidth.value,
                                         ScreenCaptureManager.surfaceHeight.value,
                                         ScreenCaptureManager.scale.value,
@@ -286,12 +297,13 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     touchIndicatorPos = pointer.position
                                     TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
                                     pointer.consume()
+                                    gestureStarted = true
                                 }
                                 PointerEventType.Move -> {
-                                    if (gestureInEdgeZone) continue
+                                    if (gestureInEdgeZone || !gestureStarted) continue
 
                                     val coords = projectCoordinates(
-                                        touchX, touchY,
+                                        touchX, touchY, scW, scH,
                                         ScreenCaptureManager.surfaceWidth.value,
                                         ScreenCaptureManager.surfaceHeight.value,
                                         ScreenCaptureManager.scale.value,
@@ -299,15 +311,19 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                         ScreenCaptureManager.offsetY.value
                                     )
                                     if (coords == null) {
-                                        // Finger moved out of content area — send UP so the
-                                        // target app doesn't have a dangling touch.
+                                        // Finger moved out of content area — send a clamped UP so
+                                        // the target app doesn't have a dangling touch.
                                         touchIndicatorPos = null
-                                        val clamped = Pair(
-                                            (touchX / ScreenCaptureManager.surfaceWidth.value).coerceIn(0f, 1f),
-                                            (touchY / ScreenCaptureManager.surfaceHeight.value).coerceIn(0f, 1f)
-                                        )
-                                        TouchInjector.injectTouch(TouchAction.UP, clamped.first, clamped.second)
+                                        val sw = ScreenCaptureManager.surfaceWidth.value
+                                        val sh = ScreenCaptureManager.surfaceHeight.value
+                                        val sc = ScreenCaptureManager.scale.value
+                                        val ox = ScreenCaptureManager.offsetX.value
+                                        val oy = ScreenCaptureManager.offsetY.value
+                                        val svX = ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw)
+                                        val svY = ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh)
+                                        TouchInjector.injectTouch(TouchAction.UP, svX / sw, svY / sh)
                                         pointer.consume()
+                                        gestureStarted = false
                                         continue
                                     }
                                     val (nx, ny) = coords
@@ -317,22 +333,27 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 }
                                 PointerEventType.Release -> {
                                     touchIndicatorPos = null
-                                    if (!gestureInEdgeZone) {
-                                        // Always send UP so the target app cleans up its state.
+                                    if (!gestureInEdgeZone && gestureStarted) {
+                                        // Send UP at the release position so the target app
+                                        // cleans up its state. Clamp if the finger left the
+                                        // content area during the release motion.
+                                        val sw = ScreenCaptureManager.surfaceWidth.value
+                                        val sh = ScreenCaptureManager.surfaceHeight.value
+                                        val sc = ScreenCaptureManager.scale.value
+                                        val ox = ScreenCaptureManager.offsetX.value
+                                        val oy = ScreenCaptureManager.offsetY.value
                                         val coords = projectCoordinates(
-                                            touchX, touchY,
-                                            ScreenCaptureManager.surfaceWidth.value,
-                                            ScreenCaptureManager.surfaceHeight.value,
-                                            ScreenCaptureManager.scale.value,
-                                            ScreenCaptureManager.offsetX.value,
-                                            ScreenCaptureManager.offsetY.value
+                                            touchX, touchY, scW, scH, sw, sh, sc, ox, oy
                                         )
-                                        val nx = coords?.first ?: (touchX / ScreenCaptureManager.surfaceWidth.value).coerceIn(0f, 1f)
-                                        val ny = coords?.second ?: (touchY / ScreenCaptureManager.surfaceHeight.value).coerceIn(0f, 1f)
+                                        val nx = coords?.first
+                                            ?: ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
+                                        val ny = coords?.second
+                                            ?: ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
                                         TouchInjector.injectTouch(TouchAction.UP, nx, ny)
                                         pointer.consume()
                                     }
                                     gestureInEdgeZone = false
+                                    gestureStarted = false
                                 }
                                 else -> Unit
                             }
@@ -493,13 +514,24 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
  * transform to obtain the normalised content coordinate [0, 1] that corresponds to
  * the touched point on the primary display.
  *
+ * The SurfaceView is centered in the secondary display's FrameLayout, so its pivot
+ * point for the scale/translate transform lies at the screen center (screenW/2, screenH/2),
+ * NOT at the SurfaceView's own center in its local coordinate space (sw/2, sh/2).
+ * These differ when the content is letterboxed (sw != screenW or sh != screenH).
+ *
+ * Visual transform (screen → SurfaceView local)::
+ *   screenPos = screenCenter + (svPos - svCenter) * scale + offset
+ *   svPos     = (screenPos  - screenCenter - offset) / scale + svCenter
+ *
  * Returns `null` when the touch lands outside the visible content area (e.g. letterbox
  * bars), in which case the caller should not inject the touch.
  *
- * @param touchX   Raw X of the touch on the mirror surface (pixels)
- * @param touchY   Raw Y of the touch on the mirror surface (pixels)
- * @param sw       Surface width (pixels)
- * @param sh       Surface height (pixels)
+ * @param touchX   Raw X of the touch on the secondary display (pixels)
+ * @param touchY   Raw Y of the touch on the secondary display (pixels)
+ * @param screenW  Full width of the secondary display Compose surface (gestureBoxSize.width)
+ * @param screenH  Full height of the secondary display Compose surface (gestureBoxSize.height)
+ * @param sw       Width of the letterboxed content area = ScreenCaptureManager.surfaceWidth
+ * @param sh       Height of the letterboxed content area = ScreenCaptureManager.surfaceHeight
  * @param scale    Current zoom scale (1.0 = no zoom)
  * @param offsetX  Current pan offset X (pixels)
  * @param offsetY  Current pan offset Y (pixels)
@@ -508,22 +540,26 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
 private fun projectCoordinates(
     touchX: Float,
     touchY: Float,
+    screenW: Float,
+    screenH: Float,
     sw: Float,
     sh: Float,
     scale: Float,
     offsetX: Float,
     offsetY: Float
 ): Pair<Float, Float>? {
-    if (sw <= 0f || sh <= 0f || scale <= 0f) return null
-    val centerX = sw / 2f
-    val centerY = sh / 2f
-    // Invert the visual transform:
-    //   visual = (content - center) * scale + center + offset
-    //   content = (visual - center - offset) / scale + center
-    val contentX = (touchX - centerX - offsetX) / scale + centerX
-    val contentY = (touchY - centerY - offsetY) / scale + centerY
-    val nx = contentX / sw
-    val ny = contentY / sh
+    if (sw <= 0f || sh <= 0f || scale <= 0f || screenW <= 0f || screenH <= 0f) return null
+    // Screen-space center — this is where the SurfaceView is anchored (CENTER gravity).
+    val screenCenterX = screenW / 2f
+    val screenCenterY = screenH / 2f
+    // SurfaceView-local pivot for the scale transform.
+    val svCenterX = sw / 2f
+    val svCenterY = sh / 2f
+    // Invert: svPos = (screenPos - screenCenter - offset) / scale + svCenter
+    val svX = (touchX - screenCenterX - offsetX) / scale + svCenterX
+    val svY = (touchY - screenCenterY - offsetY) / scale + svCenterY
+    val nx = svX / sw
+    val ny = svY / sh
     if (nx !in 0f..1f || ny !in 0f..1f) return null
     return Pair(nx, ny)
 }
