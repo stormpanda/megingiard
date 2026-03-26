@@ -30,6 +30,12 @@ object ScreenCaptureManager {
     private val _frozenBitmap = MutableStateFlow<Bitmap?>(null)
     val frozenBitmap: StateFlow<Bitmap?> = _frozenBitmap.asStateFlow()
 
+    private val _isLocked = MutableStateFlow(false)
+    val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
+
+    private val _isTouchProjectionActive = MutableStateFlow(false)
+    val isTouchProjectionActive: StateFlow<Boolean> = _isTouchProjectionActive.asStateFlow()
+
     fun setCapturing(capturing: Boolean) { _isCapturing.value = capturing }
     fun setScale(scale: Float) { _scale.value = scale }
     fun setOffsetX(x: Float) { _offsetX.value = x }
@@ -44,4 +50,39 @@ object ScreenCaptureManager {
         _frozenBitmap.value = bitmap
     }
     fun toggleFrozen() { _isFrozen.value = !_isFrozen.value }
+
+    fun setLocked(locked: Boolean) { _isLocked.value = locked }
+
+    /**
+     * Activates or deactivates touch projection.
+     * Enabling projection automatically enables lock (zoom/pan while forwarding is
+     * unusable). Disabling projection does not automatically release the lock —
+     * the user can unlock independently.
+     */
+    fun setTouchProjectionActive(active: Boolean) {
+        _isTouchProjectionActive.value = active
+        if (active) _isLocked.value = true
+    }
+
+    /**
+     * Toggles the lock state. If touch projection is currently active, toggling
+     * off also deactivates touch projection (since lock is required for it).
+     */
+    fun toggleLocked() {
+        val newLocked = !_isLocked.value
+        _isLocked.value = newLocked
+        if (!newLocked) _isTouchProjectionActive.value = false
+    }
+
+    fun toggleTouchProjection() {
+        setTouchProjectionActive(!_isTouchProjectionActive.value)
+    }
+
+    /** Resets all transient mirror session state (lock, projection, freeze). */
+    fun resetMirrorSessionState() {
+        _isTouchProjectionActive.value = false
+        _isLocked.value = false
+        _isFrozen.value = false
+        setFrozenBitmap(null)
+    }
 }

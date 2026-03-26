@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.touchpad
+package com.stormpanda.megingiard.input
 
 import android.content.Context
 import android.util.Log

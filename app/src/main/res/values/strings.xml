@@ -8,6 +8,10 @@
     <string name="cd_stop_mirroring">Stop Mirroring</string>
     <string name="cd_freeze">Freeze</string>
     <string name="cd_unfreeze">Unfreeze</string>
+    <string name="cd_lock_view">Lock view</string>
+    <string name="cd_unlock_view">Unlock view</string>
+    <string name="cd_touch_projection_on">Touch Projection on</string>
+    <string name="cd_touch_projection_off">Touch Projection off</string>
     <string name="cd_frozen_image">Frozen Stream Image</string>
     <string name="media_no_media">No Media</string>
     <string name="media_unknown_title">Unknown Title</string>
@@ -47,4 +51,16 @@
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
     <string name="settings_color_apply">Apply</string>
+
+    <!-- Mirror touch projection -->
+    <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>
+    <string name="settings_pinch_while_projecting_desc">Allow two-finger zoom and pan gestures while Touch Projection is active. Two-finger touches are not forwarded to the primary display.</string>
+
+    <!-- Mirror session state persistence -->
+    <string name="settings_remember_viewport">Remember viewport</string>
+    <string name="settings_remember_viewport_desc">Restore zoom and pan position when mirroring restarts</string>
+    <string name="settings_remember_lock">Remember lock</string>
+    <string name="settings_remember_lock_desc">Restore view lock state when mirroring restarts</string>
+    <string name="settings_remember_projection">Remember touch projection</string>
+    <string name="settings_remember_projection_desc">Restore touch projection state when mirroring restarts</string>
 </resources>

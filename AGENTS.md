@@ -52,17 +52,19 @@ com.stormpanda.megingiard
 ├── mirror/
 │ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
 │ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
-│ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze controls + carousel nav)
-│ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, etc.)
+│ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze/lock/touch-projection + carousel nav)
+│ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, lock, projection, etc.)
 │ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
+├── input/
+│ ├── ShellInputInjector.kt # Native binary lifecycle, writer thread, MOVE coalescing (shared)
+│ ├── TouchAction.kt # Shared DOWN/MOVE/UP enum
+│ └── TouchInjector.kt # Normalised → physical coordinate transform facade (shared)
 ├── settings/
 │ ├── ColorWheelPicker.kt # HSV color picker Dialog (hue wheel + brightness slider)
 │ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable
 │ ├── SettingsManager.kt # App-wide settings persistence via DataStore
 │ └── ToolSettingsPanel.kt # Per-tool settings Dialog (tool toggle, reorder, accent color)
 ├── touchpad/
-│ ├── ShellInputInjector.kt # Native binary lifecycle, writer thread, MOVE coalescing
-│ ├── TouchpadManager.kt # Normalised → physical coordinate transform
 │ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
 └── ui/
 └── CarouselOverlay.kt # Shared overlay components (auto-hide, chevron nav)
@@ -494,6 +496,12 @@ This rule applies to all changes, including bug fixes, refactors, and dependency
 
 ## 15 Checklist for Every Change
 
+> **Compilation policy:** The human operator always compiles the project themselves.
+> The agent must **never** run `./gradlew compileDebugKotlin` or any other build
+> command to verify a change. Instead, perform **static analysis only**: check imports,
+> symbol references, type compatibility, and API usage by reading the relevant source
+> files. Flag any suspected compile error as a comment to the operator.
+
 Before marking a task as done, verify:
 
 - [ ] No `MutableStateFlow` exposed outside its owning singleton
@@ -514,4 +522,4 @@ Before marking a task as done, verify:
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
 - [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR` (not `mode != AppMode.MEDIA`)
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
-- [ ] Zero compiler errors confirmed via IDE or `./gradlew compileDebugKotlin`
+- [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)

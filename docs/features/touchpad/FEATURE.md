@@ -1,8 +1,8 @@
 # Feature: Virtual Touchpad
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/touchpad/`  
-> **Native source:** `app/src/main/cpp/touchinjector.c`  
-> **Binary asset:** `app/src/main/assets/touchinjector_arm64`  
+> **Related source:** `app/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `app/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
+> **Native source:** `app/src/main/cpp/touchinjector.c`
+> **Binary asset:** `app/src/main/assets/touchinjector_arm64`
 > **Build instructions:** [`docs/BUILD_NATIVE.md`](../BUILD_NATIVE.md)
 
 ---
@@ -58,7 +58,7 @@ The binary remains alive for the entire Touchpad session. It is terminated when 
 
 ```kotlin
 DisposableEffect(Unit) {
-    onDispose { TouchpadManager.stop() }
+    onDispose { TouchInjector.stop() }
 }
 ```
 
@@ -66,11 +66,11 @@ DisposableEffect(Unit) {
 
 Commands are sent as newline-terminated ASCII strings to the binary's stdin:
 
-| Command | Format | Description |
-|---|---|---|
-| DOWN | `D x y\n` | Finger touches screen at coordinates (x, y) |
-| MOVE | `M x y\n` | Finger moves to (x, y) |
-| UP | `U x y\n` | Finger lifts from screen |
+| Command | Format    | Description                                 |
+| ------- | --------- | ------------------------------------------- |
+| DOWN    | `D x y\n` | Finger touches screen at coordinates (x, y) |
+| MOVE    | `M x y\n` | Finger moves to (x, y)                      |
+| UP      | `U x y\n` | Finger lifts from screen                    |
 
 Coordinates are integers in the touchscreen's raw physical portrait space: `x ∈ [0, 1080]`, `y ∈ [0, 1920]`.
 
@@ -101,24 +101,27 @@ sensorY =  normalizedX        * 1920
 
 The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY = 0`) to the sensor's **maximum X** (`sensorX = 1080`), correcting for the 270° rotation offset. The axis swap (`X ← Y`, `Y ← X`) reflects the portrait-to-landscape re-orientation.
 
+> **Note:** The coordinate transformation and injection pipeline (`ShellInputInjector`, `TouchInjector`, `TouchAction`) have been extracted to the shared `input/` package (`com.stormpanda.megingiard.input`) so that both the Virtual Touchpad and Mirror Touch Projection can reuse the same infrastructure. `TouchpadScreen` calls `TouchInjector` from the shared package.
+
 ### Pointer Event Handling in TouchpadScreen
 
 `TouchpadScreen` uses a raw `awaitPointerEvent()` loop on `PointerEventPass.Main`:
 
-| Event type | Action |
-|---|---|
-| `PointerEventType.Press` | Send DOWN command; store position; call `onInteraction()` to show overlay |
-| `PointerEventType.Move` | Send MOVE command; update indicator position |
-| `PointerEventType.Release` | Send UP command; clear indicator position |
+| Event type                 | Action                                                                    |
+| -------------------------- | ------------------------------------------------------------------------- |
+| `PointerEventType.Press`   | Send DOWN command; store position; call `onInteraction()` to show overlay |
+| `PointerEventType.Move`    | Send MOVE command; update indicator position                              |
+| `PointerEventType.Release` | Send UP command; clear indicator position                                 |
 
 All events are `consume()`d to prevent parent gesture detectors from interfering. The actual touch area pixel size is measured via `onGloballyPositioned` after layout, and coordinates are normalized as `(position / surfaceSize).coerceIn(0f, 1f)`.
 
 ### Source Files
 
-| File | Responsibility |
-|---|---|
-| `ShellInputInjector.kt` | Native binary lifecycle; writer thread; MOVE coalescing; stdin protocol |
-| `TouchpadManager.kt` | Coordinate transformation; public `start()` / `stop()` / `injectTouch()` API |
-| `TouchpadScreen.kt` | Compose UI: 16:9 touch surface, visual indicator, hint text, pointer event loop |
-| `touchinjector.c` | C source for the native binary (see `docs/BUILD_NATIVE.md`) |
-| `touchinjector_arm64` | Pre-built ARM64 binary asset (`app/src/main/assets/`) |
+| File                             | Responsibility                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| `../input/ShellInputInjector.kt` | Native binary lifecycle; writer thread; MOVE coalescing; stdin protocol         |
+| `../input/TouchInjector.kt`      | Coordinate transformation; public `start()` / `stop()` / `injectTouch()` API    |
+| `../input/TouchAction.kt`        | Shared `DOWN / MOVE / UP` enum                                                  |
+| `TouchpadScreen.kt`              | Compose UI: 16:9 touch surface, visual indicator, hint text, pointer event loop |
+| `touchinjector.c`                | C source for the native binary (see `docs/BUILD_NATIVE.md`)                     |
+| `touchinjector_arm64`            | Pre-built ARM64 binary asset (`app/src/main/assets/`)                           |
