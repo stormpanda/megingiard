@@ -217,7 +217,23 @@ Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from t
 
 - `LaunchedEffect(isTouchProjectionActive)` starts the injector when projection is enabled and stops it when disabled.
 - `DisposableEffect(Unit)` stops the injector unconditionally when `MirrorScreen` leaves composition (mode switch).
-- `resetMirrorSessionState()` resets `isLocked`, `isTouchProjectionActive`, and `isFrozen` atomically — called from the Stop button.
+- `resetMirrorSessionState()` resets `isLocked`, `isTouchProjectionActive`, and `isFrozen` atomically — called from the Stop button (after saving state).
+
+### Session State Persistence
+
+Users can opt in to persisting specific mirror session states across restarts via checkboxes in the Mirror tool settings panel:
+
+| Checkbox            | What is saved                 | DataStore Keys                                                      |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------- |
+| Remember viewport   | `scale`, `offsetX`, `offsetY` | `mirror_remember_viewport` + `mirror_saved_scale/offset_x/offset_y` |
+| Remember lock       | `isLocked`                    | `mirror_remember_lock` + `mirror_saved_locked`                      |
+| Remember projection | `isTouchProjectionActive`     | `mirror_remember_projection` + `mirror_saved_projection`            |
+
+**Save flow:** When the user presses Stop, `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()`. For each enabled "remember" flag, the current value is written to DataStore.
+
+**Restore flow:** When `CaptureRequestActivity` receives a successful consent result and starts the service, `SettingsManager.restoreMirrorSessionState()` is called immediately after `setCapturing(true)`. For each enabled "remember" flag, the saved value is read from DataStore and applied to `ScreenCaptureManager`.
+
+**Viewport sync:** `MirrorScreen` contains a `LaunchedEffect(isCapturing)` that, when capturing starts, reads the current `ScreenCaptureManager` scale/offset values and calls `Animatable.snapTo()` to align the animation state with the restored values. This bridges the gap between the manager (source of truth after restore) and the Compose `Animatable` instances (source of truth during gestures).
 
 ### Source Files
 

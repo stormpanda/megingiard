@@ -144,6 +144,23 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    // When capturing starts, restore persisted session state from DataStore (viewport,
+    // lock, touch projection) and then sync Animatable values.  The suspend call to
+    // restoreMirrorSessionState() ensures ScreenCaptureManager has the saved values
+    // BEFORE we read them into the Animatables — and before the snapshotFlow below
+    // can overwrite them with stale defaults.
+    LaunchedEffect(isCapturing) {
+        if (isCapturing) {
+            SettingsManager.restoreMirrorSessionState()
+            val s = ScreenCaptureManager.scale.value
+            val ox = ScreenCaptureManager.offsetX.value
+            val oy = ScreenCaptureManager.offsetY.value
+            if (s != animScale.value) animScale.snapTo(s)
+            if (ox != animOffsetX.value) animOffsetX.snapTo(ox)
+            if (oy != animOffsetY.value) animOffsetY.snapTo(oy)
+        }
+    }
+
     // Sync animated transform values to ScreenCaptureManager so MirrorPresentation's
     // SurfaceView can apply the same transform.
     LaunchedEffect(Unit) {
@@ -427,6 +444,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         // Stop
                         IconButton(
                             onClick = {
+                                SettingsManager.saveMirrorSessionState()
                                 context.stopService(Intent(context, ScreenCaptureService::class.java))
                                 ScreenCaptureManager.setCapturing(false)
                                 ScreenCaptureManager.resetMirrorSessionState()

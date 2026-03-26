@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +52,9 @@ fun ToolSettingsPanel(
     val currentMode by AppStateManager.currentMode.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
     val autoStartCapture by SettingsManager.autoStartCapture.collectAsState()
+    val rememberViewport by SettingsManager.rememberViewport.collectAsState()
+    val rememberLock by SettingsManager.rememberLock.collectAsState()
+    val rememberProjection by SettingsManager.rememberProjection.collectAsState()
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -101,7 +107,13 @@ fun ToolSettingsPanel(
                     AppMode.MIRROR -> MirrorToolSettings(
                         autoStartCapture = autoStartCapture,
                         accentColor = accentColor,
-                        onAutoStartChanged = { SettingsManager.setAutoStartCapture(it) }
+                        onAutoStartChanged = { SettingsManager.setAutoStartCapture(it) },
+                        rememberViewport = rememberViewport,
+                        onRememberViewportChanged = { SettingsManager.setRememberViewport(it) },
+                        rememberLock = rememberLock,
+                        onRememberLockChanged = { SettingsManager.setRememberLock(it) },
+                        rememberProjection = rememberProjection,
+                        onRememberProjectionChanged = { SettingsManager.setRememberProjection(it) }
                     )
                     AppMode.MEDIA, AppMode.TOUCHPAD -> {
                         Text(
@@ -155,7 +167,80 @@ fun ToolSettingsPanel(
 private fun MirrorToolSettings(
     autoStartCapture: Boolean,
     accentColor: Color,
-    onAutoStartChanged: (Boolean) -> Unit
+    onAutoStartChanged: (Boolean) -> Unit,
+    rememberViewport: Boolean,
+    onRememberViewportChanged: (Boolean) -> Unit,
+    rememberLock: Boolean,
+    onRememberLockChanged: (Boolean) -> Unit,
+    rememberProjection: Boolean,
+    onRememberProjectionChanged: (Boolean) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Auto-start capture
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_auto_start_capture),
+                    color = PANEL_TEXT,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = stringResource(R.string.settings_auto_start_capture_desc),
+                    color = PANEL_TEXT_SECONDARY,
+                    fontSize = 12.sp
+                )
+            }
+            Switch(
+                checked = autoStartCapture,
+                onCheckedChange = onAutoStartChanged,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = accentColor
+                )
+            )
+        }
+
+        HorizontalDivider(color = PANEL_DIVIDER)
+
+        // Remember viewport
+        RememberSettingRow(
+            label = stringResource(R.string.settings_remember_viewport),
+            description = stringResource(R.string.settings_remember_viewport_desc),
+            checked = rememberViewport,
+            accentColor = accentColor,
+            onCheckedChange = onRememberViewportChanged
+        )
+
+        // Remember lock
+        RememberSettingRow(
+            label = stringResource(R.string.settings_remember_lock),
+            description = stringResource(R.string.settings_remember_lock_desc),
+            checked = rememberLock,
+            accentColor = accentColor,
+            onCheckedChange = onRememberLockChanged
+        )
+
+        // Remember touch projection
+        RememberSettingRow(
+            label = stringResource(R.string.settings_remember_projection),
+            description = stringResource(R.string.settings_remember_projection_desc),
+            checked = rememberProjection,
+            accentColor = accentColor,
+            onCheckedChange = onRememberProjectionChanged
+        )
+    }
+}
+
+@Composable
+private fun RememberSettingRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    accentColor: Color,
+    onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -163,22 +248,23 @@ private fun MirrorToolSettings(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.settings_auto_start_capture),
+                text = label,
                 color = PANEL_TEXT,
                 fontSize = 14.sp
             )
             Text(
-                text = stringResource(R.string.settings_auto_start_capture_desc),
+                text = description,
                 color = PANEL_TEXT_SECONDARY,
                 fontSize = 12.sp
             )
         }
-        Switch(
-            checked = autoStartCapture,
-            onCheckedChange = onAutoStartChanged,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = accentColor
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = accentColor,
+                checkmarkColor = Color.White,
+                uncheckedColor = PANEL_TEXT_SECONDARY
             )
         )
     }

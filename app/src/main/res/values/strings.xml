@@ -51,4 +51,12 @@
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
     <string name="settings_color_apply">Apply</string>
+
+    <!-- Mirror session state persistence -->
+    <string name="settings_remember_viewport">Remember viewport</string>
+    <string name="settings_remember_viewport_desc">Restore zoom and pan position when mirroring restarts</string>
+    <string name="settings_remember_lock">Remember lock</string>
+    <string name="settings_remember_lock_desc">Restore view lock state when mirroring restarts</string>
+    <string name="settings_remember_projection">Remember touch projection</string>
+    <string name="settings_remember_projection_desc">Restore touch projection state when mirroring restarts</string>
 </resources>
