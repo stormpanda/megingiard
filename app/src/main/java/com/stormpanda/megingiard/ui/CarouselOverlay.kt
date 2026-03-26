@@ -1,10 +1,6 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,12 +11,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -45,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
@@ -56,24 +51,27 @@ import kotlinx.coroutines.delay
 
 // ── Top mode handle ────────────────────────────────────────────────────────
 private val CO_PILL_TOP_PADDING = 6.dp
-private val CO_PILL_WIDTH = 72.dp
-private val CO_PILL_HEIGHT = 4.dp
-private const val CO_PILL_ALPHA_IDLE = 0.4f
-private const val CO_PILL_ALPHA_ACTIVE = 0.75f
+// Idle pull-tab pill (always visible)
+private val CO_PILL_IDLE_WIDTH = 72.dp
+private val CO_PILL_IDLE_HEIGHT = 4.dp
+private const val CO_PILL_IDLE_ALPHA = 0.4f
 private val CO_HANDLE_H_PADDING = 12.dp
 private val CO_HANDLE_ROW_V_PADDING = 6.dp
 private val CO_HANDLE_CORNER = 12.dp
 private val CO_HANDLE_BG = Color.Black.copy(alpha = 0.55f)
 
-// ── Dot indicators ─────────────────────────────────────────────────────────
-private val CO_DOT_SIZE_IDLE = 14.dp
-private val CO_DOT_SIZE_EXPANDED = 22.dp
-private val CO_DOT_GAP_IDLE = 10.dp
-private val CO_DOT_GAP_EXPANDED = 20.dp
-private val CO_DOT_TOUCH_PADDING_V = 12.dp
-private val CO_DOT_TRACK_CORNER = 24.dp
-private val CO_DOT_TRACK_BG = Color.White.copy(alpha = 0.12f)
+// ── Dot indicators ───────────────────────────────────────────────────────────
+private val CO_DOT_SIZE = 30.dp
+private val CO_FINGER_CIRCLE_SIZE = 44.dp
+private val CO_PILL_ACTIVE_HEIGHT = CO_FINGER_CIRCLE_SIZE
+// Uniform spacing: same on all four sides AND between dots = vertical clearance
+private val CO_DOT_SPACING = (CO_PILL_ACTIVE_HEIGHT - CO_DOT_SIZE) / 2
+private val CO_FINGER_CIRCLE_COLOR = Color.White.copy(alpha = 0.45f)
 private const val CO_HYSTERESIS = 0.28f  // fraction past boundary required to switch
+
+/** Pill width: equal spacing on all sides and between dots. */
+private fun pillActiveWidth(toolCount: Int): Dp =
+    CO_DOT_SPACING * (toolCount + 1) + CO_DOT_SIZE * toolCount
 
 // ── Settings button ────────────────────────────────────────────────────────
 private val CO_SETTINGS_BUTTON_SIZE = 40.dp
@@ -189,39 +187,37 @@ private fun TopModeHandle(
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val pillAlpha by animateFloatAsState(
-        targetValue = if (visible) CO_PILL_ALPHA_ACTIVE else CO_PILL_ALPHA_IDLE,
-        animationSpec = tween(durationMillis = 300),
-        label = "pill_alpha"
-    )
+    val accentColor by SettingsManager.accentColor.collectAsState()
+    var isExpanded by remember { mutableStateOf(false) }
+    var fingerXFraction by remember { mutableStateOf(0f) }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        contentAlignment = Alignment.TopCenter,
         modifier = modifier
     ) {
-        // Pull-tab pill – always visible, brightens when controls are shown
-        Spacer(Modifier.height(CO_PILL_TOP_PADDING))
+        // Always-visible idle pull-tab pill (pure affordance, no interaction)
         Box(
             Modifier
-                .size(width = CO_PILL_WIDTH, height = CO_PILL_HEIGHT)
-                .background(Color.White.copy(alpha = pillAlpha), RoundedCornerShape(50))
+                .padding(top = CO_PILL_TOP_PADDING)
+                .size(width = CO_PILL_IDLE_WIDTH, height = CO_PILL_IDLE_HEIGHT)
+                .background(Color.White.copy(alpha = CO_PILL_IDLE_ALPHA), RoundedCornerShape(50))
         )
 
-        // Expanded info bar – slides down when visible = true
+        // Full control row: title | active pill | gear — all vertically centred
         AnimatedVisibility(
             visible = visible,
             enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
             exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
         ) {
-            // Box layout: title pinned to start, dots always centered, gear pinned to end
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = CO_HANDLE_H_PADDING, vertical = CO_HANDLE_ROW_V_PADDING)
                     .background(CO_HANDLE_BG, RoundedCornerShape(CO_HANDLE_CORNER))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                // Current mode name – start
+                // Tool name – pinned to start
                 Text(
                     text = stringResource(currentMode.nameResId()),
                     color = Color.White,
@@ -229,17 +225,80 @@ private fun TopModeHandle(
                     modifier = Modifier.align(Alignment.CenterStart)
                 )
 
-                // Dot indicators – always centered
+                // Active pill – centred in the row (accent colour, only when >1 tool)
                 if (activeTools.size > 1) {
-                    DraggableDotIndicator(
-                        tools = activeTools,
-                        currentMode = currentMode,
-                        onInteraction = onInteraction,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    val pillWidth = pillActiveWidth(activeTools.size)
+                    Box(
+                    modifier = Modifier
+                        .size(width = pillWidth, height = CO_PILL_ACTIVE_HEIGHT)
+                        .background(accentColor, RoundedCornerShape(50))
+                        .pointerInput(activeTools) {
+                            awaitEachGesture {
+                                var down = awaitPointerEvent()
+                                var downChange = down.changes.firstOrNull { it.pressed && !it.previousPressed }
+                                while (downChange == null) {
+                                    down = awaitPointerEvent()
+                                    downChange = down.changes.firstOrNull { it.pressed && !it.previousPressed }
+                                }
+                                downChange.consume()
+                                isExpanded = true
+                                fingerXFraction = (downChange.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                onInteraction()
+
+                                var committedIdx = xToIndex(downChange.position.x, activeTools.size, size.width)
+                                AppStateManager.setMode(activeTools[committedIdx])
+
+                                val pointerId = downChange.id
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                    if (!change.pressed) break
+                                    fingerXFraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                    val newIdx = xToIndexHysteresis(
+                                        change.position.x, activeTools.size, size.width, committedIdx
+                                    )
+                                    if (newIdx != committedIdx) {
+                                        committedIdx = newIdx
+                                        AppStateManager.setMode(activeTools[committedIdx])
+                                    }
+                                    change.consume()
+                                }
+
+                                isExpanded = false
+                            }
+                        }
+                ) {
+                    // Finger-position circle (mid Z)
+                    if (isExpanded) {
+                        Box(
+                            Modifier
+                                .align(Alignment.CenterStart)
+                                .offset(x = (pillWidth - CO_FINGER_CIRCLE_SIZE) * fingerXFraction)
+                                .size(CO_FINGER_CIRCLE_SIZE)
+                                .background(CO_FINGER_CIRCLE_COLOR, CircleShape)
+                        )
+                    }
+                    // Dot indicators (top Z)
+                    Row(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalArrangement = Arrangement.spacedBy(CO_DOT_SPACING),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        activeTools.forEach { tool ->
+                            Box(
+                                Modifier
+                                    .size(CO_DOT_SIZE)
+                                    .background(
+                                        Color.White.copy(alpha = if (tool == currentMode) 1f else 0.35f),
+                                        CircleShape
+                                    )
+                            )
+                        }
+                    }
+                }
                 }
 
-                // Settings gear – end
+                // Settings gear – pinned to end
                 IconButton(
                     onClick = onSettingsClick,
                     modifier = Modifier
@@ -254,96 +313,6 @@ private fun TopModeHandle(
                     )
                 }
             }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Draggable dot indicator
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * A row of dots where the user can:
- *  1. Place a finger to expand the dots and reveal a drag-track background.
- *  2. Slide left / right — the dot under the finger highlights and
- *     [AppStateManager.setMode] is called live.
- *  3. Lift the finger to confirm and collapse.
- */
-@Composable
-private fun DraggableDotIndicator(
-    tools: List<AppMode>,
-    currentMode: AppMode,
-    onInteraction: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    val dotSize by animateDpAsState(
-        targetValue = if (isExpanded) CO_DOT_SIZE_EXPANDED else CO_DOT_SIZE_IDLE,
-        animationSpec = spring(),
-        label = "dot_size"
-    )
-    val dotGap by animateDpAsState(
-        targetValue = if (isExpanded) CO_DOT_GAP_EXPANDED else CO_DOT_GAP_IDLE,
-        animationSpec = spring(),
-        label = "dot_gap"
-    )
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(dotGap),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .background(
-                if (isExpanded) CO_DOT_TRACK_BG else Color.Transparent,
-                RoundedCornerShape(CO_DOT_TRACK_CORNER)
-            )
-            .padding(horizontal = dotSize, vertical = CO_DOT_TOUCH_PADDING_V)
-            .pointerInput(tools) {
-                awaitEachGesture {
-                    // Detect initial press: pressed=true, previousPressed=false
-                    var down = awaitPointerEvent()
-                    var downChange = down.changes.firstOrNull { it.pressed && !it.previousPressed }
-                    while (downChange == null) {
-                        down = awaitPointerEvent()
-                        downChange = down.changes.firstOrNull { it.pressed && !it.previousPressed }
-                    }
-                    downChange.consume()
-                    isExpanded = true
-                    onInteraction()
-
-                    // Set mode for the dot under the initial press
-                    var committedIdx = xToIndex(downChange.position.x, tools.size, size.width)
-                    AppStateManager.setMode(tools[committedIdx])
-
-                    // Track finger movement until lifted – with hysteresis to avoid jitter
-                    val pointerId = downChange.id
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == pointerId } ?: break
-                        if (!change.pressed) break
-                        val newIdx = xToIndexHysteresis(
-                            change.position.x, tools.size, size.width, committedIdx
-                        )
-                        if (newIdx != committedIdx) {
-                            committedIdx = newIdx
-                            AppStateManager.setMode(tools[committedIdx])
-                        }
-                        change.consume()
-                    }
-
-                    isExpanded = false
-                }
-            }
-    ) {
-        tools.forEach { tool ->
-            Box(
-                Modifier
-                    .size(dotSize)
-                    .background(
-                        Color.White.copy(alpha = if (tool == currentMode) 1f else 0.35f),
-                        CircleShape
-                    )
-            )
         }
     }
 }
