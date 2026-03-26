@@ -48,6 +48,8 @@ object SettingsManager {
     private val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
     private val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 
+    // Mirror touch projection settings
+    private val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
     // Mirror session state persistence — "remember" flags
     private val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
     private val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
@@ -83,6 +85,10 @@ object SettingsManager {
 
     private val _overlayAtBottom = MutableStateFlow(false)
     val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
+
+    // Mirror touch projection — pinch-to-zoom while projecting
+    private val _pinchWhileProjecting = MutableStateFlow(false)
+    val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
 
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
@@ -124,6 +130,7 @@ object SettingsManager {
                 _overlayTimeoutMs.value = prefs[KEY_OVERLAY_TIMEOUT_MS] ?: DEFAULT_OVERLAY_TIMEOUT_MS
                 _accentColor.value = Color(prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR)
                 _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
+                _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
                 _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
@@ -192,6 +199,13 @@ object SettingsManager {
             dataStore.edit { prefs ->
                 prefs[KEY_OVERLAY_AT_BOTTOM] = value
             }
+        }
+    }
+
+    fun setPinchWhileProjecting(value: Boolean) {
+        _pinchWhileProjecting.value = value
+        scope.launch {
+            dataStore.edit { prefs -> prefs[KEY_PINCH_WHILE_PROJECTING] = value }
         }
     }
 

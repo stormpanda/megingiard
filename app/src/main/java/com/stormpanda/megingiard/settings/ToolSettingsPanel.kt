@@ -55,6 +55,7 @@ fun ToolSettingsPanel(
     val rememberViewport by SettingsManager.rememberViewport.collectAsState()
     val rememberLock by SettingsManager.rememberLock.collectAsState()
     val rememberProjection by SettingsManager.rememberProjection.collectAsState()
+    val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -113,7 +114,9 @@ fun ToolSettingsPanel(
                         rememberLock = rememberLock,
                         onRememberLockChanged = { SettingsManager.setRememberLock(it) },
                         rememberProjection = rememberProjection,
-                        onRememberProjectionChanged = { SettingsManager.setRememberProjection(it) }
+                        onRememberProjectionChanged = { SettingsManager.setRememberProjection(it) },
+                        pinchWhileProjecting = pinchWhileProjecting,
+                        onPinchWhileProjectingChanged = { SettingsManager.setPinchWhileProjecting(it) }
                     )
                     AppMode.MEDIA, AppMode.TOUCHPAD -> {
                         Text(
@@ -173,7 +176,9 @@ private fun MirrorToolSettings(
     rememberLock: Boolean,
     onRememberLockChanged: (Boolean) -> Unit,
     rememberProjection: Boolean,
-    onRememberProjectionChanged: (Boolean) -> Unit
+    onRememberProjectionChanged: (Boolean) -> Unit,
+    pinchWhileProjecting: Boolean,
+    onPinchWhileProjectingChanged: (Boolean) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Auto-start capture
@@ -230,6 +235,17 @@ private fun MirrorToolSettings(
             checked = rememberProjection,
             accentColor = accentColor,
             onCheckedChange = onRememberProjectionChanged
+        )
+
+        HorizontalDivider(color = PANEL_DIVIDER)
+
+        // Pinch-to-zoom while projecting
+        RememberSettingRow(
+            label = stringResource(R.string.settings_pinch_while_projecting),
+            description = stringResource(R.string.settings_pinch_while_projecting_desc),
+            checked = pinchWhileProjecting,
+            accentColor = accentColor,
+            onCheckedChange = onPinchWhileProjectingChanged
         )
     }
 }

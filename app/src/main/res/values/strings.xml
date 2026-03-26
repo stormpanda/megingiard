@@ -52,6 +52,10 @@
     <string name="settings_color_cancel">Cancel</string>
     <string name="settings_color_apply">Apply</string>
 
+    <!-- Mirror touch projection -->
+    <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>
+    <string name="settings_pinch_while_projecting_desc">Allow two-finger zoom and pan gestures while Touch Projection is active. Two-finger touches are not forwarded to the primary display.</string>
+
     <!-- Mirror session state persistence -->
     <string name="settings_remember_viewport">Remember viewport</string>
     <string name="settings_remember_viewport_desc">Restore zoom and pan position when mirroring restarts</string>

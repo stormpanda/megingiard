@@ -7,6 +7,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -91,6 +93,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val isLocked by ScreenCaptureManager.isLocked.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
+    val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -245,26 +248,90 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         }
                     )
                 }
-                // Pass 3 — Pinch-zoom and pan; entirely disabled when locked.
-                // Using isLocked as key so the block exits immediately when lock is engaged.
-                .pointerInput(isLocked) {
-                    if (isLocked) return@pointerInput
-                    while (true) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            coroutineScope.launch {
-                                val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
-                                animScale.snapTo(newScale)
-                                val maxX = (surfaceWidth * (newScale - 1f)) / 2f
-                                val maxY = (surfaceHeight * (newScale - 1f)) / 2f
-                                animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
-                                animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
+                // Pass 3 — Pinch-zoom and pan.
+                //
+                // Three modes controlled by isLocked and pinchWhileProjecting:
+                //
+                // A) Not locked → full detectTransformGestures (existing behaviour).
+                //
+                // B) Locked + Touch Projection + pinchWhileProjecting enabled →
+                //    multi-finger-only transform: two-finger pinch/pan still works,
+                //    but single-finger events pass through to Block 4 for injection.
+                //
+                // C) Locked (for any other reason) → no transform at all.
+                //
+                // Keys include pinchWhileProjecting and isTouchProjectionActive so the
+                // block restarts whenever the option or projection state changes.
+                .pointerInput(isLocked, pinchWhileProjecting, isTouchProjectionActive, surfaceWidth, surfaceHeight) {
+                    val multiFingerMode = isLocked && isTouchProjectionActive && pinchWhileProjecting
+                    when {
+                        multiFingerMode -> {
+                            // Multi-finger-only transform: consume 2+-finger events, let
+                            // single-finger events fall through to Block 4 for injection.
+                            awaitPointerEventScope {
+                                var multiActive = false
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val pressedCount = event.changes.count { it.pressed }
+                                    if (pressedCount >= 2) {
+                                        // Two or more fingers: perform zoom/pan.
+                                        multiActive = true
+                                        val zoom = event.calculateZoom()
+                                        val pan = event.calculatePan()
+                                        coroutineScope.launch {
+                                            val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
+                                            animScale.snapTo(newScale)
+                                            val maxX = (surfaceWidth * (newScale - 1f)) / 2f
+                                            val maxY = (surfaceHeight * (newScale - 1f)) / 2f
+                                            animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
+                                            animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
+                                        }
+                                        // Consume all changes so Block 4 does not inject.
+                                        event.changes.forEach { it.consume() }
+                                    } else if (multiActive) {
+                                        // Fingers reducing from 2 → 1 → 0: suppress the
+                                        // lingering single-finger events to avoid a stray
+                                        // DOWN injection after a pinch gesture ends.
+                                        event.changes.forEach { it.consume() }
+                                        if (pressedCount == 0) {
+                                            multiActive = false
+                                            // Snap back to 1× when a pinch-out drops below
+                                            // the comfort threshold, same as normal mode.
+                                            if (animScale.value < SNAP_BACK_THRESHOLD) {
+                                                coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
+                                                coroutineScope.launch { animOffsetX.animateTo(0f) }
+                                                coroutineScope.launch { animOffsetY.animateTo(0f) }
+                                            }
+                                        }
+                                    }
+                                    // Single finger + !multiActive → don't consume:
+                                    // Block 4 handles injection normally.
+                                }
                             }
                         }
-                        // Snap back to 1× when a pinch-out drops below the comfort threshold.
-                        if (animScale.value < SNAP_BACK_THRESHOLD) {
-                            coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
-                            coroutineScope.launch { animOffsetX.animateTo(0f) }
-                            coroutineScope.launch { animOffsetY.animateTo(0f) }
+                        !isLocked -> {
+                            // Standard unlocked mode: full detectTransformGestures.
+                            while (true) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    coroutineScope.launch {
+                                        val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
+                                        animScale.snapTo(newScale)
+                                        val maxX = (surfaceWidth * (newScale - 1f)) / 2f
+                                        val maxY = (surfaceHeight * (newScale - 1f)) / 2f
+                                        animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
+                                        animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
+                                    }
+                                }
+                                // Snap back to 1× when a pinch-out drops below the comfort threshold.
+                                if (animScale.value < SNAP_BACK_THRESHOLD) {
+                                    coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
+                                    coroutineScope.launch { animOffsetX.animateTo(0f) }
+                                    coroutineScope.launch { animOffsetY.animateTo(0f) }
+                                }
+                            }
+                        }
+                        else -> {
+                            // Locked without pinch-while-projecting: no transform.
                         }
                     }
                 }
@@ -296,6 +363,27 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
 
                             when (event.type) {
                                 PointerEventType.Press -> {
+                                    // If a second finger lands while we have an active injection
+                                    // gesture (pinchWhileProjecting mode: Block 3 will take over),
+                                    // gracefully cancel the in-flight touch before Block 3 consumes.
+                                    if (gestureStarted && event.changes.size > 1) {
+                                        touchIndicatorPos = null
+                                        val sw = ScreenCaptureManager.surfaceWidth.value
+                                        val sh = ScreenCaptureManager.surfaceHeight.value
+                                        val sc = ScreenCaptureManager.scale.value
+                                        val ox = ScreenCaptureManager.offsetX.value
+                                        val oy = ScreenCaptureManager.offsetY.value
+                                        val coords = projectCoordinates(
+                                            touchX, touchY, scW, scH, sw, sh, sc, ox, oy
+                                        )
+                                        val nx = coords?.first
+                                            ?: ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
+                                        val ny = coords?.second
+                                            ?: ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
+                                        TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+                                        gestureStarted = false
+                                        continue
+                                    }
                                     gestureStarted = false
                                     val nearEdge = if (overlayAtBottom) {
                                         touchY >= gestureBoxSize.height - edgeZonePx
@@ -322,6 +410,27 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 }
                                 PointerEventType.Move -> {
                                     if (gestureInEdgeZone || !gestureStarted) continue
+                                    // If Block 3 (multi-finger transform) consumed this event,
+                                    // it means a second finger joined and the gesture was taken
+                                    // over — send UP to cleanly end the injected gesture.
+                                    if (pointer.isConsumed) {
+                                        touchIndicatorPos = null
+                                        val sw = ScreenCaptureManager.surfaceWidth.value
+                                        val sh = ScreenCaptureManager.surfaceHeight.value
+                                        val sc = ScreenCaptureManager.scale.value
+                                        val ox = ScreenCaptureManager.offsetX.value
+                                        val oy = ScreenCaptureManager.offsetY.value
+                                        val coords = projectCoordinates(
+                                            touchX, touchY, scW, scH, sw, sh, sc, ox, oy
+                                        )
+                                        val nx = coords?.first
+                                            ?: ((touchX - scW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
+                                        val ny = coords?.second
+                                            ?: ((touchY - scH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
+                                        TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+                                        gestureStarted = false
+                                        continue
+                                    }
 
                                     val coords = projectCoordinates(
                                         touchX, touchY, scW, scH,

@@ -235,6 +235,20 @@ Users can opt in to persisting specific mirror session states across restarts vi
 
 **Viewport sync:** `MirrorScreen` contains a `LaunchedEffect(isCapturing)` that, when capturing starts, reads the current `ScreenCaptureManager` scale/offset values and calls `Animatable.snapTo()` to align the animation state with the restored values. This bridges the gap between the manager (source of truth after restore) and the Compose `Animatable` instances (source of truth during gestures).
 
+### Pinch-to-Zoom While Projecting
+
+An optional setting ("Pinch-to-zoom while projecting", default off) allows the user to use two-finger pinch/pan gestures to adjust the viewport even while Touch Projection is active.
+
+**Behaviour:**
+- When enabled and Touch Projection is active, `pointerInput` Block 3 enters *multi-finger-only* mode.
+- Events with **≥ 2 pressed pointers** are handled by Block 3 (zoom/pan applied, all changes consumed so Block 4 does not inject them).
+- Events with **1 pressed pointer** are **not consumed** by Block 3 and fall through to Block 4 for normal injection.
+- When a second finger lands while Block 4 has an active injection gesture, Block 4 gracefully sends a `UP` event to the target app before handing off to Block 3.
+- When fingers reduce from 2 → 1 → 0 after a pinch, Block 3 suppresses the lingering single-finger events to prevent a stray `DOWN` injection. After all fingers lift, snap-back logic runs as normal.
+- Two-finger touches are **never forwarded** to the primary display.
+
+**Setting storage:** `mirror_pinch_while_projecting` (`BooleanPreference`) in DataStore. Default: `false`.
+
 ### Source Files
 
 | File                                  | Responsibility                                                                          |
