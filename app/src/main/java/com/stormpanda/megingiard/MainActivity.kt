@@ -36,6 +36,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.AppMode
 
 class MainActivity : ComponentActivity() {
 
@@ -73,7 +74,7 @@ class MainActivity : ComponentActivity() {
                             // Auto-start: treat each app resume as a fresh opportunity.
                             // Only clear the decline flag here — not in the LaunchedEffect,
                             // so a decline within a session is respected until the next resume.
-                            if (SettingsManager.autoStartCapture.value) {
+                            if (SettingsManager.autoStartCapture.value && AppMode.MIRROR in SettingsManager.enabledTools.value) {
                                 AppStateManager.setUserDeclinedCapture(false)
                             }
                         }
