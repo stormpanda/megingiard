@@ -162,8 +162,8 @@ private fun TopModeHandle(
     modifier: Modifier = Modifier
 ) {
     val accentColor by SettingsManager.accentColor.collectAsState()
-    var isExpanded by remember { mutableStateOf(false) }
-    var fingerXFraction by remember { mutableStateOf(0f) }
+    val isExpanded by AppStateManager.pillExpanded.collectAsState()
+    val fingerXFraction by AppStateManager.pillFingerXFraction.collectAsState()
 
     val overlayEdgeAlignment = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter
     val overlayExpandFrom = if (overlayAtBottom) Alignment.Bottom else Alignment.Top
@@ -220,8 +220,10 @@ private fun TopModeHandle(
                                     downChange = down.changes.firstOrNull { it.pressed && !it.previousPressed }
                                 }
                                 downChange.consume()
-                                isExpanded = true
-                                fingerXFraction = (downChange.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                AppStateManager.setPillExpanded(true)
+                                AppStateManager.setPillFingerXFraction(
+                                    (downChange.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                )
                                 onInteraction()
 
                                 var committedIdx = xToIndex(downChange.position.x, activeTools.size, size.width)
@@ -232,7 +234,9 @@ private fun TopModeHandle(
                                     val event = awaitPointerEvent()
                                     val change = event.changes.firstOrNull { it.id == pointerId } ?: break
                                     if (!change.pressed) break
-                                    fingerXFraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                    AppStateManager.setPillFingerXFraction(
+                                        (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                                    )
                                     val newIdx = xToIndexHysteresis(
                                         change.position.x, activeTools.size, size.width, committedIdx
                                     )
@@ -243,7 +247,7 @@ private fun TopModeHandle(
                                     change.consume()
                                 }
 
-                                isExpanded = false
+                                AppStateManager.setPillExpanded(false)
                             }
                         }
                 ) {

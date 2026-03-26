@@ -37,6 +37,17 @@ object AppStateManager {
     private val _overlayVisible = MutableStateFlow(false)
     val overlayVisible: StateFlow<Boolean> = _overlayVisible.asStateFlow()
 
+    // Pill gesture state shared across windows so the finger indicator survives
+    // seamlessly when MirrorPresentation shows/hides during a drag.
+    private val _pillExpanded = MutableStateFlow(false)
+    val pillExpanded: StateFlow<Boolean> = _pillExpanded.asStateFlow()
+
+    private val _pillFingerXFraction = MutableStateFlow(0f)
+    val pillFingerXFraction: StateFlow<Float> = _pillFingerXFraction.asStateFlow()
+
+    fun setPillExpanded(expanded: Boolean) { _pillExpanded.value = expanded }
+    fun setPillFingerXFraction(fraction: Float) { _pillFingerXFraction.value = fraction }
+
     // Timestamp updated on every interaction to restart the auto-hide timer.
     private val _overlayInteractionTime = MutableStateFlow(0L)
 
