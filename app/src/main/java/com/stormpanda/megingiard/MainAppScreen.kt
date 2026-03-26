@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -30,7 +31,9 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
-import com.stormpanda.megingiard.ui.rememberAutoHideState
+
+private val MAS_SWIPE_EDGE_ZONE = 40.dp
+private val MAS_SWIPE_THRESHOLD = 25.dp
 
 @Composable
 fun MainAppScreen() {
@@ -39,17 +42,58 @@ fun MainAppScreen() {
     val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
 
-    val (showControls, onInteraction) = rememberAutoHideState()
+    val showControls by AppStateManager.overlayVisible.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val density = LocalDensity.current
+    val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
+            .pointerInput(overlayAtBottom) {
                 awaitPointerEventScope {
+                    var swipeStartY = Float.NaN
+                    var swipeTriggered = false
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (event.type == PointerEventType.Press || event.type == PointerEventType.Move) {
-                            onInteraction()
+                        when (event.type) {
+                            PointerEventType.Press -> {
+                                AppStateManager.setTouching(true)
+                                val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                val nearEdge = if (overlayAtBottom) {
+                                    y >= size.height - edgeZonePx
+                                } else {
+                                    y <= edgeZonePx
+                                }
+                                swipeStartY = if (nearEdge) y else Float.NaN
+                                swipeTriggered = false
+                            }
+                            PointerEventType.Move -> {
+                                if (!swipeStartY.isNaN() && !swipeTriggered) {
+                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                    val delta = if (overlayAtBottom) {
+                                        swipeStartY - y
+                                    } else {
+                                        y - swipeStartY
+                                    }
+                                    if (delta >= swipeThresholdPx) {
+                                        AppStateManager.triggerOverlay()
+                                        swipeTriggered = true
+                                    }
+                                }
+                            }
+                            PointerEventType.Release -> {
+                                // Only clear touching when all pointers are up
+                                // (multi-touch: one finger may release while another is still down)
+                                if (!event.changes.any { it.pressed }) {
+                                    AppStateManager.setTouching(false)
+                                    AppStateManager.setPillExpanded(false)
+                                }
+                                swipeStartY = Float.NaN
+                                swipeTriggered = false
+                            }
+                            else -> {}
                         }
                     }
                 }
@@ -92,11 +136,11 @@ fun MainAppScreen() {
                     }
                 }
                 AppMode.MEDIA -> MediaScreen()
-                AppMode.TOUCHPAD -> TouchpadScreen(onInteraction = onInteraction)
+                AppMode.TOUCHPAD -> TouchpadScreen(onInteraction = { AppStateManager.triggerOverlay() })
             }
         }
 
-        CarouselOverlay(visible = showControls)
+        CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
     }
 }
 

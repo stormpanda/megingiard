@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,30 +26,37 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
-import com.stormpanda.megingiard.ui.rememberAutoHideState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private val CONTROL_BUTTON_SIZE = 72.dp
 private val CONTROL_ICON_SIZE = 36.dp
-private val CONTROL_PADDING = 16.dp
 private val CONTROL_BUTTON_GAP = 16.dp
+private val MR_SWIPE_EDGE_ZONE = 40.dp
+private val MR_SWIPE_THRESHOLD = 25.dp
 private const val ZOOM_MIN = 1f
 private const val ZOOM_MAX = 5f
 private const val SNAP_BACK_THRESHOLD = 1.15f
@@ -69,7 +75,26 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val animOffsetX = remember { Animatable(0f) }
     val animOffsetY = remember { Animatable(0f) }
 
-    val (showControls, onInteraction) = rememberAutoHideState()
+    val showControls by AppStateManager.overlayVisible.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val density = LocalDensity.current
+    val edgeZonePx = with(density) { MR_SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { MR_SWIPE_THRESHOLD.toPx() }
+
+    // Local visibility for stop/pause buttons — shown on any touch, independent of carousel
+    var showButtons by remember { mutableStateOf(false) }
+    var buttonTriggerCount by remember { mutableIntStateOf(0) }
+    val isTouchingState by AppStateManager.isTouching.collectAsState()
+    val overlayTimeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
+
+    // Auto-hide for mirror stop/pause buttons (independent of carousel overlay timer)
+    LaunchedEffect(buttonTriggerCount, isTouchingState, overlayTimeoutMs) {
+        if (showButtons) {
+            if (isTouchingState) return@LaunchedEffect
+            delay(overlayTimeoutMs)
+            showButtons = false
+        }
+    }
 
     // Sync animated values to ScreenCaptureManager state flows via snapshotFlow,
     // avoiding excessive LaunchedEffect restarts on every animation frame.
@@ -88,21 +113,68 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                // Raw press/release observer: tracks isTouching + shows buttons + detects edge swipe
+                .pointerInput(overlayAtBottom) {
+                    awaitPointerEventScope {
+                        var swipeStartY = Float.NaN
+                        var swipeTriggered = false
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    AppStateManager.setTouching(true)
+                                    showButtons = true
+                                    buttonTriggerCount++
+                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                    val nearEdge = if (overlayAtBottom) {
+                                        y >= size.height - edgeZonePx
+                                    } else {
+                                        y <= edgeZonePx
+                                    }
+                                    swipeStartY = if (nearEdge) y else Float.NaN
+                                    swipeTriggered = false
+                                }
+                                PointerEventType.Move -> {
+                                    if (!swipeStartY.isNaN() && !swipeTriggered) {
+                                        val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                        val delta = if (overlayAtBottom) {
+                                            swipeStartY - y
+                                        } else {
+                                            y - swipeStartY
+                                        }
+                                        if (delta >= swipeThresholdPx) {
+                                            AppStateManager.triggerOverlay()
+                                            swipeTriggered = true
+                                        }
+                                    }
+                                }
+                                PointerEventType.Release -> {
+                                    // Only clear touching when all pointers are up
+                                    // (multi-touch: one finger may release while another is still down)
+                                    if (!event.changes.any { it.pressed }) {
+                                        AppStateManager.setTouching(false)
+                                        AppStateManager.setPillExpanded(false)
+                                    }
+                                    swipeStartY = Float.NaN
+                                    swipeTriggered = false
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+                }
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = {
                             coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
                             coroutineScope.launch { animOffsetX.animateTo(0f) }
                             coroutineScope.launch { animOffsetY.animateTo(0f) }
-                            onInteraction()
-                        },
-                        onTap = { onInteraction() }
+                        }
                     )
                 }
                 .pointerInput(Unit) {
                     while (true) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            onInteraction()
                             coroutineScope.launch {
                                 val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
                                 animScale.snapTo(newScale)
@@ -149,7 +221,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
 
             AnimatedVisibility(
-                visible = showControls,
+                visible = (showControls || showButtons) && isCapturing,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.fillMaxSize()
@@ -158,8 +230,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     val context = LocalContext.current
                     Row(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(CONTROL_PADDING),
+                            .align(Alignment.Center),
                         horizontalArrangement = Arrangement.spacedBy(CONTROL_BUTTON_GAP)
                     ) {
                         IconButton(
@@ -203,8 +274,11 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // CarouselOverlay is a sibling of the gesture Box so its pointer events are
-        // not intercepted by detectTapGestures / detectTransformGestures above.
-        CarouselOverlay(visible = showControls)
+        // CarouselOverlay is a sibling of the gesture Box so its touch events are
+        // not intercepted by detectTapGestures / detectTransformGestures.
+        // It must live here (inside MirrorPresentation's ComposeView) because
+        // MirrorPresentation is a separate window on top of the Activity window;
+        // MainAppScreen's CarouselOverlay would be invisible while mirroring.
+        CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
     }
 }

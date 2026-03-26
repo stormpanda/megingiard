@@ -239,7 +239,7 @@ The coroutine is automatically cancelled when the key (`isPlaying`) changes to `
 
 - Reusable Composables (overlay controls, auto-hide timers) belong in `ui/`.
 - Do not duplicate overlay or carousel code across screens. Use
-  `CarouselOverlay` and `rememberAutoHideState()`.
+  `CarouselOverlay` and `AppStateManager.overlayVisible` / `triggerOverlay()`.
 
 ### 6.5 Collecting StateFlows
 
@@ -459,7 +459,7 @@ These constraints are non-negotiable:
 
 ## 13 Commit Message Proposal
 
-After completing every set of changes, you MUST propose a ready-to-use commit message that covers **all staged and unstaged changes not yet committed** (it MUST include the full diff since the last commit). Use Conventional Commits format:
+After completing every set of changes, you MUST propose a ready-to-use commit message. Use Conventional Commits format:
 
 ```
 <type>: <short imperative summary>
@@ -467,6 +467,11 @@ After completing every set of changes, you MUST propose a ready-to-use commit me
 - bullet describing change 1
 - bullet describing change 2
 ```
+
+**Scope of the commit message:**
+The message MUST cover **every change made since the last commit** — across the entire conversation, not only the most recent editing step. This means: if the session involved multiple rounds of edits (e.g. first a refactor, then a bug fix, then a follow-up tweak), all of them must appear as bullets in the final proposal. Never limit the message to just the last reply or last file touched.
+
+When in doubt, mentally run through all files that were modified during the session and verify each one is represented.
 
 The proposal must be copy-paste ready — no placeholders. Present it as a code block so the user can copy it directly.
 
