@@ -71,7 +71,7 @@ Primary Display
 
 - **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the `SurfaceView` — bypassing CPU composition entirely (the Android Hardware Composer routes the signal via DRM kernel buffers).
 - **`MirrorPresentation`** is an `android.app.Presentation` instance anchored to the secondary physical display (`displayId != DEFAULT_DISPLAY`, auto-discovered via `DisplayManager`). It contains both the `SurfaceView` (hardware buffer recipient) and a `ComposeView` (UI overlay with `MirrorScreen`).
-- **`SurfaceView.setZOrderMediaOverlay(true)`** is critical: without it, the hardware buffer renders *behind* the window background, producing a black screen even though GPU rendering succeeds.
+- **`SurfaceView.setZOrderMediaOverlay(true)`** is critical: without it, the hardware buffer renders _behind_ the window background, producing a black screen even though GPU rendering succeeds.
 
 ### Synthetic Lifecycle Owner
 
@@ -103,11 +103,11 @@ The `SurfaceView` uses `setFixedSize(srcWidth, srcHeight)` so the hardware buffe
 
 State flows through three layers:
 
-| Layer | Mechanism |
-|---|---|
-| Gesture capture | `detectTapGestures` (tap, double-tap) + `detectTransformGestures` (loop) in `MirrorScreen` |
-| Animation | Three `Animatable` instances: `animScale`, `animOffsetX`, `animOffsetY` |
-| Hardware transform | `ScreenCaptureManager` StateFlows → `SurfaceView.scaleX / translationX / translationY` |
+| Layer              | Mechanism                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| Gesture capture    | `detectTapGestures` (tap, double-tap) + `detectTransformGestures` (loop) in `MirrorScreen` |
+| Animation          | Three `Animatable` instances: `animScale`, `animOffsetX`, `animOffsetY`                    |
+| Hardware transform | `ScreenCaptureManager` StateFlows → `SurfaceView.scaleX / translationX / translationY`     |
 
 **Gallery-style boundary clamping:**
 
@@ -137,11 +137,11 @@ CarouselOverlay is rendered as a sibling of the gesture `Box` (not nested inside
 
 ### Mode Switching: `show()` / `hide()` vs. `dismiss()`
 
-| Operation | When | Effect |
-|---|---|---|
-| `Presentation.show()` | Entering MIRROR mode | Restores window to Z-order; resumes capture |
-| `Presentation.hide()` | Leaving MIRROR mode (in-session) | Removes window from Z-order; VirtualDisplay retained |
-| `Presentation.dismiss()` | `Service.onDestroy()` only | Destroys the window permanently |
+| Operation                | When                             | Effect                                               |
+| ------------------------ | -------------------------------- | ---------------------------------------------------- |
+| `Presentation.show()`    | Entering MIRROR mode             | Restores window to Z-order; resumes capture          |
+| `Presentation.hide()`    | Leaving MIRROR mode (in-session) | Removes window from Z-order; VirtualDisplay retained |
+| `Presentation.dismiss()` | `Service.onDestroy()` only       | Destroys the window permanently                      |
 
 Mode switching is driven by a combined `StateFlow` in `MirrorPresentation`:
 
@@ -159,10 +159,10 @@ combine(currentMode, isActivityResumed, isOnValidScreen) { mode, resumed, valid 
 
 ### Source Files
 
-| File | Responsibility |
-|---|---|
-| `ScreenCaptureService.kt` | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle |
-| `MirrorPresentation.kt` | `Presentation` window on secondary display; surface/compose setup; mode-switching logic |
-| `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` for Compose-in-Presentation |
-| `ScreenCaptureManager.kt` | Singleton state: scale, offset, freeze state, frozen bitmap |
-| `MirrorScreen.kt` | Compose UI: gesture handling, freeze/stop controls, `CarouselOverlay` |
+| File                                  | Responsibility                                                                          |
+| ------------------------------------- | --------------------------------------------------------------------------------------- |
+| `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                 |
+| `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic |
+| `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` for Compose-in-Presentation      |
+| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze state, frozen bitmap                             |
+| `MirrorScreen.kt`                     | Compose UI: gesture handling, freeze/stop controls, `CarouselOverlay`                   |
