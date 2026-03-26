@@ -151,6 +151,12 @@ bitmap.recycle() // manager never got it, local cleanup required
 - Extract **all magic numbers** to `private const val` (primitives) or
   `private val` (Compose `Dp`, `Color`, etc.) at file scope.
 - Use SCREAMING_SNAKE_CASE: `ZOOM_MIN`, `CONTROL_BUTTON_SIZE`, `OVERLAY_TIMEOUT_MS`.
+- File-scoped color constants **must be prefixed** with a 2–3 letter screen/feature abbreviation to avoid cross-file collisions:
+  ```kotlin
+  // GlobalSettingsScreen.kt
+  private val GS_BG = Color(0xFF121212)
+  private val GS_SURFACE = Color(0xFF1C1C1E)
+  ```
 
 ### 5.4 Logging
 
@@ -198,6 +204,23 @@ manager.setScale(animScale.value)
 
 - `snapshotFlow` is in `androidx.compose.runtime`, **not** `kotlinx.coroutines`.
 
+**Polling fallback:** When reacting to state that is _not_ exposed as a `Flow` (e.g., an imperative property updated by a system callback), use a `while(true) + delay()` poll inside a keyed `LaunchedEffect` rather than forcing an artificial flow:
+
+```kotlin
+// ✅ Correct – polling imperative state
+LaunchedEffect(isPlaying) {
+    if (isPlaying) {
+        while (true) {
+            val state = MediaState.controller?.playbackState
+            // use state …
+            delay(PROGRESS_POLL_INTERVAL_MS)
+        }
+    }
+}
+```
+
+The coroutine is automatically cancelled when the key (`isPlaying`) changes to `false`.
+
 ### 6.2 String Resources
 
 - **All user-visible strings** must live in `res/values/strings.xml`.
@@ -217,6 +240,15 @@ manager.setScale(animScale.value)
 - Reusable Composables (overlay controls, auto-hide timers) belong in `ui/`.
 - Do not duplicate overlay or carousel code across screens. Use
   `CarouselOverlay` and `rememberAutoHideState()`.
+
+### 6.5 Collecting StateFlows
+
+| Context                                                | Pattern                                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------------------------- |
+| Inside a `@Composable`                                 | `.collectAsState()` — converts to Compose `State`, triggers recomposition |
+| Inside a `Service`, `Presentation`, or coroutine scope | `.collect { }` — imperative side-effect, no recomposition involved        |
+
+Never call `.collectAsState()` outside a Composable; never call raw `.collect {}` inside a Composable when the result drives UI.
 
 ---
 
@@ -249,6 +281,32 @@ super.onDestroy()
   Example: rename a helper `startForegroundNotification()` instead of
   `startForegroundService()` to prevent shadowing `Context.startForegroundService()`.
 
+### 7.4 Combining Multiple StateFlows
+
+When logic depends on **two or more independent `StateFlow`s**, use `combine()` rather than nesting `collect {}` calls:
+
+```kotlin
+// ✅ Correct – single derived signal
+scope.launch {
+    combine(
+        AppStateManager.currentMode,
+        AppStateManager.isActivityResumed,
+        AppStateManager.isOnValidScreen
+    ) { mode, resumed, valid ->
+        mode == AppMode.MIRROR && resumed && valid
+    }.collect { shouldShow ->
+        if (shouldShow) show() else hide()
+    }
+}
+
+// ❌ Wrong – nested collects create race conditions
+scope.launch {
+    AppStateManager.currentMode.collect { mode ->
+        AppStateManager.isActivityResumed.collect { resumed -> … }
+    }
+}
+```
+
 ---
 
 ## 8 Android Manifest & Permissions
@@ -279,6 +337,16 @@ super.onDestroy()
 - **Exception:** In `Service.onDestroy()` (full teardown), calling `dismiss()`
   is correct — the process is being destroyed anyway. The `hide()` vs `dismiss()`
   rule only applies to in-session mode switching.
+- **Teardown order in `onDestroy()`:** Cancel the coroutine scope _before_ releasing hardware resources and calling `dismiss()`. This prevents in-flight coroutines from racing against resource deallocation:
+  ```kotlin
+  override fun onDestroy() {
+      super.onDestroy()
+      scope.cancel()          // 1. stop all coroutines
+      virtualDisplay?.release() // 2. release hardware
+      mediaProjection?.stop()
+      mirrorPresentation?.dismiss() // 3. destroy window
+  }
+  ```
 
 ### 9.3 SurfaceView Layer Order
 
@@ -309,18 +377,29 @@ options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
 startActivity(intent, options.toBundle())
 \`\`\`
 
-### 9.6 MirrorPresentationLifecycleOwner Teardown
+### 9.6 MirrorPresentationLifecycleOwner — Setup & Teardown
 
-- `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
-  Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
-  event that cleans up all Compose state registered against the owner.
+**Setup:** After creating the `MirrorPresentationLifecycleOwner`, inject it into the Presentation's DecorView _before_ setting any `ComposeView` content:
 
-\`\`\`kotlin
-setOnDismissListener {
-scope.cancel()
-lifecycleOwner.destroy()
+```kotlin
+window?.decorView?.apply {
+    setViewTreeLifecycleOwner(lifecycleOwner)
+    setViewTreeSavedStateRegistryOwner(lifecycleOwner)
 }
-\`\`\`
+```
+
+Without this, Compose cannot find a lifecycle owner and throws at runtime.
+
+**Teardown:** `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
+Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
+event that cleans up all Compose state registered against the owner.
+
+```kotlin
+setOnDismissListener {
+    scope.cancel()
+    lifecycleOwner.destroy()
+}
+```
 
 ### 9.7 Native Touch Injection (Touchpad)
 
