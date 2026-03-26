@@ -71,7 +71,7 @@ private val CONTROL_ICON_SIZE = 36.dp
 private val CONTROL_BUTTON_GAP = 16.dp
 private val CONTROL_PILL_H_PADDING = 12.dp
 private val CONTROL_PILL_V_PADDING = 10.dp
-private val CONTROL_PILL_BG = Color.Black.copy(alpha = 0.7f)
+private val CONTROL_PILL_BG = Color.Black.copy(alpha = 0.8f)
 private val MR_SWIPE_EDGE_ZONE = 40.dp
 private val MR_SWIPE_THRESHOLD = 25.dp
 private val MR_TOUCH_INDICATOR_SIZE = 24.dp
