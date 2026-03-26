@@ -3,49 +3,42 @@
 ## 1. Product Overview
 
 **Name:** Megingiard
-**Plattform:** Android
-**Gerät:** AYN Thor (Gaming Handheld mit zwei Bildschirmen)
-**Zweck:** Eine Companion-App für den zweiten Bildschirm ("Werkzeuggürtel"), die essenzielle Komfortfunktionen während der Nutzung des Hauptbildschirms bereitstellt.
+**Platform:** Android
+**Device:** AYN Thor (gaming handheld with two displays)
+**Purpose:** A second-screen companion app ("tool belt") that provides essential quality-of-life features while the user operates the primary screen.
 
-## 2. Core Features (MVP)
+## 2. Core Features
 
-Die App umfasst zwei Hauptwerkzeuge, die den gesamten zweiten Bildschirm ausnutzen.
+The app offers three tools, each of which occupies the entire secondary screen. Detailed requirements and technical implementation are documented in the respective feature files (`FEATURE.md`).
 
-### 2.1. Screen Mirroring (Hauptbildschirm spiegeln)
+### 2.1 Screen Mirroring → [docs/features/mirror/FEATURE.md](docs/features/mirror/FEATURE.md)
 
-- **Live-Synchronisation:** Permanente, in Echtzeit synchronisierte Spiegelung des gesamten Hauptbildschirms.
-  - **Qualitätsanspruch:** Die Bildqualität muss perfekt sein, auch wenn auf dem Hauptbildschirm ressourcenintensive Spiele laufen (hohe Performance und geringer Overhead).
-  - **Manipulation:** Der User kann den gespiegelten Bildschirmausschnitt auf dem zweiten Bildschirm frei per Touch (Pinch-to-Zoom, Panning) verändern, um bestimmte Details im Spiel heranzuholen.
-- **Momentaufnahme ("Freeze"):**
-  - Erstellen eines hochauflösenden Screenshots des aktuellen Bildschirms um das Bild "einzufrieren".
-  - Dieser Snapshot dient als Referenz (z.B. für Rätsel im Spiel) und kann in der App ebenfalls gezoomt und verschoben werden.
-  - **Bedienung:** Ein kurzes Antippen (Tap) auf den zweiten Bildschirm öffnet ein Overlay mit semi-transparenten Kontroll-Buttons. Einer davon ist der Screenshot / Freeze-Button. Das Overlay verschwindet nach kurzer Inaktivität automatisch.
+- **Live mirroring** of the entire primary screen in real-time, DRM-free and without latency.
+- **Viewport control:** Pinch-to-Zoom (1×–5×), free panning with gallery-style edge clamping and automatic snap-back.
+- **Freeze Frame:** Freeze the current frame as an interactively zoomable and pannable reference screenshot.
+- **Controls Overlay:** A tap reveals semi-transparent controls (Freeze, Stop, carousel navigation) that auto-hide after a short period of inactivity.
 
-### 2.2. Medienkontrolle
+### 2.2 Media Control → [docs/features/media/FEATURE.md](docs/features/media/FEATURE.md)
 
-- **Systemweite Steuerung:** Integration über die standardmäßigen Android-`MediaSession`-APIs. Dadurch werden alle üblichen Apps (Spotify, YouTube im Hintergrund, Podcast Player, etc.) automatisch unterstützt.
-- **Funktionen:**
-  - Anzeige des aktuellen Titels.
-  - Play / Pause.
-  - Medien überspringen (Vor/Zurück).
-  - Mute / Unmute und Lautstärkeregelung.
-  - Interaktiver Fortschrittsbalken (Scrubbing).
+- **System-wide control** via the Android `MediaSession` API (Spotify, YouTube, podcasts, and more).
+- Transport controls: Play/Pause, Skip (forward/back), ±10-second jumps.
+- Interactive **progress bar** with deferred scrubbing (seek is applied on release only).
+
+### 2.3 Virtual Touchpad → [docs/features/touchpad/FEATURE.md](docs/features/touchpad/FEATURE.md)
+
+- The secondary screen becomes a **touch control surface** for the primary screen.
+- Touch input is injected in real-time via a native binary directly into the kernel input stream (< 1 ms latency).
+- 16:9 touch surface with a visual touch indicator and hint text.
 
 ## 3. User Interface & User Experience (UX)
 
-- **Startverhalten:** Beim Öffnen der App startet diese sofort in der "Mirror"-Funktion, um dem Nutzer einen sofortigen Mehrwert ohne Konfiguration zu bieten.
-- **Navigation:** Der Wechsel zwischen den verfügbaren Tools (Mirror, Medienkontrolle und Touchpad) erfolgt über **Karussell-Navigation** (Tap auf den Screen zeigt Chevron-Pfeile links/rechts).
+- **Launch behaviour:** On opening the app, it starts immediately in Mirror mode to provide instant value without any configuration.
+- **Navigation:** Switching between available tools (Mirror, Media Control, and Touchpad) is done via **carousel navigation** (tap the screen to reveal left/right chevron arrows).
 - **Layout & Design:**
-  - Die App läuft im randlosen "Immersive" Fullscreen-Modus (ohne Statusleiste oder störende Navigationsbuttons).
-  - Die Oberflächen sind im Landscape-Format strikt für die Seitenverhältnisse **4:3** und **16:9** optimiert.
-  - **Ästhetik:** Das Design (insbesondere der Medienkontrolle) bleibt zunächst bewusst dunkel und minimalistisch ("Dark Mode"), um während des Spielens auf dem Hauptbildschirm nicht durch grelle Farben abzulenken.
-  - **Controls Overlay:** Steuerungs-Elemente zeigen sich ausschließlich bei einem Tap auf den Content und verblassen nach einigen Sekunden (Auto-Hide).
-- **App-Lifecycle:** Da es sich um ein Android-Gerät handelt, vertraut Megingiard dem Systemstandard: Die App wird über den regulären Android Multi-Tasking-View (Recent Apps) beendet; eigene "Schließen"-Buttons im Interface existieren nicht.
+  - The app runs in borderless Immersive Fullscreen mode (no status bar or navigation buttons).
+  - All surfaces are optimised for **4:3** and **16:9** aspect ratios in landscape orientation.
+  - **Aesthetic:** The design (especially Media Control) is intentionally dark and minimalist ("Dark Mode") to avoid distracting the user with bright colours while gaming on the primary screen.
+  - **Controls Overlay:** Controls are revealed exclusively on a tap and fade out after a few seconds (auto-hide).
+- **App Lifecycle:** Megingiard follows Android conventions: the app is closed via the standard Android multi-tasking view (Recent Apps); there are no dedicated close buttons in the UI.
 
-## 4. Technische Architektur-Meilensteine (MVP)
 
-1. **Projekt-Setup:** Initialisierung des Android-Projekts (z. B. nativ in Kotlin mit Jetpack Compose) mit spezifischer Ausrichtung auf Immersive Fullscreen.
-2. **Screen Capture Service:** Implementierung der Android `MediaProjection` API für performantes Mirroring bei sehr hoher Bildqualität.
-3. **Touch & Gesten-Handling:** Erkennung und Verarbeitung von Pinch-to-Zoom, freiem Panning im gespiegelten Content sowie der Karussell-Navigation (Tap → Chevron-Pfeile) für den globalen Tool-Wechsel.
-4. **Overlay UI Zustand:** Entwicklung des Timer-gesteuerten "Fade-In/Fade-Out" Modells für On-Screen-Controls beim Mirror-Tool.
-5. **Media Controller Integration:** Aufbau eines Broadcast-Receivers / MediaControllers zur Interaktion mit dem System `MediaSessionManager`.

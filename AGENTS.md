@@ -22,14 +22,19 @@
 
 ## 2 Documentation Map
 
-| Document                  | Purpose                                           |
-| ------------------------- | ------------------------------------------------- |
-| `README.md`               | Project overview, feature list, quick links       |
-| `PRD.md`                  | Product requirements (German, authoritative)      |
-| `docs/REQUIREMENTS.md`    | Detailed functional & non-functional requirements |
-| `docs/ARCHITECTURE.md`    | Hardware-level architecture decisions & rationale |
-| `docs/BUILD_NATIVE.md`    | How to rebuild the native touch-injector binary   |
-| `AGENTS.md` _(this file)_ | AI agent coding conventions & constraints         |
+| Document                            | Purpose                                                               |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| `README.md`                         | Project overview, feature list, quick links                           |
+| `PRD.md`                            | Product requirements (German, authoritative)                          |
+| `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                   |
+| `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                   |
+| `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation    |
+| `docs/features/media/FEATURE.md`    | Media Control — functional requirements & technical implementation    |
+| `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
+
+> **Convention:** Every feature has its own subfolder under `docs/features/<feature>/` containing a single `FEATURE.md`. This file is the **authoritative source of truth** for that feature's requirements and technical implementation. When adding a new feature, create a new subfolder and `FEATURE.md`.
+> | `docs/BUILD_NATIVE.md` | How to rebuild the native touch-injector binary |
+> | `AGENTS.md` _(this file)_ | AI agent coding conventions & constraints |
 
 ---
 
@@ -375,7 +380,7 @@ These constraints are non-negotiable:
 
 ## 13 Commit Message Proposal
 
-After completing every set of changes, propose a ready-to-use commit message that covers **all staged and unstaged changes not yet committed** (i.e. the full diff since the last commit). Use Conventional Commits format:
+After completing every set of changes, you MUST propose a ready-to-use commit message that covers **all staged and unstaged changes not yet committed** (it MUST include the full diff since the last commit). Use Conventional Commits format:
 
 ```
 <type>: <short imperative summary>
@@ -388,7 +393,22 @@ The proposal must be copy-paste ready — no placeholders. Present it as a code 
 
 ---
 
-## 14 Checklist for Every Change
+## 14 Documentation Sync After Changes
+
+After implementing any change that affects a feature's behaviour, interface, or architecture:
+
+1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code.
+2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change invalidates any Functional Requirements or Technical Implementation section.
+3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation. This includes:
+   - Correcting or removing outdated requirements or technical descriptions.
+   - Adding documentation for new behaviour introduced by the change.
+4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant, also review `docs/ARCHITECTURE.md` and `PRD.md`.
+
+This rule applies to all changes, including bug fixes, refactors, and dependency updates that affect runtime behaviour.
+
+---
+
+## 15 Checklist for Every Change
 
 Before marking a task as done, verify:
 

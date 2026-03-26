@@ -1,43 +1,42 @@
-# Megingiard - Technical Architecture & Implementation Details
+# Megingiard - Technical Architecture Overview
 
-This document provides a technical breakdown of the architectural decisions made and the Android hardware hurdles overcome during development.
+This document provides a high-level overview of the system architecture and key design decisions. Per-feature technical implementation details live in each feature's **`FEATURE.md`** file:
 
-## 1. The DRM & Latency Problem (The Path to Presentation)
-Initially, Jetpack Compose was intended to render the mirrored image directly via `ImageReader` or an `OnScreenCaptureListener` in the UI tree.
-**The Discovery:** Hardware security features frequently block screen capture signals artificially ("Black Screen"), and software bitmap copying introduces unusable levels of latency.
-**The Solution:** Replicating proven native performance patterns:
-- **`ScreenCaptureService`:** Requests and retains the `MediaProjection` token.
-- **`VirtualDisplay`:** Establishes a direct "tunnel" from the system graphics card buffer to an output surface provided by the service.
-- **Android `Presentation`:** The sole native method in Android for stably rendering an entirely detached UI onto a physical secondary monitor (`Display.displayId`). The `Presentation` generates a hardware `SurfaceView`. This `SurfaceView` is handed directly to the `MediaProjection`.
-- **The Result:** The CPU is entirely bypassed for image transfer and rendering; the Android *Hardware Composer* routes the signal directly to the second display via a DRM-secured kernel buffer.
+- **[Screen Mirror](features/mirror/FEATURE.md#technical-implementation)** — capture pipeline, `Presentation` window, pan/zoom, freeze
+- **[Media Control](features/media/FEATURE.md#technical-implementation)** — `MediaSession` integration, scrubbing, progress polling
+- **[Virtual Touchpad](features/touchpad/FEATURE.md#technical-implementation)** — native binary, event injection, coordinate transformation
 
-## 2. Mixing Jetpack Compose into a Background Service Window
-A massive architectural challenge of `Presentation` is that its window floats strictly *above* the existing App (`MainAppScreen` from `MainActivity`) in the Z-Order. Physically, it obstructed all interactive Jetpack Compose gestures and buttons beneath it.
-**The Solution (Synthetic Lifecycle Injection):** 
-Instead of forcing touch events "downward" from the OS GUI to the Compose modifiers within the Activity, Jetpack Compose was instantiated directly "upward" into the raw Window container of the Background Service.
-- By utilizing a custom `MirrorPresentationLifecycleOwner`, artificial Lifecycle events (ON_CREATE, ON_START) and Save-States were injected into the lifeless Android `Presentation`.
-- A native `ComposeView` was then mounted *on top* of the Hardware `SurfaceView`. The Jetpack UI, complete with its Chevrons and Freeze button, now seamlessly inhabits the same physical context as the GPU video rendering, radically simplifying `pointerInput` Pan/Zoom implementations.
+---
 
-## 3. Gestures & Gallery Bounding Math
-Complex transformation calculations are fluidly managed by manipulating hardware view boundaries (`scaleX`, `translationX`, `translationY`) through Kotlin `StateFlow` structures. Coordinate mutations execute solely via lightweight animations decoupled from Compose recomposition limits.
-- Boundary limits (`maxX`, `maxY`) are calculated algebraically and dynamically relative to the `VirtualDisplay` resolution and real-time physical screen metrics.
+## Dual-Display Layout
 
-## 4. Resource-Free Freeze Frame
-The Freeze Frame mechanic avoids traditional massively expensive `Bitmap` memory copying.
-- **Buffer Detachment:** When toggled, `VirtualDisplay.surface = null` is explicitly executed.
-- By detaching the producer, the underlying `SurfaceView` native compositor halts rendering updates, permanently caching the last active `HardwareBuffer` in VRAM. This effectively "freezes" the video at a staggering `0%` CPU/GPU cost while effortlessly allowing ongoing Pan/Zoom transformation cascades.
+Megingiard runs on the AYN Thor, an Android gaming handheld with two physical displays. The app lives on the **secondary (bottom) display** and provides tools that assist the user while the primary (top) display runs games or other applications.
 
-## 5. Mode Switching Lifecycle (`hide()` vs `GONE`)
-When toggling to `MediaScreen` via Carousel navigation, the `Presentation` circumvents complete destruction by intercepting standard `cancel()` and `onBackPressed()` signals.
-- Setting view visibility to `GONE` leaves the Dialog Window trapped in Android's window manager, blocking touches from reaching the Activity beneath.
-- Utilizing the actual `Presentation.hide()` natively strips the window out of the Z-Order, while correctly suspending the `VirtualDisplay`. `Presentation.show()` awakens the flow instantly without re-instantiating the Foreground Service.
+```
+Primary Display (DEFAULT_DISPLAY)
+  └─ MainActivity → MainAppScreen (Jetpack Compose)
+       ├─ Crossfade: MIRROR / MEDIA / TOUCHPAD mode placeholder
+       └─ CarouselOverlay: chevron navigation + settings
 
-## 6. Buffered Media Scrubbing
-Continuous updates typically force high frequency playback `seekTo()` cycles that can stutter audio/video threads.
-- **State Separation:** `MediaScreen` separates the `progress` state (driven by the background controller) from a local `scrubPosition` (`MutableState`).
-- **Deferred Execution:** Visual updates (timestamps) listen to `scrubPosition` for instant dragging feedback, but the binding back to the hardware player strictly awaits the `onValueChangeFinished` callback inside the Compose `Slider` node, minimizing threading bottleneck under constant gesture drag cycles.
+Secondary Display (non-default displayId)
+  └─ MirrorPresentation (android.app.Presentation — only in MIRROR mode)
+       ├─ SurfaceView: hardware VirtualDisplay output
+       └─ ComposeView → MirrorScreen: gesture controls + CarouselOverlay
+```
 
-## 7. Reactive Overlay Timeouts
-Control overlays must remain visible during continuous interactions (such as active panning/zooming) and timeout smoothly thereafter.
-- **The Pitfall:** Static `LaunchedEffect(showControls)` structures fail to reset cleanly if the values don’t change back and forth directly, leading to race-condition premature hide triggers.
-- **The Setup:** Introducing an absolute `interactionTime = System.currentTimeMillis()` trigger key in conjunction with pointer-event triggers. Feeding this key back into the `LaunchedEffect(showControls, interactionTime)` forces the coroutine scope to flawlessly cancel and reschedule the standard `delay(3000)` timeline from the tail of the latest interaction.
+In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the primary display shows a minimal placeholder in `MainAppScreen`. In MEDIA and TOUCHPAD modes, `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
+
+---
+
+## Key Design Decisions
+
+| Decision | Rationale | Details |
+|---|---|---|
+| `android.app.Presentation` for secondary display | Only reliable Android API for anchoring an independent window to a specific physical display | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline) |
+| `MediaProjection` + `VirtualDisplay` → `SurfaceView` | Hardware buffer routing bypasses CPU/DRM; zero-copy rendering via Hardware Composer | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline) |
+| `MirrorPresentationLifecycleOwner` (synthetic) | Bridges Jetpack Compose lifecycle requirements into a service-backed `Presentation` window | [mirror/FEATURE.md](features/mirror/FEATURE.md#synthetic-lifecycle-owner) |
+| `show()` / `hide()` for mode switching (not `dismiss()`) | Avoids destroying the capture session on mode switch; `dismiss()` only in `onDestroy()` | [mirror/FEATURE.md](features/mirror/FEATURE.md#mode-switching-show--hide-vs-dismiss) |
+| Native binary for touch injection | Direct `/dev/input/event6` writes: < 1 ms latency vs. ~7 ms for Binder IPC | [touchpad/FEATURE.md](features/touchpad/FEATURE.md#why-a-native-binary) |
+| `StateFlow` singletons for all shared state | Decouples UI from services; mutable backing fields are always `private`; UI reads via read-only `StateFlow` | [AGENTS.md](../AGENTS.md#4-state-management) |
+| `snapshotFlow` for animation sync | Avoids restarting `LaunchedEffect` on every animation frame; single-launch reactive collection | [mirror/FEATURE.md](features/mirror/FEATURE.md#pan--zoom) |
+| `interactionTime` key in overlay `LaunchedEffect` | Ensures the auto-hide timer resets correctly on every interaction, even when `showControls` doesn't toggle | [AGENTS.md](../AGENTS.md#61-side-effects--launchedeffect) |
