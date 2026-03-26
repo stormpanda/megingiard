@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,6 +69,9 @@ import kotlin.math.roundToInt
 private val CONTROL_BUTTON_SIZE = 72.dp
 private val CONTROL_ICON_SIZE = 36.dp
 private val CONTROL_BUTTON_GAP = 16.dp
+private val CONTROL_PILL_H_PADDING = 12.dp
+private val CONTROL_PILL_V_PADDING = 10.dp
+private val CONTROL_PILL_BG = Color.Black.copy(alpha = 0.7f)
 private val MR_SWIPE_EDGE_ZONE = 40.dp
 private val MR_SWIPE_THRESHOLD = 25.dp
 private val MR_TOUCH_INDICATOR_SIZE = 24.dp
@@ -411,7 +415,13 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Row(
-                        modifier = Modifier.align(Alignment.Center),
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .background(CONTROL_PILL_BG, RoundedCornerShape(50))
+                            .padding(
+                                horizontal = CONTROL_PILL_H_PADDING,
+                                vertical = CONTROL_PILL_V_PADDING
+                            ),
                         horizontalArrangement = Arrangement.spacedBy(CONTROL_BUTTON_GAP)
                     ) {
                         // Stop
@@ -434,13 +444,19 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        // Freeze / Unfreeze
+                        // Freeze / Unfreeze — disabled when Touch Projection is active
+                        // (projecting touches to a frozen display would be meaningless).
                         IconButton(
                             onClick = { ScreenCaptureManager.toggleFrozen() },
+                            enabled = !isTouchProjectionActive,
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
-                                    color = if (isFrozen) accentColor else Color.White.copy(alpha = 0.3f),
+                                    color = when {
+                                        isTouchProjectionActive -> Color.White.copy(alpha = 0.12f)
+                                        isFrozen -> accentColor
+                                        else -> Color.White.copy(alpha = 0.3f)
+                                    },
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -449,7 +465,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 contentDescription = stringResource(
                                     if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze
                                 ),
-                                tint = Color.White,
+                                tint = Color.White.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -475,13 +491,19 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        // Touch Projection on / off
+                        // Touch Projection on / off — disabled when stream is frozen
+                        // (touches on a still image cannot be forwarded meaningfully).
                         IconButton(
                             onClick = { ScreenCaptureManager.toggleTouchProjection() },
+                            enabled = !isFrozen,
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
-                                    color = if (isTouchProjectionActive) accentColor else Color.White.copy(alpha = 0.3f),
+                                    color = when {
+                                        isFrozen -> Color.White.copy(alpha = 0.12f)
+                                        isTouchProjectionActive -> accentColor
+                                        else -> Color.White.copy(alpha = 0.3f)
+                                    },
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -491,7 +513,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     if (isTouchProjectionActive) R.string.cd_touch_projection_off
                                     else R.string.cd_touch_projection_on
                                 ),
-                                tint = Color.White,
+                                tint = Color.White.copy(alpha = if (isFrozen) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
