@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.rememberAutoHideState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -197,5 +198,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
+
+        CarouselOverlay(visible = showControls)
     }
 }
