@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -49,11 +49,21 @@ fun ToolSettingsPanel(
     val accentColor by SettingsManager.accentColor.collectAsState()
     val autoStartCapture by SettingsManager.autoStartCapture.collectAsState()
 
-    Dialog(onDismissRequest = onDismiss) {
+    // Full-screen scrim + centred card rendered in-tree (no Dialog window)
+    // so this works both in the main Activity and inside a Presentation.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.85f)
                 .background(PANEL_BG, RoundedCornerShape(PANEL_CORNER))
+                // Prevent clicks on the card itself from propagating to the scrim
+                .clickable(enabled = true, onClick = {})
         ) {
             // Title row
             Row(

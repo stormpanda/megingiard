@@ -205,6 +205,6 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
 
         // CarouselOverlay is a sibling of the gesture Box so its pointer events are
         // not intercepted by detectTapGestures / detectTransformGestures above.
-        CarouselOverlay(visible = showControls)
+        CarouselOverlay(visible = showControls, onInteraction = onInteraction)
     }
 }

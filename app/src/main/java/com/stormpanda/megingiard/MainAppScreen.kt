@@ -96,7 +96,7 @@ fun MainAppScreen() {
             }
         }
 
-        CarouselOverlay(visible = showControls)
+        CarouselOverlay(visible = showControls, onInteraction = onInteraction)
     }
 }
 
