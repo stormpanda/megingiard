@@ -38,9 +38,11 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M4: Controls Overlay (Auto-Hide)
 
 - All mirror controls (Stop, Freeze/Unfreeze, carousel navigation) MUST be hidden by default.
-- A single **tap** on the mirror surface MUST show the controls overlay.
+- A single **tap near the idle pill indicator** (not anywhere on the full screen) MUST show the controls overlay.
 - The overlay MUST auto-hide after the configured timeout (default: configurable in Settings).
 - Any interaction during the timeout MUST reset the timer.
+- The auto-hide timer MUST be paused while a finger is touching the screen, even if the finger is held still.
+- Stop and Freeze/Unfreeze buttons MUST be centered on the screen (not corner-aligned) to avoid being obscured by the carousel overlay.
 
 ### FR-M5: Stop Mirroring
 

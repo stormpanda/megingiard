@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -65,6 +67,7 @@ private val CO_PILL_ACTIVE_HEIGHT = CO_FINGER_CIRCLE_SIZE
 private val CO_DOT_SPACING = (CO_PILL_ACTIVE_HEIGHT - CO_DOT_SIZE) / 2
 private val CO_FINGER_CIRCLE_COLOR = Color.White.copy(alpha = 0.45f)
 private const val CO_HYSTERESIS = 0.28f  // fraction past boundary required to switch
+private const val CO_DOT_COLOR_ANIM_MS = 250
 
 /** Pill width: equal spacing on all sides and between dots. */
 private fun pillActiveWidth(toolCount: Int): Dp =
@@ -268,13 +271,17 @@ private fun TopModeHandle(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         activeTools.forEach { tool ->
+                            val dotColor by animateColorAsState(
+                                targetValue = Color.White.copy(
+                                    alpha = if (tool == currentMode) 1f else 0.35f
+                                ),
+                                animationSpec = tween(durationMillis = CO_DOT_COLOR_ANIM_MS),
+                                label = "dot_color"
+                            )
                             Box(
                                 Modifier
                                     .size(CO_DOT_SIZE)
-                                    .background(
-                                        Color.White.copy(alpha = if (tool == currentMode) 1f else 0.35f),
-                                        CircleShape
-                                    )
+                                    .background(dotColor, CircleShape)
                             )
                         }
                     }

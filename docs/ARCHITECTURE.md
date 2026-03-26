@@ -16,7 +16,7 @@ Megingiard runs on the AYN Thor, an Android gaming handheld with two physical di
 Primary Display (DEFAULT_DISPLAY)
   └─ MainActivity → MainAppScreen (Jetpack Compose)
        ├─ Crossfade: MIRROR / MEDIA / TOUCHPAD mode placeholder
-       └─ CarouselOverlay: chevron navigation + settings
+       └─ CarouselOverlay: pill-based dot navigation + settings
 
 Secondary Display (non-default displayId)
   └─ MirrorPresentation (android.app.Presentation — only in MIRROR mode)
