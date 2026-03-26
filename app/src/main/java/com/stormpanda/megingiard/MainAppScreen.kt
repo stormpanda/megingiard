@@ -18,7 +18,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -33,6 +32,9 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
 
+private val MAS_SWIPE_EDGE_ZONE = 40.dp
+private val MAS_SWIPE_THRESHOLD = 25.dp
+
 @Composable
 fun MainAppScreen() {
     val currentMode by AppStateManager.currentMode.collectAsState()
@@ -43,37 +45,49 @@ fun MainAppScreen() {
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
-
-    // Tap-zone radius around the idle pill (in px) to trigger overlay
-    val pillTapRadiusPx = with(density) { 48.dp.toPx() }
+    val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(overlayAtBottom) {
                 awaitPointerEventScope {
+                    var swipeStartY = Float.NaN
+                    var swipeTriggered = false
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         when (event.type) {
                             PointerEventType.Press -> {
                                 AppStateManager.setTouching(true)
-                                // Only trigger overlay if press is near the idle pill
-                                val pos = event.changes.firstOrNull()?.position ?: Offset.Zero
-                                val pillCenterX = size.width / 2f
-                                val pillCenterY = if (overlayAtBottom) {
-                                    size.height.toFloat()
+                                val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                val nearEdge = if (overlayAtBottom) {
+                                    y >= size.height - edgeZonePx
                                 } else {
-                                    0f
+                                    y <= edgeZonePx
                                 }
-                                val dx = pos.x - pillCenterX
-                                val dy = pos.y - pillCenterY
-                                if (dx * dx + dy * dy <= pillTapRadiusPx * pillTapRadiusPx * 4) {
-                                    AppStateManager.triggerOverlay()
+                                swipeStartY = if (nearEdge) y else Float.NaN
+                                swipeTriggered = false
+                            }
+                            PointerEventType.Move -> {
+                                if (!swipeStartY.isNaN() && !swipeTriggered) {
+                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                    val delta = if (overlayAtBottom) {
+                                        swipeStartY - y
+                                    } else {
+                                        y - swipeStartY
+                                    }
+                                    if (delta >= swipeThresholdPx) {
+                                        AppStateManager.triggerOverlay()
+                                        swipeTriggered = true
+                                    }
                                 }
                             }
                             PointerEventType.Release -> {
                                 AppStateManager.setTouching(false)
                                 AppStateManager.setPillExpanded(false)
+                                swipeStartY = Float.NaN
+                                swipeTriggered = false
                             }
                             else -> {}
                         }

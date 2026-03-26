@@ -27,8 +27,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,13 +50,15 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private val CONTROL_BUTTON_SIZE = 72.dp
 private val CONTROL_ICON_SIZE = 36.dp
 private val CONTROL_BUTTON_GAP = 16.dp
-private val PILL_TAP_RADIUS = 48.dp
+private val MR_SWIPE_EDGE_ZONE = 40.dp
+private val MR_SWIPE_THRESHOLD = 25.dp
 private const val ZOOM_MIN = 1f
 private const val ZOOM_MAX = 5f
 private const val SNAP_BACK_THRESHOLD = 1.15f
@@ -75,7 +80,23 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
-    val pillTapRadiusPx = with(density) { PILL_TAP_RADIUS.toPx() }
+    val edgeZonePx = with(density) { MR_SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { MR_SWIPE_THRESHOLD.toPx() }
+
+    // Local visibility for stop/pause buttons — shown on any touch, independent of carousel
+    var showButtons by remember { mutableStateOf(false) }
+    var buttonTriggerCount by remember { mutableIntStateOf(0) }
+    val isTouchingState by AppStateManager.isTouching.collectAsState()
+    val overlayTimeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
+
+    // Auto-hide for mirror stop/pause buttons (independent of carousel overlay timer)
+    LaunchedEffect(buttonTriggerCount, isTouchingState, overlayTimeoutMs) {
+        if (showButtons) {
+            if (isTouchingState) return@LaunchedEffect
+            delay(overlayTimeoutMs)
+            showButtons = false
+        }
+    }
 
     // Sync animated values to ScreenCaptureManager state flows via snapshotFlow,
     // avoiding excessive LaunchedEffect restarts on every animation frame.
@@ -94,49 +115,64 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // Raw press/release observer for isTouching (Initial pass, does not consume)
-                .pointerInput(Unit) {
+                // Raw press/release observer: tracks isTouching + shows buttons + detects edge swipe
+                .pointerInput(overlayAtBottom) {
                     awaitPointerEventScope {
+                        var swipeStartY = Float.NaN
+                        var swipeTriggered = false
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             when (event.type) {
-                                PointerEventType.Press -> AppStateManager.setTouching(true)
+                                PointerEventType.Press -> {
+                                    AppStateManager.setTouching(true)
+                                    showButtons = true
+                                    buttonTriggerCount++
+                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                    val nearEdge = if (overlayAtBottom) {
+                                        y >= size.height - edgeZonePx
+                                    } else {
+                                        y <= edgeZonePx
+                                    }
+                                    swipeStartY = if (nearEdge) y else Float.NaN
+                                    swipeTriggered = false
+                                }
+                                PointerEventType.Move -> {
+                                    if (!swipeStartY.isNaN() && !swipeTriggered) {
+                                        val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                        val delta = if (overlayAtBottom) {
+                                            swipeStartY - y
+                                        } else {
+                                            y - swipeStartY
+                                        }
+                                        if (delta >= swipeThresholdPx) {
+                                            AppStateManager.triggerOverlay()
+                                            swipeTriggered = true
+                                        }
+                                    }
+                                }
                                 PointerEventType.Release -> {
                                     AppStateManager.setTouching(false)
                                     AppStateManager.setPillExpanded(false)
+                                    swipeStartY = Float.NaN
+                                    swipeTriggered = false
                                 }
                                 else -> {}
                             }
                         }
                     }
                 }
-                .pointerInput(overlayAtBottom) {
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = {
                             coroutineScope.launch { animScale.animateTo(ZOOM_MIN) }
                             coroutineScope.launch { animOffsetX.animateTo(0f) }
                             coroutineScope.launch { animOffsetY.animateTo(0f) }
-                            AppStateManager.triggerOverlay()
-                        },
-                        onTap = { offset ->
-                            val pillCenterX = size.width / 2f
-                            val pillCenterY = if (overlayAtBottom) {
-                                size.height.toFloat()
-                            } else {
-                                0f
-                            }
-                            val dx = offset.x - pillCenterX
-                            val dy = offset.y - pillCenterY
-                            if (dx * dx + dy * dy <= pillTapRadiusPx * pillTapRadiusPx * 4) {
-                                AppStateManager.triggerOverlay()
-                            }
                         }
                     )
                 }
                 .pointerInput(Unit) {
                     while (true) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            AppStateManager.triggerOverlay()
                             coroutineScope.launch {
                                 val newScale = (animScale.value * zoom).coerceIn(ZOOM_MIN, ZOOM_MAX)
                                 animScale.snapTo(newScale)
@@ -183,7 +219,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
 
             AnimatedVisibility(
-                visible = showControls && isCapturing,
+                visible = (showControls || showButtons) && isCapturing,
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.fillMaxSize()
