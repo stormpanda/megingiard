@@ -20,6 +20,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +49,9 @@ fun ToolSettingsPanel(
     val currentMode by AppStateManager.currentMode.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
     val autoStartCapture by SettingsManager.autoStartCapture.collectAsState()
+
+    // Dismiss on system back
+    BackHandler(onBack = onDismiss)
 
     // Full-screen scrim + centred card rendered in-tree (no Dialog window)
     // so this works both in the main Activity and inside a Presentation.

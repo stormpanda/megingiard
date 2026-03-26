@@ -86,13 +86,15 @@ private fun AppMode.nameResId(): Int = when (this) {
 /**
  * Navigation overlay.
  *
- * Always shows a subtle pull-tab pill at the top edge. When [visible], the pill
- * brightens and a compact mode-indicator bar slides down below it: mode name,
- * an interactive [DraggableDotIndicator], and a settings gear.
+ * Renders a subtle pull-tab pill anchored to the top or bottom edge of the screen
+ * (depending on [SettingsManager.overlayAtBottom]). The pill is always visible.
  *
- * **Mode switching via dots:** place a finger on the dot cluster → dots grow and
- * a drag-track appears → slide finger to the target dot → [AppStateManager.setMode]
- * is called live. Releasing the finger confirms the selection and shrinks the dots.
+ * When [visible] is true, a compact bar animates in next to the pill containing:
+ * the current mode name, a row of circular mode-indicator dots, and a settings gear.
+ *
+ * **Mode switching:** drag a finger across the dot cluster — the nearest dot's mode
+ * is applied live via [AppStateManager.setMode]. Releasing confirms the selection.
+ * Dot color changes animate with a short tween.
  */
 @Composable
 fun CarouselOverlay(

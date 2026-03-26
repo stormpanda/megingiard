@@ -84,8 +84,12 @@ fun MainAppScreen() {
                                 }
                             }
                             PointerEventType.Release -> {
-                                AppStateManager.setTouching(false)
-                                AppStateManager.setPillExpanded(false)
+                                // Only clear touching when all pointers are up
+                                // (multi-touch: one finger may release while another is still down)
+                                if (!event.changes.any { it.pressed }) {
+                                    AppStateManager.setTouching(false)
+                                    AppStateManager.setPillExpanded(false)
+                                }
                                 swipeStartY = Float.NaN
                                 swipeTriggered = false
                             }

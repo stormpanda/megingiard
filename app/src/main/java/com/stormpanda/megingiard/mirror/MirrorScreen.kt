@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -151,8 +149,12 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     }
                                 }
                                 PointerEventType.Release -> {
-                                    AppStateManager.setTouching(false)
-                                    AppStateManager.setPillExpanded(false)
+                                    // Only clear touching when all pointers are up
+                                    // (multi-touch: one finger may release while another is still down)
+                                    if (!event.changes.any { it.pressed }) {
+                                        AppStateManager.setTouching(false)
+                                        AppStateManager.setPillExpanded(false)
+                                    }
                                     swipeStartY = Float.NaN
                                     swipeTriggered = false
                                 }
