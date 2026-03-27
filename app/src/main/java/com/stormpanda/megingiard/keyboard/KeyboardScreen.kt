@@ -84,6 +84,15 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
 
+    // Modifier states for dynamic label rendering
+    val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
+    val rshiftState by KeyboardState.stateFor("rshift").collectAsState()
+    val capsState   by KeyboardState.stateFor("caps").collectAsState()
+    val altGrState  by KeyboardState.stateFor("ralt").collectAsState()
+    val isShiftActive = lshiftState != ModifierState.INACTIVE || rshiftState != ModifierState.INACTIVE
+    val isCapsActive  = capsState   != ModifierState.INACTIVE
+    val isAltGrActive = altGrState  != ModifierState.INACTIVE
+
     LaunchedEffect(Unit) {
         KeyboardState.reset()
         // Wait until the carousel overlay has closed before starting the native binaries.
@@ -336,6 +345,9 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                             isPressed = key.id in pressedKeys,
                             modifierState = modState,
                             accentColor = accentColor,
+                            isShiftActive = isShiftActive,
+                            isCapsActive = isCapsActive,
+                            isAltGrActive = isAltGrActive,
                             modifier = Modifier.weight(key.widthWeight),
                             onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds }
                         )
@@ -397,6 +409,9 @@ private fun KeyCap(
     isPressed: Boolean,
     modifierState: ModifierState,
     accentColor: Color,
+    isShiftActive: Boolean,
+    isCapsActive: Boolean,
+    isAltGrActive: Boolean,
     modifier: Modifier = Modifier,
     onBoundsUpdate: (KeyBounds) -> Unit,
 ) {
@@ -442,8 +457,15 @@ private fun KeyCap(
                     .background(accentColor)
             )
         } else {
+            val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
+            val useShiftLabel = isShiftActive || (isCapsActive && isLetter)
+            val displayLabel = when {
+                isAltGrActive && keyDef.altGrLabel != null -> keyDef.altGrLabel!!
+                useShiftLabel && keyDef.shiftLabel != null -> keyDef.shiftLabel!!
+                else -> keyDef.label
+            }
             Text(
-                text = keyDef.label,
+                text = displayLabel,
                 color = if (isPressed) KEY_TEXT else KEY_TEXT_SECONDARY,
                 fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 12.sp,
                 fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
