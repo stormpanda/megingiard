@@ -70,11 +70,11 @@ The Touch Keyboard feature turns the secondary display into a full PC keyboard t
 
 Three per-tool settings are available under the Keyboard tool settings panel:
 
-| Setting              | Key                      | Default | Description                                  |
-| -------------------- | ------------------------ | ------- | -------------------------------------------- |
-| QWERTY layout        | `kb_qwerty`              | `false` | Toggle QWERTY (true) vs QWERTZ (false) layout |
-| Trackpoint enabled   | `kb_trackpoint_enabled`  | `true`  | Show / hide the trackpoint key               |
-| Key repeat enabled   | `kb_repeat_enabled`      | `true`  | Enable / disable key repeat                  |
+| Setting            | Key                     | Default | Description                                   |
+| ------------------ | ----------------------- | ------- | --------------------------------------------- |
+| QWERTY layout      | `kb_qwerty`             | `false` | Toggle QWERTY (true) vs QWERTZ (false) layout |
+| Trackpoint enabled | `kb_trackpoint_enabled` | `true`  | Show / hide the trackpoint key                |
+| Key repeat enabled | `kb_repeat_enabled`     | `true`  | Enable / disable key repeat                   |
 
 ---
 
@@ -121,10 +121,10 @@ DisposableEffect(Unit) {
 
 Commands are sent as newline-terminated ASCII strings to the binary's stdin:
 
-| Command  | Format              | Description                            |
-| -------- | ------------------- | -------------------------------------- |
-| KEY_DOWN | `KD <keycode>\n`    | Press key with given Linux keycode     |
-| KEY_UP   | `KU <keycode>\n`    | Release key with given Linux keycode   |
+| Command  | Format           | Description                          |
+| -------- | ---------------- | ------------------------------------ |
+| KEY_DOWN | `KD <keycode>\n` | Press key with given Linux keycode   |
+| KEY_UP   | `KU <keycode>\n` | Release key with given Linux keycode |
 
 Keycodes are standard Linux `EV_KEY` codes (1–254) as defined in `LinuxKeycodes.kt`.
 
@@ -147,14 +147,14 @@ qwertzLayout() / qwertyLayout() → List<List<KeyDef>>   // 6 rows
 
 Rows in order:
 
-| Index | Name        | Notable widths                         |
-| ----- | ----------- | -------------------------------------- |
-| 0     | F-row       | rendered at `heightWeight = 0.7`       |
-| 1     | Number row  | Backspace `widthWeight = 2.0`          |
-| 2     | Top row     | Tab `1.5`, backslash `1.5`             |
-| 3     | Home row    | CapsLock `1.75`, Enter `2.0`, trackpoint `0.6` |
-| 4     | Bottom row  | LShift `2.25`, RShift `2.75`           |
-| 5     | Bottom bar  | Space `5.5`                            |
+| Index | Name       | Notable widths                                 |
+| ----- | ---------- | ---------------------------------------------- |
+| 0     | F-row      | rendered at `heightWeight = 0.7`               |
+| 1     | Number row | Backspace `widthWeight = 2.0`                  |
+| 2     | Top row    | Tab `1.5`, backslash `1.5`                     |
+| 3     | Home row   | CapsLock `1.75`, Enter `2.0`, trackpoint `0.6` |
+| 4     | Bottom row | LShift `2.25`, RShift `2.75`                   |
+| 5     | Bottom bar | Space `5.5`                                    |
 
 **QWERTZ specifics:** The key labeled `Z` uses `KEY_Y` and the key labeled `Y`
 uses `KEY_Z`; all other keys are identical in both layouts.
@@ -242,15 +242,15 @@ the key changes (finger lifts or slides to a new key).
 
 ### Source Files
 
-| File                          | Responsibility                                                              |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| `KeyboardLayout.kt`           | `KeyDef`, `KeyType`, `qwertzLayout()`, `qwertyLayout()` — 6-row definitions |
-| `KeyboardState.kt`            | `ModifierState` enum + state machine (`KeyboardState` object)               |
-| `KeyboardScreen.kt`           | Compose UI: key grid, multi-touch loop, key repeat, trackpoint overlay      |
-| `ShellKeyInjector.kt`         | Native binary lifecycle; writer thread; `KD`/`KU` stdin protocol            |
-| `KeyInjector.kt`              | Public facade: `start()`, `stop()`, `keyDown()`, `keyUp()`, `keyTap()`      |
-| `KeyAction.kt`                | `enum class KeyAction { DOWN, UP }`                                         |
-| `LinuxKeycodes.kt`            | Named constants matching `linux/input-event-codes.h`                        |
-| `../input/TouchInjector.kt`   | Reused for trackpoint cursor movement (shared with Virtual Touchpad)        |
-| `keyinjector.c`               | C source for the native binary (see `docs/BUILD_NATIVE.md`)                 |
-| `keyinjector_arm64`           | Pre-built ARM64 binary asset (`app/src/main/assets/`)                       |
+| File                        | Responsibility                                                              |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `KeyboardLayout.kt`         | `KeyDef`, `KeyType`, `qwertzLayout()`, `qwertyLayout()` — 6-row definitions |
+| `KeyboardState.kt`          | `ModifierState` enum + state machine (`KeyboardState` object)               |
+| `KeyboardScreen.kt`         | Compose UI: key grid, multi-touch loop, key repeat, trackpoint overlay      |
+| `ShellKeyInjector.kt`       | Native binary lifecycle; writer thread; `KD`/`KU` stdin protocol            |
+| `KeyInjector.kt`            | Public facade: `start()`, `stop()`, `keyDown()`, `keyUp()`, `keyTap()`      |
+| `KeyAction.kt`              | `enum class KeyAction { DOWN, UP }`                                         |
+| `LinuxKeycodes.kt`          | Named constants matching `linux/input-event-codes.h`                        |
+| `../input/TouchInjector.kt` | Reused for trackpoint cursor movement (shared with Virtual Touchpad)        |
+| `keyinjector.c`             | C source for the native binary (see `docs/BUILD_NATIVE.md`)                 |
+| `keyinjector_arm64`         | Pre-built ARM64 binary asset (`app/src/main/assets/`)                       |
