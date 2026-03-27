@@ -32,6 +32,8 @@
     <string name="tool_name_touchpad">Touchpad</string>
     <string name="tool_name_keyboard">Keyboard</string>
     <string name="keyboard_placeholder">Keyboard coming soon…</string>
+    <string name="cd_keyboard_key">Key %s</string>
+    <string name="cd_keyboard_trackpoint">Trackpoint</string>
 
     <!-- Settings screen -->
     <string name="settings_close">Close</string>

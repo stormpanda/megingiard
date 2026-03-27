@@ -169,10 +169,10 @@ $TOOLCHAIN/bin/aarch64-linux-android35-clang \
 
 ### Binary protocol
 
-| Line sent to stdin | Meaning                              |
-| ------------------ | ------------------------------------ |
-| `KD <keycode>\n`   | Key DOWN — Linux keycode (1–254)     |
-| `KU <keycode>\n`   | Key UP — Linux keycode (1–254)       |
+| Line sent to stdin | Meaning                          |
+| ------------------ | -------------------------------- |
+| `KD <keycode>\n`   | Key DOWN — Linux keycode (1–254) |
+| `KU <keycode>\n`   | Key UP — Linux keycode (1–254)   |
 
 The binary signals readiness with `R\n` on stdout once the `/dev/uinput` virtual
 device is created. On stdin EOF it destroys the virtual device and exits.
