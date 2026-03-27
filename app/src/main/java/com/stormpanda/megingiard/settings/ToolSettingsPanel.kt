@@ -61,6 +61,9 @@ fun ToolSettingsPanel(
     val rememberLock by SettingsManager.rememberLock.collectAsState()
     val rememberProjection by SettingsManager.rememberProjection.collectAsState()
     val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
+    val kbQwerty by SettingsManager.kbQwerty.collectAsState()
+    val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
+    val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -128,13 +131,21 @@ fun ToolSettingsPanel(
                         pinchWhileProjecting = pinchWhileProjecting,
                         onPinchWhileProjectingChanged = { SettingsManager.setPinchWhileProjecting(it) }
                     )
-                    AppMode.MEDIA, AppMode.TOUCHPAD, AppMode.KEYBOARD -> {
+                    AppMode.MEDIA, AppMode.TOUCHPAD -> {
                         Text(
                             text = stringResource(R.string.settings_no_tool_settings),
                             color = PANEL_TEXT_SECONDARY,
                             fontSize = 14.sp
                         )
                     }
+                    AppMode.KEYBOARD -> KeyboardToolSettings(
+                        kbQwerty = kbQwerty,
+                        onKbQwertyChanged = { SettingsManager.setKbQwerty(it) },
+                        kbTrackpointEnabled = kbTrackpointEnabled,
+                        onKbTrackpointEnabledChanged = { SettingsManager.setKbTrackpointEnabled(it) },
+                        kbRepeatEnabled = kbRepeatEnabled,
+                        onKbRepeatEnabledChanged = { SettingsManager.setKbRepeatEnabled(it) },
+                    )
                 }
             }
 
@@ -292,6 +303,41 @@ private fun RememberSettingRow(
                 checkmarkColor = Color.White,
                 uncheckedColor = PANEL_TEXT_SECONDARY
             )
+        )
+    }
+}
+
+@Composable
+private fun KeyboardToolSettings(
+    kbQwerty: Boolean,
+    onKbQwertyChanged: (Boolean) -> Unit,
+    kbTrackpointEnabled: Boolean,
+    onKbTrackpointEnabledChanged: (Boolean) -> Unit,
+    kbRepeatEnabled: Boolean,
+    onKbRepeatEnabledChanged: (Boolean) -> Unit,
+) {
+    val accentColor by SettingsManager.accentColor.collectAsState()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        RememberSettingRow(
+            label = stringResource(R.string.settings_kb_layout),
+            description = stringResource(R.string.settings_kb_layout_qwerty),
+            checked = kbQwerty,
+            onCheckedChange = onKbQwertyChanged,
+            accentColor = accentColor,
+        )
+        RememberSettingRow(
+            label = stringResource(R.string.settings_kb_trackpoint),
+            description = stringResource(R.string.settings_kb_trackpoint_desc),
+            checked = kbTrackpointEnabled,
+            onCheckedChange = onKbTrackpointEnabledChanged,
+            accentColor = accentColor,
+        )
+        RememberSettingRow(
+            label = stringResource(R.string.settings_kb_repeat),
+            description = stringResource(R.string.settings_kb_repeat_desc),
+            checked = kbRepeatEnabled,
+            onCheckedChange = onKbRepeatEnabledChanged,
+            accentColor = accentColor,
         )
     }
 }

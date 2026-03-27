@@ -60,6 +60,7 @@ import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_O
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_P
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_Q
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_R
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_RIGHT
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_RIGHTALT
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_RIGHTBRACE
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_RIGHTCTRL

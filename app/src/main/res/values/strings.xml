@@ -56,6 +56,14 @@
     <string name="settings_color_cancel">Cancel</string>
     <string name="settings_color_apply">Apply</string>
 
+    <!-- Keyboard settings -->
+    <string name="settings_kb_layout">Keyboard layout</string>
+    <string name="settings_kb_layout_qwerty">QWERTY (swap Y/Z)</string>
+    <string name="settings_kb_trackpoint">Trackpoint</string>
+    <string name="settings_kb_trackpoint_desc">Show trackpoint dot in the home row</string>
+    <string name="settings_kb_repeat">Key repeat</string>
+    <string name="settings_kb_repeat_desc">Hold a key to repeat it</string>
+
     <!-- Mirror touch projection -->
     <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>
     <string name="settings_pinch_while_projecting_desc">Allow two-finger zoom and pan gestures while Touch Projection is active. Two-finger touches are not forwarded to the primary display.</string>

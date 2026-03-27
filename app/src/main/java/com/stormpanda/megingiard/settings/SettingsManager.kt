@@ -58,6 +58,11 @@ object SettingsManager {
     private val KEY_SAVED_SCALE = floatPreferencesKey("mirror_saved_scale")
     private val KEY_SAVED_OFFSET_X = floatPreferencesKey("mirror_saved_offset_x")
     private val KEY_SAVED_OFFSET_Y = floatPreferencesKey("mirror_saved_offset_y")
+
+    // Keyboard settings
+    private val KEY_KB_QWERTY = booleanPreferencesKey("kb_qwerty")
+    private val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
+    private val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
@@ -89,6 +94,16 @@ object SettingsManager {
     // Mirror touch projection — pinch-to-zoom while projecting
     private val _pinchWhileProjecting = MutableStateFlow(false)
     val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
+
+    // Keyboard
+    private val _kbQwerty = MutableStateFlow(false)
+    val kbQwerty: StateFlow<Boolean> = _kbQwerty.asStateFlow()
+
+    private val _kbTrackpointEnabled = MutableStateFlow(true)
+    val kbTrackpointEnabled: StateFlow<Boolean> = _kbTrackpointEnabled.asStateFlow()
+
+    private val _kbRepeatEnabled = MutableStateFlow(true)
+    val kbRepeatEnabled: StateFlow<Boolean> = _kbRepeatEnabled.asStateFlow()
 
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
@@ -134,6 +149,9 @@ object SettingsManager {
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
                 _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
+                _kbQwerty.value = prefs[KEY_KB_QWERTY] ?: false
+                _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
+                _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
             }
         }
 
@@ -228,6 +246,21 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_PROJECTION] = value }
         }
+    }
+
+    fun setKbQwerty(value: Boolean) {
+        _kbQwerty.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_QWERTY] = value } }
+    }
+
+    fun setKbTrackpointEnabled(value: Boolean) {
+        _kbTrackpointEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_ENABLED] = value } }
+    }
+
+    fun setKbRepeatEnabled(value: Boolean) {
+        _kbRepeatEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_REPEAT_ENABLED] = value } }
     }
 
     /** Persists the current mirror session state for aspects the user opted to remember. */

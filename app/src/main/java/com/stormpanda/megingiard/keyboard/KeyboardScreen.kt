@@ -73,6 +73,9 @@ private const val KB_TRACKPOINT_SENSITIVITY = 4f
 fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val accentColor by SettingsManager.accentColor.collectAsState()
+    val kbQwerty by SettingsManager.kbQwerty.collectAsState()
+    val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
+    val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
 
     LaunchedEffect(Unit) {
         KeyInjector.start(context)
@@ -88,7 +91,9 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 
-    val layout = remember { qwertzLayout() }
+    val layout = remember(kbQwerty) {
+        if (kbQwerty) qwertyLayout() else qwertzLayout()
+    }
 
     // Key bounds: id → root-space Rect, populated by KeyCap.onGloballyPositioned
     val keyBounds = remember { mutableMapOf<String, KeyBounds>() }
@@ -107,9 +112,10 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val pointerKeyMap = remember { mutableMapOf<PointerId, String>() }
     val trackpointPointers = remember { mutableSetOf<PointerId>() }
 
-    // Key repeat: fires while heldKey is non-null
+    // Key repeat: fires while heldKey is non-null and repeat is enabled
     LaunchedEffect(heldKey) {
         val key = heldKey ?: return@LaunchedEffect
+        if (!kbRepeatEnabled) return@LaunchedEffect
         delay(KB_REPEAT_INITIAL_DELAY_MS)
         while (heldKey == key) {
             if (key.linuxKeycode != 0) {
@@ -292,6 +298,8 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H)
                 ) {
                     row.forEach { key ->
+                        // Skip trackpoint key if disabled in settings
+                        if (key.type == KeyType.TRACKPOINT && !kbTrackpointEnabled) return@forEach
                         val modState by KeyboardState.stateFor(key.id).collectAsState()
                         KeyCap(
                             keyDef = key,
