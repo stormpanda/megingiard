@@ -50,6 +50,7 @@ import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 // ---------------------------------------------------------------------------
@@ -84,11 +85,15 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
 
     LaunchedEffect(Unit) {
+        KeyboardState.reset()
+        // Wait until the carousel overlay has closed before starting the native binaries.
+        // Starting them during the mode-switch animation (while the overlay is still open)
+        // causes the blocking binary startup to race against the Compose frame clock.
+        AppStateManager.overlayVisible.first { !it }
         withContext(Dispatchers.IO) {
             KeyInjector.start(context)
             TouchInjector.start(context)
         }
-        KeyboardState.reset()
     }
 
     DisposableEffect(Unit) {
