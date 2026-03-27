@@ -128,7 +128,7 @@ fun ToolSettingsPanel(
                         pinchWhileProjecting = pinchWhileProjecting,
                         onPinchWhileProjectingChanged = { SettingsManager.setPinchWhileProjecting(it) }
                     )
-                    AppMode.MEDIA, AppMode.TOUCHPAD -> {
+                    AppMode.MEDIA, AppMode.TOUCHPAD, AppMode.KEYBOARD -> {
                         Text(
                             text = stringResource(R.string.settings_no_tool_settings),
                             color = PANEL_TEXT_SECONDARY,

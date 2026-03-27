@@ -30,6 +30,8 @@
     <string name="tool_name_mirror">Mirror</string>
     <string name="tool_name_media">Media</string>
     <string name="tool_name_touchpad">Touchpad</string>
+    <string name="tool_name_keyboard">Keyboard</string>
+    <string name="keyboard_placeholder">Keyboard coming soon…</string>
 
     <!-- Settings screen -->
     <string name="settings_close">Close</string>
