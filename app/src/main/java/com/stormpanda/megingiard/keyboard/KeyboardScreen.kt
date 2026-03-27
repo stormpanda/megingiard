@@ -167,7 +167,6 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                                         trackpointX = (trackpointX + delta.x * scaleFactor).coerceIn(0f, 1f)
                                         trackpointY = (trackpointY + delta.y * scaleFactor).coerceIn(0f, 1f)
                                         TouchInjector.injectTouch(TouchAction.MOVE, trackpointX, trackpointY)
-                                        onInteraction()
                                         change.consume()
                                     }
                                     PointerEventType.Release -> {
@@ -191,7 +190,6 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                             when (event.type) {
                                 PointerEventType.Press -> {
                                     val id = keyId ?: continue@forChanges
-                                    onInteraction()
                                     val keyDef = findKeyInLayout(layout, id) ?: continue@forChanges
                                     when (keyDef.type) {
                                         KeyType.NORMAL -> {
