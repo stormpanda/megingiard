@@ -122,13 +122,11 @@ private fun TouchSurface(onInteraction: () -> Unit) {
                         when (event.type) {
                             PointerEventType.Press -> {
                                 touchPos = pointer.position
-                                onInteraction()
                                 TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
                                 pointer.consume()
                             }
                             PointerEventType.Move -> {
                                 touchPos = pointer.position
-                                onInteraction()
                                 TouchInjector.injectTouch(TouchAction.MOVE, nx, ny)
                                 pointer.consume()
                             }
