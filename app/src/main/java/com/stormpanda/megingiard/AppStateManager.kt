@@ -83,6 +83,11 @@ object AppStateManager {
         _overlayInteractionTime.value = System.currentTimeMillis()
     }
 
+    fun hideOverlay() {
+        _overlayVisible.value = false
+        _pillExpanded.value = false
+    }
+
     fun nextMode() {
         val active = SettingsManager.activeTools.value
         if (active.size <= 1) return

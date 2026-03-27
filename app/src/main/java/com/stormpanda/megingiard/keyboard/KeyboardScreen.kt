@@ -22,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,11 +43,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -76,10 +80,14 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val kbQwerty by SettingsManager.kbQwerty.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
+    val overlayVisible by AppStateManager.overlayVisible.collectAsState()
+    val overlayVisibleState = rememberUpdatedState(overlayVisible)
 
     LaunchedEffect(Unit) {
-        KeyInjector.start(context)
-        TouchInjector.start(context)
+        withContext(Dispatchers.IO) {
+            KeyInjector.start(context)
+            TouchInjector.start(context)
+        }
         KeyboardState.reset()
     }
 
@@ -154,6 +162,25 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Main)
+                        // While the carousel overlay is visible, block new key input.
+                        // Tapping outside the pill dismisses the overlay.
+                        // Release events fall through so held keys are cleaned up.
+                        if (overlayVisibleState.value) {
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    if (event.changes.none { it.isConsumed }) {
+                                        AppStateManager.hideOverlay()
+                                    }
+                                    event.changes.forEach { it.consume() }
+                                    continue
+                                }
+                                PointerEventType.Move -> {
+                                    event.changes.forEach { it.consume() }
+                                    continue
+                                }
+                                else -> Unit // Release: fall through for held-key cleanup
+                            }
+                        }
                         val boxCoords = boxCoordsState.value ?: continue
                         forChanges@ for (change in event.changes) {
                             val pid = change.id

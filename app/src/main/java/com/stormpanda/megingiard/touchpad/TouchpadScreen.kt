@@ -15,9 +15,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,9 +37,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 private const val TOUCH_AREA_ASPECT_RATIO = 16f / 9f
@@ -53,7 +58,9 @@ fun TouchpadScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     // Deploy and start the native touch injector once per session.
     // Coordinates are hardware constants — no display-size query needed.
     LaunchedEffect(Unit) {
-        TouchInjector.start(context)
+        withContext(Dispatchers.IO) {
+            TouchInjector.start(context)
+        }
     }
 
     // Stop the injector process when leaving TOUCHPAD mode so it doesn't
@@ -81,6 +88,8 @@ private fun TouchSurface(onInteraction: () -> Unit) {
 
     val density = LocalDensity.current
     val indicatorSizePx = remember(density) { with(density) { TOUCH_INDICATOR_SIZE.toPx() } }
+    val overlayVisible by AppStateManager.overlayVisible.collectAsState()
+    val overlayVisibleState = rememberUpdatedState(overlayVisible)
 
     Box(
         modifier = Modifier
@@ -99,6 +108,16 @@ private fun TouchSurface(onInteraction: () -> Unit) {
 
                         val nx = (pointer.position.x / surfaceSize.width).coerceIn(0f, 1f)
                         val ny = (pointer.position.y / surfaceSize.height).coerceIn(0f, 1f)
+
+                        // While carousel overlay is visible, block all touch injection.
+                        // Tap outside the pill dismisses the overlay.
+                        if (overlayVisibleState.value) {
+                            if (event.type == PointerEventType.Press && !pointer.isConsumed) {
+                                AppStateManager.hideOverlay()
+                            }
+                            pointer.consume()
+                            continue
+                        }
 
                         when (event.type) {
                             PointerEventType.Press -> {
