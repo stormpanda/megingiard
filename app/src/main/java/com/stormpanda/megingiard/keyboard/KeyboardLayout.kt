@@ -197,20 +197,20 @@ private fun topRowQwertz(): List<KeyDef> = listOf(
 )
 
 private fun homeRowQwertz(): List<KeyDef> = listOf(
-    KeyDef("caps",  "Caps", KEY_CAPSLOCK, widthWeight = 1.8f, type = KeyType.MODIFIER),
+    KeyDef("caps",  "Caps", KEY_CAPSLOCK, widthWeight = 1.2f, type = KeyType.MODIFIER),
     KeyDef("a",     "a",    KEY_A,        shiftLabel = "A"),
     KeyDef("s",     "s",    KEY_S,        shiftLabel = "S"),
     KeyDef("d",     "d",    KEY_D,        shiftLabel = "D"),
     KeyDef("f",     "f",    KEY_F,        shiftLabel = "F"),
     KeyDef("g",     "g",    KEY_G,        shiftLabel = "G"),
-    KeyDef("tp",    "●",    0,            widthWeight = 0.6f, type = KeyType.TRACKPOINT),
+    KeyDef("tp",    "●",    0,            widthWeight = 1.93f, type = KeyType.TRACKPOINT),
     KeyDef("h",     "h",    KEY_H,        shiftLabel = "H"),
     KeyDef("j",     "j",    KEY_J,        shiftLabel = "J"),
     KeyDef("k",     "k",    KEY_K,        shiftLabel = "K"),
     KeyDef("l",     "l",    KEY_L,        shiftLabel = "L"),
     KeyDef("semi",  ";",    KEY_SEMICOLON, shiftLabel = ":"),
     KeyDef("apos",  "'",    KEY_APOSTROPHE, shiftLabel = "\""),
-    KeyDef("enter", "Enter", KEY_ENTER,   widthWeight = 2.2f),
+    KeyDef("enter", "Enter", KEY_ENTER,   widthWeight = 1.47f),
 )
 
 private fun bottomRowQwertz(): List<KeyDef> = listOf(
@@ -251,20 +251,20 @@ private fun topRowQwerty(): List<KeyDef> = listOf(
 )
 
 private fun homeRowQwerty(): List<KeyDef> = listOf(
-    KeyDef("caps",  "Caps", KEY_CAPSLOCK, widthWeight = 1.8f, type = KeyType.MODIFIER),
+    KeyDef("caps",  "Caps", KEY_CAPSLOCK, widthWeight = 1.2f, type = KeyType.MODIFIER),
     KeyDef("a",     "a",    KEY_A,        shiftLabel = "A"),
     KeyDef("s",     "s",    KEY_S,        shiftLabel = "S"),
     KeyDef("d",     "d",    KEY_D,        shiftLabel = "D"),
     KeyDef("f",     "f",    KEY_F,        shiftLabel = "F"),
     KeyDef("g",     "g",    KEY_G,        shiftLabel = "G"),
-    KeyDef("tp",    "●",    0,            widthWeight = 0.6f, type = KeyType.TRACKPOINT),
+    KeyDef("tp",    "●",    0,            widthWeight = 1.93f, type = KeyType.TRACKPOINT),
     KeyDef("h",     "h",    KEY_H,        shiftLabel = "H"),
     KeyDef("j",     "j",    KEY_J,        shiftLabel = "J"),
     KeyDef("k",     "k",    KEY_K,        shiftLabel = "K"),
     KeyDef("l",     "l",    KEY_L,        shiftLabel = "L"),
     KeyDef("semi",  ";",    KEY_SEMICOLON, shiftLabel = ":"),
     KeyDef("apos",  "'",    KEY_APOSTROPHE, shiftLabel = "\""),
-    KeyDef("enter", "Enter", KEY_ENTER,   widthWeight = 2.2f),
+    KeyDef("enter", "Enter", KEY_ENTER,   widthWeight = 1.47f),
 )
 
 private fun bottomRowQwerty(): List<KeyDef> = listOf(
