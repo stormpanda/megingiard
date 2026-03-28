@@ -73,6 +73,7 @@ private const val KB_REPEAT_INITIAL_DELAY_MS = 500L
 private const val KB_REPEAT_INTERVAL_MS = 30L
 private const val KB_MODIFIER_HOLD_MS = 300L
 private const val KB_TRACKPOINT_SENSITIVITY = 4f
+private val KB_IME_BOTTOM_PADDING = 56.dp
 
 @Composable
 fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
@@ -81,6 +82,7 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val kbQwerty by SettingsManager.kbQwerty.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
+    val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
 
@@ -325,7 +327,12 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
+                .padding(
+                    start = 4.dp,
+                    end = 4.dp,
+                    top = 4.dp,
+                    bottom = if (kbFullscreen) 4.dp else KB_IME_BOTTOM_PADDING
+                ),
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
             layout.forEachIndexed { rowIndex, row ->

@@ -63,6 +63,7 @@ object SettingsManager {
     private val KEY_KB_QWERTY = booleanPreferencesKey("kb_qwerty")
     private val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
     private val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
+    private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
@@ -104,6 +105,10 @@ object SettingsManager {
 
     private val _kbRepeatEnabled = MutableStateFlow(true)
     val kbRepeatEnabled: StateFlow<Boolean> = _kbRepeatEnabled.asStateFlow()
+
+    // false = bottom padding for IME (default); true = fullscreen, no padding
+    private val _kbFullscreen = MutableStateFlow(false)
+    val kbFullscreen: StateFlow<Boolean> = _kbFullscreen.asStateFlow()
 
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
@@ -152,6 +157,7 @@ object SettingsManager {
                 _kbQwerty.value = prefs[KEY_KB_QWERTY] ?: false
                 _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
+                _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
             }
         }
 
@@ -261,6 +267,11 @@ object SettingsManager {
     fun setKbRepeatEnabled(value: Boolean) {
         _kbRepeatEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_REPEAT_ENABLED] = value } }
+    }
+
+    fun setKbFullscreen(value: Boolean) {
+        _kbFullscreen.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
     }
 
     /** Persists the current mirror session state for aspects the user opted to remember. */

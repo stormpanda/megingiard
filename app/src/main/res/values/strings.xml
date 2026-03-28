@@ -63,6 +63,8 @@
     <string name="settings_kb_trackpoint_desc">Show trackpoint dot in the home row</string>
     <string name="settings_kb_repeat">Key repeat</string>
     <string name="settings_kb_repeat_desc">Hold a key to repeat it</string>
+    <string name="settings_kb_fullscreen">Fullscreen keyboard</string>
+    <string name="settings_kb_fullscreen_desc">No bottom gap — keyboard fills the entire screen</string>
 
     <!-- Mirror touch projection -->
     <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>

@@ -64,6 +64,7 @@ fun ToolSettingsPanel(
     val kbQwerty by SettingsManager.kbQwerty.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
+    val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -145,6 +146,8 @@ fun ToolSettingsPanel(
                         onKbTrackpointEnabledChanged = { SettingsManager.setKbTrackpointEnabled(it) },
                         kbRepeatEnabled = kbRepeatEnabled,
                         onKbRepeatEnabledChanged = { SettingsManager.setKbRepeatEnabled(it) },
+                        kbFullscreen = kbFullscreen,
+                        onKbFullscreenChanged = { SettingsManager.setKbFullscreen(it) },
                     )
                 }
             }
@@ -315,6 +318,8 @@ private fun KeyboardToolSettings(
     onKbTrackpointEnabledChanged: (Boolean) -> Unit,
     kbRepeatEnabled: Boolean,
     onKbRepeatEnabledChanged: (Boolean) -> Unit,
+    kbFullscreen: Boolean,
+    onKbFullscreenChanged: (Boolean) -> Unit,
 ) {
     val accentColor by SettingsManager.accentColor.collectAsState()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -337,6 +342,13 @@ private fun KeyboardToolSettings(
             description = stringResource(R.string.settings_kb_repeat_desc),
             checked = kbRepeatEnabled,
             onCheckedChange = onKbRepeatEnabledChanged,
+            accentColor = accentColor,
+        )
+        RememberSettingRow(
+            label = stringResource(R.string.settings_kb_fullscreen),
+            description = stringResource(R.string.settings_kb_fullscreen_desc),
+            checked = kbFullscreen,
+            onCheckedChange = onKbFullscreenChanged,
             accentColor = accentColor,
         )
     }
