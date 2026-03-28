@@ -424,7 +424,6 @@ private fun KeyCap(
 ) {
     val isModifierActive = modifierState != ModifierState.INACTIVE
     val bg = when {
-        keyDef.type == KeyType.TRACKPOINT -> Color.Transparent
         isPressed -> KEY_BG_PRESSED
         isModifierActive -> KEY_BG_MODIFIER_ACTIVE
         else -> KEY_BG
