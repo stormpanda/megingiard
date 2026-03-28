@@ -186,7 +186,7 @@ private fun topRowQwertz(): List<KeyDef> = listOf(
     KeyDef("e",   "e",    KEY_E,          shiftLabel = "E"),
     KeyDef("r",   "r",    KEY_R,          shiftLabel = "R"),
     KeyDef("t",   "t",    KEY_T,          shiftLabel = "T"),
-    KeyDef("z",   "z",    KEY_Y,          shiftLabel = "Z"), // Z on label, Y keycode
+    KeyDef("z",   "z",    KEY_Z,          shiftLabel = "Z"), // QWERTZ: Z visual position in top row, but KEY_Z for correct output
     KeyDef("u",   "u",    KEY_U,          shiftLabel = "U"),
     KeyDef("i",   "i",    KEY_I,          shiftLabel = "I"),
     KeyDef("o",   "o",    KEY_O,          shiftLabel = "O"),
@@ -215,7 +215,7 @@ private fun homeRowQwertz(): List<KeyDef> = listOf(
 
 private fun bottomRowQwertz(): List<KeyDef> = listOf(
     KeyDef("lshift", "Shift", KEY_LEFTSHIFT,  widthWeight = 2.3f, type = KeyType.MODIFIER),
-    KeyDef("y",      "y",     KEY_Z,          shiftLabel = "Y"), // Y on label, Z keycode
+    KeyDef("y",      "y",     KEY_Y,          shiftLabel = "Y"), // QWERTZ: Y visual position in bottom row, but KEY_Y for correct output
     KeyDef("x",      "x",     KEY_X,          shiftLabel = "X"),
     KeyDef("c",      "c",     KEY_C,          shiftLabel = "C"),
     KeyDef("v",      "v",     KEY_V,          shiftLabel = "V"),
