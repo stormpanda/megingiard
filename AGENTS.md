@@ -28,9 +28,11 @@
 | `PRD.md`                            | Product requirements (German, authoritative)                          |
 | `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                   |
 | `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                   |
-| `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation    |
-| `docs/features/media/FEATURE.md`    | Media Control — functional requirements & technical implementation    |
-| `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
+| `docs/features/mirror/FEATURE.md`    | Screen Mirror — functional requirements & technical implementation    |
+| `docs/features/media/FEATURE.md`     | Media Control — functional requirements & technical implementation    |
+| `docs/features/touchpad/FEATURE.md`  | Virtual Touchpad — functional requirements & technical implementation |
+| `docs/features/keyboard/FEATURE.md`  | Virtual Keyboard — functional requirements & technical implementation |
+| `docs/features/FEATURE_TEMPLATE.md`  | Template for new feature documentation                                |
 
 > **Convention:** Every feature has its own subfolder under `docs/features/<feature>/` containing a single `FEATURE.md`. This file is the **authoritative source of truth** for that feature's requirements and technical implementation. When adding a new feature, create a new subfolder and `FEATURE.md`.
 > | `docs/BUILD_NATIVE.md` | How to rebuild the native touch-injector binary |
@@ -59,6 +61,14 @@ com.stormpanda.megingiard
 │ ├── ShellInputInjector.kt # Native binary lifecycle, writer thread, MOVE coalescing (shared)
 │ ├── TouchAction.kt # Shared DOWN/MOVE/UP enum
 │ └── TouchInjector.kt # Normalised → physical coordinate transform facade (shared)
+├── keyboard/
+│ ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
+│ ├── KeyboardState.kt # Modifier key state machine (INACTIVE/STICKY/HELD)
+│ ├── KeyboardLayout.kt # Layout definitions & KeyDef data class
+│ ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
+│ ├── ShellKeyInjector.kt # Native binary lifecycle for key injection via /dev/uinput
+│ ├── KeyAction.kt # Shared DOWN/UP enum
+│ └── LinuxKeycodes.kt # Linux input-event-codes constants
 ├── settings/
 │ ├── ColorWheelPicker.kt # HSV color picker Dialog (hue wheel + brightness slider)
 │ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable
@@ -403,7 +413,7 @@ setOnDismissListener {
 }
 ```
 
-### 9.7 Native Touch Injection (Touchpad)
+### 9.7 Native Touch Injection (Touchpad & Mirror Touch Projection)
 
 - `ShellInputInjector` manages the lifecycle of the `touchinjector_arm64`
   native helper binary (bundled in `assets/`). On `start()`, the binary is
@@ -412,13 +422,29 @@ setOnDismissListener {
 - The binary is driven via **stdin** (`"D x y\n"` / `"M x y\n"` / `"U x y\n"`)
   and signals readiness with `"R\n"` on stdout. A dedicated writer thread
   coalesces pending MOVE events (keep-latest) to prevent backlog.
-- `TouchpadManager.injectTouch()` converts normalised Compose coordinates to
+- `TouchInjector.injectTouch()` converts normalised Compose coordinates to
   the sensor's physical portrait space:
   `sensor_x = (1 − normalizedY) * 1080`, `sensor_y = normalizedX * 1920`.
 - `ShellInputInjector.stop()` **must** be called when leaving `TOUCHPAD` mode.
-  In `TouchpadScreen` this is done via `DisposableEffect(Unit) { onDispose { TouchpadManager.stop() } }`.
+  In `TouchpadScreen` this is done via `DisposableEffect(Unit) { onDispose { TouchInjector.stop() } }`.
 - The device node `/dev/input/event6` is `crw-rw-rw-` on the AYN Thor —
   no root or special permission required beyond the standard shell UID (2000).
+  See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
+
+### 9.8 Native Key Injection (Keyboard)
+
+- `ShellKeyInjector` manages the lifecycle of the `keyinjector_arm64`
+  native helper binary (bundled in `assets/`). On `start()`, the binary is
+  copied to `filesDir`, made executable, and launched via `ProcessBuilder`.
+  It opens `/dev/uinput` once and stays alive for the keyboard session.
+- The binary is driven via **stdin** (`"KD <keycode>\n"` / `"KU <keycode>\n"`)
+  and signals readiness with `"R\n"` on stdout. A dedicated writer thread
+  delivers all events **in order** — unlike touch injection, no MOVE coalescing
+  is applied (every key-down and key-up must be preserved).
+- `KeyInjector.stop()` **must** be called when leaving `KEYBOARD` mode.
+  In `KeyboardScreen` this is done via `DisposableEffect(Unit) { onDispose { KeyInjector.stop() } }`.
+- The device node `/dev/uinput` is accessible under the standard shell UID (2000) on the AYN Thor —
+  no root or special permission required.
   See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
 
 ---
@@ -522,4 +548,5 @@ Before marking a task as done, verify:
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
 - [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR` (not `mode != AppMode.MEDIA`)
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
+- [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)

@@ -9,7 +9,7 @@
 
 ## 2. Core Features
 
-The app offers three tools, each of which occupies the entire secondary screen. Detailed requirements and technical implementation are documented in the respective feature files (`FEATURE.md`).
+The app offers a set of tools, each of which occupies the entire secondary screen. Detailed requirements and technical implementation are documented in the respective feature files (`FEATURE.md`).
 
 ### 2.1 Screen Mirroring → [docs/features/mirror/FEATURE.md](docs/features/mirror/FEATURE.md)
 
@@ -30,10 +30,18 @@ The app offers three tools, each of which occupies the entire secondary screen. 
 - Touch input is injected in real-time via a native binary directly into the kernel input stream (< 1 ms latency).
 - 16:9 touch surface with a visual touch indicator and hint text.
 
+### 2.4 Virtuelle Tastatur → [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md)
+
+- Vollständige virtuelle Tastatur (**QWERTZ / QWERTY / AZERTY**) mit Buchstabenreihen, Zahlenreihe, F1–F12, Pfeiltasten und allen Standard-Modifikatoren.
+- **Modifier-Keys** mit intelligentem Drei-Zustands-Verhalten: kurzes Tippen aktiviert den Sticky-Modus (einmalige Verwendung), langes Drücken hält den Modifier bis zum Loslassen.
+- **Trackpoint:** Analoger Zeiger-Cursor, der Mausbewegungen auf dem primären Display simuliert – steuerbar direkt über die Tastatur.
+- **Key Repeat:** Konfigurierbare Wiederholungsrate für gehaltene Tasten; bei deaktiviertem Repeat wird Key-Up sofort gesendet, um das Kernel-Repeat zu unterdrücken.
+- Eingaben werden in Echtzeit via nativem Binary direkt in `/dev/uinput` injiziert (< 1 ms Latenz).
+
 ## 3. User Interface & User Experience (UX)
 
 - **Launch behaviour:** On opening the app, it starts immediately in Mirror mode to provide instant value without any configuration.
-- **Navigation:** Switching between available tools (Mirror, Media Control, and Touchpad) is done via **carousel navigation** (tap the screen to reveal left/right chevron arrows).
+- **Navigation:** Switching between the available tools is done via **carousel navigation** (tap the screen to reveal left/right chevron arrows).
 - **Layout & Design:**
   - The app runs in borderless Immersive Fullscreen mode (no status bar or navigation buttons).
   - All surfaces are optimised for **4:3** and **16:9** aspect ratios in landscape orientation.

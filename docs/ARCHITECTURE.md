@@ -5,6 +5,7 @@ This document provides a high-level overview of the system architecture and key 
 - **[Screen Mirror](features/mirror/FEATURE.md#technical-implementation)** — capture pipeline, `Presentation` window, pan/zoom, freeze
 - **[Media Control](features/media/FEATURE.md#technical-implementation)** — `MediaSession` integration, scrubbing, progress polling
 - **[Virtual Touchpad](features/touchpad/FEATURE.md#technical-implementation)** — native binary, event injection, coordinate transformation
+- **[Virtual Keyboard](features/keyboard/FEATURE.md#technical-implementation)** — native binary, modifier state machine, key injection, layout system
 
 ---
 
@@ -15,7 +16,7 @@ Megingiard runs on the AYN Thor, an Android gaming handheld with two physical di
 ```
 Primary Display (DEFAULT_DISPLAY)
   └─ MainActivity → MainAppScreen (Jetpack Compose)
-       ├─ Crossfade: MIRROR / MEDIA / TOUCHPAD mode placeholder
+       ├─ Crossfade: MIRROR / MEDIA / TOUCHPAD / KEYBOARD mode placeholder
        └─ CarouselOverlay: pill-based dot navigation + settings
 
 Secondary Display (non-default displayId)
@@ -24,7 +25,7 @@ Secondary Display (non-default displayId)
        └─ ComposeView → MirrorScreen: gesture controls + CarouselOverlay
 ```
 
-In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the primary display shows a minimal placeholder in `MainAppScreen`. In MEDIA and TOUCHPAD modes, `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
+In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the primary display shows a minimal placeholder in `MainAppScreen`. In non-mirror modes (MEDIA, TOUCHPAD, KEYBOARD), `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
 
 ---
 
@@ -37,6 +38,7 @@ In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the
 | `MirrorPresentationLifecycleOwner` (synthetic)           | Bridges Jetpack Compose lifecycle requirements into a service-backed `Presentation` window                  | [mirror/FEATURE.md](features/mirror/FEATURE.md#synthetic-lifecycle-owner)            |
 | `show()` / `hide()` for mode switching (not `dismiss()`) | Avoids destroying the capture session on mode switch; `dismiss()` only in `onDestroy()`                     | [mirror/FEATURE.md](features/mirror/FEATURE.md#mode-switching-show--hide-vs-dismiss) |
 | Native binary for touch injection                        | Direct `/dev/input/event6` writes: < 1 ms latency vs. ~7 ms for Binder IPC                                  | [touchpad/FEATURE.md](features/touchpad/FEATURE.md#why-a-native-binary)              |
+| Native binary for key injection (`keyinjector_arm64`)    | Reuses `ShellKeyInjector` pattern; direct `/dev/uinput` writes for < 1 ms key latency; independent process  | [keyboard/FEATURE.md](features/keyboard/FEATURE.md#native-binary-deployment--lifecycle) |
 | `StateFlow` singletons for all shared state              | Decouples UI from services; mutable backing fields are always `private`; UI reads via read-only `StateFlow` | [AGENTS.md](../AGENTS.md#4-state-management)                                         |
 | `snapshotFlow` for animation sync                        | Avoids restarting `LaunchedEffect` on every animation frame; single-launch reactive collection              | [mirror/FEATURE.md](features/mirror/FEATURE.md#pan--zoom)                            |
 | `interactionTime` key in overlay `LaunchedEffect`        | Ensures the auto-hide timer resets correctly on every interaction, even when `showControls` doesn't toggle  | [AGENTS.md](../AGENTS.md#61-side-effects--launchedeffect)                            |
