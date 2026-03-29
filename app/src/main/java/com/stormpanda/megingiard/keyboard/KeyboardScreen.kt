@@ -301,6 +301,13 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                             KeyboardState.activeModifierKeycodes(layout)
                                                 .forEach { KeyInjector.keyDown(it) }
                                             KeyInjector.keyDown(newDef.linuxKeycode)
+                                            if (!kbRepeatEnabled) {
+                                                // Same as Press handler: send keyUp immediately so the
+                                                // kernel never fires its own repeat for swiped keys.
+                                                KeyInjector.keyUp(newDef.linuxKeycode)
+                                                KeyboardState.activeModifierKeycodes(layout)
+                                                    .forEach { KeyInjector.keyUp(it) }
+                                            }
                                         }
                                         change.consume()
                                     }
@@ -317,7 +324,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                                 KeyboardState.releaseStickyModifiers(layout)
                                                     .forEach { KeyInjector.keyUp(it) }
                                             } else if (keyDef.linuxKeycode != 0) {
-                                                // keyUp was already sent at Press-time; only release sticky modifiers
+                                                // keyUp was already sent at press/move-time; only release sticky modifiers
                                                 KeyboardState.releaseStickyModifiers(layout)
                                                     .forEach { KeyInjector.keyUp(it) }
                                             }
