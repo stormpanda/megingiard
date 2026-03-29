@@ -133,3 +133,53 @@ no dynamic linker path issues when running from `filesDir`.
 This approach is **AYN Thor-specific**. On standard Android devices
 `/dev/input/` is not world-writable and the binary will fail to open
 the device node.
+
+---
+
+## Key Injector (`keyinjector_arm64`)
+
+### Source
+
+`app/src/main/cpp/keyinjector.c`
+
+Creates a virtual keyboard via `/dev/uinput`, then reads `KD`/`KU` commands from stdin
+and writes `EV_KEY` events into the kernel input subsystem.
+
+### Compile
+
+Same NDK setup as above. Use the same `build_keyinjector.sh` script at the workspace root:
+
+```bash
+sh build_keyinjector.sh
+```
+
+Or manually:
+
+```bash
+NDK=/opt/homebrew/Caskroom/android-ndk/29/AndroidNDK14206865.app/Contents/NDK
+TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/darwin-x86_64
+
+$TOOLCHAIN/bin/aarch64-linux-android35-clang \
+    --sysroot=$TOOLCHAIN/sysroot \
+    --target=aarch64-linux-android35 \
+    -static -O2 -s \
+    -o app/src/main/assets/keyinjector_arm64 \
+    app/src/main/cpp/keyinjector.c
+```
+
+### Binary protocol
+
+| Line sent to stdin | Meaning                          |
+| ------------------ | -------------------------------- |
+| `KD <keycode>\n`   | Key DOWN — Linux keycode (1–254) |
+| `KU <keycode>\n`   | Key UP — Linux keycode (1–254)   |
+
+The binary signals readiness with `R\n` on stdout once the `/dev/uinput` virtual
+device is created. On stdin EOF it destroys the virtual device and exits.
+
+### Device specifics (AYN Thor)
+
+| Property    | Value                           |
+| ----------- | ------------------------------- |
+| Device node | `/dev/uinput`                   |
+| Permissions | `crw-rw-rw-` (no root required) |

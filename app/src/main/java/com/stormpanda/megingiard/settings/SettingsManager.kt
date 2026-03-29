@@ -17,6 +17,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,12 @@ object SettingsManager {
     private val KEY_SAVED_SCALE = floatPreferencesKey("mirror_saved_scale")
     private val KEY_SAVED_OFFSET_X = floatPreferencesKey("mirror_saved_offset_x")
     private val KEY_SAVED_OFFSET_Y = floatPreferencesKey("mirror_saved_offset_y")
+
+    // Keyboard settings
+    private val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
+    private val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
+    private val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
+    private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
@@ -89,6 +96,20 @@ object SettingsManager {
     // Mirror touch projection — pinch-to-zoom while projecting
     private val _pinchWhileProjecting = MutableStateFlow(false)
     val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
+
+    // Keyboard
+    private val _kbLayout = MutableStateFlow(KbLayout.QWERTZ)
+    val kbLayout: StateFlow<KbLayout> = _kbLayout.asStateFlow()
+
+    private val _kbTrackpointEnabled = MutableStateFlow(true)
+    val kbTrackpointEnabled: StateFlow<Boolean> = _kbTrackpointEnabled.asStateFlow()
+
+    private val _kbRepeatEnabled = MutableStateFlow(true)
+    val kbRepeatEnabled: StateFlow<Boolean> = _kbRepeatEnabled.asStateFlow()
+
+    // false = bottom padding for IME (default); true = fullscreen, no padding
+    private val _kbFullscreen = MutableStateFlow(false)
+    val kbFullscreen: StateFlow<Boolean> = _kbFullscreen.asStateFlow()
 
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
@@ -134,6 +155,10 @@ object SettingsManager {
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
                 _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
+                _kbLayout.value = KbLayout.entries.firstOrNull { it.name == prefs[KEY_KB_LAYOUT] } ?: KbLayout.QWERTZ
+                _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
+                _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
+                _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
             }
         }
 
@@ -230,6 +255,26 @@ object SettingsManager {
         }
     }
 
+    fun setKbLayout(value: KbLayout) {
+        _kbLayout.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_LAYOUT] = value.name } }
+    }
+
+    fun setKbTrackpointEnabled(value: Boolean) {
+        _kbTrackpointEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_ENABLED] = value } }
+    }
+
+    fun setKbRepeatEnabled(value: Boolean) {
+        _kbRepeatEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_REPEAT_ENABLED] = value } }
+    }
+
+    fun setKbFullscreen(value: Boolean) {
+        _kbFullscreen.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
+    }
+
     /** Persists the current mirror session state for aspects the user opted to remember. */
     fun saveMirrorSessionState() {
         // Capture ALL values synchronously on the calling thread (main) BEFORE
@@ -293,4 +338,5 @@ internal fun AppMode.displayNameResId(): Int = when (this) {
     AppMode.MIRROR -> R.string.tool_name_mirror
     AppMode.MEDIA -> R.string.tool_name_media
     AppMode.TOUCHPAD -> R.string.tool_name_touchpad
+    AppMode.KEYBOARD -> R.string.tool_name_keyboard
 }

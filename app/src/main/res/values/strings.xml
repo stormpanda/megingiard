@@ -30,6 +30,10 @@
     <string name="tool_name_mirror">Mirror</string>
     <string name="tool_name_media">Media</string>
     <string name="tool_name_touchpad">Touchpad</string>
+    <string name="tool_name_keyboard">Keyboard</string>
+    <string name="keyboard_placeholder">Keyboard coming soon…</string>
+    <string name="cd_keyboard_key">Key %s</string>
+    <string name="cd_keyboard_trackpoint">Trackpoint</string>
 
     <!-- Settings screen -->
     <string name="settings_close">Close</string>
@@ -51,6 +55,19 @@
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
     <string name="settings_color_apply">Apply</string>
+
+    <!-- Keyboard settings -->
+    <string name="settings_kb_layout">Keyboard layout</string>
+    <string name="settings_kb_layout_desc">Key arrangement for letters</string>
+    <string name="settings_kb_layout_qwertz">QWERTZ</string>
+    <string name="settings_kb_layout_qwerty">QWERTY</string>
+    <string name="settings_kb_layout_azerty">AZERTY</string>
+    <string name="settings_kb_trackpoint">Trackpoint</string>
+    <string name="settings_kb_trackpoint_desc">Show trackpoint dot in the home row</string>
+    <string name="settings_kb_repeat">Key repeat</string>
+    <string name="settings_kb_repeat_desc">Hold a key to repeat it</string>
+    <string name="settings_kb_fullscreen">Fullscreen keyboard</string>
+    <string name="settings_kb_fullscreen_desc">No bottom gap — keyboard fills the entire screen</string>
 
     <!-- Mirror touch projection -->
     <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>

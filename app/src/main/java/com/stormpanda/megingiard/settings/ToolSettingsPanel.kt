@@ -16,10 +16,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +33,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.keyboard.KbLayout
 
 private val PANEL_BG = Color(0xFF1C1C1E)
 private val PANEL_TEXT = Color.White
@@ -61,6 +68,10 @@ fun ToolSettingsPanel(
     val rememberLock by SettingsManager.rememberLock.collectAsState()
     val rememberProjection by SettingsManager.rememberProjection.collectAsState()
     val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
+    val kbLayout by SettingsManager.kbLayout.collectAsState()
+    val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
+    val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
+    val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -135,6 +146,16 @@ fun ToolSettingsPanel(
                             fontSize = 14.sp
                         )
                     }
+                    AppMode.KEYBOARD -> KeyboardToolSettings(
+                        kbLayout = kbLayout,
+                        onKbLayoutChanged = { SettingsManager.setKbLayout(it) },
+                        kbTrackpointEnabled = kbTrackpointEnabled,
+                        onKbTrackpointEnabledChanged = { SettingsManager.setKbTrackpointEnabled(it) },
+                        kbRepeatEnabled = kbRepeatEnabled,
+                        onKbRepeatEnabledChanged = { SettingsManager.setKbRepeatEnabled(it) },
+                        kbFullscreen = kbFullscreen,
+                        onKbFullscreenChanged = { SettingsManager.setKbFullscreen(it) },
+                    )
                 }
             }
 
@@ -294,4 +315,116 @@ private fun RememberSettingRow(
             )
         )
     }
+}
+
+@Composable
+private fun KeyboardToolSettings(
+    kbLayout: KbLayout,
+    onKbLayoutChanged: (KbLayout) -> Unit,
+    kbTrackpointEnabled: Boolean,
+    onKbTrackpointEnabledChanged: (Boolean) -> Unit,
+    kbRepeatEnabled: Boolean,
+    onKbRepeatEnabledChanged: (Boolean) -> Unit,
+    kbFullscreen: Boolean,
+    onKbFullscreenChanged: (Boolean) -> Unit,
+) {
+    val accentColor by SettingsManager.accentColor.collectAsState()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LayoutDropdownRow(
+            currentLayout = kbLayout,
+            onLayoutSelected = onKbLayoutChanged,
+            accentColor = accentColor,
+        )
+        RememberSettingRow(
+            label = stringResource(R.string.settings_kb_trackpoint),
+            description = stringResource(R.string.settings_kb_trackpoint_desc),
+            checked = kbTrackpointEnabled,
+            onCheckedChange = onKbTrackpointEnabledChanged,
+            accentColor = accentColor,
+        )
+        RememberSettingRow(
+            label = stringResource(R.string.settings_kb_repeat),
+            description = stringResource(R.string.settings_kb_repeat_desc),
+            checked = kbRepeatEnabled,
+            onCheckedChange = onKbRepeatEnabledChanged,
+            accentColor = accentColor,
+        )
+        RememberSettingRow(
+            label = stringResource(R.string.settings_kb_fullscreen),
+            description = stringResource(R.string.settings_kb_fullscreen_desc),
+            checked = kbFullscreen,
+            onCheckedChange = onKbFullscreenChanged,
+            accentColor = accentColor,
+        )
+    }
+}
+
+@Composable
+private fun LayoutDropdownRow(
+    currentLayout: KbLayout,
+    onLayoutSelected: (KbLayout) -> Unit,
+    accentColor: Color,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_kb_layout),
+                color = PANEL_TEXT,
+                fontSize = 14.sp
+            )
+            Text(
+                text = stringResource(R.string.settings_kb_layout_desc),
+                color = PANEL_TEXT_SECONDARY,
+                fontSize = 12.sp
+            )
+        }
+        Box {
+            Row(
+                modifier = Modifier
+                    .clickable { expanded = true }
+                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(currentLayout.labelResId()),
+                    color = PANEL_TEXT,
+                    fontSize = 14.sp
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = PANEL_TEXT_SECONDARY,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(PANEL_BG)
+            ) {
+                KbLayout.entries.forEach { layout ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(layout.labelResId()),
+                                color = if (layout == currentLayout) accentColor else PANEL_TEXT,
+                                fontSize = 14.sp
+                            )
+                        },
+                        onClick = { onLayoutSelected(layout); expanded = false }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun KbLayout.labelResId(): Int = when (this) {
+    KbLayout.QWERTZ -> R.string.settings_kb_layout_qwertz
+    KbLayout.QWERTY -> R.string.settings_kb_layout_qwerty
+    KbLayout.AZERTY -> R.string.settings_kb_layout_azerty
 }
