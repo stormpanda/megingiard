@@ -2,11 +2,11 @@
 
 Detailed functional requirements (including acceptance criteria and edge cases) are documented per feature:
 
-| Feature | Description | Document |
-|---|---|---|
-| Screen Mirror | Live mirroring, pan/zoom, freeze frame, controls overlay | [docs/features/mirror/FEATURE.md](features/mirror/FEATURE.md) |
-| Media Control | Transport controls, scrubbing, progress tracking | [docs/features/media/FEATURE.md](features/media/FEATURE.md) |
-| Virtual Touchpad | Native touch injection, coordinate mapping, visual feedback | [docs/features/touchpad/FEATURE.md](features/touchpad/FEATURE.md) |
+| Feature          | Description                                                                                        | Document                                                          |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Screen Mirror    | Live mirroring, pan/zoom, freeze frame, controls overlay                                           | [docs/features/mirror/FEATURE.md](features/mirror/FEATURE.md)     |
+| Media Control    | Transport controls, scrubbing, progress tracking                                                   | [docs/features/media/FEATURE.md](features/media/FEATURE.md)       |
+| Virtual Touchpad | Native touch injection, coordinate mapping, visual feedback                                        | [docs/features/touchpad/FEATURE.md](features/touchpad/FEATURE.md) |
 | Virtual Keyboard | Full keyboard layout (QWERTZ/QWERTY/AZERTY), modifier key state machine, trackpoint, key injection | [docs/features/keyboard/FEATURE.md](features/keyboard/FEATURE.md) |
 
 ---

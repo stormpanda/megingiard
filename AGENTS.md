@@ -28,11 +28,11 @@
 | `PRD.md`                            | Product requirements (German, authoritative)                          |
 | `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                   |
 | `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                   |
-| `docs/features/mirror/FEATURE.md`    | Screen Mirror — functional requirements & technical implementation    |
-| `docs/features/media/FEATURE.md`     | Media Control — functional requirements & technical implementation    |
-| `docs/features/touchpad/FEATURE.md`  | Virtual Touchpad — functional requirements & technical implementation |
-| `docs/features/keyboard/FEATURE.md`  | Virtual Keyboard — functional requirements & technical implementation |
-| `docs/features/FEATURE_TEMPLATE.md`  | Template for new feature documentation                                |
+| `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation    |
+| `docs/features/media/FEATURE.md`    | Media Control — functional requirements & technical implementation    |
+| `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
+| `docs/features/keyboard/FEATURE.md` | Virtual Keyboard — functional requirements & technical implementation |
+| `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                |
 
 > **Convention:** Every feature has its own subfolder under `docs/features/<feature>/` containing a single `FEATURE.md`. This file is the **authoritative source of truth** for that feature's requirements and technical implementation. When adding a new feature, create a new subfolder and `FEATURE.md`.
 > | `docs/BUILD_NATIVE.md` | How to rebuild the native touch-injector binary |

@@ -3,7 +3,7 @@
 <!-- Replace {Feature Name} with the name of the feature (e.g. "Virtual Keyboard"). -->
 
 > **Related source:** `app/src/main/java/com/stormpanda/megingiard/{feature}/`
-> *(Add additional source paths for any shared infrastructure packages, e.g. `input/`.)*
+> _(Add additional source paths for any shared infrastructure packages, e.g. `input/`.)_
 
 <!-- If the feature uses a native binary, uncomment and fill in the three lines below: -->
 <!-- > **Native source:** `app/src/main/cpp/{source}.c` -->
@@ -54,6 +54,7 @@ User Input (Compose)
       ▼
 {FeatureService}   ← background work
 ```
+
 }
 
 ### {Additional Sections As Needed}
@@ -69,7 +70,7 @@ coordinate transforms, lifecycle management, settings persistence.}
      For files from shared packages (e.g. input/), use a relative path prefix
      such as ../input/. -->
 
-| File | Responsibility |
-|------|----------------|
-| `{FeatureScreen}.kt` | {Short description of the file's role} |
+| File                  | Responsibility                         |
+| --------------------- | -------------------------------------- |
+| `{FeatureScreen}.kt`  | {Short description of the file's role} |
 | `{FeatureManager}.kt` | {Short description of the file's role} |

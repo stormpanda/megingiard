@@ -48,5 +48,3 @@ The app offers a set of tools, each of which occupies the entire secondary scree
   - **Aesthetic:** The design (especially Media Control) is intentionally dark and minimalist ("Dark Mode") to avoid distracting the user with bright colours while gaming on the primary screen.
   - **Controls Overlay:** Controls are revealed exclusively on a tap and fade out after a few seconds (auto-hide).
 - **App Lifecycle:** Megingiard follows Android conventions: the app is closed via the standard Android multi-tasking view (Recent Apps); there are no dedicated close buttons in the UI.
-
-
