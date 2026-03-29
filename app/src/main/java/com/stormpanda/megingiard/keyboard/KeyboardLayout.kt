@@ -316,7 +316,7 @@ private fun topRowAzerty(): List<KeyDef> = listOf(
 )
 
 private fun homeRowAzerty(): List<KeyDef> = listOf(
-    KeyDef("caps",  "Caps", KEY_CAPSLOCK, widthWeight = 1.2f, type = KeyType.MODIFIER),
+    KeyDef("caps",  "Caps", KEY_CAPSLOCK, widthWeight = 1.7f, type = KeyType.MODIFIER),
     KeyDef("q",     "q",    KEY_Q,        shiftLabel = "Q"), // AZERTY: Q at A position
     KeyDef("s",     "s",    KEY_S,        shiftLabel = "S"),
     KeyDef("d",     "d",    KEY_D,        shiftLabel = "D"),
@@ -327,8 +327,8 @@ private fun homeRowAzerty(): List<KeyDef> = listOf(
     KeyDef("j",     "j",    KEY_J,        shiftLabel = "J"),
     KeyDef("k",     "k",    KEY_K,        shiftLabel = "K"),
     KeyDef("l",     "l",    KEY_L,        shiftLabel = "L"),
-    KeyDef("m",     "m",    KEY_M,        widthWeight = 2f, shiftLabel = "M"), // M in home row; absorbs ; and ' slots
-    KeyDef("enter", "Enter", KEY_ENTER,   widthWeight = 1.47f),
+    KeyDef("m",     "m",    KEY_M,        shiftLabel = "M"), // same width as other letters
+    KeyDef("enter", "Enter", KEY_ENTER,   widthWeight = 1.97f),
 )
 
 private fun bottomRowAzerty(): List<KeyDef> = listOf(
