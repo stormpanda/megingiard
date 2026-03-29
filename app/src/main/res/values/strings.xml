@@ -58,7 +58,10 @@
 
     <!-- Keyboard settings -->
     <string name="settings_kb_layout">Keyboard layout</string>
-    <string name="settings_kb_layout_qwerty">QWERTY (swap Y/Z)</string>
+    <string name="settings_kb_layout_desc">Key arrangement for letters</string>
+    <string name="settings_kb_layout_qwertz">QWERTZ</string>
+    <string name="settings_kb_layout_qwerty">QWERTY</string>
+    <string name="settings_kb_layout_azerty">AZERTY</string>
     <string name="settings_kb_trackpoint">Trackpoint</string>
     <string name="settings_kb_trackpoint_desc">Show trackpoint dot in the home row</string>
     <string name="settings_kb_repeat">Key repeat</string>

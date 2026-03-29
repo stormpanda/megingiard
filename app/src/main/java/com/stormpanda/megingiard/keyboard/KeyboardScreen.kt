@@ -79,7 +79,7 @@ private val KB_IME_BOTTOM_PADDING = 56.dp
 fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val accentColor by SettingsManager.accentColor.collectAsState()
-    val kbQwerty by SettingsManager.kbQwerty.collectAsState()
+    val kbLayout by SettingsManager.kbLayout.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
@@ -115,8 +115,12 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 
-    val layout = remember(kbQwerty) {
-        if (kbQwerty) qwertyLayout() else qwertzLayout()
+    val layout = remember(kbLayout) {
+        when (kbLayout) {
+            KbLayout.QWERTY -> qwertyLayout()
+            KbLayout.AZERTY -> azertyLayout()
+            KbLayout.QWERTZ -> qwertzLayout()
+        }
     }
 
     // Key bounds: id → root-space Rect, populated by KeyCap.onGloballyPositioned

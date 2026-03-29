@@ -102,6 +102,8 @@ data class KeyDef(
 
 enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
 
+enum class KbLayout { QWERTZ, QWERTY, AZERTY }
+
 // ---------------------------------------------------------------------------
 // Layout factories
 // ---------------------------------------------------------------------------
@@ -121,6 +123,15 @@ fun qwertyLayout(): List<List<KeyDef>> = listOf(
     topRowQwerty(),
     homeRowQwerty(),
     bottomRowQwerty(),
+    bottomBarRow(),
+)
+
+fun azertyLayout(): List<List<KeyDef>> = listOf(
+    fRow(),
+    numberRow(),
+    topRowAzerty(),
+    homeRowAzerty(),
+    bottomRowAzerty(),
     bottomBarRow(),
 )
 
@@ -280,5 +291,58 @@ private fun bottomRowQwerty(): List<KeyDef> = listOf(
     KeyDef("dot",    ".",     KEY_DOT,        shiftLabel = ">"),
     KeyDef("slash",  "/",     KEY_SLASH,      shiftLabel = "?"),
     KeyDef("uarrow", "↑",     KEY_UP,         widthWeight = 1.7f), // swapped with rshift, wider
+    KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.5f, type = KeyType.MODIFIER),
+)
+
+// ---------------------------------------------------------------------------
+// AZERTY-specific rows (French layout — A/Q and Z/W transposed, M in home row)
+// ---------------------------------------------------------------------------
+
+private fun topRowAzerty(): List<KeyDef> = listOf(
+    KeyDef("tab", "Tab",  KEY_TAB,        widthWeight = 1.5f),
+    KeyDef("a",   "a",    KEY_A,          shiftLabel = "A"), // AZERTY: A at top-left (Q position)
+    KeyDef("z",   "z",    KEY_Z,          shiftLabel = "Z"), // AZERTY: Z at W position
+    KeyDef("e",   "e",    KEY_E,          shiftLabel = "E"),
+    KeyDef("r",   "r",    KEY_R,          shiftLabel = "R"),
+    KeyDef("t",   "t",    KEY_T,          shiftLabel = "T"),
+    KeyDef("y",   "y",    KEY_Y,          shiftLabel = "Y"),
+    KeyDef("u",   "u",    KEY_U,          shiftLabel = "U"),
+    KeyDef("i",   "i",    KEY_I,          shiftLabel = "I"),
+    KeyDef("o",   "o",    KEY_O,          shiftLabel = "O"),
+    KeyDef("p",   "p",    KEY_P,          shiftLabel = "P"),
+    KeyDef("lbrc","[",    KEY_LEFTBRACE,  shiftLabel = "{"),
+    KeyDef("rbrc","]",    KEY_RIGHTBRACE, shiftLabel = "}"),
+    KeyDef("bsls","\\",   KEY_BACKSLASH,  widthWeight = 1.5f, shiftLabel = "|"),
+)
+
+private fun homeRowAzerty(): List<KeyDef> = listOf(
+    KeyDef("caps",  "Caps", KEY_CAPSLOCK, widthWeight = 1.2f, type = KeyType.MODIFIER),
+    KeyDef("q",     "q",    KEY_Q,        shiftLabel = "Q"), // AZERTY: Q at A position
+    KeyDef("s",     "s",    KEY_S,        shiftLabel = "S"),
+    KeyDef("d",     "d",    KEY_D,        shiftLabel = "D"),
+    KeyDef("f",     "f",    KEY_F,        shiftLabel = "F"),
+    KeyDef("g",     "g",    KEY_G,        shiftLabel = "G"),
+    KeyDef("tp",    "●",    0,            widthWeight = 1.93f, type = KeyType.TRACKPOINT),
+    KeyDef("h",     "h",    KEY_H,        shiftLabel = "H"),
+    KeyDef("j",     "j",    KEY_J,        shiftLabel = "J"),
+    KeyDef("k",     "k",    KEY_K,        shiftLabel = "K"),
+    KeyDef("l",     "l",    KEY_L,        shiftLabel = "L"),
+    KeyDef("m",     "m",    KEY_M,        widthWeight = 2f, shiftLabel = "M"), // M in home row; absorbs ; and ' slots
+    KeyDef("enter", "Enter", KEY_ENTER,   widthWeight = 1.47f),
+)
+
+private fun bottomRowAzerty(): List<KeyDef> = listOf(
+    KeyDef("lshift", "Shift", KEY_LEFTSHIFT,  widthWeight = 2.3f, type = KeyType.MODIFIER),
+    KeyDef("w",      "w",     KEY_W,          shiftLabel = "W"), // AZERTY: W at Z position
+    KeyDef("x",      "x",     KEY_X,          shiftLabel = "X"),
+    KeyDef("c",      "c",     KEY_C,          shiftLabel = "C"),
+    KeyDef("v",      "v",     KEY_V,          shiftLabel = "V"),
+    KeyDef("b",      "b",     KEY_B,          shiftLabel = "B"),
+    KeyDef("n",      "n",     KEY_N,          shiftLabel = "N"),
+    KeyDef("comma",  ",",     KEY_COMMA,      shiftLabel = "<"),
+    KeyDef("semi",   ";",     KEY_SEMICOLON,  shiftLabel = ":"),
+    KeyDef("dot",    ".",     KEY_DOT,        shiftLabel = ">"),
+    KeyDef("slash",  "/",     KEY_SLASH,      shiftLabel = "?"),
+    KeyDef("uarrow", "↑",     KEY_UP,         widthWeight = 1.7f),
     KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.5f, type = KeyType.MODIFIER),
 )
