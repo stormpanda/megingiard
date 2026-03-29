@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -48,6 +49,8 @@ object SettingsManager {
     private val KEY_OVERLAY_TIMEOUT_MS = longPreferencesKey("overlay_timeout_ms")
     private val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
     private val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
+    private val KEY_REMEMBER_LAST_TOOL = booleanPreferencesKey("remember_last_tool")
+    private val KEY_LAST_TOOL = stringPreferencesKey("last_tool")
 
     // Mirror touch projection settings
     private val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
@@ -121,6 +124,10 @@ object SettingsManager {
     private val _rememberProjection = MutableStateFlow(false)
     val rememberProjection: StateFlow<Boolean> = _rememberProjection.asStateFlow()
 
+    // General session — remember last used tool across restarts
+    private val _rememberLastTool = MutableStateFlow(false)
+    val rememberLastTool: StateFlow<Boolean> = _rememberLastTool.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -155,6 +162,7 @@ object SettingsManager {
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
                 _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
+                _rememberLastTool.value = prefs[KEY_REMEMBER_LAST_TOOL] ?: false
                 _kbLayout.value = KbLayout.entries.firstOrNull { it.name == prefs[KEY_KB_LAYOUT] } ?: KbLayout.QWERTZ
                 _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
@@ -170,6 +178,36 @@ object SettingsManager {
                 AppStateManager.setMode(active.first())
             }
         }.launchIn(scope)
+
+        // One-shot: select the correct initial tool once DataStore data is available.
+        // Uses the first tool in the active list, or the last used tool if that option is on.
+        scope.launch {
+            val prefs = dataStore.data.catch { emit(emptyPreferences()) }.first()
+            val enabledStr = prefs[KEY_ENABLED_TOOLS]
+            val enabled = if (enabledStr != null) {
+                enabledStr.split(",")
+                    .mapNotNull { runCatching { AppMode.valueOf(it) }.getOrNull() }
+                    .toSet()
+                    .ifEmpty { AppMode.entries.toSet() }
+            } else AppMode.entries.toSet()
+            val orderStr = prefs[KEY_TOOL_ORDER]
+            val order = if (orderStr != null) {
+                val parsed = orderStr.split(",")
+                    .mapNotNull { runCatching { AppMode.valueOf(it) }.getOrNull() }
+                if (parsed.containsAll(AppMode.entries)) parsed else AppMode.entries.toList()
+            } else AppMode.entries.toList()
+            val active = order.filter { it in enabled }.ifEmpty { listOf(AppMode.entries.first()) }
+            val rememberLast = prefs[KEY_REMEMBER_LAST_TOOL] ?: false
+            val lastTool = prefs[KEY_LAST_TOOL]?.let { runCatching { AppMode.valueOf(it) }.getOrNull() }
+            val startMode = if (rememberLast && lastTool != null && lastTool in active) lastTool else active.first()
+            AppStateManager.setMode(startMode)
+        }
+
+        // Persist the active tool whenever the user navigates, so it can be restored on restart.
+        AppStateManager.currentMode
+            .drop(1)
+            .onEach { mode -> dataStore.edit { prefs -> prefs[KEY_LAST_TOOL] = mode.name } }
+            .launchIn(scope)
     }
 
     fun setEnabledTools(tools: Set<AppMode>) {
@@ -252,6 +290,13 @@ object SettingsManager {
         _rememberProjection.value = value
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_PROJECTION] = value }
+        }
+    }
+
+    fun setRememberLastTool(value: Boolean) {
+        _rememberLastTool.value = value
+        scope.launch {
+            dataStore.edit { prefs -> prefs[KEY_REMEMBER_LAST_TOOL] = value }
         }
     }
 

@@ -80,4 +80,8 @@
     <string name="settings_remember_lock_desc">Restore view lock state when mirroring restarts</string>
     <string name="settings_remember_projection">Remember touch projection</string>
     <string name="settings_remember_projection_desc">Restore touch projection state when mirroring restarts</string>
+
+    <!-- General session -->
+    <string name="settings_remember_last_tool">Remember last used tool</string>
+    <string name="settings_remember_last_tool_desc">Restore the active tool when the app restarts</string>
 </resources>

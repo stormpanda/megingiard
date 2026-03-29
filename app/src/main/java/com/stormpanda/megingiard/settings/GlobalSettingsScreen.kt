@@ -70,6 +70,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val overlayTimeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val rememberLastTool by SettingsManager.rememberLastTool.collectAsState()
 
     var showColorPicker by remember { mutableStateOf(false) }
 
@@ -171,6 +172,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                         overlayAtBottom = overlayAtBottom,
                         accentColor = accentColor,
                         onChanged = { SettingsManager.setOverlayAtBottom(it) }
+                    )
+                    HorizontalDivider(color = GS_DIVIDER)
+                    RememberLastToolRow(
+                        rememberLastTool = rememberLastTool,
+                        accentColor = accentColor,
+                        onChanged = { SettingsManager.setRememberLastTool(it) }
                     )
                     HorizontalDivider(color = GS_DIVIDER)
                 }
@@ -309,6 +316,42 @@ private fun OverlayPositionRow(
         )
         Switch(
             checked = overlayAtBottom,
+            onCheckedChange = onChanged,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = accentColor
+            )
+        )
+    }
+}
+
+@Composable
+private fun RememberLastToolRow(
+    rememberLastTool: Boolean,
+    accentColor: Color,
+    onChanged: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(GS_SURFACE)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_remember_last_tool),
+                color = GS_TEXT,
+                fontSize = 14.sp
+            )
+            Text(
+                text = stringResource(R.string.settings_remember_last_tool_desc),
+                color = GS_TEXT_SECONDARY,
+                fontSize = 12.sp
+            )
+        }
+        Switch(
+            checked = rememberLastTool,
             onCheckedChange = onChanged,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
