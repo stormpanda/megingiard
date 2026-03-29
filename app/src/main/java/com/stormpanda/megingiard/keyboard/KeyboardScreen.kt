@@ -76,7 +76,7 @@ private const val KB_TRACKPOINT_SENSITIVITY = 4f
 private val KB_IME_BOTTOM_PADDING = 56.dp
 
 @Composable
-fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
+fun KeyboardScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val accentColor by SettingsManager.accentColor.collectAsState()
     val kbLayout by SettingsManager.kbLayout.collectAsState()
@@ -124,7 +124,7 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     }
 
     // Key bounds: id → root-space Rect, populated by KeyCap.onGloballyPositioned
-    val keyBounds = remember { mutableMapOf<String, KeyBounds>() }
+    val keyBounds = remember(kbLayout) { mutableMapOf<String, KeyBounds>() }
     // Outer Box layout coords — used to convert pointer positions to root space
     val boxCoordsState = remember { mutableStateOf<LayoutCoordinates?>(null) }
 

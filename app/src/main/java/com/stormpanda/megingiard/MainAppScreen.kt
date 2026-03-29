@@ -137,8 +137,8 @@ fun MainAppScreen() {
                     }
                 }
                 AppMode.MEDIA -> MediaScreen()
-                AppMode.TOUCHPAD -> TouchpadScreen(onInteraction = { AppStateManager.triggerOverlay() })
-                AppMode.KEYBOARD -> KeyboardScreen(onInteraction = { AppStateManager.triggerOverlay() })
+                AppMode.TOUCHPAD -> TouchpadScreen()
+                AppMode.KEYBOARD -> KeyboardScreen()
             }
         }
 

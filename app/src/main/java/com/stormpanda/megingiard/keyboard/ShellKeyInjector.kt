@@ -34,6 +34,7 @@ object ShellKeyInjector {
 
     @Volatile private var process: Process?       = null
     @Volatile private var writer:  BufferedWriter? = null
+    @Volatile private var writerThread: Thread?    = null
     @Volatile private var running                  = false
 
     private val queue = LinkedBlockingQueue<KeyCommand>()
@@ -63,7 +64,7 @@ object ShellKeyInjector {
             }
             queue.clear()
             running = true
-            Thread(::writerLoop, "KeyInjectorWriter").also {
+            writerThread = Thread(::writerLoop, "KeyInjectorWriter").also {
                 it.isDaemon = true
                 it.start()
             }
@@ -75,6 +76,8 @@ object ShellKeyInjector {
     @Synchronized
     fun stop() {
         running = false
+        writerThread?.interrupt()
+        writerThread = null
         queue.clear()
         try { writer?.close()  } catch (_: Exception) {}
         try { process?.destroy() } catch (_: Exception) {}

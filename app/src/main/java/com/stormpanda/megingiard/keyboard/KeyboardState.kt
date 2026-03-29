@@ -21,7 +21,7 @@ private const val MODIFIER_HOLD_THRESHOLD_MS = 300L
  * Tracks the [ModifierState] for every known modifier key.
  *
  * Call [onModifierTouchDown] when the finger lands, [onModifierTouchUp] when
- * it lifts. [onRegularKeyInjected] is called by [KeyboardScreen] immediately
+ * it lifts. [releaseStickyModifiers] is called by [KeyboardScreen] immediately
  * after sending any non-modifier key — it clears all STICKY modifiers and
  * returns the list of modifier keycodes that need a KEY_UP event.
  */
@@ -56,7 +56,7 @@ object KeyboardState {
      *
      * Decision logic:
      * - If currently [ModifierState.HELD] → release (set [ModifierState.INACTIVE])
-     * - If currently [ModifierState.STICKY] → double-tap = lock: keep STICKY (no change)
+     * - If currently [ModifierState.STICKY] → second tap = release: set [ModifierState.INACTIVE]
      * - If currently [ModifierState.INACTIVE] and duration < threshold → set [ModifierState.STICKY]
      * - If currently [ModifierState.INACTIVE] and duration >= threshold → set [ModifierState.INACTIVE]
      *   (HELD was already activated by a long-press; caller released while still HELD — treat
@@ -106,25 +106,7 @@ object KeyboardState {
     }
 
     /**
-     * Called immediately after any non-modifier key is injected.
-     *
-     * Clears all [ModifierState.STICKY] modifiers and returns the list of
-     * their keycodes so the caller can inject KEY_UP for each.
-     */
-    fun onRegularKeyInjected(): List<Int> {
-        val toRelease = mutableListOf<Int>()
-        for ((id, flow) in _modifiers) {
-            if (flow.value == ModifierState.STICKY) {
-                flow.value = ModifierState.INACTIVE
-                // look up the keycode from the layout; use id-to-keycode via caller
-                // — caller uses releaseStickyKeycodes() which has direct access
-            }
-        }
-        return toRelease
-    }
-
-    /**
-     * Variant of [onRegularKeyInjected] that accepts the full layout so it can
+     * Variant that accepts the full layout so it can
      * look up keycodes from key ids automatically.
      *
      * Returns the list of keycodes that need KEY_UP injection.

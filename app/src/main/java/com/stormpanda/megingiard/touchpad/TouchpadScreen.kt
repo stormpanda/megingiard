@@ -52,7 +52,7 @@ private val TOUCH_INDICATOR_ALPHA = 0.5f
 private val TOUCH_AREA_CORNER_RADIUS = 4.dp
 
 @Composable
-fun TouchpadScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
+fun TouchpadScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     // Deploy and start the native touch injector once per session.
@@ -73,12 +73,12 @@ fun TouchpadScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize().background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
-        TouchSurface(onInteraction = onInteraction)
+        TouchSurface()
     }
 }
 
 @Composable
-private fun TouchSurface(onInteraction: () -> Unit) {
+private fun TouchSurface() {
     // Track the measured pixel size of the touch area so we can compute
     // normalised coordinates without a second layout pass.
     var surfaceSize by remember { mutableStateOf(IntSize.Zero) }
@@ -109,9 +109,9 @@ private fun TouchSurface(onInteraction: () -> Unit) {
                         val nx = (pointer.position.x / surfaceSize.width).coerceIn(0f, 1f)
                         val ny = (pointer.position.y / surfaceSize.height).coerceIn(0f, 1f)
 
-                        // While carousel overlay is visible, block all touch injection.
-                        // Tap outside the pill dismisses the overlay.
-                        if (overlayVisibleState.value) {
+                        // While carousel overlay is visible, block Press/Move but
+                        // always let Release through so a touch-in-flight gets UP.
+                        if (overlayVisibleState.value && event.type != PointerEventType.Release) {
                             if (event.type == PointerEventType.Press && !pointer.isConsumed) {
                                 AppStateManager.hideOverlay()
                             }

@@ -20,7 +20,6 @@ object LinuxKeycodes {
     const val KEY_LEFTMETA    = 125
     const val KEY_RIGHTALT    = 100  // AltGr
     const val KEY_RIGHTCTRL   = 97
-    const val KEY_FN          = 0x1d0 // synthetic, may vary — used as modifier only
 
     // F-keys
     const val KEY_F1          = 59

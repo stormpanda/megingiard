@@ -107,13 +107,13 @@ The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY 
 
 `TouchpadScreen` uses a raw `awaitPointerEvent()` loop on `PointerEventPass.Main`:
 
-| Event type                 | Action                                                                    |
-| -------------------------- | ------------------------------------------------------------------------- |
-| `PointerEventType.Press`   | Send DOWN command; store position; call `onInteraction()` to show overlay |
-| `PointerEventType.Move`    | Send MOVE command; update indicator position                              |
-| `PointerEventType.Release` | Send UP command; clear indicator position                                 |
+| Event type                 | Action                                       |
+| -------------------------- | -------------------------------------------- |
+| `PointerEventType.Press`   | Send DOWN command; store position            |
+| `PointerEventType.Move`    | Send MOVE command; update indicator position |
+| `PointerEventType.Release` | Send UP command; clear indicator position    |
 
-All events are `consume()`d to prevent parent gesture detectors from interfering. The actual touch area pixel size is measured via `onGloballyPositioned` after layout, and coordinates are normalized as `(position / surfaceSize).coerceIn(0f, 1f)`.
+All events are `consume()`d to prevent parent gesture detectors from interfering. When the carousel overlay is visible, Press and Move events are blocked (a Press on the surface dismisses the overlay), but **Release always falls through** so that touches already in flight receive a proper UP event. The actual touch area pixel size is measured via `onGloballyPositioned` after layout, and coordinates are normalized as `(position / surfaceSize).coerceIn(0f, 1f)`.
 
 ### Source Files
 
