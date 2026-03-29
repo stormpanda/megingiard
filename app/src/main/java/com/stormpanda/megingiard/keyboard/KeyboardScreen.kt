@@ -141,7 +141,7 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
     val trackpointPointers = remember { mutableSetOf<PointerId>() }
 
     // Key repeat: fires while heldKey is non-null and repeat is enabled
-    LaunchedEffect(heldKey) {
+    LaunchedEffect(heldKey, kbRepeatEnabled) {
         val key = heldKey ?: return@LaunchedEffect
         if (!kbRepeatEnabled) return@LaunchedEffect
         delay(KB_REPEAT_INITIAL_DELAY_MS)
@@ -247,6 +247,13 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                                                 KeyboardState.activeModifierKeycodes(layout)
                                                     .forEach { KeyInjector.keyDown(it) }
                                                 KeyInjector.keyDown(keyDef.linuxKeycode)
+                                                if (!kbRepeatEnabled) {
+                                                    // Send keyUp immediately so the kernel never fires
+                                                    // its own repeat — the user must re-tap to repeat.
+                                                    KeyInjector.keyUp(keyDef.linuxKeycode)
+                                                    KeyboardState.activeModifierKeycodes(layout)
+                                                        .forEach { KeyInjector.keyUp(it) }
+                                                }
                                             }
                                         }
                                         KeyType.MODIFIER -> {
@@ -277,9 +284,11 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                                     // Release previous NORMAL key
                                     if (prevDef?.type == KeyType.NORMAL && prevDef.linuxKeycode != 0) {
                                         heldKey = null
-                                        KeyInjector.keyUp(prevDef.linuxKeycode)
-                                        KeyboardState.activeModifierKeycodes(layout)
-                                            .forEach { KeyInjector.keyUp(it) }
+                                        if (kbRepeatEnabled) {
+                                            KeyInjector.keyUp(prevDef.linuxKeycode)
+                                            KeyboardState.activeModifierKeycodes(layout)
+                                                .forEach { KeyInjector.keyUp(it) }
+                                        }
                                         pressedKeys = pressedKeys - prevId
                                     }
 
@@ -303,8 +312,12 @@ fun KeyboardScreen(onInteraction: () -> Unit, modifier: Modifier = Modifier) {
                                     when (keyDef.type) {
                                         KeyType.NORMAL -> {
                                             heldKey = null
-                                            if (keyDef.linuxKeycode != 0) {
+                                            if (keyDef.linuxKeycode != 0 && kbRepeatEnabled) {
                                                 KeyInjector.keyUp(keyDef.linuxKeycode)
+                                                KeyboardState.releaseStickyModifiers(layout)
+                                                    .forEach { KeyInjector.keyUp(it) }
+                                            } else if (keyDef.linuxKeycode != 0) {
+                                                // keyUp was already sent at Press-time; only release sticky modifiers
                                                 KeyboardState.releaseStickyModifiers(layout)
                                                     .forEach { KeyInjector.keyUp(it) }
                                             }
