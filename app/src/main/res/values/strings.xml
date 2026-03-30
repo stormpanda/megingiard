@@ -120,8 +120,8 @@ Open Settings to create a layout.</string>
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Keyboard Key</string>
     <string name="macropad_action_gamepad_button">Gamepad Button</string>
-    <string name="macropad_action_mouse_left">Mouse Left Click</string>
-    <string name="macropad_action_mouse_right">Mouse Right Click</string>
+    <string name="macropad_action_mouse_button">Mouse Button</string>
+    <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
@@ -137,7 +137,7 @@ Open Settings to create a layout.</string>
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>
     <string name="macropad_display_gamepad_button">Gamepad: %s</string>
-    <string name="macropad_display_mouse_left">Mouse: Left Click</string>
-    <string name="macropad_display_mouse_right">Mouse: Right Click</string>
+    <string name="macropad_display_mouse_button">Mouse: %s</string>
+    <string name="macropad_display_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_display_trackpoint">Trackpoint</string>
 </resources>

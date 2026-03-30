@@ -16,6 +16,8 @@ import java.util.concurrent.LinkedBlockingQueue
  * - `MB L D\n` / `MB L U\n` — left button down / up
  * - `MB R D\n` / `MB R U\n` — right button down / up
  * - `MB M D\n` / `MB M U\n` — middle button down / up
+ * - `MB 4 D\n` / `MB 4 U\n` — mouse button 4 (BTN_SIDE) down / up
+ * - `MB 5 D\n` / `MB 5 U\n` — mouse button 5 (BTN_EXTRA) down / up
  * - `MM <dx> <dy>\n`         — relative pointer move (trackpoint)
  * - `MW <delta>\n`           — scroll wheel (positive = up)
  *

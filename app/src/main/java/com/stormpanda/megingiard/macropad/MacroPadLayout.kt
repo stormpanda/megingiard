@@ -23,6 +23,12 @@ enum class ButtonSize(val cols: Int, val rows: Int) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Mouse button enum — used by PadAction.MouseButton
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -45,15 +51,22 @@ sealed class PadAction {
         val label: String,
     ) : PadAction()
 
-    /** Injects BTN_LEFT via mouseinjector_arm64. */
+    /**
+     * Injects a mouse button event via mouseinjector_arm64.
+     * Replaces the legacy MouseLeftClick / MouseRightClick data objects.
+     */
     @Serializable
-    @SerialName("mouse_left_click")
-    data object MouseLeftClick : PadAction()
+    @SerialName("mouse_button")
+    data class MouseButton(val button: com.stormpanda.megingiard.macropad.MouseButton) : PadAction()
 
-    /** Injects BTN_RIGHT via mouseinjector_arm64. */
+    /**
+     * A 1×2 button that translates vertical drag distance into scroll-wheel events.
+     * The further the finger moves from the touch-down point, the faster it scrolls.
+     * Always rendered with SIZE_1X2; the size is locked in the editor.
+     */
     @Serializable
-    @SerialName("mouse_right_click")
-    data object MouseRightClick : PadAction()
+    @SerialName("scroll_wheel")
+    data object ScrollWheel : PadAction()
 
     /**
      * Marks this element as a relative-mouse trackpoint area.
@@ -62,6 +75,20 @@ sealed class PadAction {
     @Serializable
     @SerialName("trackpoint")
     data object TrackpointMove : PadAction()
+
+    // ── Legacy: retained for JSON back-compat only ─────────────────────────
+    // Old profiles saved these types before MouseButton was introduced.
+    // They are deserialized normally; the app treats them as MouseButton(LEFT/RIGHT).
+
+    @Suppress("unused")
+    @Serializable
+    @SerialName("mouse_left_click")
+    data object MouseLeftClick : PadAction()
+
+    @Suppress("unused")
+    @Serializable
+    @SerialName("mouse_right_click")
+    data object MouseRightClick : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

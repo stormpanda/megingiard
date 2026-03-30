@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -77,6 +81,9 @@ private const val MP_RELEASE_ANIM_MS = 160
 
 // Sensitivity of trackpoint drag: px input → mouse delta
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
+
+// Sensitivity of scroll wheel drag: px per scroll unit sent
+private const val MP_SCROLL_SENSITIVITY_PX = 12f
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -148,6 +155,8 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
 
     // Track last trackpoint finger position for delta computation
     var lastTpPos   by remember { mutableStateOf<Offset?>(null) }
+    // Scroll-wheel buttons: track the Y position when the finger went down
+    val scrollStartY = remember { mutableMapOf<PointerId, Float>() }
 
     Box(
         contentAlignment = Alignment.Center,
@@ -212,8 +221,13 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                         when {
                                             hitButton != null -> {
                                                 pointerMap[id] = hitButton.id
-                                                pressedIds = pressedIds + hitButton.id
-                                                injectActionDown(hitButton.action)
+                                                if (hitButton.action !is PadAction.ScrollWheel) {
+                                                    pressedIds = pressedIds + hitButton.id
+                                                    injectActionDown(hitButton.action)
+                                                } else {
+                                                    // Scroll wheel: record start Y, do not inject down
+                                                    scrollStartY[id] = py
+                                                }
                                             }
                                             hitTrackpoint -> {
                                                 pointerMap[id] = "tp"
@@ -239,7 +253,29 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                 lastTpPos = change.position
                                                 change.consume()
                                             }
-                                            else -> { /* button hold — no move injection */ }
+                                            null -> { /* unknown pointer */ }
+                                            else -> {
+                                                // Check if this mapped button is a scroll wheel
+                                                val mappedId = pointerMap[id]
+                                                val mappedBtn = if (mappedId != null)
+                                                    profile.buttons.firstOrNull { it.id == mappedId }
+                                                else null
+                                                if (mappedBtn?.action is PadAction.ScrollWheel) {
+                                                    val startY = scrollStartY[id]
+                                                    if (startY != null) {
+                                                        val totalDeltaY = startY - py  // negative = scroll down
+                                                        // Convert pixel distance to scroll units with velocity scaling:
+                                                        // units grow quadratically with distance for natural feel
+                                                        val units = (totalDeltaY / MP_SCROLL_SENSITIVITY_PX).toInt()
+                                                        if (units != 0) {
+                                                            MouseInjector.scrollWheel(units)
+                                                            // Move start point by the consumed pixels so delta resets
+                                                            scrollStartY[id] = py
+                                                        }
+                                                    }
+                                                    change.consume()
+                                                }
+                                            }
                                         }
                                     }
 
@@ -253,9 +289,12 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                 }
                                                 null -> { /* unknown pointer */ }
                                                 else -> {
-                                                    pressedIds = pressedIds - mapped
+                                                    scrollStartY.remove(id)
                                                     val btn = profile.buttons.firstOrNull { it.id == mapped }
-                                                    if (btn != null) injectActionUp(btn.action)
+                                                    if (btn != null && btn.action !is PadAction.ScrollWheel) {
+                                                        pressedIds = pressedIds - mapped
+                                                        injectActionUp(btn.action)
+                                                    }
                                                 }
                                             }
                                         }
@@ -338,13 +377,38 @@ private fun PadButton(
             .background(accentColor.copy(alpha = alpha))
             .border(1.dp, accentColor, chipShape),
     ) {
-        Text(
-            text     = btn.label,
-            color    = MP_BTN_TEXT,
-            fontSize = (11 * btn.buttonSize.cols).sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (btn.action is PadAction.ScrollWheel) {
+            ScrollWheelFace(accentColor = accentColor)
+        } else {
+            Text(
+                text     = btn.label,
+                color    = MP_BTN_TEXT,
+                fontSize = (11 * btn.buttonSize.cols).sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scroll wheel face — two chevrons up + two chevrons down
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ScrollWheelFace(accentColor: Color) {
+    androidx.compose.foundation.layout.Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        // Up chevrons
+        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        androidx.compose.foundation.layout.Spacer(Modifier.height(4.dp))
+        // Down chevrons
+        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -388,9 +452,18 @@ private fun injectActionDown(action: PadAction) {
     when (action) {
         is PadAction.KeyboardKey     -> KeyInjector.keyDown(action.keycode)
         is PadAction.GamepadButton   -> GamepadInjector.buttonDown(action.btnCode)
+        is PadAction.MouseButton     -> when (action.button) {
+            MouseButton.LEFT   -> MouseInjector.leftDown()
+            MouseButton.RIGHT  -> MouseInjector.rightDown()
+            MouseButton.MIDDLE -> MouseInjector.middleDown()
+            MouseButton.MOUSE4 -> MouseInjector.mouse4Down()
+            MouseButton.MOUSE5 -> MouseInjector.mouse5Down()
+        }
+        is PadAction.ScrollWheel     -> { /* handled via drag events */ }
+        is PadAction.TrackpointMove  -> { /* handled via drag events */ }
+        // Legacy — treat as equivalent new types
         is PadAction.MouseLeftClick  -> MouseInjector.leftDown()
         is PadAction.MouseRightClick -> MouseInjector.rightDown()
-        is PadAction.TrackpointMove  -> { /* handled via drag events */ }
     }
 }
 
@@ -398,9 +471,18 @@ private fun injectActionUp(action: PadAction) {
     when (action) {
         is PadAction.KeyboardKey     -> KeyInjector.keyUp(action.keycode)
         is PadAction.GamepadButton   -> GamepadInjector.buttonUp(action.btnCode)
+        is PadAction.MouseButton     -> when (action.button) {
+            MouseButton.LEFT   -> MouseInjector.leftUp()
+            MouseButton.RIGHT  -> MouseInjector.rightUp()
+            MouseButton.MIDDLE -> MouseInjector.middleUp()
+            MouseButton.MOUSE4 -> MouseInjector.mouse4Up()
+            MouseButton.MOUSE5 -> MouseInjector.mouse5Up()
+        }
+        is PadAction.ScrollWheel     -> { /* handled via drag events */ }
+        is PadAction.TrackpointMove  -> { /* handled via drag events */ }
+        // Legacy
         is PadAction.MouseLeftClick  -> MouseInjector.leftUp()
         is PadAction.MouseRightClick -> MouseInjector.rightUp()
-        is PadAction.TrackpointMove  -> { /* handled via drag events */ }
     }
 }
 

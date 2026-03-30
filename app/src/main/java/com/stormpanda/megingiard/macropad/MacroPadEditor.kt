@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -476,7 +478,22 @@ private fun DraggableButton(
                 )
             }
     ) {
-        Text(btn.label, color = ED_TEXT, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (btn.action is PadAction.ScrollWheel) {
+            // Show mini scroll icon in editor chip
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = ED_TEXT, modifier = Modifier.size(14.dp))
+                Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = ED_TEXT.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Spacer(Modifier.height(2.dp))
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = ED_TEXT.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = ED_TEXT, modifier = Modifier.size(14.dp))
+            }
+        } else {
+            Text(btn.label, color = ED_TEXT, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
@@ -737,6 +754,15 @@ private fun ButtonEditDialog(
     var showSizeMenu  by remember { mutableStateOf(false) }
     var action        by remember { mutableStateOf(button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")) }
 
+    // When the action changes to ScrollWheel, force SIZE_1X2 and clear label
+    fun onActionChanged(newAction: PadAction) {
+        action = newAction
+        if (newAction is PadAction.ScrollWheel) {
+            buttonSize = ButtonSize.SIZE_1X2
+            label = ""
+        }
+    }
+
     AlertDialog(
         containerColor   = ED_SURFACE,
         onDismissRequest = onDismiss,
@@ -752,82 +778,92 @@ private fun ButtonEditDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Label input
-                OutlinedTextField(
-                    value         = label,
-                    onValueChange = { label = it },
-                    label         = { Text(stringResource(R.string.macropad_editor_button_label), color = ED_TEXT_SECONDARY) },
-                    singleLine    = true,
-                    colors        = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = accentColor,
-                        unfocusedBorderColor = ED_BORDER,
-                        focusedTextColor     = ED_TEXT,
-                        unfocusedTextColor   = ED_TEXT,
-                        cursorColor          = accentColor,
-                    ),
-                )
+                // Label input (hidden for ScrollWheel)
+                if (action !is PadAction.ScrollWheel) {
+                    OutlinedTextField(
+                        value         = label,
+                        onValueChange = { label = it },
+                        label         = { Text(stringResource(R.string.macropad_editor_button_label), color = ED_TEXT_SECONDARY) },
+                        singleLine    = true,
+                        colors        = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = accentColor,
+                            unfocusedBorderColor = ED_BORDER,
+                            focusedTextColor     = ED_TEXT,
+                            unfocusedTextColor   = ED_TEXT,
+                            cursorColor          = accentColor,
+                        ),
+                    )
 
-                // Button shape selector
-                SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ButtonShape.entries.forEach { shape ->
-                        val selected = shape == buttonShape
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
-                                .background(if (selected) accentColor.copy(alpha = 0.3f) else ED_SURFACE)
-                                .border(
-                                    width = if (selected) 2.dp else 1.dp,
-                                    color = if (selected) accentColor else ED_BORDER,
-                                    shape = if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp),
+                    // Button shape selector (hidden for ScrollWheel)
+                    SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ButtonShape.entries.forEach { shape ->
+                            val selected = shape == buttonShape
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
+                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else ED_SURFACE)
+                                    .border(
+                                        width = if (selected) 2.dp else 1.dp,
+                                        color = if (selected) accentColor else ED_BORDER,
+                                        shape = if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp),
+                                    )
+                                    .clickable { buttonShape = shape },
+                            ) {
+                                Text(
+                                    text  = if (shape == ButtonShape.CIRCLE)
+                                        stringResource(R.string.macropad_editor_shape_circle)
+                                    else
+                                        stringResource(R.string.macropad_editor_shape_square),
+                                    color = if (selected) accentColor else ED_TEXT_SECONDARY,
+                                    fontSize = 10.sp,
+                                    textAlign = TextAlign.Center,
                                 )
-                                .clickable { buttonShape = shape },
-                        ) {
-                            Text(
-                                text  = if (shape == ButtonShape.CIRCLE)
-                                    stringResource(R.string.macropad_editor_shape_circle)
-                                else
-                                    stringResource(R.string.macropad_editor_shape_square),
-                                color = if (selected) accentColor else ED_TEXT_SECONDARY,
-                                fontSize = 10.sp,
-                                textAlign = TextAlign.Center,
-                            )
+                            }
                         }
                     }
                 }
 
-                // Button size dropdown (1×1 / 2×1 / 1×2 / 2×2)
+                // Button size dropdown — locked to 1×2 for ScrollWheel
                 SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
-                Box {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(ED_SURFACE)
-                            .border(1.dp, ED_BORDER, RoundedCornerShape(8.dp))
-                            .clickable { showSizeMenu = true }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(buttonSize.displayLabel(), color = ED_TEXT, fontSize = 14.sp)
-                        Icon(
-                            imageVector = Icons.Filled.ArrowDropDown,
-                            contentDescription = null,
-                            tint = ED_TEXT_SECONDARY,
-                        )
-                    }
-                    DropdownMenu(
-                        expanded         = showSizeMenu,
-                        onDismissRequest = { showSizeMenu = false },
-                        modifier         = Modifier.background(ED_SURFACE),
-                    ) {
-                        ButtonSize.entries.forEach { size ->
-                            DropdownMenuItem(
-                                text    = { Text(size.displayLabel(), color = ED_TEXT) },
-                                onClick = { buttonSize = size; showSizeMenu = false },
+                if (action is PadAction.ScrollWheel) {
+                    Text(
+                        text     = ButtonSize.SIZE_1X2.displayLabel(),
+                        color    = ED_TEXT_SECONDARY,
+                        fontSize = 14.sp,
+                    )
+                } else {
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ED_SURFACE)
+                                .border(1.dp, ED_BORDER, RoundedCornerShape(8.dp))
+                                .clickable { showSizeMenu = true }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(buttonSize.displayLabel(), color = ED_TEXT, fontSize = 14.sp)
+                            Icon(
+                                imageVector = Icons.Filled.ArrowDropDown,
+                                contentDescription = null,
+                                tint = ED_TEXT_SECONDARY,
                             )
+                        }
+                        DropdownMenu(
+                            expanded         = showSizeMenu,
+                            onDismissRequest = { showSizeMenu = false },
+                            modifier         = Modifier.background(ED_SURFACE),
+                        ) {
+                            ButtonSize.entries.forEach { size ->
+                                DropdownMenuItem(
+                                    text    = { Text(size.displayLabel(), color = ED_TEXT) },
+                                    onClick = { buttonSize = size; showSizeMenu = false },
+                                )
+                            }
                         }
                     }
                 }
@@ -837,14 +873,14 @@ private fun ButtonEditDialog(
                 ActionPicker(
                     current     = action,
                     accentColor = accentColor,
-                    onChange    = { action = it },
+                    onChange    = ::onActionChanged,
                 )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (label.isNotBlank()) {
+                    if (label.isNotBlank() || action is PadAction.ScrollWheel) {
                         val result = button?.copy(
                             label       = label,
                             buttonShape = buttonShape,
@@ -862,9 +898,9 @@ private fun ButtonEditDialog(
                         onConfirm(result)
                     }
                 },
-                enabled = label.isNotBlank(),
+                enabled = label.isNotBlank() || action is PadAction.ScrollWheel,
             ) {
-                Text(stringResource(R.string.macropad_editor_done), color = if (label.isNotBlank()) accentColor else ED_TEXT_SECONDARY)
+                Text(stringResource(R.string.macropad_editor_done), color = if (label.isNotBlank() || action is PadAction.ScrollWheel) accentColor else ED_TEXT_SECONDARY)
             }
         },
         dismissButton = {
@@ -923,11 +959,13 @@ private fun ActionPicker(
 
         // Category-specific detail picker
         when (current) {
-            is PadAction.KeyboardKey  -> KeyboardKeyPicker(current, accentColor, onChange)
-            is PadAction.GamepadButton -> GamepadButtonPicker(current, accentColor, onChange)
+            is PadAction.KeyboardKey    -> KeyboardKeyPicker(current, accentColor, onChange)
+            is PadAction.GamepadButton  -> GamepadButtonPicker(current, accentColor, onChange)
+            is PadAction.MouseButton    -> MouseButtonPicker(current, accentColor, onChange)
+            is PadAction.ScrollWheel,
+            is PadAction.TrackpointMove,
             is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick,
-            is PadAction.TrackpointMove -> { /* no further config needed */ }
+            is PadAction.MouseRightClick -> { /* no further config needed */ }
         }
     }
 }
@@ -963,6 +1001,43 @@ private fun KeyboardKeyPicker(
                 DropdownMenuItem(
                     text = { Text(label, color = if (code == current.keycode) accentColor else ED_TEXT, fontSize = 14.sp) },
                     onClick = { onChange(PadAction.KeyboardKey(code, label)); expanded = false },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MouseButtonPicker(
+    current: PadAction.MouseButton,
+    accentColor: Color,
+    onChange: (PadAction) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(current.button.displayLabel(), color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+        }
+
+        DropdownMenu(
+            expanded         = expanded,
+            onDismissRequest = { expanded = false },
+            modifier         = Modifier.background(ED_SURFACE),
+        ) {
+            MouseButton.entries.forEach { btn ->
+                DropdownMenuItem(
+                    text    = { Text(btn.displayLabel(), color = if (btn == current.button) accentColor else ED_TEXT, fontSize = 14.sp) },
+                    onClick = { onChange(PadAction.MouseButton(btn)); expanded = false },
                 )
             }
         }
@@ -1060,30 +1135,33 @@ private fun NameInputDialog(
 // Action category enum (for the category dropdown)
 // ─────────────────────────────────────────────────────────────────────────────
 
-private enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_LEFT, MOUSE_RIGHT, TRACKPOINT }
+private enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT }
 
 private fun ActionCategory.labelResId(): Int = when (this) {
     ActionCategory.KEYBOARD_KEY    -> R.string.macropad_action_keyboard_key
     ActionCategory.GAMEPAD_BUTTON  -> R.string.macropad_action_gamepad_button
-    ActionCategory.MOUSE_LEFT      -> R.string.macropad_action_mouse_left
-    ActionCategory.MOUSE_RIGHT     -> R.string.macropad_action_mouse_right
+    ActionCategory.MOUSE_BUTTON    -> R.string.macropad_action_mouse_button
+    ActionCategory.SCROLL_WHEEL    -> R.string.macropad_action_scroll_wheel
     ActionCategory.TRACKPOINT      -> R.string.macropad_action_trackpoint
 }
 
 private fun ActionCategory.defaultAction(): PadAction = when (this) {
     ActionCategory.KEYBOARD_KEY   -> PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
     ActionCategory.GAMEPAD_BUTTON -> PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
-    ActionCategory.MOUSE_LEFT     -> PadAction.MouseLeftClick
-    ActionCategory.MOUSE_RIGHT    -> PadAction.MouseRightClick
+    ActionCategory.MOUSE_BUTTON   -> PadAction.MouseButton(MouseButton.LEFT)
+    ActionCategory.SCROLL_WHEEL   -> PadAction.ScrollWheel
     ActionCategory.TRACKPOINT     -> PadAction.TrackpointMove
 }
 
 private fun PadAction.categoryResId(): Int = when (this) {
-    is PadAction.KeyboardKey   -> R.string.macropad_action_keyboard_key
-    is PadAction.GamepadButton -> R.string.macropad_action_gamepad_button
-    is PadAction.MouseLeftClick  -> R.string.macropad_action_mouse_left
-    is PadAction.MouseRightClick -> R.string.macropad_action_mouse_right
-    is PadAction.TrackpointMove  -> R.string.macropad_action_trackpoint
+    is PadAction.KeyboardKey        -> R.string.macropad_action_keyboard_key
+    is PadAction.GamepadButton      -> R.string.macropad_action_gamepad_button
+    is PadAction.MouseButton        -> R.string.macropad_action_mouse_button
+    is PadAction.ScrollWheel        -> R.string.macropad_action_scroll_wheel
+    is PadAction.TrackpointMove     -> R.string.macropad_action_trackpoint
+    // Legacy
+    is PadAction.MouseLeftClick     -> R.string.macropad_action_mouse_button
+    is PadAction.MouseRightClick    -> R.string.macropad_action_mouse_button
 }
 
 @Composable
@@ -1092,9 +1170,12 @@ private fun PadAction.displayLabel(): String {
     return when (this) {
         is PadAction.KeyboardKey     -> context.getString(R.string.macropad_display_keyboard_key, label)
         is PadAction.GamepadButton   -> context.getString(R.string.macropad_display_gamepad_button, label)
-        is PadAction.MouseLeftClick  -> context.getString(R.string.macropad_display_mouse_left)
-        is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_right)
+        is PadAction.MouseButton     -> context.getString(R.string.macropad_display_mouse_button, button.displayLabel())
+        is PadAction.ScrollWheel     -> context.getString(R.string.macropad_display_scroll_wheel)
         is PadAction.TrackpointMove  -> context.getString(R.string.macropad_display_trackpoint)
+        // Legacy
+        is PadAction.MouseLeftClick  -> context.getString(R.string.macropad_display_mouse_button, "Left")
+        is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_button, "Right")
     }
 }
 
@@ -1106,24 +1187,46 @@ private fun ButtonSize.displayLabel(): String = when (this) {
     ButtonSize.SIZE_2X2 -> stringResource(R.string.macropad_button_size_2x2)
 }
 
+private fun MouseButton.displayLabel(): String = when (this) {
+    MouseButton.LEFT   -> "Left"
+    MouseButton.RIGHT  -> "Right"
+    MouseButton.MIDDLE -> "Middle"
+    MouseButton.MOUSE4 -> "Mouse 4"
+    MouseButton.MOUSE5 -> "Mouse 5"
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Keyboard key preset list (common keys for MacroPad use)
 // ─────────────────────────────────────────────────────────────────────────────
 
 private val KEYBOARD_KEY_PRESETS: List<Pair<Int, String>> = listOf(
+    // ── Special / control keys ────────────────────────────────────────────────
     LinuxKeycodes.KEY_SPACE      to "Space",
     LinuxKeycodes.KEY_ENTER      to "Enter",
     LinuxKeycodes.KEY_ESC        to "Esc",
     LinuxKeycodes.KEY_TAB        to "Tab",
     LinuxKeycodes.KEY_BACKSPACE  to "Backspace",
+    LinuxKeycodes.KEY_CAPSLOCK   to "CapsLock",
     LinuxKeycodes.KEY_LEFTCTRL   to "Ctrl",
+    LinuxKeycodes.KEY_RIGHTCTRL  to "Ctrl R",
     LinuxKeycodes.KEY_LEFTSHIFT  to "Shift",
+    LinuxKeycodes.KEY_RIGHTSHIFT to "Shift R",
     LinuxKeycodes.KEY_LEFTALT    to "Alt",
+    LinuxKeycodes.KEY_RIGHTALT   to "AltGr",
     LinuxKeycodes.KEY_LEFTMETA   to "Meta / Win",
+    // ── Navigation ────────────────────────────────────────────────────────────
     LinuxKeycodes.KEY_UP         to "↑",
     LinuxKeycodes.KEY_DOWN       to "↓",
     LinuxKeycodes.KEY_LEFT       to "←",
     LinuxKeycodes.KEY_RIGHT      to "→",
+    LinuxKeycodes.KEY_HOME       to "Home",
+    LinuxKeycodes.KEY_END        to "End",
+    LinuxKeycodes.KEY_PAGEUP     to "PgUp",
+    LinuxKeycodes.KEY_PAGEDOWN   to "PgDn",
+    LinuxKeycodes.KEY_INSERT     to "Insert",
+    LinuxKeycodes.KEY_DELETE     to "Delete",
+    LinuxKeycodes.KEY_SYSRQ     to "PrintScrn",
+    // ── F-keys ────────────────────────────────────────────────────────────────
     LinuxKeycodes.KEY_F1         to "F1",
     LinuxKeycodes.KEY_F2         to "F2",
     LinuxKeycodes.KEY_F3         to "F3",
@@ -1136,6 +1239,7 @@ private val KEYBOARD_KEY_PRESETS: List<Pair<Int, String>> = listOf(
     LinuxKeycodes.KEY_F10        to "F10",
     LinuxKeycodes.KEY_F11        to "F11",
     LinuxKeycodes.KEY_F12        to "F12",
+    // ── Number row ────────────────────────────────────────────────────────────
     LinuxKeycodes.KEY_1          to "1",
     LinuxKeycodes.KEY_2          to "2",
     LinuxKeycodes.KEY_3          to "3",
@@ -1146,4 +1250,44 @@ private val KEYBOARD_KEY_PRESETS: List<Pair<Int, String>> = listOf(
     LinuxKeycodes.KEY_8          to "8",
     LinuxKeycodes.KEY_9          to "9",
     LinuxKeycodes.KEY_0          to "0",
+    LinuxKeycodes.KEY_MINUS      to "-",
+    LinuxKeycodes.KEY_EQUAL      to "=",
+    // ── Letters A–Z ───────────────────────────────────────────────────────────
+    LinuxKeycodes.KEY_A          to "A",
+    LinuxKeycodes.KEY_B          to "B",
+    LinuxKeycodes.KEY_C          to "C",
+    LinuxKeycodes.KEY_D          to "D",
+    LinuxKeycodes.KEY_E          to "E",
+    LinuxKeycodes.KEY_F          to "F",
+    LinuxKeycodes.KEY_G          to "G",
+    LinuxKeycodes.KEY_H          to "H",
+    LinuxKeycodes.KEY_I          to "I",
+    LinuxKeycodes.KEY_J          to "J",
+    LinuxKeycodes.KEY_K          to "K",
+    LinuxKeycodes.KEY_L          to "L",
+    LinuxKeycodes.KEY_M          to "M",
+    LinuxKeycodes.KEY_N          to "N",
+    LinuxKeycodes.KEY_O          to "O",
+    LinuxKeycodes.KEY_P          to "P",
+    LinuxKeycodes.KEY_Q          to "Q",
+    LinuxKeycodes.KEY_R          to "R",
+    LinuxKeycodes.KEY_S          to "S",
+    LinuxKeycodes.KEY_T          to "T",
+    LinuxKeycodes.KEY_U          to "U",
+    LinuxKeycodes.KEY_V          to "V",
+    LinuxKeycodes.KEY_W          to "W",
+    LinuxKeycodes.KEY_X          to "X",
+    LinuxKeycodes.KEY_Y          to "Y",
+    LinuxKeycodes.KEY_Z          to "Z",
+    // ── Symbols / punctuation ─────────────────────────────────────────────────
+    LinuxKeycodes.KEY_GRAVE      to "`",
+    LinuxKeycodes.KEY_LEFTBRACE  to "[",
+    LinuxKeycodes.KEY_RIGHTBRACE to "]",
+    LinuxKeycodes.KEY_BACKSLASH  to "\\",
+    LinuxKeycodes.KEY_SEMICOLON  to ";",
+    LinuxKeycodes.KEY_APOSTROPHE to "'",
+    LinuxKeycodes.KEY_COMMA      to ",",
+    LinuxKeycodes.KEY_DOT        to ".",
+    LinuxKeycodes.KEY_SLASH      to "/",
+    LinuxKeycodes.KEY_102ND      to "< >",
 )
