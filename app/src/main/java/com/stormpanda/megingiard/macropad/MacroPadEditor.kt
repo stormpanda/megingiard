@@ -361,9 +361,9 @@ private fun PadCanvas(profile: PadProfile, accentColor: Color) {
 
     val padModifier = Modifier
         .fillMaxWidth()
-        .aspectRatio(1f)
-        .border(1.dp, ED_BORDER, if (profile.padShape == PadShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
-        .clip(if (profile.padShape == PadShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
+        .aspectRatio(16f / 9f)
+        .border(1.dp, ED_BORDER, RoundedCornerShape(4.dp))
+        .clip(RoundedCornerShape(4.dp))
         .background(ED_SURFACE)
         .onSizeChanged { canvasSize = it }
 

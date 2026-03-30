@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 // Shape enums
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum class PadShape { SQUARE, CIRCLE }
+enum class PadShape { SQUARE, CIRCLE }  // retained for JSON back-compat; no longer used in UI
 
 enum class ButtonShape { SQUARE, CIRCLE }
 
@@ -95,9 +95,6 @@ data class PadButton(
 /**
  * @param id               Stable unique identifier (UUID string).
  * @param name             User-visible profile name.
- * @param padShape         Overall pad boundary (square or circle).
- * @param padSizePercent   How large the pad renders as a percentage of the
- *                         shorter screen dimension [20, 100].
  * @param buttons          All buttons placed on this pad.
  * @param hasTrackpoint    Whether a trackpoint area is shown on the pad.
  * @param trackpointPosX   Trackpoint centre X, normalised [0.0, 1.0].
@@ -108,11 +105,12 @@ data class PadButton(
 data class PadProfile(
     val id: String,
     val name: String,
-    val padShape: PadShape = PadShape.SQUARE,
-    val padSizePercent: Int = 80,
     val buttons: List<PadButton> = emptyList(),
     val hasTrackpoint: Boolean = false,
     val trackpointPosX: Float = 0.5f,
     val trackpointPosY: Float = 0.5f,
     val trackpointSize: Float = 2f,
+    // Legacy fields — kept for JSON deserialization of existing profiles; ignored at runtime.
+    @Suppress("unused") val padShape: PadShape = PadShape.SQUARE,
+    @Suppress("unused") val padSizePercent: Int = 80,
 )

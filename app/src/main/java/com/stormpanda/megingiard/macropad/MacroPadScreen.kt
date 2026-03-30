@@ -6,7 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -60,9 +62,9 @@ import kotlin.math.roundToInt
 
 private val MP_BG                    = Color(0xFF0D0D0D)
 private val MP_PAD_BG                = Color(0xFF1A1A1A)
-private val MP_PAD_BORDER            = Color.White.copy(alpha = 0.12f)
-private val MP_BTN_PRESSED_ALPHA     = 0.55f
-private val MP_BTN_NORMAL_ALPHA      = 0.22f
+private val MP_PAD_BORDER            = Color.White.copy(alpha = 0.25f)
+private val MP_BTN_PRESSED_ALPHA     = 0.80f
+private val MP_BTN_NORMAL_ALPHA      = 0.25f
 private val MP_BTN_TEXT              = Color.White
 private val MP_HINT_TEXT             = Color.White.copy(alpha = 0.25f)
 private val MP_TRACKPOINT_ALPHA      = 0.30f
@@ -148,22 +150,17 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
     // Track last trackpoint finger position for delta computation
     var lastTpPos   by remember { mutableStateOf<Offset?>(null) }
 
-    // Size fraction that the profile specifies
-    val sizeFraction = profile.padSizePercent / 100f
-
-    val padShape = if (profile.padShape == PadShape.CIRCLE) CircleShape
-                  else RoundedCornerShape(MP_CORNER_RADIUS)
-
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize(sizeFraction)
-                .clip(padShape)
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(MP_CORNER_RADIUS))
                 .background(MP_PAD_BG)
-                .border(1.dp, MP_PAD_BORDER, padShape)
+                .border(1.dp, MP_PAD_BORDER, RoundedCornerShape(MP_CORNER_RADIUS))
                 .onSizeChanged { canvasSize = it }
                 .pointerInput(profile, canvasSize) {
                     awaitPointerEventScope {

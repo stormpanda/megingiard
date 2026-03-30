@@ -20,8 +20,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -50,9 +48,6 @@ private val MS_TEXT            = Color.White
 private val MS_TEXT_SECONDARY  = Color.White.copy(alpha = 0.6f)
 private val MS_DIVIDER         = Color.White.copy(alpha = 0.12f)
 private val MS_BORDER          = Color.White.copy(alpha = 0.20f)
-
-private const val MS_PAD_SIZE_MIN = 20f
-private const val MS_PAD_SIZE_MAX = 100f
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -95,36 +90,6 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
         )
 
         HorizontalDivider(color = MS_DIVIDER)
-
-        if (activeProfile != null) {
-            // ── Pad shape ──────────────────────────────────────────────────
-            SettingsLabel(stringResource(R.string.settings_macropad_pad_shape), accentColor)
-            PadShapeToggle(
-                current     = activeProfile.padShape,
-                accentColor = accentColor,
-                onSelect    = { shape ->
-                    MacroPadState.updateProfile(activeProfile.copy(padShape = shape))
-                },
-            )
-
-            HorizontalDivider(color = MS_DIVIDER)
-
-            // ── Pad size ───────────────────────────────────────────────────
-            Text(
-                text     = stringResource(R.string.settings_macropad_pad_size, activeProfile.padSizePercent),
-                color    = MS_TEXT,
-                fontSize = 14.sp,
-            )
-            Slider(
-                value         = activeProfile.padSizePercent.toFloat(),
-                onValueChange = { MacroPadState.updateProfile(activeProfile.copy(padSizePercent = it.toInt())) },
-                valueRange    = MS_PAD_SIZE_MIN..MS_PAD_SIZE_MAX,
-                colors        = SliderDefaults.colors(thumbColor = accentColor, activeTrackColor = accentColor),
-                modifier      = Modifier.fillMaxWidth(),
-            )
-
-            HorizontalDivider(color = MS_DIVIDER)
-        }
 
         // ── Edit Layout button ─────────────────────────────────────────────
         EditLayoutButton(accentColor = accentColor, onClick = onOpenEditor)
@@ -181,51 +146,6 @@ private fun ProfileDropdown(
                         )
                     },
                     onClick = { onSelect(p.id); expanded = false },
-                )
-            }
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Pad shape toggle
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun PadShapeToggle(
-    current:     PadShape,
-    accentColor: Color,
-    onSelect:    (PadShape) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        PadShape.entries.forEach { shape ->
-            val selected = shape == current
-            val label = when (shape) {
-                PadShape.SQUARE -> stringResource(R.string.settings_macropad_shape_square)
-                PadShape.CIRCLE -> stringResource(R.string.settings_macropad_shape_circle)
-            }
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (selected) accentColor.copy(alpha = 0.2f) else Color.Transparent)
-                    .border(
-                        width = if (selected) 2.dp else 1.dp,
-                        color = if (selected) accentColor else MS_BORDER,
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    .clickable { onSelect(shape) }
-                    .padding(vertical = 10.dp),
-            ) {
-                Text(
-                    text     = label,
-                    color    = if (selected) accentColor else MS_TEXT_SECONDARY,
-                    fontSize = 13.sp,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                 )
             }
         }
