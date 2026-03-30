@@ -38,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -63,9 +64,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalContext
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -104,9 +109,27 @@ private const val ED_EDGE_MARGIN = 0.05f
  */
 @Composable
 fun MacroPadEditor(onDone: () -> Unit) {
+    val context     = LocalContext.current
     val profiles    by MacroPadState.profiles.collectAsState()
     val activeId    by MacroPadState.activeProfileId.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
+
+    // Stop all uinput virtual devices while the editor is open.
+    // keyinjector_arm64 registers as a hardware keyboard via uinput, which causes
+    // Android to suppress the soft IME — making text fields un-typeable.
+    // We restart all injectors when the editor is dismissed (user returns to use mode).
+    DisposableEffect(Unit) {
+        KeyInjector.stop()
+        GamepadInjector.stop()
+        MouseInjector.stop()
+        onDispose {
+            CoroutineScope(Dispatchers.IO).launch {
+                KeyInjector.start(context)
+                GamepadInjector.start(context)
+                MouseInjector.start(context)
+            }
+        }
+    }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
 
