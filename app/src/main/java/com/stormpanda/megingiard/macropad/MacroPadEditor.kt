@@ -44,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -408,6 +409,13 @@ private fun DraggableButton(
     accentColor:       Color,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
+    // rememberUpdatedState lets the pointerInput closure (keyed only on btn.id +
+    // canvasSize) see the live btn even though its lambda is NOT restarted when
+    // btn.posX/posY change between drags.
+    val currentBtn = rememberUpdatedState(btn)
+    // Anchor position captured at the moment the finger goes down.
+    var startPosX by remember(btn.id) { mutableFloatStateOf(btn.posX) }
+    var startPosY by remember(btn.id) { mutableFloatStateOf(btn.posY) }
     var dragOffsetX by remember(btn.id) { mutableFloatStateOf(0f) }
     var dragOffsetY by remember(btn.id) { mutableFloatStateOf(0f) }
 
@@ -433,16 +441,21 @@ private fun DraggableButton(
             .border(1.dp, accentColor, chipShape)
             .pointerInput(btn.id, canvasSize) {
                 detectDragGestures(
-                    onDragStart = { dragOffsetX = 0f; dragOffsetY = 0f },
+                    onDragStart = {
+                        // Capture the current (live) position as anchor so the
+                        // accumulated delta is always relative to this drag's start.
+                        startPosX = currentBtn.value.posX
+                        startPosY = currentBtn.value.posY
+                        dragOffsetX = 0f
+                        dragOffsetY = 0f
+                    },
                     onDrag = { change, drag ->
                         change.consume()
                         dragOffsetX += drag.x
                         dragOffsetY += drag.y
-                        val cx = btn.posX * w
-                        val cy = btn.posY * h
                         onPositionChanged(
-                            ((cx + dragOffsetX) / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
-                            ((cy + dragOffsetY) / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
+                            (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
+                            (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
                         )
                     },
                 )
@@ -461,6 +474,10 @@ private fun DraggableTrackpoint(
     accentColor: Color,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
+    val currentPosX = rememberUpdatedState(posX)
+    val currentPosY = rememberUpdatedState(posY)
+    var startPosX by remember { mutableFloatStateOf(posX) }
+    var startPosY by remember { mutableFloatStateOf(posY) }
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
 
@@ -483,16 +500,19 @@ private fun DraggableTrackpoint(
             .border(2.dp, accentColor, CircleShape)
             .pointerInput(canvasSize) {
                 detectDragGestures(
-                    onDragStart = { dragOffsetX = 0f; dragOffsetY = 0f },
+                    onDragStart = {
+                        startPosX = currentPosX.value
+                        startPosY = currentPosY.value
+                        dragOffsetX = 0f
+                        dragOffsetY = 0f
+                    },
                     onDrag = { change, drag ->
                         change.consume()
                         dragOffsetX += drag.x
                         dragOffsetY += drag.y
-                        val cx = posX * w
-                        val cy = posY * h
                         onPositionChanged(
-                            ((cx + dragOffsetX) / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
-                            ((cy + dragOffsetY) / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
+                            (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
+                            (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
                         )
                     },
                 )
