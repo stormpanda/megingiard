@@ -30,6 +30,7 @@ import com.stormpanda.megingiard.media.MediaScreen
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
+import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
 
@@ -139,6 +140,7 @@ fun MainAppScreen() {
                 AppMode.MEDIA -> MediaScreen()
                 AppMode.TOUCHPAD -> TouchpadScreen()
                 AppMode.KEYBOARD -> KeyboardScreen()
+                AppMode.MACROPAD -> MacroPadScreen()
             }
         }
 

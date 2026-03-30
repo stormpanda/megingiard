@@ -43,10 +43,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.macropad.MacroPadEditor
+import com.stormpanda.megingiard.macropad.MacroPadToolSettings
 
 private val PANEL_BG = Color(0xFF1C1C1E)
 private val PANEL_TEXT = Color.White
@@ -72,6 +76,7 @@ fun ToolSettingsPanel(
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
+    var showMacroPadEditor by remember { mutableStateOf(false) }
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -156,6 +161,7 @@ fun ToolSettingsPanel(
                         kbFullscreen = kbFullscreen,
                         onKbFullscreenChanged = { SettingsManager.setKbFullscreen(it) },
                     )
+                    AppMode.MACROPAD -> MacroPadToolSettings(onOpenEditor = { showMacroPadEditor = true })
                 }
             }
 
@@ -193,6 +199,18 @@ fun ToolSettingsPanel(
                     modifier = Modifier.size(16.dp)
                 )
             }
+        }
+    }
+
+    if (showMacroPadEditor) {
+        Dialog(
+            onDismissRequest = { showMacroPadEditor = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
+        ) {
+            MacroPadEditor(onDone = { showMacroPadEditor = false })
         }
     }
 }

@@ -74,6 +74,17 @@ com.stormpanda.megingiard
 │ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable
 │ ├── SettingsManager.kt # App-wide settings persistence via DataStore
 │ └── ToolSettingsPanel.kt # Per-tool settings Dialog (tool toggle, reorder, accent color)
+├── macropad/
+│ ├── MacroPadScreen.kt # Use-mode Composable (pad render, multi-touch, injector lifecycle)
+│ ├── MacroPadEditor.kt # Full-screen layout editor (profile CRUD, drag-repositioning)
+│ ├── MacroPadToolSettings.kt # Tool-settings panel (profile picker, shape/size, Edit Layout)
+│ ├── MacroPadState.kt # Singleton state: profiles + active profile, CRUD, persistence
+│ ├── MacroPadLayout.kt # Serializable data model: PadProfile, PadButton, PadAction
+│ ├── GamepadInjector.kt # Public facade over ShellGamepadInjector
+│ ├── ShellGamepadInjector.kt # Native binary lifecycle + writer thread for gamepad injection
+│ ├── GamepadKeycodes.kt # Linux BTN\_\* constants + preset list
+│ ├── MouseInjector.kt # Public facade over ShellMouseInjector
+│ └── ShellMouseInjector.kt # Native binary lifecycle + MOVE-coalescing writer thread
 ├── touchpad/
 │ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
 └── ui/

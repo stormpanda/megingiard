@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-enum class AppMode { MIRROR, MEDIA, TOUCHPAD, KEYBOARD }
+enum class AppMode { MIRROR, MEDIA, TOUCHPAD, KEYBOARD, MACROPAD }
 
 object AppStateManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

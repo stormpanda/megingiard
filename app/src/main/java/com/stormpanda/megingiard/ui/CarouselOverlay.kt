@@ -82,6 +82,7 @@ private fun AppMode.nameResId(): Int = when (this) {
     AppMode.MEDIA -> R.string.tool_name_media
     AppMode.TOUCHPAD -> R.string.tool_name_touchpad
     AppMode.KEYBOARD -> R.string.tool_name_keyboard
+    AppMode.MACROPAD -> R.string.tool_name_macropad
 }
 
 /**

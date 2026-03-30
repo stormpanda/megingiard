@@ -18,6 +18,8 @@ import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 private const val DEFAULT_OVERLAY_TIMEOUT_MS = 3_000L
@@ -63,6 +68,10 @@ object SettingsManager {
     private val KEY_SAVED_OFFSET_X = floatPreferencesKey("mirror_saved_offset_x")
     private val KEY_SAVED_OFFSET_Y = floatPreferencesKey("mirror_saved_offset_y")
 
+    // MacroPad settings
+    private val KEY_MACROPAD_PROFILES           = stringPreferencesKey("macropad_profiles")
+    private val KEY_MACROPAD_ACTIVE_PROFILE_ID  = stringPreferencesKey("macropad_active_profile_id")
+
     // Keyboard settings
     private val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
     private val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
@@ -74,6 +83,8 @@ object SettingsManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
+
+    private val macropadJson = Json { ignoreUnknownKeys = true }
 
     private val _enabledTools = MutableStateFlow(AppMode.entries.toSet())
     val enabledTools: StateFlow<Set<AppMode>> = _enabledTools.asStateFlow()
@@ -167,6 +178,16 @@ object SettingsManager {
                 _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
                 _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
+
+                // MacroPad profiles
+                val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
+                if (macropadProfilesJson != null) {
+                    val profiles = runCatching {
+                        macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
+                    }.getOrElse { emptyList() }
+                    val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
+                    MacroPadState.loadFrom(profiles, activeId)
+                }
             }
         }
 
@@ -320,6 +341,25 @@ object SettingsManager {
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
     }
 
+    /**
+     * Persists the current MacroPad profile list and active profile ID to DataStore.
+     * Called by [MacroPadState] mutators whenever the profile state changes.
+     */
+    fun saveMacroPadData() {
+        val profiles = MacroPadState.profiles.value
+        val activeId = MacroPadState.activeProfileId.value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_MACROPAD_PROFILES] = macropadJson.encodeToString(profiles)
+                if (activeId != null) {
+                    prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID] = activeId
+                } else {
+                    prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
+                }
+            }
+        }
+    }
+
     /** Persists the current mirror session state for aspects the user opted to remember. */
     fun saveMirrorSessionState() {
         // Capture ALL values synchronously on the calling thread (main) BEFORE
@@ -384,4 +424,5 @@ internal fun AppMode.displayNameResId(): Int = when (this) {
     AppMode.MEDIA -> R.string.tool_name_media
     AppMode.TOUCHPAD -> R.string.tool_name_touchpad
     AppMode.KEYBOARD -> R.string.tool_name_keyboard
+    AppMode.MACROPAD -> R.string.tool_name_macropad
 }
