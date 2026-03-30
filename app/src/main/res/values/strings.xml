@@ -132,6 +132,7 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_shape_circle">Circle</string>
     <string name="settings_macropad_pad_size">Pad size: %d%%</string>
     <string name="settings_macropad_edit_layout">Edit Layout…</string>
+    <string name="settings_macropad_new_layout">New Layout</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>

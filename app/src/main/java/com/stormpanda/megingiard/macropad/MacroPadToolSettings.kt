@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.DropdownMenu
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
+import java.util.UUID
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -76,7 +78,7 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
                 fontSize = 14.sp,
             )
             Spacer(Modifier.height(4.dp))
-            EditLayoutButton(accentColor = accentColor, onClick = onOpenEditor)
+            LayoutActionButtons(accentColor = accentColor, onOpenEditor = onOpenEditor)
             return@Column
         }
 
@@ -91,8 +93,8 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
 
         HorizontalDivider(color = MS_DIVIDER)
 
-        // ── Edit Layout button ─────────────────────────────────────────────
-        EditLayoutButton(accentColor = accentColor, onClick = onOpenEditor)
+        // ── Layout action buttons ───────────────────────────────────────────
+        LayoutActionButtons(accentColor = accentColor, onOpenEditor = onOpenEditor)
     }
 }
 
@@ -153,34 +155,74 @@ private fun ProfileDropdown(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Edit Layout button
+// Layout action buttons (Edit + New, side by side)
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun EditLayoutButton(accentColor: Color, onClick: () -> Unit) {
+private fun LayoutActionButtons(accentColor: Color, onOpenEditor: () -> Unit) {
+    val defaultName = stringResource(R.string.macropad_editor_new_profile_name)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment    = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
+        modifier             = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(
-            imageVector        = Icons.Filled.Edit,
-            contentDescription = null,
-            tint               = accentColor,
-            modifier           = Modifier.size(18.dp),
-        )
-        Text(
-            text     = stringResource(R.string.settings_macropad_edit_layout),
-            color    = accentColor,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 8.dp),
-        )
+        // Edit current layout
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable(onClick = onOpenEditor)
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment    = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Edit,
+                contentDescription = null,
+                tint               = accentColor,
+                modifier           = Modifier.size(18.dp),
+            )
+            Text(
+                text       = stringResource(R.string.settings_macropad_edit_layout),
+                color      = accentColor,
+                fontSize   = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier   = Modifier.padding(start = 6.dp),
+            )
+        }
+
+        // New layout — creates a blank profile and opens the editor
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable {
+                    val newProfile = PadProfile(
+                        id   = UUID.randomUUID().toString(),
+                        name = defaultName,
+                    )
+                    MacroPadState.addProfile(newProfile)
+                    MacroPadState.setActiveProfileId(newProfile.id)
+                    onOpenEditor()
+                }
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment    = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Add,
+                contentDescription = null,
+                tint               = accentColor,
+                modifier           = Modifier.size(18.dp),
+            )
+            Text(
+                text       = stringResource(R.string.settings_macropad_new_layout),
+                color      = accentColor,
+                fontSize   = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier   = Modifier.padding(start = 6.dp),
+            )
+        }
     }
 }
 
