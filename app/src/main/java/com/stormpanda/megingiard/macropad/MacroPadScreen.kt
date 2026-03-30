@@ -185,6 +185,9 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
 
                                 when (event.type) {
                                     PointerEventType.Press -> {
+                                        // Only act on the pointer that just went down;
+                                        // other pointers in this batch event are still held from before.
+                                        if (!change.previousPressed) {
                                         // Determine which element was hit
                                         val hitButton  = profile.buttons.firstOrNull { btn ->
                                             val chipSizePx = with(density) {
@@ -216,6 +219,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                 lastTpPos = change.position
                                             }
                                         }
+                                        } // end if (!change.previousPressed)
                                         change.consume()
                                     }
 
@@ -239,15 +243,19 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                     }
 
                                     PointerEventType.Release -> {
-                                        when (val mapped = pointerMap.remove(id)) {
-                                            "tp" -> {
-                                                lastTpPos = null
-                                            }
-                                            null -> { /* unknown pointer */ }
-                                            else -> {
-                                                pressedIds = pressedIds - mapped
-                                                val btn = profile.buttons.firstOrNull { it.id == mapped }
-                                                if (btn != null) injectActionUp(btn.action)
+                                        // Only act on the pointer that actually lifted;
+                                        // other pointers in this batch event are still held.
+                                        if (!change.pressed) {
+                                            when (val mapped = pointerMap.remove(id)) {
+                                                "tp" -> {
+                                                    lastTpPos = null
+                                                }
+                                                null -> { /* unknown pointer */ }
+                                                else -> {
+                                                    pressedIds = pressedIds - mapped
+                                                    val btn = profile.buttons.firstOrNull { it.id == mapped }
+                                                    if (btn != null) injectActionUp(btn.action)
+                                                }
                                             }
                                         }
                                         change.consume()
