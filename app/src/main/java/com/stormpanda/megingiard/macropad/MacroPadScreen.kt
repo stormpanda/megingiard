@@ -7,8 +7,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -65,7 +67,7 @@ private val MP_BTN_TEXT              = Color.White
 private val MP_HINT_TEXT             = Color.White.copy(alpha = 0.25f)
 private val MP_TRACKPOINT_ALPHA      = 0.30f
 
-private val MP_BUTTON_UNIT_DP        = 56.dp   // 1.0 sizeWeight = this on-screen
+private val MP_BUTTON_UNIT_DP        = 70.dp   // 1×1 = this size on-screen
 private val MP_TRACKPOINT_BASE_DP    = 64.dp
 private val MP_CORNER_RADIUS         = 8.dp
 
@@ -190,13 +192,16 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                         if (!change.previousPressed) {
                                         // Determine which element was hit
                                         val hitButton  = profile.buttons.firstOrNull { btn ->
-                                            val chipSizePx = with(density) {
-                                                (MP_BUTTON_UNIT_DP * btn.sizeWeight).toPx()
+                                            val chipWidthPx = with(density) {
+                                                (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
+                                            }
+                                            val chipHeightPx = with(density) {
+                                                (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
                                             }
                                             val bx = btn.posX * w
                                             val by = btn.posY * h
-                                            val r  = chipSizePx / 2f
-                                            kotlin.math.hypot((px - bx).toDouble(), (py - by).toDouble()) <= r.toDouble()
+                                            px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
+                                            py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
                                         }
                                         val hitTrackpoint = profile.hasTrackpoint && hitButton == null && run {
                                             val chipSizePx = with(density) {
@@ -314,20 +319,22 @@ private fun PadButton(
         label = "btnAlpha",
     )
 
-    val chipShape = if (btn.buttonShape == ButtonShape.CIRCLE) CircleShape
-                   else RoundedCornerShape(MP_CORNER_RADIUS)
+    val chipShape = if (btn.buttonShape == ButtonShape.CIRCLE && btn.buttonSize == ButtonSize.SIZE_1X1)
+        CircleShape else RoundedCornerShape(MP_CORNER_RADIUS)
 
-    val chipSizePx = with(density) { (MP_BUTTON_UNIT_DP * btn.sizeWeight).toPx() }
+    val chipWidthPx  = with(density) { (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx() }
+    val chipHeightPx = with(density) { (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx() }
     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
-    val left = btn.posX * w - chipSizePx / 2f
-    val top  = btn.posY * h - chipSizePx / 2f
+    val left = btn.posX * w - chipWidthPx / 2f
+    val top  = btn.posY * h - chipHeightPx / 2f
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .size(MP_BUTTON_UNIT_DP * btn.sizeWeight)
+            .width(MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
+            .height(MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
             .alpha(alpha)
             .clip(chipShape)
             .background(accentColor)
@@ -336,7 +343,7 @@ private fun PadButton(
         Text(
             text     = btn.label,
             color    = MP_BTN_TEXT,
-            fontSize = (11 * btn.sizeWeight).sp,
+            fontSize = (11 * btn.buttonSize.cols).sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

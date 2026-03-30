@@ -87,7 +87,7 @@ private val ED_BORDER          = Color.White.copy(alpha = 0.20f)
 private val ED_TOP_BAR_HEIGHT  = 56.dp
 private val ED_PADDING         = 16.dp
 private val ED_ITEM_PADDING    = 12.dp
-private val ED_BUTTON_UNIT_DP  = 48.dp   // 1.0 sizeWeight = this size on the pad canvas
+private val ED_BUTTON_UNIT_DP  = 60.dp   // 1.0 (1×1) = this size on the pad canvas
 
 // Minimum fraction distance from pad edge for button centres
 private const val ED_EDGE_MARGIN = 0.05f
@@ -423,22 +423,26 @@ private fun DraggableButton(
     var dragOffsetY by remember(btn.id) { mutableFloatStateOf(0f) }
 
     val density = LocalDensity.current
-    val chipSizePx = with(density) { (ED_BUTTON_UNIT_DP * btn.sizeWeight).toPx() }
+    val chipWidthPx  = with(density) { (ED_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx() }
+    val chipHeightPx = with(density) { (ED_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx() }
 
     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
 
     // Top-left position in canvas pixels (centre adjusted by half-chip)
-    val left = btn.posX * w - chipSizePx / 2f
-    val top  = btn.posY * h - chipSizePx / 2f
+    val left = btn.posX * w - chipWidthPx / 2f
+    val top  = btn.posY * h - chipHeightPx / 2f
 
-    val chipShape = if (btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    // Circle shape only makes visual sense for square (1×1) buttons
+    val chipShape = if (btn.buttonShape == ButtonShape.CIRCLE && btn.buttonSize == ButtonSize.SIZE_1X1)
+        CircleShape else RoundedCornerShape(8.dp)
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .size(ED_BUTTON_UNIT_DP * btn.sizeWeight)
+            .width(ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
+            .height(ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
             .clip(chipShape)
             .background(accentColor.copy(alpha = 0.25f))
             .border(1.dp, accentColor, chipShape)
@@ -721,6 +725,8 @@ private fun ButtonEditDialog(
 ) {
     var label         by remember { mutableStateOf(button?.label ?: "") }
     var buttonShape   by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
+    var buttonSize    by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
+    var showSizeMenu  by remember { mutableStateOf(false) }
     var action        by remember { mutableStateOf(button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")) }
 
     AlertDialog(
@@ -784,6 +790,40 @@ private fun ButtonEditDialog(
                     }
                 }
 
+                // Button size dropdown (1×1 / 2×1 / 1×2 / 2×2)
+                SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(ED_SURFACE)
+                            .border(1.dp, ED_BORDER, RoundedCornerShape(8.dp))
+                            .clickable { showSizeMenu = true }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(buttonSize.displayLabel(), color = ED_TEXT, fontSize = 14.sp)
+                        Icon(
+                            imageVector = Icons.Filled.ArrowDropDown,
+                            contentDescription = null,
+                            tint = ED_TEXT_SECONDARY,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded         = showSizeMenu,
+                        onDismissRequest = { showSizeMenu = false },
+                        modifier         = Modifier.background(ED_SURFACE),
+                    ) {
+                        ButtonSize.entries.forEach { size ->
+                            DropdownMenuItem(
+                                text    = { Text(size.displayLabel(), color = ED_TEXT) },
+                                onClick = { buttonSize = size; showSizeMenu = false },
+                            )
+                        }
+                    }
+                }
+
                 // Action picker
                 SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
                 ActionPicker(
@@ -800,6 +840,7 @@ private fun ButtonEditDialog(
                         val result = button?.copy(
                             label       = label,
                             buttonShape = buttonShape,
+                            buttonSize  = buttonSize,
                             action      = action,
                         ) ?: PadButton(
                             id          = UUID.randomUUID().toString(),
@@ -807,6 +848,7 @@ private fun ButtonEditDialog(
                             posX        = 0.5f,
                             posY        = 0.5f,
                             buttonShape = buttonShape,
+                            buttonSize  = buttonSize,
                             action      = action,
                         )
                         onConfirm(result)
@@ -1046,6 +1088,14 @@ private fun PadAction.displayLabel(): String {
         is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_right)
         is PadAction.TrackpointMove  -> context.getString(R.string.macropad_display_trackpoint)
     }
+}
+
+@Composable
+private fun ButtonSize.displayLabel(): String = when (this) {
+    ButtonSize.SIZE_1X1 -> stringResource(R.string.macropad_button_size_1x1)
+    ButtonSize.SIZE_2X1 -> stringResource(R.string.macropad_button_size_2x1)
+    ButtonSize.SIZE_1X2 -> stringResource(R.string.macropad_button_size_1x2)
+    ButtonSize.SIZE_2X2 -> stringResource(R.string.macropad_button_size_2x2)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

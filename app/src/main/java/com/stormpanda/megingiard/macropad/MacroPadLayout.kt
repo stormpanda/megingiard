@@ -11,6 +11,17 @@ enum class PadShape { SQUARE, CIRCLE }
 
 enum class ButtonShape { SQUARE, CIRCLE }
 
+/**
+ * Grid multiplier for a button: cols × rows relative to the base button unit.
+ * Non-square buttons always render as rounded-rectangle regardless of ButtonShape.
+ */
+enum class ButtonSize(val cols: Int, val rows: Int) {
+    SIZE_1X1(1, 1),
+    SIZE_2X1(2, 1),
+    SIZE_1X2(1, 2),
+    SIZE_2X2(2, 2),
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,8 +73,8 @@ sealed class PadAction {
  * @param label     Text shown on the button face.
  * @param posX      Horizontal centre position, normalised [0.0, 1.0] relative to pad width.
  * @param posY      Vertical centre position, normalised [0.0, 1.0] relative to pad height.
- * @param sizeWeight Size relative to the default button unit (1.0 = default).
- * @param buttonShape Visual shape of the button face.
+ * @param buttonSize Grid multiplier (cols × rows). Non-square sizes always render as rounded rectangle.
+ * @param buttonShape Visual shape — only honoured for SIZE_1X1; larger sizes always use rounded rectangle.
  * @param action    What this button injects when pressed / held.
  */
 @Serializable
@@ -72,7 +83,7 @@ data class PadButton(
     val label: String,
     val posX: Float,
     val posY: Float,
-    val sizeWeight: Float = 1f,
+    val buttonSize: ButtonSize = ButtonSize.SIZE_1X1,
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
 )
