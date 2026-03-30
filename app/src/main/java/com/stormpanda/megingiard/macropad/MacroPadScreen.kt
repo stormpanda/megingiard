@@ -319,8 +319,11 @@ private fun PadButton(
         label = "btnAlpha",
     )
 
-    val chipShape = if (btn.buttonShape == ButtonShape.CIRCLE && btn.buttonSize == ButtonSize.SIZE_1X1)
-        CircleShape else RoundedCornerShape(MP_CORNER_RADIUS)
+    val chipShape = when (btn.buttonSize) {
+        ButtonSize.SIZE_2X2                      -> CircleShape
+        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
+        ButtonSize.SIZE_1X1 -> if (btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(MP_CORNER_RADIUS)
+    }
 
     val chipWidthPx  = with(density) { (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx() }
     val chipHeightPx = with(density) { (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx() }

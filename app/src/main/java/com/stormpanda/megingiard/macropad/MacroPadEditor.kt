@@ -434,8 +434,11 @@ private fun DraggableButton(
     val top  = btn.posY * h - chipHeightPx / 2f
 
     // Circle shape only makes visual sense for square (1×1) buttons
-    val chipShape = if (btn.buttonShape == ButtonShape.CIRCLE && btn.buttonSize == ButtonSize.SIZE_1X1)
-        CircleShape else RoundedCornerShape(8.dp)
+    val chipShape = when (btn.buttonSize) {
+        ButtonSize.SIZE_2X2                  -> CircleShape
+        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
+        ButtonSize.SIZE_1X1 -> if (btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    }
 
     Box(
         contentAlignment = Alignment.Center,
