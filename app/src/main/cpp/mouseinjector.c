@@ -2,7 +2,7 @@
  * mouseinjector.c — Megingiard virtual mouse via /dev/uinput
  *
  * Creates a virtual mouse that exposes:
- *   - Buttons : BTN_LEFT, BTN_RIGHT, BTN_MIDDLE
+ *   - Buttons : BTN_LEFT, BTN_RIGHT, BTN_MIDDLE, BTN_SIDE (4), BTN_EXTRA (5)
  *   - Relative axes: REL_X, REL_Y, REL_WHEEL
  *
  * Binary protocol (stdin → binary):
@@ -12,6 +12,10 @@
  *   MB R U\n   — right button UP
  *   MB M D\n   — middle button DOWN
  *   MB M U\n   — middle button UP
+ *   MB 4 D\n   — mouse button 4 (BTN_SIDE) DOWN
+ *   MB 4 U\n   — mouse button 4 (BTN_SIDE) UP
+ *   MB 5 D\n   — mouse button 5 (BTN_EXTRA) DOWN
+ *   MB 5 U\n   — mouse button 5 (BTN_EXTRA) UP
  *   MM <dx> <dy>\n — relative mouse MOVE (integer pixels, trackpoint)
  *   MW <delta>\n   — scroll WHEEL (positive = up)
  *
@@ -47,6 +51,8 @@ int main(void) {
     ioctl(fd, UI_SET_KEYBIT, BTN_LEFT);
     ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT);
     ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE);
+    ioctl(fd, UI_SET_KEYBIT, BTN_SIDE);    /* mouse button 4 */
+    ioctl(fd, UI_SET_KEYBIT, BTN_EXTRA);   /* mouse button 5 */
 
     /* Register EV_REL for relative movement */
     ioctl(fd, UI_SET_EVBIT, EV_REL);
@@ -82,6 +88,8 @@ int main(void) {
             if      (side == 'L') btn = BTN_LEFT;
             else if (side == 'R') btn = BTN_RIGHT;
             else if (side == 'M') btn = BTN_MIDDLE;
+            else if (side == '4') btn = BTN_SIDE;
+            else if (side == '5') btn = BTN_EXTRA;
             else continue;
 
             __s32 val = (du == 'D') ? 1 : 0;
