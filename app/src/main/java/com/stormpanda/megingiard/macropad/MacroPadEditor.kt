@@ -413,6 +413,9 @@ private fun DraggableButton(
     // canvasSize) see the live btn even though its lambda is NOT restarted when
     // btn.posX/posY change between drags.
     val currentBtn = rememberUpdatedState(btn)
+    // Always call the latest onPositionChanged so PadCanvas's stale-profile
+    // closure (captured by pointerInput) doesn't revert sibling button positions.
+    val currentOnPositionChanged = rememberUpdatedState(onPositionChanged)
     // Anchor position captured at the moment the finger goes down.
     var startPosX by remember(btn.id) { mutableFloatStateOf(btn.posX) }
     var startPosY by remember(btn.id) { mutableFloatStateOf(btn.posY) }
@@ -453,7 +456,7 @@ private fun DraggableButton(
                         change.consume()
                         dragOffsetX += drag.x
                         dragOffsetY += drag.y
-                        onPositionChanged(
+                        currentOnPositionChanged.value(
                             (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
                             (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
                         )
@@ -476,6 +479,7 @@ private fun DraggableTrackpoint(
 ) {
     val currentPosX = rememberUpdatedState(posX)
     val currentPosY = rememberUpdatedState(posY)
+    val currentOnPositionChanged = rememberUpdatedState(onPositionChanged)
     var startPosX by remember { mutableFloatStateOf(posX) }
     var startPosY by remember { mutableFloatStateOf(posY) }
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
@@ -510,7 +514,7 @@ private fun DraggableTrackpoint(
                         change.consume()
                         dragOffsetX += drag.x
                         dragOffsetY += drag.y
-                        onPositionChanged(
+                        currentOnPositionChanged.value(
                             (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
                             (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
                         )
