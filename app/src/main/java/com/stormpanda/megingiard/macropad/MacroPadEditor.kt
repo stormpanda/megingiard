@@ -333,21 +333,26 @@ private fun EditorBody(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(ED_PADDING),
+            .padding(vertical = ED_PADDING),
         verticalArrangement = Arrangement.spacedBy(ED_PADDING),
     ) {
-        // Pad canvas — interactive drag area
+        // Pad canvas — full width, no horizontal padding so it matches use-mode
         PadCanvas(profile = profile, accentColor = accentColor)
 
-        HorizontalDivider(color = ED_DIVIDER)
+        Column(
+            modifier = Modifier.padding(horizontal = ED_PADDING),
+            verticalArrangement = Arrangement.spacedBy(ED_PADDING),
+        ) {
+            HorizontalDivider(color = ED_DIVIDER)
 
-        // Toolbar: Add button + Trackpoint toggle
-        EditorToolbar(profile = profile, accentColor = accentColor)
+            // Toolbar: Add button + Trackpoint toggle
+            EditorToolbar(profile = profile, accentColor = accentColor)
 
-        HorizontalDivider(color = ED_DIVIDER)
+            HorizontalDivider(color = ED_DIVIDER)
 
-        // Button list — tap to edit
-        ButtonList(profile = profile, accentColor = accentColor)
+            // Button list — tap to edit
+            ButtonList(profile = profile, accentColor = accentColor)
+        }
     }
 }
 

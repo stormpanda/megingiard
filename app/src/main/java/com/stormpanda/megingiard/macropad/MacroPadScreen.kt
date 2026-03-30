@@ -28,7 +28,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -69,7 +68,7 @@ private val MP_BTN_TEXT              = Color.White
 private val MP_HINT_TEXT             = Color.White.copy(alpha = 0.25f)
 private val MP_TRACKPOINT_ALPHA      = 0.30f
 
-private val MP_BUTTON_UNIT_DP        = 70.dp   // 1×1 = this size on-screen
+private val MP_BUTTON_UNIT_DP        = 60.dp   // 1×1 = this size on-screen; matches editor
 private val MP_TRACKPOINT_BASE_DP    = 64.dp
 private val MP_CORNER_RADIUS         = 8.dp
 
@@ -335,10 +334,9 @@ private fun PadButton(
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
             .width(MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
-            .alpha(alpha)
             .clip(chipShape)
-            .background(accentColor)
-            .border(1.dp, accentColor.copy(alpha = 0.8f), chipShape),
+            .background(accentColor.copy(alpha = alpha))
+            .border(1.dp, accentColor, chipShape),
     ) {
         Text(
             text     = btn.label,
