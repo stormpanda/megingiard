@@ -90,6 +90,7 @@ private val ED_TOP_BAR_HEIGHT  = 56.dp
 private val ED_PADDING         = 16.dp
 private val ED_ITEM_PADDING    = 12.dp
 private val ED_BUTTON_UNIT_DP  = 60.dp   // 1.0 (1×1) = this size on the pad canvas
+private val ED_BTN_SQUARE_RADIUS = 4.dp
 
 // Minimum fraction distance from pad edge for button centres
 private const val ED_EDGE_MARGIN = 0.05f
@@ -440,11 +441,13 @@ private fun DraggableButton(
     val left = btn.posX * w - chipWidthPx / 2f
     val top  = btn.posY * h - chipHeightPx / 2f
 
-    // Circle shape only makes visual sense for square (1×1) buttons
-    val chipShape = when (btn.buttonSize) {
-        ButtonSize.SIZE_2X2                  -> CircleShape
-        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
-        ButtonSize.SIZE_1X1 -> if (btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp)
+    val chipShape = when (btn.buttonShape) {
+        ButtonShape.SQUARE -> RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
+        ButtonShape.CIRCLE -> when (btn.buttonSize) {
+            ButtonSize.SIZE_2X2                      -> CircleShape
+            ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
+            ButtonSize.SIZE_1X1                      -> CircleShape
+        }
     }
 
     Box(

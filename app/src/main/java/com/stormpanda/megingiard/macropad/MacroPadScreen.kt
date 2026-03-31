@@ -75,6 +75,7 @@ private val MP_TRACKPOINT_ALPHA      = 0.30f
 private val MP_BUTTON_UNIT_DP        = 60.dp   // 1×1 = this size on-screen; matches editor
 private val MP_TRACKPOINT_BASE_DP    = 64.dp
 private val MP_CORNER_RADIUS         = 8.dp
+private val MP_BTN_SQUARE_RADIUS     = 4.dp
 
 private const val MP_PRESS_ANIM_MS   = 80
 private const val MP_RELEASE_ANIM_MS = 160
@@ -354,10 +355,13 @@ private fun PadButton(
         label = "btnAlpha",
     )
 
-    val chipShape = when (btn.buttonSize) {
-        ButtonSize.SIZE_2X2                      -> CircleShape
-        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
-        ButtonSize.SIZE_1X1 -> if (btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(MP_CORNER_RADIUS)
+    val chipShape = when (btn.buttonShape) {
+        ButtonShape.SQUARE -> RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
+        ButtonShape.CIRCLE -> when (btn.buttonSize) {
+            ButtonSize.SIZE_2X2                      -> CircleShape
+            ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
+            ButtonSize.SIZE_1X1                      -> CircleShape
+        }
     }
 
     val chipWidthPx  = with(density) { (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx() }
