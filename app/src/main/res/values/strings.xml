@@ -116,6 +116,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_device_keyboard">Keyboard</string>
     <string name="macropad_editor_device_gamepad">Gamepad</string>
     <string name="macropad_editor_device_mouse">Mouse</string>
+    <string name="macropad_device_disabled_keyboard">Keyboard has been disabled for this layout</string>
+    <string name="macropad_device_disabled_gamepad">Gamepad has been disabled for this layout</string>
+    <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
     <string name="macropad_editor_new_profile_name">New Profile</string>
     <string name="macropad_editor_rename">Rename</string>
     <string name="macropad_editor_delete_profile">Delete Profile</string>

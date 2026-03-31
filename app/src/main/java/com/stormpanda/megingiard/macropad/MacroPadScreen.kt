@@ -48,6 +48,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import android.widget.Toast
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -150,6 +151,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun PadSurface(profile: PadProfile, accentColor: Color) {
     val density      = LocalDensity.current
+    val context      = LocalContext.current
     var canvasSize   by remember { mutableStateOf(IntSize.Zero) }
     val overlayVisible      by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState  = rememberUpdatedState(overlayVisible)
@@ -219,6 +221,19 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
 
                                         when {
                                             hitButton != null -> {
+                                                // Check if the required device is disabled
+                                                val disabledMsgRes = when (hitButton.action) {
+                                                    is PadAction.KeyboardKey   -> if (!profile.enableKeyboard) R.string.macropad_device_disabled_keyboard else null
+                                                    is PadAction.GamepadButton -> if (!profile.enableGamepad)  R.string.macropad_device_disabled_gamepad  else null
+                                                    is PadAction.MouseButton,
+                                                    is PadAction.ScrollWheel,
+                                                    is PadAction.TrackpointMove,
+                                                    is PadAction.MouseLeftClick,
+                                                    is PadAction.MouseRightClick -> if (!profile.enableMouse) R.string.macropad_device_disabled_mouse else null
+                                                }
+                                                if (disabledMsgRes != null) {
+                                                    Toast.makeText(context, disabledMsgRes, Toast.LENGTH_SHORT).show()
+                                                } else {
                                                 pointerMap[id] = hitButton.id
                                                 when {
                                                     hitButton.action is PadAction.ScrollWheel -> {
@@ -233,6 +248,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                         injectActionDown(hitButton.action)
                                                     }
                                                 }
+                                                } // end device-enabled check
                                             }
                                         }
                                         } // end if (!change.previousPressed)
