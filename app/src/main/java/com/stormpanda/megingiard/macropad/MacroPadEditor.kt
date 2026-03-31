@@ -52,8 +52,14 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -92,7 +98,8 @@ private val ED_TOP_BAR_HEIGHT  = 56.dp
 private val ED_PADDING         = 16.dp
 private val ED_ITEM_PADDING    = 12.dp
 private val ED_BUTTON_UNIT_DP  = 60.dp   // 1.0 (1×1) = this size on the pad canvas
-private val ED_BTN_SQUARE_RADIUS = 4.dp
+private val ED_BTN_SQUARE_RADIUS        = 4.dp
+private const val ED_BTN_DISABLED_ALPHA = 0.38f
 
 // Minimum fraction distance from pad edge for button centres
 private const val ED_EDGE_MARGIN = 0.05f
@@ -444,9 +451,12 @@ private fun PadCanvas(profile: PadProfile, accentColor: Color) {
         // Render each button as a draggable chip
         profile.buttons.forEach { btn ->
             DraggableButton(
-                btn         = btn,
-                canvasSize  = canvasSize,
-                accentColor = accentColor,
+                btn            = btn,
+                canvasSize     = canvasSize,
+                accentColor    = accentColor,
+                enableKeyboard = profile.enableKeyboard,
+                enableGamepad  = profile.enableGamepad,
+                enableMouse    = profile.enableMouse,
                 onPositionChanged = { nx, ny ->
                     MacroPadState.updateProfile(
                         profile.copy(
@@ -467,6 +477,9 @@ private fun DraggableButton(
     btn:               PadButton,
     canvasSize:        IntSize,
     accentColor:       Color,
+    enableKeyboard:    Boolean,
+    enableGamepad:     Boolean,
+    enableMouse:       Boolean,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
     // rememberUpdatedState lets the pointerInput closure (keyed only on btn.id +
@@ -484,6 +497,15 @@ private fun DraggableButton(
 
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
+    val isDeviceDisabled = when (btn.action) {
+        is PadAction.KeyboardKey                 -> !enableKeyboard
+        is PadAction.GamepadButton               -> !enableGamepad
+        is PadAction.MouseButton,
+        is PadAction.ScrollWheel,
+        is PadAction.TrackpointMove,
+        is PadAction.MouseLeftClick,
+        is PadAction.MouseRightClick             -> !enableMouse
+    }
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val chipWidthPx  = with(density) {
         if (isTrackpoint) (ED_BUTTON_UNIT_DP * tpMultiplier).toPx()
@@ -516,6 +538,19 @@ private fun DraggableButton(
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
             .width(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .drawWithContent {
+                if (isDeviceDisabled) {
+                    val p = Paint().apply {
+                        colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                        this.alpha = ED_BTN_DISABLED_ALPHA
+                    }
+                    drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                    drawContent()
+                    drawContext.canvas.restore()
+                } else {
+                    drawContent()
+                }
+            }
             .clip(chipShape)
             .background(accentColor.copy(alpha = 0.25f))
             .border(1.dp, accentColor, chipShape)
@@ -677,10 +712,20 @@ private fun ButtonListItem(
     var showDelete  by remember { mutableStateOf(false) }
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
+    val isDeviceDisabled = when (btn.action) {
+        is PadAction.KeyboardKey                 -> !enableKeyboard
+        is PadAction.GamepadButton               -> !enableGamepad
+        is PadAction.MouseButton,
+        is PadAction.ScrollWheel,
+        is PadAction.TrackpointMove,
+        is PadAction.MouseLeftClick,
+        is PadAction.MouseRightClick             -> !enableMouse
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (isDeviceDisabled) 0.38f else 1f)
             .clickable { showEdit = true }
             .padding(horizontal = 4.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,

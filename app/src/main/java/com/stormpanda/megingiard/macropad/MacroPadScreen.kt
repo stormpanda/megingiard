@@ -33,8 +33,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
@@ -66,9 +71,10 @@ import kotlin.math.roundToInt
 private val MP_BG                    = Color(0xFF0D0D0D)
 private val MP_PAD_BG                = Color(0xFF1A1A1A)
 private val MP_PAD_BORDER            = Color.White.copy(alpha = 0.25f)
-private val MP_BTN_PRESSED_ALPHA     = 0.80f
-private val MP_BTN_NORMAL_ALPHA      = 0.25f
-private val MP_BTN_TEXT              = Color.White
+private val MP_BTN_PRESSED_ALPHA        = 0.80f
+private val MP_BTN_NORMAL_ALPHA         = 0.25f
+private const val MP_BTN_DISABLED_ALPHA = 0.38f
+private val MP_BTN_TEXT                 = Color.White
 private val MP_HINT_TEXT             = Color.White.copy(alpha = 0.25f)
 
 private val MP_BUTTON_UNIT_DP        = 60.dp   // 1×1 = this size on-screen; matches editor
@@ -306,12 +312,22 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
         ) {
             // Render buttons
             profile.buttons.forEach { btn ->
+                val isDeviceDisabled = when (btn.action) {
+                    is PadAction.KeyboardKey                 -> !profile.enableKeyboard
+                    is PadAction.GamepadButton               -> !profile.enableGamepad
+                    is PadAction.MouseButton,
+                    is PadAction.ScrollWheel,
+                    is PadAction.TrackpointMove,
+                    is PadAction.MouseLeftClick,
+                    is PadAction.MouseRightClick             -> !profile.enableMouse
+                }
                 val isPressed = btn.id in pressedIds
                 PadButton(
-                    btn         = btn,
-                    isPressed   = isPressed,
-                    canvasSize  = canvasSize,
-                    accentColor = accentColor,
+                    btn              = btn,
+                    isPressed        = isPressed,
+                    canvasSize       = canvasSize,
+                    accentColor      = accentColor,
+                    isDeviceDisabled = isDeviceDisabled,
                 )
             }
         }
@@ -324,10 +340,11 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
 
 @Composable
 private fun PadButton(
-    btn:         PadButton,
-    isPressed:   Boolean,
-    canvasSize:  IntSize,
-    accentColor: Color,
+    btn:              PadButton,
+    isPressed:        Boolean,
+    canvasSize:       IntSize,
+    accentColor:      Color,
+    isDeviceDisabled: Boolean,
 ) {
     val density = LocalDensity.current
 
@@ -370,6 +387,19 @@ private fun PadButton(
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
             .width(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .drawWithContent {
+                if (isDeviceDisabled) {
+                    val p = Paint().apply {
+                        colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                        this.alpha = MP_BTN_DISABLED_ALPHA
+                    }
+                    drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                    drawContent()
+                    drawContext.canvas.restore()
+                } else {
+                    drawContent()
+                }
+            }
             .clip(chipShape)
             .background(accentColor.copy(alpha = alpha))
             .border(1.dp, accentColor, chipShape),
