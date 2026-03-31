@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.settings.SettingsManager
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -49,8 +50,35 @@ object MacroPadState {
     // -------------------------------------------------------------------------
 
     internal fun loadFrom(profiles: List<PadProfile>, activeProfileId: String?) {
-        _profiles.value = profiles
+        // One-time migration: profiles saved before the Trackpoint-as-button change stored the
+        // trackpoint as profile-level flags (hasTrackpoint, trackpointPosX/Y, trackpointSize).
+        // Convert any such profile to a TrackpointMove PadButton and persist immediately.
+        var needsSave = false
+        val migrated = profiles.map { profile ->
+            if (!profile.hasTrackpoint) return@map profile
+            needsSave = true
+            val tpSize = when {
+                profile.trackpointSize <= 1.5f -> TrackpointSize.SMALL
+                profile.trackpointSize <= 2.5f -> TrackpointSize.MEDIUM
+                else                           -> TrackpointSize.LARGE
+            }
+            val tpButton = PadButton(
+                id          = UUID.randomUUID().toString(),
+                label       = "",
+                posX        = profile.trackpointPosX,
+                posY        = profile.trackpointPosY,
+                buttonSize  = ButtonSize.SIZE_1X1,
+                buttonShape = ButtonShape.CIRCLE,
+                action      = PadAction.TrackpointMove(tpSize),
+            )
+            profile.copy(
+                buttons      = profile.buttons + tpButton,
+                hasTrackpoint = false,
+            )
+        }
+        _profiles.value = migrated
         _activeProfileId.value = activeProfileId
+        if (needsSave) SettingsManager.saveMacroPadData()
     }
 
     // -------------------------------------------------------------------------

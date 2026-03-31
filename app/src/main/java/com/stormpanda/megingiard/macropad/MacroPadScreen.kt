@@ -70,10 +70,8 @@ private val MP_BTN_PRESSED_ALPHA     = 0.80f
 private val MP_BTN_NORMAL_ALPHA      = 0.25f
 private val MP_BTN_TEXT              = Color.White
 private val MP_HINT_TEXT             = Color.White.copy(alpha = 0.25f)
-private val MP_TRACKPOINT_ALPHA      = 0.30f
 
 private val MP_BUTTON_UNIT_DP        = 60.dp   // 1×1 = this size on-screen; matches editor
-private val MP_TRACKPOINT_BASE_DP    = 64.dp
 private val MP_CORNER_RADIUS         = 8.dp
 private val MP_BTN_SQUARE_RADIUS     = 4.dp
 
@@ -100,9 +98,10 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) {
         AppStateManager.overlayVisible.first { !it }
         withContext(Dispatchers.IO) {
-            KeyInjector.start(context)
-            GamepadInjector.start(context)
-            MouseInjector.start(context)
+            val ap = MacroPadState.activeProfile.value
+            if (ap?.enableKeyboard != false) KeyInjector.start(context)
+            if (ap?.enableGamepad != false) GamepadInjector.start(context)
+            if (ap?.enableMouse != false) MouseInjector.start(context)
         }
     }
 
@@ -152,7 +151,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
     // Track which button IDs are currently pressed (multi-touch)
     var pressedIds  by remember { mutableStateOf(setOf<String>()) }
     // Pointer → button/trackpoint mapping for multi-touch release
-    val pointerMap  = remember { mutableMapOf<PointerId, String>() }   // "tp" for trackpoint
+    val pointerMap  = remember { mutableMapOf<PointerId, String>() }
 
     // Track last trackpoint finger position for delta computation
     var lastTpPos   by remember { mutableStateOf<Offset?>(null) }
@@ -196,43 +195,38 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                         // Only act on the pointer that just went down;
                                         // other pointers in this batch event are still held from before.
                                         if (!change.previousPressed) {
-                                        // Determine which element was hit
-                                        val hitButton  = profile.buttons.firstOrNull { btn ->
+                                        val hitButton = profile.buttons.firstOrNull { btn ->
+                                            val isTrackpoint = btn.action is PadAction.TrackpointMove
                                             val chipWidthPx = with(density) {
-                                                (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
+                                                if (isTrackpoint) (MP_BUTTON_UNIT_DP * (btn.action as PadAction.TrackpointMove).size.multiplier).toPx()
+                                                else (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
                                             }
                                             val chipHeightPx = with(density) {
-                                                (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
+                                                if (isTrackpoint) (MP_BUTTON_UNIT_DP * (btn.action as PadAction.TrackpointMove).size.multiplier).toPx()
+                                                else (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
                                             }
                                             val bx = btn.posX * w
                                             val by = btn.posY * h
                                             px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
                                             py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
                                         }
-                                        val hitTrackpoint = profile.hasTrackpoint && hitButton == null && run {
-                                            val chipSizePx = with(density) {
-                                                (MP_TRACKPOINT_BASE_DP * profile.trackpointSize).toPx()
-                                            }
-                                            val tx = profile.trackpointPosX * w
-                                            val ty = profile.trackpointPosY * h
-                                            val r  = chipSizePx / 2f
-                                            kotlin.math.hypot((px - tx).toDouble(), (py - ty).toDouble()) <= r.toDouble()
-                                        }
 
                                         when {
                                             hitButton != null -> {
                                                 pointerMap[id] = hitButton.id
-                                                if (hitButton.action !is PadAction.ScrollWheel) {
-                                                    pressedIds = pressedIds + hitButton.id
-                                                    injectActionDown(hitButton.action)
-                                                } else {
-                                                    // Scroll wheel: record start Y, do not inject down
-                                                    scrollStartY[id] = py
+                                                when {
+                                                    hitButton.action is PadAction.ScrollWheel -> {
+                                                        // Scroll wheel: record start Y, do not inject down
+                                                        scrollStartY[id] = py
+                                                    }
+                                                    hitButton.action is PadAction.TrackpointMove -> {
+                                                        lastTpPos = change.position
+                                                    }
+                                                    else -> {
+                                                        pressedIds = pressedIds + hitButton.id
+                                                        injectActionDown(hitButton.action)
+                                                    }
                                                 }
-                                            }
-                                            hitTrackpoint -> {
-                                                pointerMap[id] = "tp"
-                                                lastTpPos = change.position
                                             }
                                         }
                                         } // end if (!change.previousPressed)
@@ -241,40 +235,37 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
 
                                     PointerEventType.Move -> {
                                         when (pointerMap[id]) {
-                                            "tp" -> {
-                                                val last = lastTpPos
-                                                if (last != null) {
-                                                    val delta = change.positionChange()
-                                                    val dx = (delta.x * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                                                    val dy = (delta.y * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                                                    if (dx != 0 || dy != 0) {
-                                                        MouseInjector.moveMouse(dx, dy)
-                                                    }
-                                                }
-                                                lastTpPos = change.position
-                                                change.consume()
-                                            }
                                             null -> { /* unknown pointer */ }
                                             else -> {
-                                                // Check if this mapped button is a scroll wheel
-                                                val mappedId = pointerMap[id]
-                                                val mappedBtn = if (mappedId != null)
-                                                    profile.buttons.firstOrNull { it.id == mappedId }
-                                                else null
-                                                if (mappedBtn?.action is PadAction.ScrollWheel) {
-                                                    val startY = scrollStartY[id]
-                                                    if (startY != null) {
-                                                        val totalDeltaY = startY - py  // negative = scroll down
-                                                        // Convert pixel distance to scroll units with velocity scaling:
-                                                        // units grow quadratically with distance for natural feel
-                                                        val units = (totalDeltaY / MP_SCROLL_SENSITIVITY_PX).toInt()
-                                                        if (units != 0) {
-                                                            MouseInjector.scrollWheel(units)
-                                                            // Move start point by the consumed pixels so delta resets
-                                                            scrollStartY[id] = py
+                                                val mappedId  = pointerMap[id]
+                                                val mappedBtn = profile.buttons.firstOrNull { it.id == mappedId }
+                                                when {
+                                                    mappedBtn?.action is PadAction.TrackpointMove -> {
+                                                        val last = lastTpPos
+                                                        if (last != null) {
+                                                            val delta = change.positionChange()
+                                                            val dx = (delta.x * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                                                            val dy = (delta.y * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                                                            if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
                                                         }
+                                                        lastTpPos = change.position
+                                                        change.consume()
                                                     }
-                                                    change.consume()
+                                                    mappedBtn?.action is PadAction.ScrollWheel -> {
+                                                        val startY = scrollStartY[id]
+                                                        if (startY != null) {
+                                                            val totalDeltaY = startY - py  // negative = scroll down
+                                                            // Convert pixel distance to scroll units with velocity scaling:
+                                                            // units grow quadratically with distance for natural feel
+                                                            val units = (totalDeltaY / MP_SCROLL_SENSITIVITY_PX).toInt()
+                                                            if (units != 0) {
+                                                                MouseInjector.scrollWheel(units)
+                                                                // Move start point by the consumed pixels so delta resets
+                                                                scrollStartY[id] = py
+                                                            }
+                                                        }
+                                                        change.consume()
+                                                    }
                                                 }
                                             }
                                         }
@@ -285,16 +276,20 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                         // other pointers in this batch event are still held.
                                         if (!change.pressed) {
                                             when (val mapped = pointerMap.remove(id)) {
-                                                "tp" -> {
-                                                    lastTpPos = null
-                                                }
                                                 null -> { /* unknown pointer */ }
                                                 else -> {
-                                                    scrollStartY.remove(id)
                                                     val btn = profile.buttons.firstOrNull { it.id == mapped }
-                                                    if (btn != null && btn.action !is PadAction.ScrollWheel) {
-                                                        pressedIds = pressedIds - mapped
-                                                        injectActionUp(btn.action)
+                                                    when {
+                                                        btn?.action is PadAction.TrackpointMove -> {
+                                                            lastTpPos = null
+                                                        }
+                                                        btn?.action is PadAction.ScrollWheel -> {
+                                                            scrollStartY.remove(id)
+                                                        }
+                                                        btn != null -> {
+                                                            pressedIds = pressedIds - mapped
+                                                            injectActionUp(btn.action)
+                                                        }
                                                     }
                                                 }
                                             }
@@ -315,17 +310,6 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                 PadButton(
                     btn         = btn,
                     isPressed   = isPressed,
-                    canvasSize  = canvasSize,
-                    accentColor = accentColor,
-                )
-            }
-
-            // Render trackpoint
-            if (profile.hasTrackpoint) {
-                PadTrackpoint(
-                    posX        = profile.trackpointPosX,
-                    posY        = profile.trackpointPosY,
-                    size        = profile.trackpointSize,
                     canvasSize  = canvasSize,
                     accentColor = accentColor,
                 )
@@ -355,7 +339,10 @@ private fun PadButton(
         label = "btnAlpha",
     )
 
-    val chipShape = when (btn.buttonShape) {
+    val isTrackpoint = btn.action is PadAction.TrackpointMove
+    val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
+
+    val chipShape = if (isTrackpoint) CircleShape else when (btn.buttonShape) {
         ButtonShape.SQUARE -> RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
         ButtonShape.CIRCLE -> when (btn.buttonSize) {
             ButtonSize.SIZE_2X2                      -> CircleShape
@@ -364,8 +351,14 @@ private fun PadButton(
         }
     }
 
-    val chipWidthPx  = with(density) { (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx() }
-    val chipHeightPx = with(density) { (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx() }
+    val chipWidthPx  = with(density) {
+        if (isTrackpoint) (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
+        else (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
+    }
+    val chipHeightPx = with(density) {
+        if (isTrackpoint) (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
+        else (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
+    }
     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
     val left = btn.posX * w - chipWidthPx / 2f
@@ -375,13 +368,15 @@ private fun PadButton(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .width(MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
-            .height(MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .width(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
+            .height(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
             .clip(chipShape)
             .background(accentColor.copy(alpha = alpha))
             .border(1.dp, accentColor, chipShape),
     ) {
-        if (btn.action is PadAction.ScrollWheel) {
+        if (isTrackpoint) {
+            Text("●", color = accentColor.copy(alpha = 0.7f), fontSize = 18.sp)
+        } else if (btn.action is PadAction.ScrollWheel) {
             ScrollWheelFace(accentColor = accentColor)
         } else {
             Text(
@@ -413,38 +408,6 @@ private fun ScrollWheelFace(accentColor: Color) {
         // Down chevrons
         Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Trackpoint indicator
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun PadTrackpoint(
-    posX:        Float,
-    posY:        Float,
-    size:        Float,
-    canvasSize:  IntSize,
-    accentColor: Color,
-) {
-    val density    = LocalDensity.current
-    val chipSizePx = with(density) { (MP_TRACKPOINT_BASE_DP * size).toPx() }
-    val w = canvasSize.width.toFloat().coerceAtLeast(1f)
-    val h = canvasSize.height.toFloat().coerceAtLeast(1f)
-    val left = posX * w - chipSizePx / 2f
-    val top  = posY * h - chipSizePx / 2f
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .size(MP_TRACKPOINT_BASE_DP * size)
-            .clip(CircleShape)
-            .background(accentColor.copy(alpha = MP_TRACKPOINT_ALPHA))
-            .border(1.dp, accentColor.copy(alpha = 0.5f), CircleShape),
-    ) {
-        Text("●", color = accentColor.copy(alpha = 0.7f), fontSize = 18.sp)
     }
 }
 

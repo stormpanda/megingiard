@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -127,10 +129,11 @@ fun MacroPadEditor(onDone: () -> Unit) {
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
+            val ap = MacroPadState.activeProfile.value
             CoroutineScope(Dispatchers.IO).launch {
-                KeyInjector.start(context)
-                GamepadInjector.start(context)
-                MouseInjector.start(context)
+                if (ap?.enableKeyboard != false) KeyInjector.start(context)
+                if (ap?.enableGamepad != false) GamepadInjector.start(context)
+                if (ap?.enableMouse != false) MouseInjector.start(context)
             }
         }
     }
@@ -339,6 +342,41 @@ private fun EditorBody(
             .padding(vertical = ED_PADDING),
         verticalArrangement = Arrangement.spacedBy(ED_PADDING),
     ) {
+        // Device checkboxes
+        Column(modifier = Modifier.padding(horizontal = ED_PADDING)) {
+            Text(
+                text  = stringResource(R.string.macropad_editor_devices),
+                color = accentColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(4.dp))
+            DeviceCheckboxRow(
+                label       = stringResource(R.string.macropad_editor_device_keyboard),
+                checked     = profile.enableKeyboard,
+                accentColor = accentColor,
+                onCheckedChange = {
+                    MacroPadState.updateProfile(profile.copy(enableKeyboard = it))
+                },
+            )
+            DeviceCheckboxRow(
+                label       = stringResource(R.string.macropad_editor_device_gamepad),
+                checked     = profile.enableGamepad,
+                accentColor = accentColor,
+                onCheckedChange = {
+                    MacroPadState.updateProfile(profile.copy(enableGamepad = it))
+                },
+            )
+            DeviceCheckboxRow(
+                label       = stringResource(R.string.macropad_editor_device_mouse),
+                checked     = profile.enableMouse,
+                accentColor = accentColor,
+                onCheckedChange = {
+                    MacroPadState.updateProfile(profile.copy(enableMouse = it))
+                },
+            )
+        }
+
         // Pad canvas — full width, no horizontal padding so it matches use-mode
         PadCanvas(profile = profile, accentColor = accentColor)
 
@@ -348,7 +386,7 @@ private fun EditorBody(
         ) {
             HorizontalDivider(color = ED_DIVIDER)
 
-            // Toolbar: Add button + Trackpoint toggle
+            // Toolbar: Add button
             EditorToolbar(profile = profile, accentColor = accentColor)
 
             HorizontalDivider(color = ED_DIVIDER)
@@ -356,6 +394,33 @@ private fun EditorBody(
             // Button list — tap to edit
             ButtonList(profile = profile, accentColor = accentColor)
         }
+    }
+}
+
+@Composable
+private fun DeviceCheckboxRow(
+    label:           String,
+    checked:         Boolean,
+    accentColor:     Color,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked         = checked,
+            onCheckedChange = onCheckedChange,
+            colors          = CheckboxDefaults.colors(
+                checkedColor   = accentColor,
+                checkmarkColor = ED_BG,
+                uncheckedColor = ED_TEXT_SECONDARY,
+            ),
+        )
+        Text(label, color = ED_TEXT, fontSize = 14.sp)
     }
 }
 
@@ -394,19 +459,6 @@ private fun PadCanvas(profile: PadProfile, accentColor: Color) {
             )
         }
 
-        // Trackpoint indicator
-        if (profile.hasTrackpoint) {
-            DraggableTrackpoint(
-                posX        = profile.trackpointPosX,
-                posY        = profile.trackpointPosY,
-                size        = profile.trackpointSize,
-                canvasSize  = canvasSize,
-                accentColor = accentColor,
-                onPositionChanged = { nx, ny ->
-                    MacroPadState.updateProfile(profile.copy(trackpointPosX = nx, trackpointPosY = ny))
-                },
-            )
-        }
     }
 }
 
@@ -431,8 +483,16 @@ private fun DraggableButton(
     var dragOffsetY by remember(btn.id) { mutableFloatStateOf(0f) }
 
     val density = LocalDensity.current
-    val chipWidthPx  = with(density) { (ED_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx() }
-    val chipHeightPx = with(density) { (ED_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx() }
+    val isTrackpoint = btn.action is PadAction.TrackpointMove
+    val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
+    val chipWidthPx  = with(density) {
+        if (isTrackpoint) (ED_BUTTON_UNIT_DP * tpMultiplier).toPx()
+        else (ED_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
+    }
+    val chipHeightPx = with(density) {
+        if (isTrackpoint) (ED_BUTTON_UNIT_DP * tpMultiplier).toPx()
+        else (ED_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
+    }
 
     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
@@ -441,7 +501,7 @@ private fun DraggableButton(
     val left = btn.posX * w - chipWidthPx / 2f
     val top  = btn.posY * h - chipHeightPx / 2f
 
-    val chipShape = when (btn.buttonShape) {
+    val chipShape = if (isTrackpoint) CircleShape else when (btn.buttonShape) {
         ButtonShape.SQUARE -> RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
         ButtonShape.CIRCLE -> when (btn.buttonSize) {
             ButtonSize.SIZE_2X2                      -> CircleShape
@@ -454,8 +514,8 @@ private fun DraggableButton(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .width(ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
-            .height(ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .width(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
+            .height(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
             .clip(chipShape)
             .background(accentColor.copy(alpha = 0.25f))
             .border(1.dp, accentColor, chipShape)
@@ -481,7 +541,9 @@ private fun DraggableButton(
                 )
             }
     ) {
-        if (btn.action is PadAction.ScrollWheel) {
+        if (btn.action is PadAction.TrackpointMove) {
+            Text("●", color = accentColor, fontSize = 14.sp)
+        } else if (btn.action is PadAction.ScrollWheel) {
             // Show mini scroll icon in editor chip
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -500,66 +562,8 @@ private fun DraggableButton(
     }
 }
 
-@Composable
-private fun DraggableTrackpoint(
-    posX: Float,
-    posY: Float,
-    size: Float,
-    canvasSize: IntSize,
-    accentColor: Color,
-    onPositionChanged: (Float, Float) -> Unit,
-) {
-    val currentPosX = rememberUpdatedState(posX)
-    val currentPosY = rememberUpdatedState(posY)
-    val currentOnPositionChanged = rememberUpdatedState(onPositionChanged)
-    var startPosX by remember { mutableFloatStateOf(posX) }
-    var startPosY by remember { mutableFloatStateOf(posY) }
-    var dragOffsetX by remember { mutableFloatStateOf(0f) }
-    var dragOffsetY by remember { mutableFloatStateOf(0f) }
-
-    val density = LocalDensity.current
-    val chipSizePx = with(density) { (ED_BUTTON_UNIT_DP * size).toPx() }
-
-    val w = canvasSize.width.toFloat().coerceAtLeast(1f)
-    val h = canvasSize.height.toFloat().coerceAtLeast(1f)
-
-    val left = posX * w - chipSizePx / 2f
-    val top  = posY * h - chipSizePx / 2f
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .size(ED_BUTTON_UNIT_DP * size)
-            .clip(CircleShape)
-            .background(accentColor.copy(alpha = 0.15f))
-            .border(2.dp, accentColor, CircleShape)
-            .pointerInput(canvasSize) {
-                detectDragGestures(
-                    onDragStart = {
-                        startPosX = currentPosX.value
-                        startPosY = currentPosY.value
-                        dragOffsetX = 0f
-                        dragOffsetY = 0f
-                    },
-                    onDrag = { change, drag ->
-                        change.consume()
-                        dragOffsetX += drag.x
-                        dragOffsetY += drag.y
-                        currentOnPositionChanged.value(
-                            (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
-                            (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
-                        )
-                    },
-                )
-            }
-    ) {
-        Text("●", color = accentColor, fontSize = 14.sp)
-    }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
-// Toolbar: add button + trackpoint toggle
+// Toolbar: add button
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -578,35 +582,22 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
             onClick     = { showButtonDialog = true },
             modifier    = Modifier.weight(1f),
         )
-
-        // Trackpoint toggle
-        val trackpointLabel = if (profile.hasTrackpoint)
-            stringResource(R.string.macropad_editor_remove_trackpoint)
-        else
-            stringResource(R.string.macropad_editor_add_trackpoint)
-
-        EditorActionChip(
-            label       = trackpointLabel,
-            icon        = Icons.Filled.Add,
-            accentColor = if (profile.hasTrackpoint) ED_TEXT_SECONDARY else accentColor,
-            onClick     = {
-                MacroPadState.updateProfile(profile.copy(hasTrackpoint = !profile.hasTrackpoint))
-            },
-            modifier    = Modifier.weight(1f),
-        )
     }
 
     if (showButtonDialog) {
         ButtonEditDialog(
-            button      = null,  // null = new button
-            accentColor = accentColor,
-            onConfirm   = { newBtn ->
+            button         = null,  // null = new button
+            accentColor    = accentColor,
+            enableKeyboard = profile.enableKeyboard,
+            enableGamepad  = profile.enableGamepad,
+            enableMouse    = profile.enableMouse,
+            onConfirm      = { newBtn ->
                 MacroPadState.updateProfile(
                     profile.copy(buttons = profile.buttons + newBtn)
                 )
                 showButtonDialog = false
             },
-            onDismiss   = { showButtonDialog = false },
+            onDismiss      = { showButtonDialog = false },
         )
     }
 }
@@ -651,14 +642,17 @@ private fun ButtonList(profile: PadProfile, accentColor: Color) {
         }
         profile.buttons.forEach { btn ->
             ButtonListItem(
-                btn         = btn,
-                accentColor = accentColor,
-                onUpdate    = { updated ->
+                btn            = btn,
+                accentColor    = accentColor,
+                enableKeyboard = profile.enableKeyboard,
+                enableGamepad  = profile.enableGamepad,
+                enableMouse    = profile.enableMouse,
+                onUpdate       = { updated ->
                     MacroPadState.updateProfile(
                         profile.copy(buttons = profile.buttons.map { if (it.id == btn.id) updated else it })
                     )
                 },
-                onDelete    = {
+                onDelete       = {
                     MacroPadState.updateProfile(
                         profile.copy(buttons = profile.buttons.filter { it.id != btn.id })
                     )
@@ -671,13 +665,18 @@ private fun ButtonList(profile: PadProfile, accentColor: Color) {
 
 @Composable
 private fun ButtonListItem(
-    btn:         PadButton,
-    accentColor: Color,
-    onUpdate:    (PadButton) -> Unit,
-    onDelete:    () -> Unit,
+    btn:            PadButton,
+    accentColor:    Color,
+    enableKeyboard: Boolean,
+    enableGamepad:  Boolean,
+    enableMouse:    Boolean,
+    onUpdate:       (PadButton) -> Unit,
+    onDelete:       () -> Unit,
 ) {
     var showEdit    by remember { mutableStateOf(false) }
     var showDelete  by remember { mutableStateOf(false) }
+
+    val isTrackpoint = btn.action is PadAction.TrackpointMove
 
     Row(
         modifier = Modifier
@@ -687,7 +686,7 @@ private fun ButtonListItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Shape indicator
-        val chipShape = if (btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(4.dp)
+        val chipShape = if (isTrackpoint || btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(4.dp)
         Box(
             modifier = Modifier
                 .size(32.dp)
@@ -696,14 +695,28 @@ private fun ButtonListItem(
                 .border(1.dp, accentColor, chipShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text(btn.label.take(2), color = ED_TEXT, fontSize = 10.sp)
+            if (isTrackpoint) {
+                Text("●", color = ED_TEXT, fontSize = 10.sp)
+            } else {
+                Text(btn.label.take(2), color = ED_TEXT, fontSize = 10.sp)
+            }
         }
 
         Spacer(Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(btn.label, color = ED_TEXT, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(btn.action.displayLabel(), color = ED_TEXT_SECONDARY, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (isTrackpoint) {
+                val sizeLabel = when ((btn.action as PadAction.TrackpointMove).size) {
+                    TrackpointSize.SMALL  -> stringResource(R.string.macropad_trackpoint_size_small)
+                    TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
+                    TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
+                }
+                Text(stringResource(R.string.macropad_action_trackpoint), color = ED_TEXT, fontSize = 14.sp, maxLines = 1)
+                Text(sizeLabel, color = ED_TEXT_SECONDARY, fontSize = 12.sp, maxLines = 1)
+            } else {
+                Text(btn.label, color = ED_TEXT, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.action.displayLabel(), color = ED_TEXT_SECONDARY, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
 
         IconButton(onClick = { showDelete = true }) {
@@ -713,10 +726,13 @@ private fun ButtonListItem(
 
     if (showEdit) {
         ButtonEditDialog(
-            button      = btn,
-            accentColor = accentColor,
-            onConfirm   = { onUpdate(it); showEdit = false },
-            onDismiss   = { showEdit = false },
+            button         = btn,
+            accentColor    = accentColor,
+            enableKeyboard = enableKeyboard,
+            enableGamepad  = enableGamepad,
+            enableMouse    = enableMouse,
+            onConfirm      = { onUpdate(it); showEdit = false },
+            onDismiss      = { showEdit = false },
         )
     }
 
@@ -725,7 +741,12 @@ private fun ButtonListItem(
             containerColor   = ED_SURFACE,
             onDismissRequest = { showDelete = false },
             title   = { Text(stringResource(R.string.macropad_editor_delete_button), color = ED_TEXT) },
-            text    = { Text(btn.label, color = ED_TEXT_SECONDARY) },
+            text    = {
+                Text(
+                    if (isTrackpoint) stringResource(R.string.macropad_action_trackpoint) else btn.label,
+                    color = ED_TEXT_SECONDARY,
+                )
+            },
             confirmButton = {
                 TextButton(onClick = { onDelete(); showDelete = false }) {
                     Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
@@ -746,10 +767,13 @@ private fun ButtonListItem(
 
 @Composable
 private fun ButtonEditDialog(
-    button:      PadButton?,    // null → create new
-    accentColor: Color,
-    onConfirm:   (PadButton) -> Unit,
-    onDismiss:   () -> Unit,
+    button:         PadButton?,    // null → create new
+    accentColor:    Color,
+    enableKeyboard: Boolean = true,
+    enableGamepad:  Boolean = true,
+    enableMouse:    Boolean = true,
+    onConfirm:      (PadButton) -> Unit,
+    onDismiss:      () -> Unit,
 ) {
     var label         by remember { mutableStateOf(button?.label ?: "") }
     var buttonShape   by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
@@ -757,14 +781,19 @@ private fun ButtonEditDialog(
     var showSizeMenu  by remember { mutableStateOf(false) }
     var action        by remember { mutableStateOf(button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")) }
 
-    // When the action changes to ScrollWheel, force SIZE_1X2 and clear label
     fun onActionChanged(newAction: PadAction) {
         action = newAction
         if (newAction is PadAction.ScrollWheel) {
             buttonSize = ButtonSize.SIZE_1X2
             label = ""
         }
+        if (newAction is PadAction.TrackpointMove) {
+            label = ""
+            buttonShape = ButtonShape.CIRCLE
+        }
     }
+
+    val isConfirmEnabled = label.isNotBlank() || action is PadAction.ScrollWheel || action is PadAction.TrackpointMove
 
     AlertDialog(
         containerColor   = ED_SURFACE,
@@ -772,6 +801,7 @@ private fun ButtonEditDialog(
         title = {
             Text(
                 text  = if (button == null) stringResource(R.string.macropad_editor_add_button)
+                        else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
                         else button.label,
                 color = ED_TEXT,
             )
@@ -781,8 +811,8 @@ private fun ButtonEditDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Label input (hidden for ScrollWheel)
-                if (action !is PadAction.ScrollWheel) {
+                // Label input and shape — hidden for ScrollWheel and TrackpointMove
+                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
                     OutlinedTextField(
                         value         = label,
                         onValueChange = { label = it },
@@ -797,7 +827,6 @@ private fun ButtonEditDialog(
                         ),
                     )
 
-                    // Button shape selector (hidden for ScrollWheel)
                     SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ButtonShape.entries.forEach { shape ->
@@ -829,14 +858,48 @@ private fun ButtonEditDialog(
                     }
                 }
 
-                // Button size dropdown — locked to 1×2 for ScrollWheel
-                SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
+                // Size section — TrackpointSize picker for trackpoint, locked label for ScrollWheel, dropdown otherwise
+                SectionLabel(
+                    text = if (action is PadAction.TrackpointMove)
+                        stringResource(R.string.macropad_editor_trackpoint_size)
+                    else
+                        stringResource(R.string.macropad_editor_button_size),
+                    accentColor = accentColor,
+                )
                 if (action is PadAction.ScrollWheel) {
                     Text(
                         text     = ButtonSize.SIZE_1X2.displayLabel(),
                         color    = ED_TEXT_SECONDARY,
                         fontSize = 14.sp,
                     )
+                } else if (action is PadAction.TrackpointMove) {
+                    val tpAction = action as PadAction.TrackpointMove
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TrackpointSize.entries.forEach { sz ->
+                            val selected = sz == tpAction.size
+                            val szLabel = when (sz) {
+                                TrackpointSize.SMALL  -> stringResource(R.string.macropad_trackpoint_size_small)
+                                TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
+                                TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
+                            }
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else ED_SURFACE)
+                                    .border(
+                                        width = if (selected) 2.dp else 1.dp,
+                                        color = if (selected) accentColor else ED_BORDER,
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .clickable { action = PadAction.TrackpointMove(sz) }
+                                    .padding(vertical = 10.dp),
+                            ) {
+                                Text(szLabel, color = if (selected) accentColor else ED_TEXT_SECONDARY, fontSize = 12.sp)
+                            }
+                        }
+                    }
                 } else {
                     Box {
                         Row(
@@ -874,16 +937,19 @@ private fun ButtonEditDialog(
                 // Action picker
                 SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
                 ActionPicker(
-                    current     = action,
-                    accentColor = accentColor,
-                    onChange    = ::onActionChanged,
+                    current        = action,
+                    accentColor    = accentColor,
+                    enableKeyboard = enableKeyboard,
+                    enableGamepad  = enableGamepad,
+                    enableMouse    = enableMouse,
+                    onChange       = ::onActionChanged,
                 )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (label.isNotBlank() || action is PadAction.ScrollWheel) {
+                    if (isConfirmEnabled) {
                         val result = button?.copy(
                             label       = label,
                             buttonShape = buttonShape,
@@ -901,9 +967,9 @@ private fun ButtonEditDialog(
                         onConfirm(result)
                     }
                 },
-                enabled = label.isNotBlank() || action is PadAction.ScrollWheel,
+                enabled = isConfirmEnabled,
             ) {
-                Text(stringResource(R.string.macropad_editor_done), color = if (label.isNotBlank() || action is PadAction.ScrollWheel) accentColor else ED_TEXT_SECONDARY)
+                Text(stringResource(R.string.macropad_editor_done), color = if (isConfirmEnabled) accentColor else ED_TEXT_SECONDARY)
             }
         },
         dismissButton = {
@@ -920,9 +986,12 @@ private fun ButtonEditDialog(
 
 @Composable
 private fun ActionPicker(
-    current:     PadAction,
-    accentColor: Color,
-    onChange:    (PadAction) -> Unit,
+    current:        PadAction,
+    accentColor:    Color,
+    enableKeyboard: Boolean = true,
+    enableGamepad:  Boolean = true,
+    enableMouse:    Boolean = true,
+    onChange:       (PadAction) -> Unit,
 ) {
     // Action category selection
     var categoryExpanded by remember { mutableStateOf(false) }
@@ -950,13 +1019,22 @@ private fun ActionPicker(
             modifier         = Modifier.background(ED_SURFACE),
         ) {
             ActionCategory.entries.forEach { cat ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(cat.labelResId()), color = ED_TEXT, fontSize = 14.sp) },
-                    onClick = {
-                        categoryExpanded = false
-                        onChange(cat.defaultAction())
-                    },
-                )
+                val catEnabled = when (cat) {
+                    ActionCategory.KEYBOARD_KEY   -> enableKeyboard
+                    ActionCategory.GAMEPAD_BUTTON -> enableGamepad
+                    ActionCategory.MOUSE_BUTTON,
+                    ActionCategory.SCROLL_WHEEL,
+                    ActionCategory.TRACKPOINT     -> enableMouse
+                }
+                if (catEnabled) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(cat.labelResId()), color = ED_TEXT, fontSize = 14.sp) },
+                        onClick = {
+                            categoryExpanded = false
+                            onChange(cat.defaultAction())
+                        },
+                    )
+                }
             }
         }
 
@@ -1153,7 +1231,7 @@ private fun ActionCategory.defaultAction(): PadAction = when (this) {
     ActionCategory.GAMEPAD_BUTTON -> PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
     ActionCategory.MOUSE_BUTTON   -> PadAction.MouseButton(MouseButton.LEFT)
     ActionCategory.SCROLL_WHEEL   -> PadAction.ScrollWheel
-    ActionCategory.TRACKPOINT     -> PadAction.TrackpointMove
+    ActionCategory.TRACKPOINT     -> PadAction.TrackpointMove()
 }
 
 private fun PadAction.categoryResId(): Int = when (this) {

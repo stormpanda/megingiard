@@ -22,6 +22,17 @@ enum class ButtonSize(val cols: Int, val rows: Int) {
     SIZE_2X2(2, 2),
 }
 
+/**
+ * Visual size of a trackpoint button.
+ * The [multiplier] is applied to the base button unit (MP_BUTTON_UNIT_DP / ED_BUTTON_UNIT_DP)
+ * to derive the rendered circle diameter.
+ */
+enum class TrackpointSize(val multiplier: Float) {
+    SMALL(1.5f),
+    MEDIUM(2.0f),
+    LARGE(3.0f),
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Mouse button enum — used by PadAction.MouseButton
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,10 +82,14 @@ sealed class PadAction {
     /**
      * Marks this element as a relative-mouse trackpoint area.
      * No key injection; drag deltas are forwarded to MouseInjector.moveMouse().
+     * [size] controls the rendered circle diameter; defaults to MEDIUM for JSON back-compat
+     * with old profiles that stored this as a bare `data object` with no body.
      */
     @Serializable
     @SerialName("trackpoint")
-    data object TrackpointMove : PadAction()
+    data class TrackpointMove(
+        val size: TrackpointSize = TrackpointSize.MEDIUM,
+    ) : PadAction()
 
     // ── Legacy: retained for JSON back-compat only ─────────────────────────
     // Old profiles saved these types before MouseButton was introduced.
@@ -123,21 +138,24 @@ data class PadButton(
  * @param id               Stable unique identifier (UUID string).
  * @param name             User-visible profile name.
  * @param buttons          All buttons placed on this pad.
- * @param hasTrackpoint    Whether a trackpoint area is shown on the pad.
- * @param trackpointPosX   Trackpoint centre X, normalised [0.0, 1.0].
- * @param trackpointPosY   Trackpoint centre Y, normalised [0.0, 1.0].
- * @param trackpointSize   Trackpoint size weight relative to the default button unit.
+ * @param enableKeyboard   Whether the keyboard virtual device (keyinjector_arm64) is active for this profile.
+ * @param enableGamepad    Whether the gamepad virtual device (gamepadinjector_arm64) is active for this profile.
+ * @param enableMouse      Whether the mouse virtual device (mouseinjector_arm64) is active for this profile.
  */
 @Serializable
 data class PadProfile(
     val id: String,
     val name: String,
     val buttons: List<PadButton> = emptyList(),
-    val hasTrackpoint: Boolean = false,
-    val trackpointPosX: Float = 0.5f,
-    val trackpointPosY: Float = 0.5f,
-    val trackpointSize: Float = 2f,
+    val enableKeyboard: Boolean = true,
+    val enableGamepad: Boolean = true,
+    val enableMouse: Boolean = true,
     // Legacy fields — kept for JSON deserialization of existing profiles; ignored at runtime.
+    // Profiles with hasTrackpoint=true are migrated to a TrackpointMove button in MacroPadState.loadFrom().
+    @Suppress("unused") val hasTrackpoint: Boolean = false,
+    @Suppress("unused") val trackpointPosX: Float = 0.5f,
+    @Suppress("unused") val trackpointPosY: Float = 0.5f,
+    @Suppress("unused") val trackpointSize: Float = 2f,
     @Suppress("unused") val padShape: PadShape = PadShape.SQUARE,
     @Suppress("unused") val padSizePercent: Int = 80,
 )

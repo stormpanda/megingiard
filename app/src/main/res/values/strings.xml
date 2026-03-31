@@ -108,8 +108,14 @@ Open Settings to create a layout.</string>
     <string name="macropad_button_size_2x1">2×1</string>
     <string name="macropad_button_size_1x2">1×2</string>
     <string name="macropad_button_size_2x2">2×2</string>
-    <string name="macropad_editor_add_trackpoint">Add Trackpoint</string>
-    <string name="macropad_editor_remove_trackpoint">Remove Trackpoint</string>
+    <string name="macropad_editor_trackpoint_size">Trackpoint size</string>
+    <string name="macropad_trackpoint_size_small">Small</string>
+    <string name="macropad_trackpoint_size_medium">Medium</string>
+    <string name="macropad_trackpoint_size_large">Large</string>
+    <string name="macropad_editor_devices">Simulated Devices</string>
+    <string name="macropad_editor_device_keyboard">Keyboard</string>
+    <string name="macropad_editor_device_gamepad">Gamepad</string>
+    <string name="macropad_editor_device_mouse">Mouse</string>
     <string name="macropad_editor_new_profile_name">New Profile</string>
     <string name="macropad_editor_rename">Rename</string>
     <string name="macropad_editor_delete_profile">Delete Profile</string>
