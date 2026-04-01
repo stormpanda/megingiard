@@ -28,11 +28,25 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - **HELD:** activated by holding the modifier key for ≥ 300 ms; the modifier remains active until the finger is lifted from the key.
 - Any non-modifier key injection while a modifier is STICKY MUST automatically release all STICKY modifiers after the key is injected.
 
-### FR-K3: Integrated Trackpoint
+### FR-K3: Integrated Trackpoint — Mouse Mode
 
 - When enabled in Settings, the keyboard MUST render a **trackpoint key** (accent-colored dot `●`) in the home row.
-- Touching the trackpoint and moving the finger MUST translate relative delta movements into mouse cursor movement on the primary display.
-- The trackpoint MUST reuse the shared `input/` injection infrastructure (`TouchInjector`) for cursor movement.
+- Touching the trackpoint and moving the finger MUST translate relative delta movements into mouse cursor movement on the primary display via `MouseInjector` from the shared `input/` package.
+- Movement sensitivity is configurable and controlled by a multiplier applied to the raw Compose delta values.
+
+### FR-K6: Virtual Mouse Button Overlay
+
+- While the trackpoint is actively touched, the keyboard MUST show a semi-transparent **mouse button overlay** alongside the trackpoint area.
+- The overlay MUST contain the following buttons:
+  - **LMB** (left mouse button, 1×2 pill)
+  - **MMB** (middle mouse button, 1×1 circle)
+  - **RMB** (right mouse button, 1×2 pill)
+  - **M4** / **M5** (extra mouse buttons 4 and 5, 1×1 circles) above and below the scroll wheel
+  - **Scroll Wheel** (1×2 pill, vertical drag accumulates and sends scroll events)
+- The overlay MUST disappear as soon as the user lifts all fingers from the trackpoint.
+- The horizontal placement of the button column (left edge, right edge, or both) MUST be configurable via a **Button Position** setting.
+- When placed on the **right** side, the layout is mirrored so LMB/MMB/RMB remain at the outer edge and the scroll column (M4/ScrollWheel/M5) is inward.
+- Button events MUST be consumed at `PointerEventPass.Initial` so they do not accidentally close the overlay.
 
 ### FR-K4: Key Repeat
 
@@ -69,7 +83,7 @@ keyinjector_arm64     ← native process
 /dev/uinput           ← Linux virtual input device
 ```
 
-Trackpoint movement is delegated to `TouchInjector` from the shared `input/` package, reusing the same coordinate transform and native binary (`touchinjector_arm64`) that the Virtual Touchpad uses.
+Trackpoint movement is delegated to `MouseInjector` from the shared `input/` package, which drives `ShellMouseInjector` → `mouseinjector_arm64` for relative cursor movement. The virtual mouse button overlay (LMB / MMB / RMB / M4 / M5 / scroll wheel) also calls `MouseInjector` directly.
 
 ### Native Binary: Deployment & Lifecycle
 
@@ -187,16 +201,16 @@ When the `CarouselOverlay` is visible:
 
 ### Source Files
 
-| File                             | Responsibility                                                                          |
-| -------------------------------- | --------------------------------------------------------------------------------------- |
+| File                             | Responsibility                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------- |
 | `KeyboardScreen.kt`              | Compose UI: layout rendering, gesture handling, modifier highlighting, trackpoint overlay |
-| `KeyboardState.kt`               | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key                 |
-| `KeyboardLayout.kt`              | `KeyDef` data class; QWERTZ / QWERTY / AZERTY layout definitions                       |
-| `KeyInjector.kt`                 | Public facade: `start()` / `stop()` / `keyDown()` / `keyUp()` / `keyTap()`             |
-| `ShellKeyInjector.kt`            | Native binary lifecycle; `LinkedBlockingQueue` writer thread; stdin protocol            |
-| `KeyAction.kt`                   | Shared `DOWN / UP` enum for key injection                                               |
-| `LinuxKeycodes.kt`               | Linux `input-event-codes.h` constants (A–Z, 0–9, F1–F12, modifiers, navigation)        |
-| `keyinjector.c`                  | C source for the native binary (see `docs/BUILD_NATIVE.md`)                            |
-| `keyinjector_arm64`              | Pre-built ARM64 binary asset (`app/src/main/assets/`)                                  |
-| `../input/TouchInjector.kt`      | Shared trackpoint cursor movement (reused from Virtual Touchpad)                        |
-| `../input/ShellInputInjector.kt` | Shared touch injection infrastructure (reused by trackpoint cursor movement)            |
+| `KeyboardState.kt`               | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key                    |
+| `KeyboardLayout.kt`              | `KeyDef` data class; QWERTZ / QWERTY / AZERTY layout definitions                          |
+| `KeyInjector.kt`                 | Public facade: `start()` / `stop()` / `keyDown()` / `keyUp()` / `keyTap()`                |
+| `ShellKeyInjector.kt`            | Native binary lifecycle; `LinkedBlockingQueue` writer thread; stdin protocol              |
+| `KeyAction.kt`                   | Shared `DOWN / UP` enum for key injection                                                 |
+| `LinuxKeycodes.kt`               | Linux `input-event-codes.h` constants (A–Z, 0–9, F1–F12, modifiers, navigation)           |
+| `keyinjector.c`                  | C source for the native binary (see `docs/BUILD_NATIVE.md`)                               |
+| `keyinjector_arm64`              | Pre-built ARM64 binary asset (`app/src/main/assets/`)                                     |
+| `../input/TouchInjector.kt`      | Shared trackpoint cursor movement (reused from Virtual Touchpad)                          |
+| `../input/ShellInputInjector.kt` | Shared touch injection infrastructure (reused by trackpoint cursor movement)              |

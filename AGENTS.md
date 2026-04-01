@@ -60,7 +60,9 @@ com.stormpanda.megingiard
 ├── input/
 │ ├── ShellInputInjector.kt # Native binary lifecycle, writer thread, MOVE coalescing (shared)
 │ ├── TouchAction.kt # Shared DOWN/MOVE/UP enum
-│ └── TouchInjector.kt # Normalised → physical coordinate transform facade (shared)
+│ ├── TouchInjector.kt # Normalised → physical coordinate transform facade (shared)
+│ ├── MouseInjector.kt # Public facade over ShellMouseInjector (shared)
+│ └── ShellMouseInjector.kt # Native binary lifecycle + MOVE-coalescing writer thread (shared)
 ├── keyboard/
 │ ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
 │ ├── KeyboardState.kt # Modifier key state machine (INACTIVE/STICKY/HELD)
@@ -82,9 +84,7 @@ com.stormpanda.megingiard
 │ ├── MacroPadLayout.kt # Serializable data model: PadProfile, PadButton, PadAction
 │ ├── GamepadInjector.kt # Public facade over ShellGamepadInjector
 │ ├── ShellGamepadInjector.kt # Native binary lifecycle + writer thread for gamepad injection
-│ ├── GamepadKeycodes.kt # Linux BTN\_\* constants + preset list
-│ ├── MouseInjector.kt # Public facade over ShellMouseInjector
-│ └── ShellMouseInjector.kt # Native binary lifecycle + MOVE-coalescing writer thread
+│ └── GamepadKeycodes.kt # Linux BTN\_ constants + preset list
 ├── touchpad/
 │ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
 └── ui/

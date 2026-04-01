@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.macropad
+package com.stormpanda.megingiard.input
 
 import android.content.Context
 import android.util.Log
