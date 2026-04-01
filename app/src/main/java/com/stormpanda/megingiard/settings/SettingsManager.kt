@@ -18,6 +18,7 @@ import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -79,6 +80,7 @@ object SettingsManager {
     private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
     // Keyboard trackpoint input method
     private val KEY_KB_TRACKPOINT_USE_MOUSE = booleanPreferencesKey("kb_trackpoint_use_mouse")
+    private val KEY_KB_MOUSE_BTN_POS = stringPreferencesKey("kb_mouse_btn_pos")
 
     // Touchpad settings
     private val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
@@ -136,6 +138,10 @@ object SettingsManager {
     // Keyboard trackpoint input method: true = mouse (default), false = touch
     private val _kbTrackpointUseMouse = MutableStateFlow(true)
     val kbTrackpointUseMouse: StateFlow<Boolean> = _kbTrackpointUseMouse.asStateFlow()
+
+    // Keyboard trackpoint mouse button position
+    private val _kbMouseBtnPos = MutableStateFlow(KbMouseBtnPos.LEFT)
+    val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = _kbMouseBtnPos.asStateFlow()
 
     // Touchpad input method: false = touch (default), true = mouse
     private val _touchpadUseMouse = MutableStateFlow(false)
@@ -203,6 +209,7 @@ object SettingsManager {
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
                 _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
                 _kbTrackpointUseMouse.value = prefs[KEY_KB_TRACKPOINT_USE_MOUSE] ?: true
+                _kbMouseBtnPos.value = KbMouseBtnPos.entries.firstOrNull { it.name == prefs[KEY_KB_MOUSE_BTN_POS] } ?: KbMouseBtnPos.LEFT
                 _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
@@ -372,6 +379,11 @@ object SettingsManager {
     fun setKbTrackpointUseMouse(value: Boolean) {
         _kbTrackpointUseMouse.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_USE_MOUSE] = value } }
+    }
+
+    fun setKbMouseBtnPos(value: KbMouseBtnPos) {
+        _kbMouseBtnPos.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
     }
 
     fun setTouchpadUseMouse(value: Boolean) {

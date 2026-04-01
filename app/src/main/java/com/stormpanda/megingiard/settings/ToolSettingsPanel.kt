@@ -49,6 +49,7 @@ import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadToolSettings
 
@@ -77,6 +78,7 @@ fun ToolSettingsPanel(
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
     val kbTrackpointUseMouse by SettingsManager.kbTrackpointUseMouse.collectAsState()
+    val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
     val touchpadUseMouse by SettingsManager.touchpadUseMouse.collectAsState()
     val touchpadTapToClick by SettingsManager.touchpadTapToClick.collectAsState()
     val touchpadTwoFingerTap by SettingsManager.touchpadTwoFingerTap.collectAsState()
@@ -171,6 +173,8 @@ fun ToolSettingsPanel(
                         onKbTrackpointEnabledChanged = { SettingsManager.setKbTrackpointEnabled(it) },
                         kbTrackpointUseMouse = kbTrackpointUseMouse,
                         onKbTrackpointUseMouseChanged = { SettingsManager.setKbTrackpointUseMouse(it) },
+                        kbMouseBtnPos = kbMouseBtnPos,
+                        onKbMouseBtnPosChanged = { SettingsManager.setKbMouseBtnPos(it) },
                         kbRepeatEnabled = kbRepeatEnabled,
                         onKbRepeatEnabledChanged = { SettingsManager.setKbRepeatEnabled(it) },
                         kbFullscreen = kbFullscreen,
@@ -358,6 +362,8 @@ private fun KeyboardToolSettings(
     onKbTrackpointEnabledChanged: (Boolean) -> Unit,
     kbTrackpointUseMouse: Boolean,
     onKbTrackpointUseMouseChanged: (Boolean) -> Unit,
+    kbMouseBtnPos: KbMouseBtnPos,
+    onKbMouseBtnPosChanged: (KbMouseBtnPos) -> Unit,
     kbRepeatEnabled: Boolean,
     onKbRepeatEnabledChanged: (Boolean) -> Unit,
     kbFullscreen: Boolean,
@@ -385,6 +391,13 @@ private fun KeyboardToolSettings(
                 onUseMouseChanged = onKbTrackpointUseMouseChanged,
                 accentColor = accentColor
             )
+            if (kbTrackpointUseMouse) {
+                MouseBtnPosDropdownRow(
+                    currentPos = kbMouseBtnPos,
+                    onPosSelected = onKbMouseBtnPosChanged,
+                    accentColor = accentColor,
+                )
+            }
         }
         RememberSettingRow(
             label = stringResource(R.string.settings_kb_repeat),
@@ -471,6 +484,76 @@ private fun KbLayout.labelResId(): Int = when (this) {
     KbLayout.QWERTZ -> R.string.settings_kb_layout_qwertz
     KbLayout.QWERTY -> R.string.settings_kb_layout_qwerty
     KbLayout.AZERTY -> R.string.settings_kb_layout_azerty
+}
+
+private fun KbMouseBtnPos.labelResId(): Int = when (this) {
+    KbMouseBtnPos.LEFT  -> R.string.kb_mouse_btn_pos_left
+    KbMouseBtnPos.RIGHT -> R.string.kb_mouse_btn_pos_right
+    KbMouseBtnPos.BOTH  -> R.string.kb_mouse_btn_pos_both
+}
+
+@Composable
+private fun MouseBtnPosDropdownRow(
+    currentPos: KbMouseBtnPos,
+    onPosSelected: (KbMouseBtnPos) -> Unit,
+    accentColor: Color,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_kb_mouse_btn_pos),
+                color = PANEL_TEXT,
+                fontSize = 14.sp
+            )
+            Text(
+                text = stringResource(R.string.settings_kb_mouse_btn_pos_desc),
+                color = PANEL_TEXT_SECONDARY,
+                fontSize = 12.sp
+            )
+        }
+        Box {
+            Row(
+                modifier = Modifier
+                    .clickable { expanded = true }
+                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(currentPos.labelResId()),
+                    color = PANEL_TEXT,
+                    fontSize = 14.sp
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = PANEL_TEXT_SECONDARY,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(PANEL_BG)
+            ) {
+                KbMouseBtnPos.entries.forEach { pos ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(pos.labelResId()),
+                                color = if (pos == currentPos) accentColor else PANEL_TEXT,
+                                fontSize = 14.sp
+                            )
+                        },
+                        onClick = { onPosSelected(pos); expanded = false }
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

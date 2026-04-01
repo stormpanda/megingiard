@@ -77,11 +77,16 @@ private const val KB_REPEAT_INTERVAL_MS = 30L
 private const val KB_MODIFIER_HOLD_MS = 300L
 private const val KB_TRACKPOINT_SENSITIVITY = 4f
 private val   KB_IME_BOTTOM_PADDING              = 56.dp
-// Trackpoint mouse mode
-private const val KB_TRACKPOINT_MOUSE_SENSITIVITY = 3f
-private val   KB_MOUSE_BTN_WIDTH                  = 80.dp
-private val   KB_MOUSE_BTN_HEIGHT                 = 44.dp
-private val   KB_MOUSE_BTN_CORNER                 = 6.dp
+// Trackpoint mouse mode — buttons match MacroPad SIZE_1X2 style
+private const val KB_TRACKPOINT_MOUSE_SENSITIVITY  = 3f
+private val   KB_MOUSE_BTN_W                       = 60.dp   // MacroPad MP_BUTTON_UNIT_DP × 1
+private val   KB_MOUSE_BTN_H                       = 120.dp  // MacroPad MP_BUTTON_UNIT_DP × 2
+private val   KB_MOUSE_BTN_SHAPE                   = RoundedCornerShape(percent = 50)
+private val   KB_MOUSE_BTN_GAP                     = 8.dp
+private const val KB_MOUSE_BTN_NORMAL_ALPHA         = 0.25f
+private const val KB_MOUSE_BTN_PRESSED_ALPHA        = 0.80f
+private const val KB_MOUSE_BTN_PRESS_ANIM_MS        = 80
+private const val KB_MOUSE_BTN_RELEASE_ANIM_MS      = 160
 
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
@@ -92,6 +97,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
     val kbTrackpointUseMouse by SettingsManager.kbTrackpointUseMouse.collectAsState()
+    val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
     val kbTrackpointUseMouseState = rememberUpdatedState(kbTrackpointUseMouse)
@@ -217,10 +223,16 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                         forChanges@ for (change in event.changes) {
                             val pid = change.id
 
-                            // Trackpoint pointers: delta-based movement
+                            // Trackpoint pointers are handled unconditionally — their Release
+                            // must always fire, regardless of whether a child consumed the event.
+                            // IMPORTANT: dispatch on per-pointer pressed state, NOT event.type.
+                            // event.type == Release fires when *any* finger lifts; in a multi-touch
+                            // scenario (e.g. mouse button finger releasing while trackpoint is still
+                            // held) the still-held trackpoint pointer would otherwise be treated as
+                            // released and close the overlay prematurely.
                             if (pid in trackpointPointers) {
-                                when (event.type) {
-                                    PointerEventType.Move -> {
+                                when {
+                                    change.pressed && event.type == PointerEventType.Move -> {
                                         val delta = change.positionChange()
                                         if (kbTrackpointUseMouseState.value) {
                                             val dx = (delta.x * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
@@ -234,7 +246,8 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                         }
                                         change.consume()
                                     }
-                                    PointerEventType.Release -> {
+                                    !change.pressed && change.previousPressed -> {
+                                        // This specific pointer was released (not just some other finger)
                                         trackpointPointers -= pid
                                         pointerKeyMap.remove(pid)
                                         if (trackpointPointers.isEmpty()) trackpointVisible = false
@@ -243,10 +256,13 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                         }
                                         change.consume()
                                     }
-                                    else -> Unit
                                 }
                                 continue@forChanges
                             }
+
+                            // Non-trackpoint events consumed by a child (e.g. mouse button press)
+                            // are skipped so they never trigger key presses or other side-effects.
+                            if (change.isConsumed) continue@forChanges
 
                             // Convert pointer position to root space for hit testing
                             val rootPos = boxCoords.localToRoot(change.position)
@@ -433,23 +449,28 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                 // so they disappear from composition (and stop intercepting events) as soon
                 // as the user lifts all fingers from the trackpoint.
                 if (kbTrackpointUseMouse && trackpointVisible) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        MouseButton(
-                            label = stringResource(R.string.kb_mouse_btn_left),
+                    if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                        MouseButtonColumn(
                             accentColor = accentColor,
-                            onDown = { MouseInjector.leftDown() },
-                            onUp   = { MouseInjector.leftUp() },
+                            onLmbDown = { MouseInjector.leftDown() },
+                            onLmbUp = { MouseInjector.leftUp() },
+                            onRmbDown = { MouseInjector.rightDown() },
+                            onRmbUp = { MouseInjector.rightUp() },
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(start = 8.dp),
                         )
-                        MouseButton(
-                            label = stringResource(R.string.kb_mouse_btn_right),
+                    }
+                    if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                        MouseButtonColumn(
                             accentColor = accentColor,
-                            onDown = { MouseInjector.rightDown() },
-                            onUp   = { MouseInjector.rightUp() },
+                            onLmbDown = { MouseInjector.leftDown() },
+                            onLmbUp = { MouseInjector.leftUp() },
+                            onRmbDown = { MouseInjector.rightDown() },
+                            onRmbUp = { MouseInjector.rightUp() },
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 8.dp),
                         )
                     }
                 }
@@ -459,12 +480,46 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
 }
 
 // ---------------------------------------------------------------------------
-// Mouse button composable (inside trackpoint overlay)
+// Mouse button composables (inside trackpoint overlay)
 // ---------------------------------------------------------------------------
 
 /**
- * A pressable button that calls [onDown] on touch press and [onUp] on release.
- * Pointer events are consumed so they don't propagate to the outer keyboard handler.
+ * A vertical 1×2 block of LMB + RMB buttons placed at a configurable edge of the
+ * trackpoint overlay. Events are consumed in the Initial pass so the outer keyboard
+ * handler (Main pass) never sees them and cannot accidentally close the overlay.
+ */
+@Composable
+private fun MouseButtonColumn(
+    accentColor: Color,
+    onLmbDown: () -> Unit,
+    onLmbUp: () -> Unit,
+    onRmbDown: () -> Unit,
+    onRmbUp: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(KB_MOUSE_BTN_GAP),
+    ) {
+        MouseButton(
+            label = stringResource(R.string.kb_mouse_btn_left),
+            accentColor = accentColor,
+            onDown = onLmbDown,
+            onUp = onLmbUp,
+        )
+        MouseButton(
+            label = stringResource(R.string.kb_mouse_btn_right),
+            accentColor = accentColor,
+            onDown = onRmbDown,
+            onUp = onRmbUp,
+        )
+    }
+}
+
+/**
+ * A single pressable mouse button. Pointer events are consumed using
+ * [PointerEventPass.Initial] so they are handled before the outer keyboard
+ * [PointerEventPass.Main] handler, preventing accidental overlay closure.
  */
 @Composable
 private fun MouseButton(
@@ -474,26 +529,48 @@ private fun MouseButton(
     onUp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var pressed by remember { mutableStateOf(false) }
+    val alpha by animateFloatAsState(
+        targetValue = if (pressed) KB_MOUSE_BTN_PRESSED_ALPHA else KB_MOUSE_BTN_NORMAL_ALPHA,
+        animationSpec = tween(if (pressed) KB_MOUSE_BTN_PRESS_ANIM_MS else KB_MOUSE_BTN_RELEASE_ANIM_MS),
+        label = "mouseBtnAlpha",
+    )
     Box(
         modifier = modifier
-            .size(KB_MOUSE_BTN_WIDTH, KB_MOUSE_BTN_HEIGHT)
-            .clip(RoundedCornerShape(KB_MOUSE_BTN_CORNER))
-            .background(Color.White.copy(alpha = 0.12f))
-            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(KB_MOUSE_BTN_CORNER))
+            .size(KB_MOUSE_BTN_W, KB_MOUSE_BTN_H)
+            .clip(KB_MOUSE_BTN_SHAPE)
+            .background(accentColor.copy(alpha = alpha))
+            .border(1.dp, accentColor, KB_MOUSE_BTN_SHAPE)
             .pointerInput(Unit) {
                 awaitPointerEventScope {
+                    // Only consume events for pointers that *started* within this button.
+                    // Pointers originating outside (e.g. the trackpoint finger) are ignored
+                    // so the outer handler can still close the overlay on trackpoint release.
+                    val activePids = mutableSetOf<PointerId>()
                     while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
                         for (change in event.changes) {
-                            when {
-                                event.type == PointerEventType.Press && !change.previousPressed -> {
-                                    onDown()
-                                    change.consume()
+                            val pid = change.id
+                            when (event.type) {
+                                PointerEventType.Press -> if (!change.previousPressed) {
+                                    if (change.position.x in 0f..size.width.toFloat() &&
+                                        change.position.y in 0f..size.height.toFloat()) {
+                                        activePids += pid
+                                        pressed = true
+                                        onDown()
+                                        change.consume()
+                                    }
                                 }
-                                event.type == PointerEventType.Release && !change.pressed -> {
+                                PointerEventType.Release -> if (!change.pressed && pid in activePids) {
+                                    activePids -= pid
+                                    if (activePids.isEmpty()) pressed = false
                                     onUp()
                                     change.consume()
                                 }
+                                PointerEventType.Move -> if (pid in activePids) {
+                                    change.consume()
+                                }
+                                else -> Unit
                             }
                         }
                     }
@@ -503,9 +580,8 @@ private fun MouseButton(
     ) {
         Text(
             text = label,
-            color = accentColor,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            fontSize = 11.sp,
         )
     }
 }

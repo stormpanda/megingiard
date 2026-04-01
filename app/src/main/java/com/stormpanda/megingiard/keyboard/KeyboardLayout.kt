@@ -104,6 +104,8 @@ enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
 
 enum class KbLayout { QWERTZ, QWERTY, AZERTY }
 
+enum class KbMouseBtnPos { LEFT, RIGHT, BOTH }
+
 // ---------------------------------------------------------------------------
 // Layout factories
 // ---------------------------------------------------------------------------
