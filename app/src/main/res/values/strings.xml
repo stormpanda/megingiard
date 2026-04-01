@@ -130,7 +130,10 @@ Open Settings to create a layout.</string>
 
     <!-- Keyboard trackpoint virtual mouse buttons -->
     <string name="kb_mouse_btn_left">LMB</string>
+    <string name="kb_mouse_btn_middle">MMB</string>
     <string name="kb_mouse_btn_right">RMB</string>
+    <string name="kb_mouse_btn_4">M4</string>
+    <string name="kb_mouse_btn_5">M5</string>
     <!-- Keyboard trackpoint mouse button position setting -->
     <string name="settings_kb_mouse_btn_pos">Button-Position</string>
     <string name="settings_kb_mouse_btn_pos_desc">Wo die LMB/RMB-Tasten erscheinen</string>
