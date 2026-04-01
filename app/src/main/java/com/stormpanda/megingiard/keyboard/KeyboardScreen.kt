@@ -47,8 +47,6 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.input.TouchAction
-import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -75,7 +73,6 @@ private const val KB_TRACKPOINT_FADE_MS = 200
 private const val KB_REPEAT_INITIAL_DELAY_MS = 500L
 private const val KB_REPEAT_INTERVAL_MS = 30L
 private const val KB_MODIFIER_HOLD_MS = 300L
-private const val KB_TRACKPOINT_SENSITIVITY = 4f
 private val   KB_IME_BOTTOM_PADDING              = 56.dp
 // Trackpoint mouse mode — buttons match MacroPad SIZE_1X2 style
 private const val KB_TRACKPOINT_MOUSE_SENSITIVITY  = 3f
@@ -96,11 +93,9 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
-    val kbTrackpointUseMouse by SettingsManager.kbTrackpointUseMouse.collectAsState()
     val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
-    val kbTrackpointUseMouseState = rememberUpdatedState(kbTrackpointUseMouse)
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -119,7 +114,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
         AppStateManager.overlayVisible.first { !it }
         withContext(Dispatchers.IO) {
             KeyInjector.start(context)
-            TouchInjector.start(context)
             MouseInjector.start(context)
         }
     }
@@ -127,7 +121,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     DisposableEffect(Unit) {
         onDispose {
             KeyInjector.stop()
-            TouchInjector.stop()
             MouseInjector.stop()
             KeyboardState.reset()
         }
@@ -151,8 +144,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     var trackpointVisible by remember { mutableStateOf(false) }
     var heldKey by remember { mutableStateOf<KeyDef?>(null) }
     var modifierBeingHeld by remember { mutableStateOf<KeyDef?>(null) }
-    var trackpointX by remember { mutableStateOf(0.5f) }
-    var trackpointY by remember { mutableStateOf(0.5f) }
 
     // Per-pointer tracking (mutableMapOf is not state; it's mutated inside pointerInput)
     val pointerKeyMap = remember { mutableMapOf<PointerId, String>() }
@@ -234,16 +225,9 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                 when {
                                     change.pressed && event.type == PointerEventType.Move -> {
                                         val delta = change.positionChange()
-                                        if (kbTrackpointUseMouseState.value) {
-                                            val dx = (delta.x * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
-                                            val dy = (delta.y * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
-                                            if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
-                                        } else {
-                                            val scaleFactor = KB_TRACKPOINT_SENSITIVITY / size.width.coerceAtLeast(1)
-                                            trackpointX = (trackpointX + delta.x * scaleFactor).coerceIn(0f, 1f)
-                                            trackpointY = (trackpointY + delta.y * scaleFactor).coerceIn(0f, 1f)
-                                            TouchInjector.injectTouch(TouchAction.MOVE, trackpointX, trackpointY)
-                                        }
+                                        val dx = (delta.x * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
+                                        val dy = (delta.y * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
+                                        if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
                                         change.consume()
                                     }
                                     !change.pressed && change.previousPressed -> {
@@ -251,9 +235,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                         trackpointPointers -= pid
                                         pointerKeyMap.remove(pid)
                                         if (trackpointPointers.isEmpty()) trackpointVisible = false
-                                        if (!kbTrackpointUseMouseState.value) {
-                                            TouchInjector.injectTouch(TouchAction.UP, trackpointX, trackpointY)
-                                        }
                                         change.consume()
                                     }
                                 }
@@ -301,13 +282,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                             trackpointPointers += pid
                                             pointerKeyMap[pid] = id
                                             trackpointVisible = true
-                                            if (kbTrackpointUseMouseState.value) {
-                                                // Mouse mode: no absolute DOWN; cursor position is persistent
-                                            } else {
-                                                trackpointX = 0.5f
-                                                trackpointY = 0.5f
-                                                TouchInjector.injectTouch(TouchAction.DOWN, 0.5f, 0.5f)
-                                            }
                                         }
                                     }
                                     change.consume()
@@ -448,7 +422,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                 // Virtual mouse buttons: only rendered while trackpoint is actively touched
                 // so they disappear from composition (and stop intercepting events) as soon
                 // as the user lifts all fingers from the trackpoint.
-                if (kbTrackpointUseMouse && trackpointVisible) {
+                if (trackpointVisible) {
                     if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
                         MouseButtonColumn(
                             accentColor = accentColor,

@@ -78,8 +78,6 @@ object SettingsManager {
     private val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
     private val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
     private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
-    // Keyboard trackpoint input method
-    private val KEY_KB_TRACKPOINT_USE_MOUSE = booleanPreferencesKey("kb_trackpoint_use_mouse")
     private val KEY_KB_MOUSE_BTN_POS = stringPreferencesKey("kb_mouse_btn_pos")
 
     // Touchpad settings
@@ -134,10 +132,6 @@ object SettingsManager {
     // false = bottom padding for IME (default); true = fullscreen, no padding
     private val _kbFullscreen = MutableStateFlow(false)
     val kbFullscreen: StateFlow<Boolean> = _kbFullscreen.asStateFlow()
-
-    // Keyboard trackpoint input method: true = mouse (default), false = touch
-    private val _kbTrackpointUseMouse = MutableStateFlow(true)
-    val kbTrackpointUseMouse: StateFlow<Boolean> = _kbTrackpointUseMouse.asStateFlow()
 
     // Keyboard trackpoint mouse button position
     private val _kbMouseBtnPos = MutableStateFlow(KbMouseBtnPos.LEFT)
@@ -208,7 +202,6 @@ object SettingsManager {
                 _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
                 _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
-                _kbTrackpointUseMouse.value = prefs[KEY_KB_TRACKPOINT_USE_MOUSE] ?: true
                 _kbMouseBtnPos.value = KbMouseBtnPos.entries.firstOrNull { it.name == prefs[KEY_KB_MOUSE_BTN_POS] } ?: KbMouseBtnPos.LEFT
                 _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
@@ -374,11 +367,6 @@ object SettingsManager {
     fun setKbFullscreen(value: Boolean) {
         _kbFullscreen.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
-    }
-
-    fun setKbTrackpointUseMouse(value: Boolean) {
-        _kbTrackpointUseMouse.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_USE_MOUSE] = value } }
     }
 
     fun setKbMouseBtnPos(value: KbMouseBtnPos) {

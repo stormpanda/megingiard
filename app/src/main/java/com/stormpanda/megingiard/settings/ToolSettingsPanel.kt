@@ -77,7 +77,6 @@ fun ToolSettingsPanel(
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
-    val kbTrackpointUseMouse by SettingsManager.kbTrackpointUseMouse.collectAsState()
     val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
     val touchpadUseMouse by SettingsManager.touchpadUseMouse.collectAsState()
     val touchpadTapToClick by SettingsManager.touchpadTapToClick.collectAsState()
@@ -171,8 +170,6 @@ fun ToolSettingsPanel(
                         onKbLayoutChanged = { SettingsManager.setKbLayout(it) },
                         kbTrackpointEnabled = kbTrackpointEnabled,
                         onKbTrackpointEnabledChanged = { SettingsManager.setKbTrackpointEnabled(it) },
-                        kbTrackpointUseMouse = kbTrackpointUseMouse,
-                        onKbTrackpointUseMouseChanged = { SettingsManager.setKbTrackpointUseMouse(it) },
                         kbMouseBtnPos = kbMouseBtnPos,
                         onKbMouseBtnPosChanged = { SettingsManager.setKbMouseBtnPos(it) },
                         kbRepeatEnabled = kbRepeatEnabled,
@@ -360,8 +357,6 @@ private fun KeyboardToolSettings(
     onKbLayoutChanged: (KbLayout) -> Unit,
     kbTrackpointEnabled: Boolean,
     onKbTrackpointEnabledChanged: (Boolean) -> Unit,
-    kbTrackpointUseMouse: Boolean,
-    onKbTrackpointUseMouseChanged: (Boolean) -> Unit,
     kbMouseBtnPos: KbMouseBtnPos,
     onKbMouseBtnPosChanged: (KbMouseBtnPos) -> Unit,
     kbRepeatEnabled: Boolean,
@@ -384,20 +379,11 @@ private fun KeyboardToolSettings(
             accentColor = accentColor,
         )
         if (kbTrackpointEnabled) {
-            InputMethodRow(
-                label = stringResource(R.string.settings_input_method),
-                description = stringResource(R.string.settings_input_method_desc),
-                useMouse = kbTrackpointUseMouse,
-                onUseMouseChanged = onKbTrackpointUseMouseChanged,
-                accentColor = accentColor
+            MouseBtnPosDropdownRow(
+                currentPos = kbMouseBtnPos,
+                onPosSelected = onKbMouseBtnPosChanged,
+                accentColor = accentColor,
             )
-            if (kbTrackpointUseMouse) {
-                MouseBtnPosDropdownRow(
-                    currentPos = kbMouseBtnPos,
-                    onPosSelected = onKbMouseBtnPosChanged,
-                    accentColor = accentColor,
-                )
-            }
         }
         RememberSettingRow(
             label = stringResource(R.string.settings_kb_repeat),
