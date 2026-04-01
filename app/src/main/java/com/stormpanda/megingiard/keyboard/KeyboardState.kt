@@ -55,15 +55,15 @@ object KeyboardState {
      * Called when a modifier key finger lifts.
      *
      * Decision logic:
-     * - If currently [ModifierState.HELD] → release (set [ModifierState.INACTIVE])
-     * - If currently [ModifierState.STICKY] → second tap = release: set [ModifierState.INACTIVE]
-     * - If currently [ModifierState.INACTIVE] and duration < threshold → set [ModifierState.STICKY]
-     * - If currently [ModifierState.INACTIVE] and duration >= threshold → set [ModifierState.INACTIVE]
-     *   (HELD was already activated by a long-press; caller released while still HELD — treat
-     *    as release so caller injects KEY_UP via [heldKeycodes])
+     * - If currently [ModifierState.HELD] → set [ModifierState.INACTIVE], return keycode to inject KEY_UP
+     * - If currently [ModifierState.STICKY] → second tap cycles back to [ModifierState.INACTIVE],
+     *   return keycode to inject KEY_UP
+     * - If currently [ModifierState.INACTIVE] and duration < threshold → set [ModifierState.STICKY],
+     *   return empty list (key will be held until [releaseStickyModifiers] is called)
+     * - If currently [ModifierState.INACTIVE] and duration >= threshold → already handled by
+     *   [onModifierLongPress]; return empty list
      *
-     * Returns the list of keycodes that need a KEY_UP event injected right now
-     * (only for HELD modifiers being released).
+     * Returns the list of keycodes that need a KEY_UP event injected right now.
      */
     fun onModifierTouchUp(id: String, keycode: Int): List<Int> {
         val flow = getOrCreate(id)

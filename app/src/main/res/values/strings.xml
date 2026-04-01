@@ -31,6 +31,7 @@
     <string name="tool_name_media">Media</string>
     <string name="tool_name_touchpad">Touchpad</string>
     <string name="tool_name_keyboard">Keyboard</string>
+    <string name="tool_name_macropad">MacroPad</string>
     <string name="keyboard_placeholder">Keyboard coming soon…</string>
     <string name="cd_keyboard_key">Key %s</string>
     <string name="cd_keyboard_trackpoint">Trackpoint</string>
@@ -84,4 +85,68 @@
     <!-- General session -->
     <string name="settings_remember_last_tool">Remember last used tool</string>
     <string name="settings_remember_last_tool_desc">Restore the active tool when the app restarts</string>
+
+    <!-- MacroPad tool -->
+    <string name="macropad_no_profile">No profile configured.
+Open Settings to create a layout.</string>
+    <string name="macropad_open_settings">Open Settings</string>
+    <string name="cd_macropad_button">MacroPad button: %s</string>
+    <string name="cd_macropad_trackpoint">Trackpoint</string>
+
+    <!-- MacroPad editor -->
+    <string name="macropad_editor_title">Edit Layout</string>
+    <string name="macropad_editor_done">Done</string>
+    <string name="macropad_editor_add_button">Add Button</string>
+    <string name="macropad_editor_delete_button">Delete</string>
+    <string name="macropad_editor_button_label">Label</string>
+    <string name="macropad_editor_action">Action</string>
+    <string name="macropad_editor_button_shape">Button shape</string>
+    <string name="macropad_editor_shape_circle">Circle</string>
+    <string name="macropad_editor_shape_square">Square</string>
+    <string name="macropad_editor_button_size">Button size</string>
+    <string name="macropad_button_size_1x1">1×1</string>
+    <string name="macropad_button_size_2x1">2×1</string>
+    <string name="macropad_button_size_1x2">1×2</string>
+    <string name="macropad_button_size_2x2">2×2</string>
+    <string name="macropad_editor_trackpoint_size">Trackpoint size</string>
+    <string name="macropad_trackpoint_size_small">Small</string>
+    <string name="macropad_trackpoint_size_medium">Medium</string>
+    <string name="macropad_trackpoint_size_large">Large</string>
+    <string name="macropad_editor_devices">Simulated Devices</string>
+    <string name="macropad_editor_device_keyboard">Keyboard</string>
+    <string name="macropad_editor_device_gamepad">Gamepad</string>
+    <string name="macropad_editor_device_mouse">Mouse</string>
+    <string name="macropad_device_disabled_keyboard">Keyboard has been disabled for this layout</string>
+    <string name="macropad_device_disabled_gamepad">Gamepad has been disabled for this layout</string>
+    <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
+    <string name="macropad_editor_new_profile_name">New Profile</string>
+    <string name="macropad_editor_rename">Rename</string>
+    <string name="macropad_editor_delete_profile">Delete Profile</string>
+    <string name="macropad_editor_confirm_delete">Delete this profile?</string>
+    <string name="macropad_editor_cancel">Cancel</string>
+    <string name="macropad_editor_confirm">Delete</string>
+
+    <!-- MacroPad action picker labels -->
+    <string name="macropad_action_keyboard_key">Keyboard Key</string>
+    <string name="macropad_action_gamepad_button">Gamepad Button</string>
+    <string name="macropad_action_mouse_button">Mouse Button</string>
+    <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
+    <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
+
+    <!-- MacroPad settings (ToolSettingsPanel) -->
+    <string name="settings_macropad_profile">Active Profile</string>
+    <string name="settings_macropad_new_profile">New Profile…</string>
+    <string name="settings_macropad_pad_shape">Pad shape</string>
+    <string name="settings_macropad_shape_square">Square</string>
+    <string name="settings_macropad_shape_circle">Circle</string>
+    <string name="settings_macropad_pad_size">Pad size: %d%%</string>
+    <string name="settings_macropad_edit_layout">Edit Layout…</string>
+    <string name="settings_macropad_new_layout">New Layout</string>
+
+    <!-- MacroPad button action display labels (shown in editor button list) -->
+    <string name="macropad_display_keyboard_key">Key: %s</string>
+    <string name="macropad_display_gamepad_button">Gamepad: %s</string>
+    <string name="macropad_display_mouse_button">Mouse: %s</string>
+    <string name="macropad_display_scroll_wheel">Scroll Wheel</string>
+    <string name="macropad_display_trackpoint">Trackpoint</string>
 </resources>

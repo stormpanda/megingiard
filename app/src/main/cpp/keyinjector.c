@@ -11,7 +11,16 @@ static void write_event(int fd, __u16 type, __u16 code, __s32 value) {
     ev.type  = type;
     ev.code  = code;
     ev.value = value;
-    write(fd, &ev, sizeof(ev));
+    ssize_t written = write(fd, &ev, sizeof(ev));
+    if (written < 0) {
+        perror("write uinput event");
+        exit(EXIT_FAILURE);
+    }
+    if ((size_t)written != sizeof(ev)) {
+        fprintf(stderr, "short write to uinput: wrote %zd of %zu bytes\n",
+                written, sizeof(ev));
+        exit(EXIT_FAILURE);
+    }
 }
 
 int main(void) {
@@ -19,12 +28,12 @@ int main(void) {
     if (fd < 0) { perror("open /dev/uinput"); return 1; }
 
     // Register EV_KEY capability
-    ioctl(fd, UI_SET_EVBIT, EV_KEY);
-    ioctl(fd, UI_SET_EVBIT, EV_SYN);
+    if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) { perror("UI_SET_EVBIT EV_KEY"); return 1; }
+    if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) { perror("UI_SET_EVBIT EV_SYN"); return 1; }
 
     // Register all keycodes we will ever send (1–254 covers every standard key)
     for (int i = 1; i < 255; i++) {
-        ioctl(fd, UI_SET_KEYBIT, i);
+        if (ioctl(fd, UI_SET_KEYBIT, i) < 0) { perror("UI_SET_KEYBIT"); return 1; }
     }
 
     // Create the virtual device
@@ -35,8 +44,8 @@ int main(void) {
     usetup.id.product = 0x5678;
     strncpy(usetup.name, "Megingiard Virtual Keyboard", UINPUT_MAX_NAME_SIZE - 1);
 
-    ioctl(fd, UI_DEV_SETUP, &usetup);
-    ioctl(fd, UI_DEV_CREATE);
+    if (ioctl(fd, UI_DEV_SETUP, &usetup) < 0) { perror("UI_DEV_SETUP"); return 1; }
+    if (ioctl(fd, UI_DEV_CREATE) < 0)         { perror("UI_DEV_CREATE"); return 1; }
 
     // Signal readiness
     write(STDOUT_FILENO, "R\n", 2);

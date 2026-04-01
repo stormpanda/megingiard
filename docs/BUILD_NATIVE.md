@@ -156,12 +156,15 @@ sh build_keyinjector.sh
 Or manually:
 
 ```bash
-NDK=/opt/homebrew/Caskroom/android-ndk/29/AndroidNDK14206865.app/Contents/NDK
-TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/darwin-x86_64
+# Set ANDROID_NDK_HOME to your NDK installation, or export NDK instead.
+# Common HOST_TAG values: darwin-arm64, darwin-x86_64, linux-x86_64
+NDK_ROOT="${ANDROID_NDK_HOME:-${NDK:?Set ANDROID_NDK_HOME or NDK to your NDK root}}"
+HOST_TAG="${HOST_TAG:-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)}"
+TOOLCHAIN="$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG"
 
-$TOOLCHAIN/bin/aarch64-linux-android35-clang \
-    --sysroot=$TOOLCHAIN/sysroot \
-    --target=aarch64-linux-android35 \
+"$TOOLCHAIN/bin/aarch64-linux-android33-clang" \
+    --sysroot="$TOOLCHAIN/sysroot" \
+    --target=aarch64-linux-android33 \
     -static -O2 -s \
     -o app/src/main/assets/keyinjector_arm64 \
     app/src/main/cpp/keyinjector.c
@@ -183,3 +186,112 @@ device is created. On stdin EOF it destroys the virtual device and exits.
 | ----------- | ------------------------------- |
 | Device node | `/dev/uinput`                   |
 | Permissions | `crw-rw-rw-` (no root required) |
+
+---
+
+## Gamepad Injector (`gamepadinjector_arm64`)
+
+### Source
+
+`app/src/main/cpp/gamepadinjector.c`
+
+Creates a virtual gamepad via `/dev/uinput` that exposes face buttons (A/B/X/Y),
+shoulder buttons (L1/R1/L2/R2), thumbstick-click buttons (L3/R3), Start/Select/Guide,
+and a D-Pad (ABS_HAT0X / ABS_HAT0Y). Used by the MacroPad tool.
+
+### Compile
+
+```bash
+sh build_gamepadinjector.sh
+```
+
+Or manually (same NDK as above):
+
+```bash
+NDK=/opt/homebrew/Caskroom/android-ndk/29/AndroidNDK14206865.app/Contents/NDK
+TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/darwin-x86_64
+
+$TOOLCHAIN/bin/aarch64-linux-android35-clang \
+    --sysroot=$TOOLCHAIN/sysroot \
+    --target=aarch64-linux-android35 \
+    -static -O2 -s \
+    -o app/src/main/assets/gamepadinjector_arm64 \
+    app/src/main/cpp/gamepadinjector.c
+```
+
+### Binary protocol
+
+| Line sent to stdin    | Meaning                                                             |
+| --------------------- | ------------------------------------------------------------------- |
+| `GD <code>\n`         | Button DOWN — Linux BTN\_\* value (e.g. 304 = BTN_SOUTH / A)        |
+| `GU <code>\n`         | Button UP                                                           |
+| `HD <axis> <value>\n` | D-Pad hat: axis 0 = X (−1 left / +1 right), 1 = Y (−1 up / +1 down) |
+
+The binary signals readiness with `R\n` on stdout once the virtual device is created.
+On stdin EOF it destroys the virtual device and exits.
+
+### Registered button codes
+
+| Constant   | Value | Label        |
+| ---------- | ----- | ------------ |
+| BTN_SOUTH  | 304   | A / Cross    |
+| BTN_EAST   | 305   | B / Circle   |
+| BTN_NORTH  | 308   | Y / Triangle |
+| BTN_WEST   | 307   | X / Square   |
+| BTN_TL     | 310   | L1           |
+| BTN_TR     | 311   | R1           |
+| BTN_TL2    | 312   | L2           |
+| BTN_TR2    | 313   | R2           |
+| BTN_THUMBL | 317   | L3           |
+| BTN_THUMBR | 318   | R3           |
+| BTN_START  | 315   | Start        |
+| BTN_SELECT | 314   | Select       |
+| BTN_MODE   | 316   | Guide / Home |
+
+---
+
+## Mouse Injector (`mouseinjector_arm64`)
+
+### Source
+
+`app/src/main/cpp/mouseinjector.c`
+
+Creates a virtual mouse via `/dev/uinput` that exposes BTN_LEFT/RIGHT/MIDDLE and
+relative axes REL_X, REL_Y, REL_WHEEL. Used by the MacroPad tool for mouse-click
+buttons and the relative-movement trackpoint.
+
+### Compile
+
+```bash
+sh build_mouseinjector.sh
+```
+
+Or manually:
+
+```bash
+NDK=/opt/homebrew/Caskroom/android-ndk/29/AndroidNDK14206865.app/Contents/NDK
+TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/darwin-x86_64
+
+$TOOLCHAIN/bin/aarch64-linux-android35-clang \
+    --sysroot=$TOOLCHAIN/sysroot \
+    --target=aarch64-linux-android35 \
+    -static -O2 -s \
+    -o app/src/main/assets/mouseinjector_arm64 \
+    app/src/main/cpp/mouseinjector.c
+```
+
+### Binary protocol
+
+| Line sent to stdin | Meaning                                      |
+| ------------------ | -------------------------------------------- |
+| `MB L D\n`         | Left button DOWN                             |
+| `MB L U\n`         | Left button UP                               |
+| `MB R D\n`         | Right button DOWN                            |
+| `MB R U\n`         | Right button UP                              |
+| `MB M D\n`         | Middle button DOWN                           |
+| `MB M U\n`         | Middle button UP                             |
+| `MM <dx> <dy>\n`   | Relative pointer move (integer pixel deltas) |
+| `MW <delta>\n`     | Scroll wheel (positive = up)                 |
+
+The binary signals readiness with `R\n` on stdout once the virtual device is created.
+On stdin EOF it destroys the virtual device and exits.

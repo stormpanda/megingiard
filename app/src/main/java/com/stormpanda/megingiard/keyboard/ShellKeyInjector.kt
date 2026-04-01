@@ -6,6 +6,7 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 /**
  * Injects keyboard events by piping commands to the native `keyinjector_arm64`
@@ -27,8 +28,9 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 object ShellKeyInjector {
 
-    private const val TAG          = "ShellKeyInjector"
-    private const val BINARY_ASSET = "keyinjector_arm64"
+    private const val TAG                   = "ShellKeyInjector"
+    private const val BINARY_ASSET          = "keyinjector_arm64"
+    private const val READY_TIMEOUT_SECONDS = 5L
 
     private data class KeyCommand(val action: KeyAction, val linuxKeycode: Int)
 
@@ -56,7 +58,20 @@ object ShellKeyInjector {
                 .start()
             process = p
             writer  = BufferedWriter(OutputStreamWriter(p.outputStream))
-            val ready = p.inputStream.bufferedReader().readLine()
+            // Read the readiness signal with a bounded timeout so a binary that
+            // never prints "R" doesn't hang the caller indefinitely.
+            val reader = p.inputStream.bufferedReader()
+            val readyFuture = java.util.concurrent.Executors.newSingleThreadExecutor().submit<String?> {
+                try { reader.readLine() } catch (_: Exception) { null }
+            }
+            val ready = try {
+                readyFuture.get(READY_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            } catch (e: Exception) {
+                Log.e(TAG, "Timed out or failed waiting for key injector ready signal: $e")
+                readyFuture.cancel(true)
+                p.destroy()
+                return
+            }
             if (ready != "R") {
                 Log.e(TAG, "Unexpected ready signal: $ready")
                 p.destroy()
@@ -94,6 +109,11 @@ object ShellKeyInjector {
 
     fun injectKey(action: KeyAction, linuxKeycode: Int) {
         if (!running) return
+        // Native protocol only accepts keycodes 1–254; silently drop anything outside that range.
+        if (linuxKeycode !in 1..254) {
+            Log.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for action=$action")
+            return
+        }
         queue.offer(KeyCommand(action, linuxKeycode))
     }
 
