@@ -25,6 +25,7 @@
     <string name="cd_forward_10">Forward 10 seconds</string>
     <string name="cd_skip_next">Next track</string>
     <string name="touchpad_hint">Touch here to control the top screen</string>
+    <string name="touchpad_hint_mouse">Slide to move cursor · Tap to click</string>
 
     <!-- Tool display names -->
     <string name="tool_name_mirror">Mirror</string>
@@ -69,6 +70,14 @@
     <string name="settings_kb_repeat_desc">Hold a key to repeat it</string>
     <string name="settings_kb_fullscreen">Fullscreen keyboard</string>
     <string name="settings_kb_fullscreen_desc">No bottom gap — keyboard fills the entire screen</string>
+
+    <!-- Input method (touchpad + keyboard trackpoint) -->
+    <string name="settings_input_method">Mausmodus</string>
+    <string name="settings_input_method_desc">Mausbewegung statt Touch-Steuerung</string>
+    <string name="settings_tap_to_click">Tap to Click</string>
+    <string name="settings_tap_to_click_desc">Einzel-Tap = Linksklick</string>
+    <string name="settings_two_finger_tap">Zweifinger-Tap</string>
+    <string name="settings_two_finger_tap_desc">Zweifinger-Tap = Rechtsklick</string>
 
     <!-- Mirror touch projection -->
     <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>
@@ -118,6 +127,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_device_mouse">Mouse</string>
     <string name="macropad_device_disabled_keyboard">Keyboard has been disabled for this layout</string>
     <string name="macropad_device_disabled_gamepad">Gamepad has been disabled for this layout</string>
+
+    <!-- Keyboard trackpoint virtual mouse buttons -->
+    <string name="kb_mouse_btn_left">L</string>
+    <string name="kb_mouse_btn_right">R</string>
     <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
     <string name="macropad_editor_new_profile_name">New Profile</string>
     <string name="macropad_editor_rename">Rename</string>

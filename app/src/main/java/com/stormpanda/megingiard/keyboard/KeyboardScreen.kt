@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -45,9 +46,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -73,7 +76,12 @@ private const val KB_REPEAT_INITIAL_DELAY_MS = 500L
 private const val KB_REPEAT_INTERVAL_MS = 30L
 private const val KB_MODIFIER_HOLD_MS = 300L
 private const val KB_TRACKPOINT_SENSITIVITY = 4f
-private val KB_IME_BOTTOM_PADDING = 56.dp
+private val   KB_IME_BOTTOM_PADDING              = 56.dp
+// Trackpoint mouse mode
+private const val KB_TRACKPOINT_MOUSE_SENSITIVITY = 3f
+private val   KB_MOUSE_BTN_WIDTH                  = 80.dp
+private val   KB_MOUSE_BTN_HEIGHT                 = 44.dp
+private val   KB_MOUSE_BTN_CORNER                 = 6.dp
 
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
@@ -83,8 +91,10 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
+    val kbTrackpointUseMouse by SettingsManager.kbTrackpointUseMouse.collectAsState()
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
+    val kbTrackpointUseMouseState = rememberUpdatedState(kbTrackpointUseMouse)
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -104,6 +114,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
         withContext(Dispatchers.IO) {
             KeyInjector.start(context)
             TouchInjector.start(context)
+            MouseInjector.start(context)
         }
     }
 
@@ -111,6 +122,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
         onDispose {
             KeyInjector.stop()
             TouchInjector.stop()
+            MouseInjector.stop()
             KeyboardState.reset()
         }
     }
@@ -210,17 +222,25 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                 when (event.type) {
                                     PointerEventType.Move -> {
                                         val delta = change.positionChange()
-                                        val scaleFactor = KB_TRACKPOINT_SENSITIVITY / size.width.coerceAtLeast(1)
-                                        trackpointX = (trackpointX + delta.x * scaleFactor).coerceIn(0f, 1f)
-                                        trackpointY = (trackpointY + delta.y * scaleFactor).coerceIn(0f, 1f)
-                                        TouchInjector.injectTouch(TouchAction.MOVE, trackpointX, trackpointY)
+                                        if (kbTrackpointUseMouseState.value) {
+                                            val dx = (delta.x * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
+                                            val dy = (delta.y * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
+                                            if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
+                                        } else {
+                                            val scaleFactor = KB_TRACKPOINT_SENSITIVITY / size.width.coerceAtLeast(1)
+                                            trackpointX = (trackpointX + delta.x * scaleFactor).coerceIn(0f, 1f)
+                                            trackpointY = (trackpointY + delta.y * scaleFactor).coerceIn(0f, 1f)
+                                            TouchInjector.injectTouch(TouchAction.MOVE, trackpointX, trackpointY)
+                                        }
                                         change.consume()
                                     }
                                     PointerEventType.Release -> {
                                         trackpointPointers -= pid
                                         pointerKeyMap.remove(pid)
                                         if (trackpointPointers.isEmpty()) trackpointVisible = false
-                                        TouchInjector.injectTouch(TouchAction.UP, trackpointX, trackpointY)
+                                        if (!kbTrackpointUseMouseState.value) {
+                                            TouchInjector.injectTouch(TouchAction.UP, trackpointX, trackpointY)
+                                        }
                                         change.consume()
                                     }
                                     else -> Unit
@@ -264,10 +284,14 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                         KeyType.TRACKPOINT -> {
                                             trackpointPointers += pid
                                             pointerKeyMap[pid] = id
-                                            trackpointX = 0.5f
-                                            trackpointY = 0.5f
                                             trackpointVisible = true
-                                            TouchInjector.injectTouch(TouchAction.DOWN, 0.5f, 0.5f)
+                                            if (kbTrackpointUseMouseState.value) {
+                                                // Mouse mode: no absolute DOWN; cursor position is persistent
+                                            } else {
+                                                trackpointX = 0.5f
+                                                trackpointY = 0.5f
+                                                TouchInjector.injectTouch(TouchAction.DOWN, 0.5f, 0.5f)
+                                            }
                                         }
                                     }
                                     change.consume()
@@ -387,7 +411,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Trackpoint overlay — purely visual, no pointerInput; handled by outer Box
+        // Trackpoint overlay: mouse buttons own their pointerInput; outer Box handles trackpoint moves.
         if (trackpointAlpha > 0f) {
             Box(
                 modifier = Modifier
@@ -405,8 +429,84 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                 )
+                // Virtual mouse buttons: only rendered while trackpoint is actively touched
+                // so they disappear from composition (and stop intercepting events) as soon
+                // as the user lifts all fingers from the trackpoint.
+                if (kbTrackpointUseMouse && trackpointVisible) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        MouseButton(
+                            label = stringResource(R.string.kb_mouse_btn_left),
+                            accentColor = accentColor,
+                            onDown = { MouseInjector.leftDown() },
+                            onUp   = { MouseInjector.leftUp() },
+                        )
+                        MouseButton(
+                            label = stringResource(R.string.kb_mouse_btn_right),
+                            accentColor = accentColor,
+                            onDown = { MouseInjector.rightDown() },
+                            onUp   = { MouseInjector.rightUp() },
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mouse button composable (inside trackpoint overlay)
+// ---------------------------------------------------------------------------
+
+/**
+ * A pressable button that calls [onDown] on touch press and [onUp] on release.
+ * Pointer events are consumed so they don't propagate to the outer keyboard handler.
+ */
+@Composable
+private fun MouseButton(
+    label: String,
+    accentColor: Color,
+    onDown: () -> Unit,
+    onUp: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(KB_MOUSE_BTN_WIDTH, KB_MOUSE_BTN_HEIGHT)
+            .clip(RoundedCornerShape(KB_MOUSE_BTN_CORNER))
+            .background(Color.White.copy(alpha = 0.12f))
+            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(KB_MOUSE_BTN_CORNER))
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        for (change in event.changes) {
+                            when {
+                                event.type == PointerEventType.Press && !change.previousPressed -> {
+                                    onDown()
+                                    change.consume()
+                                }
+                                event.type == PointerEventType.Release && !change.pressed -> {
+                                    onUp()
+                                    change.consume()
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = accentColor,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

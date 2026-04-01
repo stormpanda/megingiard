@@ -76,6 +76,10 @@ fun ToolSettingsPanel(
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
+    val kbTrackpointUseMouse by SettingsManager.kbTrackpointUseMouse.collectAsState()
+    val touchpadUseMouse by SettingsManager.touchpadUseMouse.collectAsState()
+    val touchpadTapToClick by SettingsManager.touchpadTapToClick.collectAsState()
+    val touchpadTwoFingerTap by SettingsManager.touchpadTwoFingerTap.collectAsState()
     var showMacroPadEditor by remember { mutableStateOf(false) }
 
     // Dismiss on system back
@@ -144,18 +148,29 @@ fun ToolSettingsPanel(
                         pinchWhileProjecting = pinchWhileProjecting,
                         onPinchWhileProjectingChanged = { SettingsManager.setPinchWhileProjecting(it) }
                     )
-                    AppMode.MEDIA, AppMode.TOUCHPAD -> {
+                    AppMode.MEDIA -> {
                         Text(
                             text = stringResource(R.string.settings_no_tool_settings),
                             color = PANEL_TEXT_SECONDARY,
                             fontSize = 14.sp
                         )
                     }
+                    AppMode.TOUCHPAD -> TouchpadToolSettings(
+                        touchpadUseMouse = touchpadUseMouse,
+                        onTouchpadUseMouseChanged = { SettingsManager.setTouchpadUseMouse(it) },
+                        tapToClick = touchpadTapToClick,
+                        onTapToClickChanged = { SettingsManager.setTouchpadTapToClick(it) },
+                        twoFingerTap = touchpadTwoFingerTap,
+                        onTwoFingerTapChanged = { SettingsManager.setTouchpadTwoFingerTap(it) },
+                        accentColor = accentColor
+                    )
                     AppMode.KEYBOARD -> KeyboardToolSettings(
                         kbLayout = kbLayout,
                         onKbLayoutChanged = { SettingsManager.setKbLayout(it) },
                         kbTrackpointEnabled = kbTrackpointEnabled,
                         onKbTrackpointEnabledChanged = { SettingsManager.setKbTrackpointEnabled(it) },
+                        kbTrackpointUseMouse = kbTrackpointUseMouse,
+                        onKbTrackpointUseMouseChanged = { SettingsManager.setKbTrackpointUseMouse(it) },
                         kbRepeatEnabled = kbRepeatEnabled,
                         onKbRepeatEnabledChanged = { SettingsManager.setKbRepeatEnabled(it) },
                         kbFullscreen = kbFullscreen,
@@ -341,6 +356,8 @@ private fun KeyboardToolSettings(
     onKbLayoutChanged: (KbLayout) -> Unit,
     kbTrackpointEnabled: Boolean,
     onKbTrackpointEnabledChanged: (Boolean) -> Unit,
+    kbTrackpointUseMouse: Boolean,
+    onKbTrackpointUseMouseChanged: (Boolean) -> Unit,
     kbRepeatEnabled: Boolean,
     onKbRepeatEnabledChanged: (Boolean) -> Unit,
     kbFullscreen: Boolean,
@@ -360,6 +377,15 @@ private fun KeyboardToolSettings(
             onCheckedChange = onKbTrackpointEnabledChanged,
             accentColor = accentColor,
         )
+        if (kbTrackpointEnabled) {
+            InputMethodRow(
+                label = stringResource(R.string.settings_input_method),
+                description = stringResource(R.string.settings_input_method_desc),
+                useMouse = kbTrackpointUseMouse,
+                onUseMouseChanged = onKbTrackpointUseMouseChanged,
+                accentColor = accentColor
+            )
+        }
         RememberSettingRow(
             label = stringResource(R.string.settings_kb_repeat),
             description = stringResource(R.string.settings_kb_repeat_desc),
@@ -445,4 +471,69 @@ private fun KbLayout.labelResId(): Int = when (this) {
     KbLayout.QWERTZ -> R.string.settings_kb_layout_qwertz
     KbLayout.QWERTY -> R.string.settings_kb_layout_qwerty
     KbLayout.AZERTY -> R.string.settings_kb_layout_azerty
+}
+
+@Composable
+private fun TouchpadToolSettings(
+    touchpadUseMouse: Boolean,
+    onTouchpadUseMouseChanged: (Boolean) -> Unit,
+    tapToClick: Boolean,
+    onTapToClickChanged: (Boolean) -> Unit,
+    twoFingerTap: Boolean,
+    onTwoFingerTapChanged: (Boolean) -> Unit,
+    accentColor: Color,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        InputMethodRow(
+            label = stringResource(R.string.settings_input_method),
+            description = stringResource(R.string.settings_input_method_desc),
+            useMouse = touchpadUseMouse,
+            onUseMouseChanged = onTouchpadUseMouseChanged,
+            accentColor = accentColor
+        )
+        if (touchpadUseMouse) {
+            HorizontalDivider(color = PANEL_DIVIDER)
+            RememberSettingRow(
+                label = stringResource(R.string.settings_tap_to_click),
+                description = stringResource(R.string.settings_tap_to_click_desc),
+                checked = tapToClick,
+                onCheckedChange = onTapToClickChanged,
+                accentColor = accentColor
+            )
+            RememberSettingRow(
+                label = stringResource(R.string.settings_two_finger_tap),
+                description = stringResource(R.string.settings_two_finger_tap_desc),
+                checked = twoFingerTap,
+                onCheckedChange = onTwoFingerTapChanged,
+                accentColor = accentColor
+            )
+        }
+    }
+}
+
+@Composable
+private fun InputMethodRow(
+    label: String,
+    description: String,
+    useMouse: Boolean,
+    onUseMouseChanged: (Boolean) -> Unit,
+    accentColor: Color,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, color = PANEL_TEXT, fontSize = 14.sp)
+            Text(text = description, color = PANEL_TEXT_SECONDARY, fontSize = 12.sp)
+        }
+        Switch(
+            checked = useMouse,
+            onCheckedChange = onUseMouseChanged,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = accentColor
+            )
+        )
+    }
 }

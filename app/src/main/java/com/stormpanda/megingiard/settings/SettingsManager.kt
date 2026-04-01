@@ -77,6 +77,14 @@ object SettingsManager {
     private val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
     private val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
     private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
+    // Keyboard trackpoint input method
+    private val KEY_KB_TRACKPOINT_USE_MOUSE = booleanPreferencesKey("kb_trackpoint_use_mouse")
+
+    // Touchpad settings
+    private val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
+    private val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
+    private val KEY_TOUCHPAD_TWO_FINGER_TAP = booleanPreferencesKey("touchpad_two_finger_tap")
+
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
@@ -124,6 +132,22 @@ object SettingsManager {
     // false = bottom padding for IME (default); true = fullscreen, no padding
     private val _kbFullscreen = MutableStateFlow(false)
     val kbFullscreen: StateFlow<Boolean> = _kbFullscreen.asStateFlow()
+
+    // Keyboard trackpoint input method: true = mouse (default), false = touch
+    private val _kbTrackpointUseMouse = MutableStateFlow(true)
+    val kbTrackpointUseMouse: StateFlow<Boolean> = _kbTrackpointUseMouse.asStateFlow()
+
+    // Touchpad input method: false = touch (default), true = mouse
+    private val _touchpadUseMouse = MutableStateFlow(false)
+    val touchpadUseMouse: StateFlow<Boolean> = _touchpadUseMouse.asStateFlow()
+
+    // Tap-to-click — only active in touchpad mouse mode
+    private val _touchpadTapToClick = MutableStateFlow(true)
+    val touchpadTapToClick: StateFlow<Boolean> = _touchpadTapToClick.asStateFlow()
+
+    // Two-finger tap = right click — only active in touchpad mouse mode
+    private val _touchpadTwoFingerTap = MutableStateFlow(true)
+    val touchpadTwoFingerTap: StateFlow<Boolean> = _touchpadTwoFingerTap.asStateFlow()
 
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
@@ -178,6 +202,10 @@ object SettingsManager {
                 _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
                 _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
+                _kbTrackpointUseMouse.value = prefs[KEY_KB_TRACKPOINT_USE_MOUSE] ?: true
+                _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
+                _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
+                _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -339,6 +367,26 @@ object SettingsManager {
     fun setKbFullscreen(value: Boolean) {
         _kbFullscreen.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
+    }
+
+    fun setKbTrackpointUseMouse(value: Boolean) {
+        _kbTrackpointUseMouse.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_USE_MOUSE] = value } }
+    }
+
+    fun setTouchpadUseMouse(value: Boolean) {
+        _touchpadUseMouse.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_USE_MOUSE] = value } }
+    }
+
+    fun setTouchpadTapToClick(value: Boolean) {
+        _touchpadTapToClick.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TAP_TO_CLICK] = value } }
+    }
+
+    fun setTouchpadTwoFingerTap(value: Boolean) {
+        _touchpadTwoFingerTap.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
     }
 
     /**
