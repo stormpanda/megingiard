@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Display
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -56,6 +57,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Megingiard's window must never steal key focus from apps on the primary display.
+        // Without this flag, tapping any key on the virtual keyboard gives this window
+        // keyboard focus, so uinput key events are delivered here instead of the target app.
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         SettingsManager.init(this)
         enableEdgeToEdge()
         setContent {
