@@ -17,6 +17,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.ThemeMode
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -69,6 +70,9 @@ object SettingsManager {
     private val KEY_SAVED_OFFSET_X = floatPreferencesKey("mirror_saved_offset_x")
     private val KEY_SAVED_OFFSET_Y = floatPreferencesKey("mirror_saved_offset_y")
 
+    // Appearance
+    private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+
     // MacroPad settings
     private val KEY_MACROPAD_PROFILES           = stringPreferencesKey("macropad_profiles")
     private val KEY_MACROPAD_ACTIVE_PROFILE_ID  = stringPreferencesKey("macropad_active_profile_id")
@@ -111,6 +115,9 @@ object SettingsManager {
 
     private val _accentColor = MutableStateFlow(Color(DEFAULT_ACCENT_COLOR))
     val accentColor: StateFlow<Color> = _accentColor.asStateFlow()
+
+    private val _themeMode = MutableStateFlow(ThemeMode.DARK)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
     private val _overlayAtBottom = MutableStateFlow(false)
     val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
@@ -192,6 +199,7 @@ object SettingsManager {
                 _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
                 _overlayTimeoutMs.value = prefs[KEY_OVERLAY_TIMEOUT_MS] ?: DEFAULT_OVERLAY_TIMEOUT_MS
                 _accentColor.value = Color(prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR)
+                _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                 _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
                 _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
@@ -303,6 +311,11 @@ object SettingsManager {
                 prefs[KEY_ACCENT_COLOR] = color.toArgb()
             }
         }
+    }
+
+    fun setThemeMode(value: ThemeMode) {
+        _themeMode.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_THEME_MODE] = value.name } }
     }
 
     fun setOverlayAtBottom(value: Boolean) {

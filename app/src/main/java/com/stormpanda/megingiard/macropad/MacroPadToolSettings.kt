@@ -39,17 +39,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-
-private val MS_SURFACE         = Color(0xFF1C1C1E)
-private val MS_TEXT            = Color.White
-private val MS_TEXT_SECONDARY  = Color.White.copy(alpha = 0.6f)
-private val MS_DIVIDER         = Color.White.copy(alpha = 0.12f)
-private val MS_BORDER          = Color.White.copy(alpha = 0.20f)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -66,6 +61,7 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
     val profiles    by MacroPadState.profiles.collectAsState()
     val activeId    by MacroPadState.activeProfileId.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
+    val colors      = LocalAppColors.current
 
     val activeProfile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
 
@@ -74,7 +70,7 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
         if (profiles.isEmpty()) {
             Text(
                 text     = stringResource(R.string.macropad_no_profile),
-                color    = MS_TEXT_SECONDARY,
+                color    = colors.onSurfaceSecondary,
                 fontSize = 14.sp,
             )
             Spacer(Modifier.height(4.dp))
@@ -91,7 +87,7 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
             onSelect    = { MacroPadState.setActiveProfileId(it) },
         )
 
-        HorizontalDivider(color = MS_DIVIDER)
+        HorizontalDivider(color = colors.divider)
 
         // ── Layout action buttons ───────────────────────────────────────────
         LayoutActionButtons(accentColor = accentColor, onOpenEditor = onOpenEditor)
@@ -111,39 +107,40 @@ private fun ProfileDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
+    val colors = LocalAppColors.current
 
     Box {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, MS_BORDER, RoundedCornerShape(8.dp))
+                .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
                 .clickable { expanded = true }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text     = active?.name ?: "",
-                color    = MS_TEXT,
+                color    = colors.onSurface,
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = MS_TEXT_SECONDARY)
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
         }
 
         DropdownMenu(
             expanded         = expanded,
             onDismissRequest = { expanded = false },
-            modifier         = Modifier.background(MS_SURFACE),
+            modifier         = Modifier.background(colors.surface),
         ) {
             profiles.forEach { p ->
                 DropdownMenuItem(
                     text = {
                         Text(
                             text  = p.name,
-                            color = if (p.id == activeId) accentColor else MS_TEXT,
+                            color = if (p.id == activeId) accentColor else colors.onSurface,
                             fontSize = 14.sp,
                         )
                     },

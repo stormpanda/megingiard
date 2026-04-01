@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -38,6 +38,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.colorSchemeFor
+import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -131,23 +134,28 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = Color.Black
-                ) {
-                    if (!hasNotificationAccess) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(stringResource(R.string.notification_listener_required), color = Color.White)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(onClick = {
-                                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                                }) { Text(stringResource(R.string.grant_permission)) }
+            val themeMode by SettingsManager.themeMode.collectAsState()
+            val appColors = paletteFor(themeMode)
+
+            MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
+                CompositionLocalProvider(LocalAppColors provides appColors) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = appColors.appBackground
+                    ) {
+                        if (!hasNotificationAccess) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(stringResource(R.string.notification_listener_required), color = appColors.onSurface)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(onClick = {
+                                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                    }) { Text(stringResource(R.string.grant_permission)) }
+                                }
                             }
+                        } else {
+                            MainAppScreen()
                         }
-                    } else {
-                        MainAppScreen()
                     }
                 }
             }

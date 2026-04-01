@@ -6,6 +6,7 @@ This document provides a high-level overview of the system architecture and key 
 - **[Media Control](features/media/FEATURE.md#technical-implementation)** — `MediaSession` integration, scrubbing, progress polling
 - **[Virtual Touchpad](features/touchpad/FEATURE.md#technical-implementation)** — native binary, event injection, coordinate transformation
 - **[Virtual Keyboard](features/keyboard/FEATURE.md#technical-implementation)** — native binary, modifier state machine, key injection, layout system
+- **[App Theming](features/theming/FEATURE.md#technical-implementation)** — token-based `AppColors`, dark/light palettes, `LocalAppColors` CompositionLocal
 
 ---
 
@@ -42,3 +43,4 @@ In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the
 | `StateFlow` singletons for all shared state              | Decouples UI from services; mutable backing fields are always `private`; UI reads via read-only `StateFlow` | [AGENTS.md](../AGENTS.md#4-state-management)                                            |
 | `snapshotFlow` for animation sync                        | Avoids restarting `LaunchedEffect` on every animation frame; single-launch reactive collection              | [mirror/FEATURE.md](features/mirror/FEATURE.md#pan--zoom)                               |
 | `interactionTime` key in overlay `LaunchedEffect`        | Ensures the auto-hide timer resets correctly on every interaction, even when `showControls` doesn't toggle  | [AGENTS.md](../AGENTS.md#61-side-effects--launchedeffect)                               |
+| Token-based theming via `LocalAppColors`                 | 16 semantic `AppColors` tokens + `CompositionLocalProvider`; adding a new theme requires only a new palette | [theming/FEATURE.md](features/theming/FEATURE.md)                                       |

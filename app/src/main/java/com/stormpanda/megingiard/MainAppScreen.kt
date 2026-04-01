@@ -33,6 +33,7 @@ import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
+import com.stormpanda.megingiard.ui.LocalAppColors
 
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
@@ -43,6 +44,7 @@ fun MainAppScreen() {
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
     val accentColor by SettingsManager.accentColor.collectAsState()
+    val colors = LocalAppColors.current
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -106,7 +108,7 @@ fun MainAppScreen() {
                 AppMode.MIRROR -> {
                     val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
                     Box(
-                        modifier = Modifier.fillMaxSize().background(Color.Black),
+                        modifier = Modifier.fillMaxSize().background(colors.appBackground),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isValidScreen) {
@@ -130,7 +132,7 @@ fun MainAppScreen() {
                         } else {
                             Text(
                                 text = stringResource(R.string.mirror_wrong_screen),
-                                color = Color.White,
+                                color = colors.onSurface,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(32.dp)
                             )

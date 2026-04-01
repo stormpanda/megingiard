@@ -50,17 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.ThemeMode
 import kotlin.math.roundToInt
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-
-private val GS_BG = Color(0xFF121212)
-private val GS_SURFACE = Color(0xFF1C1C1E)
-private val GS_TEXT = Color.White
-private val GS_TEXT_SECONDARY = Color.White.copy(alpha = 0.6f)
-private val GS_DIVIDER = Color.White.copy(alpha = 0.08f)
-private val GS_TOP_BAR = Color(0xFF1C1C1E)
-private val GS_SURFACE_DRAGGING = Color(0xFF2C2C2E)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +65,8 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val accentColor by SettingsManager.accentColor.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val rememberLastTool by SettingsManager.rememberLastTool.collectAsState()
+    val themeMode by SettingsManager.themeMode.collectAsState()
+    val colors = LocalAppColors.current
 
     var showColorPicker by remember { mutableStateOf(false) }
 
@@ -96,7 +92,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(GS_BG)
+            .background(colors.appBackground)
     ) {
         Scaffold(
             containerColor = Color.Transparent,
@@ -105,7 +101,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     title = {
                         Text(
                             text = stringResource(R.string.settings_global_title),
-                            color = GS_TEXT
+                            color = colors.onSurface
                         )
                     },
                     navigationIcon = {
@@ -113,11 +109,11 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.settings_back),
-                                tint = GS_TEXT
+                                tint = colors.onSurface
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = GS_TOP_BAR)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
                 )
             }
         ) { paddingValues ->
@@ -131,7 +127,8 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 item {
                     SettingsCategoryHeader(
                         text = stringResource(R.string.settings_section_tools),
-                        accentColor = accentColor
+                        accentColor = accentColor,
+                        colors = colors
                     )
                 }
                 itemsIndexed(toolOrder, key = { _, tool -> tool.name }) { _, tool ->
@@ -143,6 +140,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             isDragging = isDragging,
                             canDisable = enabledTools.size > 1 || !isEnabled,
                             accentColor = accentColor,
+                            colors = colors,
                             onToggle = { checked ->
                                 val newEnabled = if (checked) enabledTools + tool else enabledTools - tool
                                 if (newEnabled.isNotEmpty()) SettingsManager.setEnabledTools(newEnabled)
@@ -150,7 +148,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             dragHandleModifier = Modifier.draggableHandle()
                         )
                         HorizontalDivider(
-                            color = GS_DIVIDER,
+                            color = colors.divider,
                             modifier = Modifier.padding(start = 56.dp)
                         )
                     }
@@ -160,36 +158,49 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 item {
                     SettingsCategoryHeader(
                         text = stringResource(R.string.settings_section_general),
-                        accentColor = accentColor
+                        accentColor = accentColor,
+                        colors = colors
                     )
                     OverlayTimeoutRow(
                         overlayTimeoutMs = overlayTimeoutMs,
                         accentColor = accentColor,
+                        colors = colors,
                         onTimeoutChanged = { SettingsManager.setOverlayTimeoutMs(it) }
                     )
-                    HorizontalDivider(color = GS_DIVIDER)
+                    HorizontalDivider(color = colors.divider)
                     OverlayPositionRow(
                         overlayAtBottom = overlayAtBottom,
                         accentColor = accentColor,
+                        colors = colors,
                         onChanged = { SettingsManager.setOverlayAtBottom(it) }
                     )
-                    HorizontalDivider(color = GS_DIVIDER)
+                    HorizontalDivider(color = colors.divider)
                     RememberLastToolRow(
                         rememberLastTool = rememberLastTool,
                         accentColor = accentColor,
+                        colors = colors,
                         onChanged = { SettingsManager.setRememberLastTool(it) }
                     )
-                    HorizontalDivider(color = GS_DIVIDER)
+                    HorizontalDivider(color = colors.divider)
                 }
 
                 // Appearance section
                 item {
                     SettingsCategoryHeader(
                         text = stringResource(R.string.settings_section_appearance),
-                        accentColor = accentColor
+                        accentColor = accentColor,
+                        colors = colors
                     )
+                    ThemeModeRow(
+                        themeMode = themeMode,
+                        accentColor = accentColor,
+                        colors = colors,
+                        onChanged = { SettingsManager.setThemeMode(it) }
+                    )
+                    HorizontalDivider(color = colors.divider)
                     AccentColorRow(
                         accentColor = accentColor,
+                        colors = colors,
                         onClick = { showColorPicker = true }
                     )
                 }
@@ -199,7 +210,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun SettingsCategoryHeader(text: String, accentColor: Color) {
+private fun SettingsCategoryHeader(text: String, accentColor: Color, colors: com.stormpanda.megingiard.ui.AppColors) {
     Text(
         text = text.uppercase(Locale.ROOT),
         color = accentColor,
@@ -207,7 +218,7 @@ private fun SettingsCategoryHeader(text: String, accentColor: Color) {
         letterSpacing = 1.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .background(GS_BG)
+            .background(colors.appBackground)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     )
 }
@@ -219,13 +230,14 @@ private fun ToolOrderRow(
     isDragging: Boolean,
     canDisable: Boolean,
     accentColor: Color,
+    colors: com.stormpanda.megingiard.ui.AppColors,
     onToggle: (Boolean) -> Unit,
     dragHandleModifier: Modifier
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (isDragging) GS_SURFACE_DRAGGING else GS_SURFACE)
+            .background(if (isDragging) colors.surfaceVariant else colors.surface)
             .padding(horizontal = 4.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -236,13 +248,13 @@ private fun ToolOrderRow(
             colors = CheckboxDefaults.colors(
                 checkedColor = accentColor,
                 checkmarkColor = Color.White,
-                uncheckedColor = GS_TEXT_SECONDARY,
+                uncheckedColor = colors.onSurfaceSecondary,
                 disabledCheckedColor = accentColor
             )
         )
         Text(
             text = stringResource(tool.displayNameResId()),
-            color = GS_TEXT,
+            color = colors.onSurface,
             fontSize = 14.sp,
             modifier = Modifier
                 .weight(1f)
@@ -251,7 +263,7 @@ private fun ToolOrderRow(
         Icon(
             imageVector = Icons.Filled.DragHandle,
             contentDescription = stringResource(R.string.cd_drag_reorder),
-            tint = GS_TEXT_SECONDARY,
+            tint = colors.onSurfaceSecondary,
             modifier = Modifier
                 .padding(12.dp)
                 .then(dragHandleModifier)
@@ -263,6 +275,7 @@ private fun ToolOrderRow(
 private fun OverlayTimeoutRow(
     overlayTimeoutMs: Long,
     accentColor: Color,
+    colors: com.stormpanda.megingiard.ui.AppColors,
     onTimeoutChanged: (Long) -> Unit
 ) {
     var sliderValue by remember { mutableFloatStateOf(overlayTimeoutMs.toFloat()) }
@@ -270,12 +283,12 @@ private fun OverlayTimeoutRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(GS_SURFACE)
+            .background(colors.surface)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
             text = stringResource(R.string.settings_overlay_timeout, seconds),
-            color = GS_TEXT,
+            color = colors.onSurface,
             fontSize = 14.sp
         )
         Slider(
@@ -299,18 +312,19 @@ private fun OverlayTimeoutRow(
 private fun OverlayPositionRow(
     overlayAtBottom: Boolean,
     accentColor: Color,
+    colors: com.stormpanda.megingiard.ui.AppColors,
     onChanged: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(GS_SURFACE)
+            .background(colors.surface)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = stringResource(R.string.settings_overlay_position),
-            color = GS_TEXT,
+            color = colors.onSurface,
             fontSize = 14.sp,
             modifier = Modifier.weight(1f)
         )
@@ -329,24 +343,25 @@ private fun OverlayPositionRow(
 private fun RememberLastToolRow(
     rememberLastTool: Boolean,
     accentColor: Color,
+    colors: com.stormpanda.megingiard.ui.AppColors,
     onChanged: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(GS_SURFACE)
+            .background(colors.surface)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.settings_remember_last_tool),
-                color = GS_TEXT,
+                color = colors.onSurface,
                 fontSize = 14.sp
             )
             Text(
                 text = stringResource(R.string.settings_remember_last_tool_desc),
-                color = GS_TEXT_SECONDARY,
+                color = colors.onSurfaceSecondary,
                 fontSize = 12.sp
             )
         }
@@ -362,18 +377,51 @@ private fun RememberLastToolRow(
 }
 
 @Composable
-private fun AccentColorRow(accentColor: Color, onClick: () -> Unit) {
+private fun ThemeModeRow(
+    themeMode: ThemeMode,
+    accentColor: Color,
+    colors: com.stormpanda.megingiard.ui.AppColors,
+    onChanged: (ThemeMode) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(GS_SURFACE)
+            .background(colors.surface)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.settings_theme_mode),
+            color = colors.onSurface,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = themeMode == ThemeMode.LIGHT,
+            onCheckedChange = { isLight ->
+                onChanged(if (isLight) ThemeMode.LIGHT else ThemeMode.DARK)
+            },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = accentColor
+            )
+        )
+    }
+}
+
+@Composable
+private fun AccentColorRow(accentColor: Color, colors: com.stormpanda.megingiard.ui.AppColors, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = stringResource(R.string.settings_accent_color),
-            color = GS_TEXT,
+            color = colors.onSurface,
             fontSize = 14.sp,
             modifier = Modifier.weight(1f)
         )
@@ -382,13 +430,13 @@ private fun AccentColorRow(accentColor: Color, onClick: () -> Unit) {
                 .size(28.dp)
                 .clip(CircleShape)
                 .background(accentColor)
-                .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                .border(1.dp, colors.accentBorder, CircleShape)
         )
         Spacer(modifier = Modifier.size(8.dp))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
-            tint = GS_TEXT_SECONDARY,
+            tint = colors.onSurfaceSecondary,
             modifier = Modifier.size(16.dp)
         )
     }

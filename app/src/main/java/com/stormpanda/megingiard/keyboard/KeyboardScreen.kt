@@ -56,6 +56,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -66,13 +67,6 @@ import kotlinx.coroutines.withContext
 // Layout constants
 // ---------------------------------------------------------------------------
 private const val F_ROW_HEIGHT_WEIGHT = 0.7f
-private val KB_BG = Color(0xFF1A1A1A)
-private val KEY_BG = Color(0xFF2C2C2E)
-private val KEY_BG_PRESSED = Color(0xFF48484A)
-private val KEY_BG_MODIFIER_ACTIVE = Color(0xFF3A3A3C)
-private val KEY_TEXT = Color.White
-private val KEY_TEXT_SECONDARY = Color.White.copy(alpha = 0.7f)
-private val KEY_BORDER = Color.White.copy(alpha = 0.08f)
 private val KEY_CORNER = 6.dp
 private val KEY_PADDING_H = 2.dp
 private val KEY_PADDING_V = 2.dp
@@ -106,6 +100,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
+    val colors = LocalAppColors.current
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -195,7 +190,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(KB_BG)
+            .background(colors.appBackground)
             .onGloballyPositioned { boxCoordsState.value = it }
             .pointerInput(layout) {
                 awaitPointerEventScope {
@@ -419,13 +414,13 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     .aspectRatio(16f / 9f)
                     .align(Alignment.Center)
                     .alpha(trackpointAlpha)
-                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(8.dp)),
+                    .background(colors.controlOverlay, RoundedCornerShape(8.dp))
+                    .border(1.dp, colors.onControlOverlay.copy(alpha = 0.18f), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = stringResource(R.string.cd_keyboard_trackpoint),
-                    color = Color.White.copy(alpha = 0.25f),
+                    color = colors.onControlOverlay.copy(alpha = 0.25f),
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                 )
@@ -746,10 +741,11 @@ private fun KeyCap(
     onBoundsUpdate: (KeyBounds) -> Unit,
 ) {
     val isModifierActive = modifierState != ModifierState.INACTIVE
+    val colors = LocalAppColors.current
     val bg = when {
-        isPressed -> KEY_BG_PRESSED
-        isModifierActive -> KEY_BG_MODIFIER_ACTIVE
-        else -> KEY_BG
+        isPressed -> colors.keyPressed
+        isModifierActive -> colors.keyModifierActive
+        else -> colors.keyBackground
     }
 
     Box(
@@ -760,7 +756,7 @@ private fun KeyCap(
             .background(bg)
             .border(
                 width = if (isModifierActive) 1.dp else 0.5.dp,
-                color = if (isModifierActive) accentColor.copy(alpha = 0.7f) else KEY_BORDER,
+                color = if (isModifierActive) accentColor.copy(alpha = 0.7f) else colors.divider,
                 shape = RoundedCornerShape(KEY_CORNER)
             )
             .onGloballyPositioned { coords ->
@@ -795,7 +791,7 @@ private fun KeyCap(
             }
             Text(
                 text = displayLabel,
-                color = if (isPressed) KEY_TEXT else KEY_TEXT_SECONDARY,
+                color = if (isPressed) colors.onSurface else colors.onSurfaceSecondary,
                 fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 12.sp,
                 fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
