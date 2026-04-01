@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalContext
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.settings.SettingsManager
