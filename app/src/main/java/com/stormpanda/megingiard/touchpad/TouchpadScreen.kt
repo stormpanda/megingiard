@@ -150,11 +150,11 @@ private fun TouchSurface(
 
                             // Block input while the carousel overlay is shown.
                             if (overlayVisibleState.value && event.type != PointerEventType.Release) {
-                                event.changes.firstOrNull()?.let { c ->
-                                    if (event.type == PointerEventType.Press && !c.isConsumed) {
-                                        AppStateManager.hideOverlay()
-                                    }
-                                    c.consume()
+                                if (event.type == PointerEventType.Press && event.changes.any { !it.isConsumed }) {
+                                    AppStateManager.hideOverlay()
+                                }
+                                event.changes.forEach { change ->
+                                    if (!change.isConsumed) change.consume()
                                 }
                                 continue
                             }

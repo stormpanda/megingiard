@@ -35,8 +35,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -57,10 +59,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Megingiard's window must never steal key focus from apps on the primary display.
-        // Without this flag, tapping any key on the virtual keyboard gives this window
-        // keyboard focus, so uinput key events are delivered here instead of the target app.
-        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        // FLAG_NOT_FOCUSABLE must only be active in KEYBOARD mode so that uinput key events
+        // are delivered to the focused app (the game) rather than to Megingiard.
+        // Keeping it active in other modes would break in-app text fields (e.g. MacroPad
+        // profile name inputs).
+        lifecycleScope.launch {
+            AppStateManager.currentMode.collect { mode ->
+                if (mode == AppMode.KEYBOARD) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+                }
+            }
+        }
         SettingsManager.init(this)
         enableEdgeToEdge()
         setContent {

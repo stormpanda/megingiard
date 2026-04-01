@@ -72,12 +72,12 @@
     <string name="settings_kb_fullscreen_desc">No bottom gap — keyboard fills the entire screen</string>
 
     <!-- Input method (touchpad + keyboard trackpoint) -->
-    <string name="settings_input_method">Mausmodus</string>
-    <string name="settings_input_method_desc">Mausbewegung statt Touch-Steuerung</string>
+    <string name="settings_input_method">Mouse mode</string>
+    <string name="settings_input_method_desc">Mouse movement instead of touch controls</string>
     <string name="settings_tap_to_click">Tap to Click</string>
-    <string name="settings_tap_to_click_desc">Einzel-Tap = Linksklick</string>
-    <string name="settings_two_finger_tap">Zweifinger-Tap</string>
-    <string name="settings_two_finger_tap_desc">Zweifinger-Tap = Rechtsklick</string>
+    <string name="settings_tap_to_click_desc">Single tap = left click</string>
+    <string name="settings_two_finger_tap">Two-finger tap</string>
+    <string name="settings_two_finger_tap_desc">Two-finger tap = right click</string>
 
     <!-- Mirror touch projection -->
     <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>

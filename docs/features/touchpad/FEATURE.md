@@ -34,6 +34,15 @@ The Virtual Touchpad feature turns the secondary display into a touch surface th
 - The touchpad MUST function within the standard app permission set on the AYN Thor.
 - No root access or additional Android permissions beyond the app's declared set are required.
 
+### FR-T5: Mouse Mode
+
+- The touchpad MUST support an optional **mouse mode**, toggled via a setting, in which touch input is translated into relative mouse cursor movement instead of absolute touch forwarding.
+- In mouse mode the `TouchInjector` lifecycle MUST NOT be started; instead `MouseInjector` (shared `input/` package) is started and stopped alongside the touchpad session.
+- **Tap-to-click:** When enabled, a single short tap (below a configurable slop and time threshold) MUST send a left-button click (down + up) via `MouseInjector`.
+- **Two-finger tap:** When enabled, a two-finger short tap MUST send a right-button click via `MouseInjector`.
+- Only the **primary pointer** (first finger down) drives cursor movement; additional fingers are tracked solely for two-finger tap detection.
+- When the carousel overlay is visible, all pointer changes MUST be consumed (not just the first) before skipping the event loop iteration.
+
 ---
 
 ## Technical Implementation
@@ -101,7 +110,9 @@ sensorY =  normalizedX        * 1920
 
 The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY = 0`) to the sensor's **maximum X** (`sensorX = 1080`), correcting for the 270° rotation offset. The axis swap (`X ← Y`, `Y ← X`) reflects the portrait-to-landscape re-orientation.
 
-> **Note:** The coordinate transformation and injection pipeline (`ShellInputInjector`, `TouchInjector`, `TouchAction`) have been extracted to the shared `input/` package (`com.stormpanda.megingiard.input`) so that both the Virtual Touchpad and Mirror Touch Projection can reuse the same infrastructure. `TouchpadScreen` calls `TouchInjector` from the shared package.
+> **Note:** The coordinate transformation and injection pipeline (`ShellInputInjector`, `TouchInjector`, `TouchAction`) have been extracted to the shared `input/` package (`com.stormpanda.megingiard.input`) so that both the Virtual Touchpad and Mirror Touch Projection can reuse the same infrastructure. `TouchpadScreen` calls `TouchInjector` from the shared package in **touch mode**.
+>
+> In **mouse mode** `TouchpadScreen` starts `MouseInjector` instead. Relative delta values from Compose pointer events are scaled by `TP_MOUSE_SENSITIVITY` and forwarded to `MouseInjector.moveMouse(dx, dy)`. Tap gestures (single-finger and two-finger) are detected via slop + time thresholds and mapped to LMB / RMB clicks.
 
 ### Pointer Event Handling in TouchpadScreen
 
