@@ -1,10 +1,12 @@
 package com.stormpanda.megingiard
 
 import android.app.ActivityOptions
+import android.app.LocaleManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.LocaleList
 import android.provider.Settings
 import android.view.Display
 import android.view.WindowManager
@@ -37,10 +39,13 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.paletteFor
+import java.util.Locale
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -76,6 +81,19 @@ class MainActivity : ComponentActivity() {
             }
         }
         SettingsManager.init(this)
+        lifecycleScope.launch {
+            SettingsManager.appLanguage.drop(1).collect { lang ->
+                val desired = when (lang) {
+                    AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
+                    AppLanguage.EN     -> LocaleList(Locale.ENGLISH)
+                    AppLanguage.DE     -> LocaleList(Locale.GERMAN)
+                }
+                val localeManager = getSystemService(LocaleManager::class.java)
+                if (localeManager.applicationLocales != desired) {
+                    localeManager.applicationLocales = desired
+                }
+            }
+        }
         enableEdgeToEdge()
         setContent {
             var hasNotificationAccess by remember { mutableStateOf(isNotificationListenerEnabled(this@MainActivity)) }

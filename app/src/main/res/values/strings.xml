@@ -139,11 +139,11 @@ Open Settings to create a layout.</string>
     <string name="kb_mouse_btn_4">M4</string>
     <string name="kb_mouse_btn_5">M5</string>
     <!-- Keyboard trackpoint mouse button position setting -->
-    <string name="settings_kb_mouse_btn_pos">Button-Position</string>
-    <string name="settings_kb_mouse_btn_pos_desc">Wo die LMB/RMB-Tasten erscheinen</string>
-    <string name="kb_mouse_btn_pos_left">Links</string>
-    <string name="kb_mouse_btn_pos_right">Rechts</string>
-    <string name="kb_mouse_btn_pos_both">Links &amp; Rechts</string>
+    <string name="settings_kb_mouse_btn_pos">Button Position</string>
+    <string name="settings_kb_mouse_btn_pos_desc">Where the LMB/RMB buttons appear</string>
+    <string name="kb_mouse_btn_pos_left">Left</string>
+    <string name="kb_mouse_btn_pos_right">Right</string>
+    <string name="kb_mouse_btn_pos_both">Left &amp; Right</string>
     <string name="macropad_device_disabled_mouse">Mouse has been disabled for this layout</string>
     <string name="macropad_editor_new_profile_name">New Profile</string>
     <string name="macropad_editor_rename">Rename</string>
@@ -175,4 +175,19 @@ Open Settings to create a layout.</string>
     <string name="macropad_display_mouse_button">Mouse: %s</string>
     <string name="macropad_display_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_display_trackpoint">Trackpoint</string>
+
+    <!-- Language setting -->
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_de">Deutsch</string>
+
+    <!-- Exit confirmation dialog -->
+    <string name="exit_dialog_title">Exit Megingiard</string>
+    <string name="exit_dialog_message">Do you want to close the app?</string>
+    <string name="exit_dialog_confirm">Close</string>
+    <string name="exit_dialog_cancel">Cancel</string>
+
+    <!-- Media empty state -->
+    <string name="media_no_media_hint">Start media playback on the top screen to control it here.</string>
 </resources>

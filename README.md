@@ -21,7 +21,7 @@ Given its hardware-specific approach, this project is extensively documented:
 3. **Gallery-Style Pan & Zoom:** Natural and smart multi-touch gestures with exact physical boundary constraints (_Hard Edges_ to prevent vanishing windows) and auto-centering (Pinch-Out Snap-Back).
 4. **Resource-Efficient Freeze Frame:** Physically decouples the video producer from the renderer to freeze frames in the hardware buffer with zero CPU overhead while retaining full zoom capabilities.
 5. **Virtual Keyboard:** Full QWERTZ/QWERTY/AZERTY keyboard with multi-state modifier keys, an integrated trackpoint, and sub-millisecond key injection via a native binary directly into `/dev/uinput`.
-6. **MacroPad:** Fully configurable button pad with multiple named profiles, free-placement buttons, and five action types — keyboard key, gamepad button (virtual uinput gamepad), mouse left/right click, and a trackpoint area for relative mouse movement.
+6. **MacroPad:** Fully configurable button pad with multiple named profiles, free-placement buttons, and five action types — keyboard key, gamepad button (virtual uinput gamepad), mouse left/right click, and a trackpoint area for relative mouse movement. See [docs/features/macropad/FEATURE.md](docs/features/macropad/FEATURE.md).
 
 ---
 

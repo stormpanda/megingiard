@@ -79,8 +79,12 @@ private fun pillActiveWidth(toolCount: Int): Dp =
     CO_DOT_SPACING * (toolCount + 1) + CO_DOT_SIZE * toolCount
 
 // ── Settings button ────────────────────────────────────────────────────────
-private val CO_SETTINGS_BUTTON_SIZE = 40.dp
+private val CO_SETTINGS_BUTTON_SIZE = 48.dp  // Phase 6: increased from 40 to 48 dp (Material min touch target)
 private val CO_SETTINGS_ICON_SIZE = 20.dp
+private const val CO_DOT_INACTIVE_ALPHA = 0.35f
+private val CO_BORDER_WIDTH = 2.dp
+private val CO_HANDLE_CONTENT_H_PADDING = 12.dp
+private val CO_HANDLE_CONTENT_V_PADDING = 8.dp
 
 private fun AppMode.nameResId(): Int = when (this) {
     AppMode.MIRROR -> R.string.tool_name_mirror
@@ -206,8 +210,8 @@ private fun TopModeHandle(
                     .fillMaxWidth()
                     .padding(horizontal = CO_HANDLE_H_PADDING, vertical = CO_HANDLE_ROW_V_PADDING)
                     .background(colors.controlOverlay, RoundedCornerShape(CO_HANDLE_CORNER))
-                    .border(2.dp, colors.controlOverlayBorder, RoundedCornerShape(CO_HANDLE_CORNER))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .border(CO_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(CO_HANDLE_CORNER))
+                        .padding(horizontal = CO_HANDLE_CONTENT_H_PADDING, vertical = CO_HANDLE_CONTENT_V_PADDING),
                 contentAlignment = Alignment.Center
             ) {
                 // Tool name – pinned to start
@@ -225,7 +229,7 @@ private fun TopModeHandle(
                     modifier = Modifier
                         .size(width = pillWidth, height = CO_PILL_ACTIVE_HEIGHT)
                         .background(colors.navPillBody, RoundedCornerShape(50))
-                        .border(2.dp, colors.navPillBorder, RoundedCornerShape(50))
+                        .border(CO_BORDER_WIDTH, colors.navPillBorder, RoundedCornerShape(50))
                         .pointerInput(activeTools) {
                             awaitEachGesture {
                                 var down = awaitPointerEvent()
@@ -285,7 +289,7 @@ private fun TopModeHandle(
                         activeTools.forEach { tool ->
                             val dotColor by animateColorAsState(
                                 targetValue = if (tool == currentMode) colors.controlIndicatorActive
-                                              else colors.onControlOverlay.copy(alpha = 0.35f),
+                                              else colors.onControlOverlay.copy(alpha = CO_DOT_INACTIVE_ALPHA),
                                 animationSpec = tween(durationMillis = CO_DOT_COLOR_ANIM_MS),
                                 label = "dot_color"
                             )

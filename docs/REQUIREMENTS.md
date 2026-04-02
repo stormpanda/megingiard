@@ -8,6 +8,7 @@ Detailed functional requirements (including acceptance criteria and edge cases) 
 | Media Control    | Transport controls, scrubbing, progress tracking                                                   | [docs/features/media/FEATURE.md](features/media/FEATURE.md)       |
 | Virtual Touchpad | Native touch injection, coordinate mapping, visual feedback                                        | [docs/features/touchpad/FEATURE.md](features/touchpad/FEATURE.md) |
 | Virtual Keyboard | Full keyboard layout (QWERTZ/QWERTY/AZERTY), modifier key state machine, trackpoint, key injection | [docs/features/keyboard/FEATURE.md](features/keyboard/FEATURE.md) |
+| MacroPad         | Configurable button pad, multiple named profiles, free-placement buttons, action types (keyboard key, gamepad button, mouse click, scroll wheel, trackpoint) | [docs/features/macropad/FEATURE.md](features/macropad/FEATURE.md) |
 
 ---
 

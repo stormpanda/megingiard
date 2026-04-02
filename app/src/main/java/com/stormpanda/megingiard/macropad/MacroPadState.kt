@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.stateIn
  */
 object MacroPadState {
 
+    // App-lifetime scope: intentionally never cancelled — this singleton lives for the
+    // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     // -------------------------------------------------------------------------

@@ -67,6 +67,7 @@ fun formatTime(ms: Long): String {
 
 @Composable
 fun MediaScreen(modifier: Modifier = Modifier) {
+    val hasActiveMedia by MediaState.hasActiveMedia.collectAsState()
     val title by MediaState.currentTitle.collectAsState()
     val isPlaying by MediaState.isPlaying.collectAsState()
     val progress by MediaState.currentProgress.collectAsState()
@@ -94,6 +95,29 @@ fun MediaScreen(modifier: Modifier = Modifier) {
     var scrubPosition by remember { mutableStateOf<Long?>(null) }
     val displayProgress = scrubPosition ?: localProgress
     val colors = LocalAppColors.current
+
+    if (!hasActiveMedia) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(colors.appBackground),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.media_no_media),
+                style = MaterialTheme.typography.headlineSmall,
+                color = colors.onSurface,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.media_no_media_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceSecondary,
+            )
+        }
+        return
+    }
 
     Column(
         modifier = modifier

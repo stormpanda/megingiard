@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 enum class AppMode { MIRROR, MEDIA, TOUCHPAD, KEYBOARD, MACROPAD }
 
 object AppStateManager {
+    // App-lifetime scope: intentionally never cancelled — this singleton lives for the
+    // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _currentMode = MutableStateFlow(AppMode.MIRROR)

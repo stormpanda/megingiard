@@ -27,10 +27,14 @@ object MediaState {
     // Internal write access only for the NotificationListener
     internal var activeController: MediaController? = null
 
+    private val _hasActiveMedia = MutableStateFlow(false)
+    val hasActiveMedia: StateFlow<Boolean> = _hasActiveMedia.asStateFlow()
+
     internal fun updateTitle(title: String) { _currentTitle.value = title }
     internal fun updatePlaying(playing: Boolean) { _isPlaying.value = playing }
     internal fun updateProgress(progress: Long) { _currentProgress.value = progress }
     internal fun updateMaxProgress(max: Long) { _maxProgress.value = max }
+    internal fun updateHasActiveMedia(has: Boolean) { _hasActiveMedia.value = has }
 }
 
 // Read-only accessor for UI layers to issue transport commands
@@ -86,6 +90,7 @@ class MegingiardNotificationListener : NotificationListenerService() {
     private fun updateActiveSession(controller: MediaController?) {
         MediaState.activeController?.unregisterCallback(callback)
         MediaState.activeController = controller
+        MediaState.updateHasActiveMedia(controller != null)
         controller?.registerCallback(callback)
         callback.onMetadataChanged(controller?.metadata)
         callback.onPlaybackStateChanged(controller?.playbackState)

@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.keyboard
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -341,41 +342,50 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                 }
             }
     ) {
-        // Visual keyboard layout
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = 4.dp,
-                    end = 4.dp,
-                    top = if (overlayAtBottom) 4.dp else CAROUSEL_PILL_INSET,
-                    bottom = if (kbFullscreen) (if (overlayAtBottom) CAROUSEL_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
-                ),
-            verticalArrangement = Arrangement.SpaceEvenly
-        ) {
-            layout.forEachIndexed { rowIndex, row ->
-                val heightWeight = if (rowIndex == 0) F_ROW_HEIGHT_WEIGHT else 1f
-                Row(
-                    modifier = Modifier
-                        .weight(heightWeight)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H)
-                ) {
-                    row.forEach { key ->
-                        // Skip trackpoint key if disabled in settings
-                        if (key.type == KeyType.TRACKPOINT && !kbTrackpointEnabled) return@forEach
-                        val modState by KeyboardState.stateFor(key.id).collectAsState()
-                        KeyCap(
-                            keyDef = key,
-                            isPressed = key.id in pressedKeys,
-                            modifierState = modState,
-                            accentColor = accentColor,
-                            isShiftActive = isShiftActive,
-                            isCapsActive = isCapsActive,
-                            isAltGrActive = isAltGrActive,
-                            modifier = Modifier.weight(key.widthWeight),
-                            onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds }
-                        )
+        // Visual keyboard layout — Crossfade for smooth layout transitions
+        Crossfade(targetState = kbLayout, label = "Layout Switch") { activeLayout ->
+            val animatedLayout = remember(activeLayout) {
+                when (activeLayout) {
+                    KbLayout.QWERTY -> qwertyLayout()
+                    KbLayout.AZERTY -> azertyLayout()
+                    KbLayout.QWERTZ -> qwertzLayout()
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = 4.dp,
+                        end = 4.dp,
+                        top = if (overlayAtBottom) 4.dp else CAROUSEL_PILL_INSET,
+                        bottom = if (kbFullscreen) (if (overlayAtBottom) CAROUSEL_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
+                    ),
+                verticalArrangement = Arrangement.SpaceEvenly
+            ) {
+                animatedLayout.forEachIndexed { rowIndex, row ->
+                    val heightWeight = if (rowIndex == 0) F_ROW_HEIGHT_WEIGHT else 1f
+                    Row(
+                        modifier = Modifier
+                            .weight(heightWeight)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H)
+                    ) {
+                        row.forEach { key ->
+                            // Skip trackpoint key if disabled in settings
+                            if (key.type == KeyType.TRACKPOINT && !kbTrackpointEnabled) return@forEach
+                            val modState by KeyboardState.stateFor(key.id).collectAsState()
+                            KeyCap(
+                                keyDef = key,
+                                isPressed = key.id in pressedKeys,
+                                modifierState = modState,
+                                accentColor = accentColor,
+                                isShiftActive = isShiftActive,
+                                isCapsActive = isCapsActive,
+                                isAltGrActive = isAltGrActive,
+                                modifier = Modifier.weight(key.widthWeight),
+                                onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds }
+                            )
+                        }
                     }
                 }
             }

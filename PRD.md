@@ -37,7 +37,11 @@ The app offers a set of tools, each of which occupies the entire secondary scree
 - **Trackpoint:** Analoger Zeiger-Cursor, der Mausbewegungen auf dem primären Display simuliert – steuerbar direkt über die Tastatur.
 - **Key Repeat:** Konfigurierbare Wiederholungsrate für gehaltene Tasten; bei deaktiviertem Repeat wird Key-Up sofort gesendet, um das Kernel-Repeat zu unterdrücken.
 - Eingaben werden in Echtzeit via nativem Binary direkt in `/dev/uinput` injiziert (< 1 ms Latenz).
+### 2.5 MacroPad → [docs/features/macropad/FEATURE.md](docs/features/macropad/FEATURE.md)
 
+- Frei konfigurierbares Button-Pad mit mehreren benannten Profilen und freier Positionierung.
+- Unterstützte Aktionstypen: Tastatur-Taste, Gamepad-Button (via virtuellem uinput-Gamepad), Maus-Links-/Rechtsklick, Scroll-Wheel und Trackpoint (relative Mausbewegung).
+- Layouts werden im integrierten Editor (Drag & Drop, Größenauswahl, Beschriftung) erstellt und als JSON in DataStore persistiert.
 ## 3. User Interface & User Experience (UX)
 
 - **Launch behaviour:** On opening the app, it starts immediately in Mirror mode to provide instant value without any configuration.

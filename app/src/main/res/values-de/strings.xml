@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Megingiard</string>
+    <string name="mirror_waiting_permission">Warte auf Bildschirmberechtigung\u2026</string>
+    <string name="mirror_wrong_screen">Spiegelung wird nur unterstützt, wenn Megingiard auf dem unteren Bildschirm läuft.</string>
+    <string name="mirror_start_button">Spiegelung starten</string>
+    <string name="cd_previous_tool">Vorheriges Werkzeug</string>
+    <string name="cd_next_tool">Nächstes Werkzeug</string>
+    <string name="cd_stop_mirroring">Spiegelung stoppen</string>
+    <string name="cd_freeze">Einfrieren</string>
+    <string name="cd_unfreeze">Einfrieren aufheben</string>
+    <string name="cd_lock_view">Ansicht sperren</string>
+    <string name="cd_unlock_view">Ansicht entsperren</string>
+    <string name="cd_touch_projection_on">Touch-Projektion aktiv</string>
+    <string name="cd_touch_projection_off">Touch-Projektion inaktiv</string>
+    <string name="cd_frozen_image">Eingefrorenes Standbild</string>
+    <string name="media_no_media">Kein Medium</string>
+    <string name="media_unknown_title">Unbekannter Titel</string>
+    <string name="media_scrubbing_to">Spulen zu: %s</string>
+    <string name="notification_listener_required">Benachrichtigungszugriff für Mediensteuerung erforderlich</string>
+    <string name="grant_permission">Berechtigung erteilen</string>
+    <string name="notification_mirroring_active">Spiegelung aktiv</string>
+    <string name="cd_skip_previous">Vorheriger Titel</string>
+    <string name="cd_replay_10">10 Sekunden zurückspulen</string>
+    <string name="cd_play_pause">Wiedergabe / Pause</string>
+    <string name="cd_forward_10">10 Sekunden vorspulen</string>
+    <string name="cd_skip_next">Nächster Titel</string>
+    <string name="touchpad_hint">Hier tippen, um den oberen Bildschirm zu steuern</string>
+    <string name="touchpad_hint_mouse">Ziehen zum Bewegen · Tippen zum Klicken</string>
+
+    <!-- Tool display names -->
+    <string name="tool_name_mirror">Spiegel</string>
+    <string name="tool_name_media">Medien</string>
+    <string name="tool_name_touchpad">Touchpad</string>
+    <string name="tool_name_keyboard">Tastatur</string>
+    <string name="tool_name_macropad">MacroPad</string>
+    <string name="keyboard_placeholder">Tastatur kommt bald\u2026</string>
+    <string name="cd_keyboard_key">Taste %s</string>
+    <string name="cd_keyboard_trackpoint">Trackpoint</string>
+
+    <!-- Settings screen -->
+    <string name="settings_close">Schließen</string>
+    <string name="cd_open_settings">Einstellungen öffnen</string>
+    <string name="cd_open_global_settings">Globale Einstellungen öffnen</string>
+    <string name="cd_drag_reorder">Zum Sortieren ziehen</string>
+    <string name="settings_section_tools">Werkzeuge</string>
+    <string name="settings_section_general">Allgemein</string>
+    <string name="settings_section_appearance">Erscheinungsbild</string>
+    <string name="settings_auto_start_capture">Spiegelung automatisch starten</string>
+    <string name="settings_auto_start_capture_desc">Beim App-Start automatisch die Bildschirmaufnahme anfragen</string>
+    <string name="settings_overlay_timeout">Steuerung ausblenden nach: %ds</string>
+    <string name="settings_no_tool_settings">Keine Einstellungen für dieses Werkzeug verfügbar.</string>
+    <string name="settings_global_title">Einstellungen</string>
+    <string name="settings_back">Zurück</string>
+    <string name="settings_accent_color">Akzentfarbe</string>
+    <string name="settings_theme">Design</string>
+    <string name="theme_dark">Dunkel</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_cyberpunk">Cyberpunk</string>
+    <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
+    <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
+    <string name="settings_color_brightness">Helligkeit</string>
+    <string name="settings_color_cancel">Abbrechen</string>
+    <string name="settings_color_apply">Anwenden</string>
+
+    <!-- Keyboard settings -->
+    <string name="settings_kb_layout">Tastaturlayout</string>
+    <string name="settings_kb_layout_desc">Buchstabenanordnung</string>
+    <string name="settings_kb_layout_qwertz">QWERTZ</string>
+    <string name="settings_kb_layout_qwerty">QWERTY</string>
+    <string name="settings_kb_layout_azerty">AZERTY</string>
+    <string name="settings_kb_trackpoint">Trackpoint</string>
+    <string name="settings_kb_trackpoint_desc">Trackpoint-Punkt in der Grundreihe anzeigen</string>
+    <string name="settings_kb_repeat">Tastenwiederholung</string>
+    <string name="settings_kb_repeat_desc">Taste gedrückt halten für Wiederholung</string>
+    <string name="settings_kb_fullscreen">Vollbild-Tastatur</string>
+    <string name="settings_kb_fullscreen_desc">Kein Abstand unten — Tastatur füllt den gesamten Bildschirm</string>
+
+    <!-- Input method (touchpad + keyboard trackpoint) -->
+    <string name="settings_input_method">Mausmodus</string>
+    <string name="settings_input_method_desc">Mausbewegungen statt Touch-Steuerung</string>
+    <string name="settings_tap_to_click">Tippen zum Klicken</string>
+    <string name="settings_tap_to_click_desc">Einfaches Tippen = Linksklick</string>
+    <string name="settings_two_finger_tap">Zwei-Finger-Tippen</string>
+    <string name="settings_two_finger_tap_desc">Zwei-Finger-Tippen = Rechtsklick</string>
+
+    <!-- Mirror touch projection -->
+    <string name="settings_pinch_while_projecting">Pinch-to-Zoom während Projektion</string>
+    <string name="settings_pinch_while_projecting_desc">Zwei-Finger-Zoomen und Schwenken während die Touch-Projektion aktiv ist. Zwei-Finger-Gesten werden nicht an das primäre Display weitergeleitet.</string>
+
+    <!-- Mirror session state persistence -->
+    <string name="settings_remember_viewport">Ansichtsausschnitt merken</string>
+    <string name="settings_remember_viewport_desc">Zoom und Position beim Neustart der Spiegelung wiederherstellen</string>
+    <string name="settings_remember_lock">Sperre merken</string>
+    <string name="settings_remember_lock_desc">Gesperrten Zustand beim Neustart der Spiegelung wiederherstellen</string>
+    <string name="settings_remember_projection">Touch-Projektion merken</string>
+    <string name="settings_remember_projection_desc">Touch-Projektion-Status beim Neustart der Spiegelung wiederherstellen</string>
+
+    <!-- General session -->
+    <string name="settings_remember_last_tool">Letztes Werkzeug merken</string>
+    <string name="settings_remember_last_tool_desc">Aktives Werkzeug beim App-Neustart wiederherstellen</string>
+
+    <!-- MacroPad tool -->
+    <string name="macropad_no_profile">Kein Profil konfiguriert.
+Einstellungen öffnen, um ein Layout zu erstellen.</string>
+    <string name="macropad_open_settings">Einstellungen öffnen</string>
+    <string name="cd_macropad_button">MacroPad-Taste: %s</string>
+    <string name="cd_macropad_trackpoint">Trackpoint</string>
+
+    <!-- MacroPad editor -->
+    <string name="macropad_editor_title">Layout bearbeiten</string>
+    <string name="macropad_editor_done">Fertig</string>
+    <string name="macropad_editor_add_button">Taste hinzufügen</string>
+    <string name="macropad_editor_delete_button">Löschen</string>
+    <string name="macropad_editor_button_label">Beschriftung</string>
+    <string name="macropad_editor_action">Aktion</string>
+    <string name="macropad_editor_button_shape">Tastenform</string>
+    <string name="macropad_editor_shape_circle">Kreis</string>
+    <string name="macropad_editor_shape_square">Quadrat</string>
+    <string name="macropad_editor_button_size">Tastengröße</string>
+    <string name="macropad_button_size_1x1">1×1</string>
+    <string name="macropad_button_size_2x1">2×1</string>
+    <string name="macropad_button_size_1x2">1×2</string>
+    <string name="macropad_button_size_2x2">2×2</string>
+    <string name="macropad_editor_trackpoint_size">Trackpoint-Größe</string>
+    <string name="macropad_trackpoint_size_small">Klein</string>
+    <string name="macropad_trackpoint_size_medium">Mittel</string>
+    <string name="macropad_trackpoint_size_large">Groß</string>
+    <string name="macropad_editor_devices">Simulierte Geräte</string>
+    <string name="macropad_editor_device_keyboard">Tastatur</string>
+    <string name="macropad_editor_device_gamepad">Gamepad</string>
+    <string name="macropad_editor_device_mouse">Maus</string>
+    <string name="macropad_device_disabled_keyboard">Tastatur ist für dieses Layout deaktiviert</string>
+    <string name="macropad_device_disabled_gamepad">Gamepad ist für dieses Layout deaktiviert</string>
+
+    <!-- Keyboard trackpoint virtual mouse buttons -->
+    <string name="kb_mouse_btn_left">LMT</string>
+    <string name="kb_mouse_btn_middle">MMT</string>
+    <string name="kb_mouse_btn_right">RMT</string>
+    <string name="kb_mouse_btn_4">M4</string>
+    <string name="kb_mouse_btn_5">M5</string>
+    <!-- Keyboard trackpoint mouse button position setting -->
+    <string name="settings_kb_mouse_btn_pos">Tastenposition</string>
+    <string name="settings_kb_mouse_btn_pos_desc">Wo die LMT/RMT-Tasten erscheinen</string>
+    <string name="kb_mouse_btn_pos_left">Links</string>
+    <string name="kb_mouse_btn_pos_right">Rechts</string>
+    <string name="kb_mouse_btn_pos_both">Links &amp; Rechts</string>
+    <string name="macropad_device_disabled_mouse">Maus ist für dieses Layout deaktiviert</string>
+    <string name="macropad_editor_new_profile_name">Neues Profil</string>
+    <string name="macropad_editor_rename">Umbenennen</string>
+    <string name="macropad_editor_delete_profile">Profil löschen</string>
+    <string name="macropad_editor_confirm_delete">Dieses Profil löschen?</string>
+    <string name="macropad_editor_cancel">Abbrechen</string>
+    <string name="macropad_editor_confirm">Löschen</string>
+
+    <!-- MacroPad action picker labels -->
+    <string name="macropad_action_keyboard_key">Tastaturtaste</string>
+    <string name="macropad_action_gamepad_button">Gamepad-Taste</string>
+    <string name="macropad_action_mouse_button">Maustaste</string>
+    <string name="macropad_action_scroll_wheel">Scrollrad</string>
+    <string name="macropad_action_trackpoint">Trackpoint (relative Maus)</string>
+
+    <!-- MacroPad settings (ToolSettingsPanel) -->
+    <string name="settings_macropad_profile">Aktives Profil</string>
+    <string name="settings_macropad_new_profile">Neues Profil\u2026</string>
+    <string name="settings_macropad_pad_shape">Pad-Form</string>
+    <string name="settings_macropad_shape_square">Quadrat</string>
+    <string name="settings_macropad_shape_circle">Kreis</string>
+    <string name="settings_macropad_pad_size">Pad-Größe: %d%%</string>
+    <string name="settings_macropad_edit_layout">Layout bearbeiten\u2026</string>
+    <string name="settings_macropad_new_layout">Neues Layout</string>
+
+    <!-- MacroPad button action display labels (shown in editor button list) -->
+    <string name="macropad_display_keyboard_key">Taste: %s</string>
+    <string name="macropad_display_gamepad_button">Gamepad: %s</string>
+    <string name="macropad_display_mouse_button">Maus: %s</string>
+    <string name="macropad_display_scroll_wheel">Scrollrad</string>
+    <string name="macropad_display_trackpoint">Trackpoint</string>
+
+    <!-- Language setting -->
+    <string name="settings_language">Sprache</string>
+    <string name="settings_language_system">Systemstandard</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_de">Deutsch</string>
+
+    <!-- Exit confirmation dialog -->
+    <string name="exit_dialog_title">Megingiard beenden</string>
+    <string name="exit_dialog_message">Möchtest du die App schließen?</string>
+    <string name="exit_dialog_confirm">Schließen</string>
+    <string name="exit_dialog_cancel">Abbrechen</string>
+
+    <!-- Media empty state -->
+    <string name="media_no_media_hint">Starte eine Medienwiedergabe auf dem oberen Bildschirm, um sie hier zu steuern.</string>
+</resources>
