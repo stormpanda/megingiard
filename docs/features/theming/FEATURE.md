@@ -40,24 +40,24 @@ Megingiard supports user-selectable colour themes. In Phase 1 the user can switc
 
 Sixteen semantic `AppColors` tokens cover all theming needs:
 
-| Token                | Semantic purpose                     |
-| -------------------- | ------------------------------------ |
-| `appBackground`      | Full-screen background               |
-| `surface`            | Card / panel / row surface           |
-| `surfaceVariant`     | Elevated surface (e.g. dragged item) |
-| `onSurface`          | Primary text                         |
-| `onSurfaceSecondary` | Secondary / hint text                |
-| `divider`            | Subtle separator lines               |
-| `controlOverlay`     | Floating control pill background     |
-| `onControlOverlay`   | Text / icons on the control overlay  |
-| `fingerCircle`       | Finger-indicator circle              |
-| `keyBackground`      | Key face (normal)                    |
-| `keyPressed`         | Key face (pressed)                   |
-| `keyModifierActive`  | Modifier key when sticky/held        |
-| `touchpadBackground` | Touchpad surface                     |
-| `touchpadIndicator`  | Touchpad border / hint dots          |
-| `pickerBackground`   | Color-picker dialog background       |
-| `accentBorder`       | Accent-colour swatch border          |
+| Token                | Semantic purpose                                                            |
+| -------------------- | --------------------------------------------------------------------------- |
+| `appBackground`      | Full-screen background                                                      |
+| `surface`            | Card / panel / row surface                                                  |
+| `surfaceVariant`     | Elevated surface (e.g. dragged item)                                        |
+| `onSurface`          | Primary text                                                                |
+| `onSurfaceSecondary` | Secondary / hint text                                                       |
+| `divider`            | Subtle separator lines                                                      |
+| `controlOverlay`     | Floating control pill background — always dark (overlaid on screen content) |
+| `onControlOverlay`   | Text / icons on the control overlay — always white (theme-invariant)        |
+| `fingerCircle`       | Finger-indicator circle — always white-tinted (theme-invariant)             |
+| `keyBackground`      | Key face (normal)                                                           |
+| `keyPressed`         | Key face (pressed)                                                          |
+| `keyModifierActive`  | Modifier key when sticky/held                                               |
+| `touchpadBackground` | Touchpad surface                                                            |
+| `touchpadIndicator`  | Touchpad border / hint dots                                                 |
+| `pickerBackground`   | Color-picker dialog background                                              |
+| `accentBorder`       | Accent-colour swatch border                                                 |
 
 ### Palettes
 
