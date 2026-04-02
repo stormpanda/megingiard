@@ -52,7 +52,10 @@
     <string name="settings_global_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_accent_color">Accent color</string>
-    <string name="settings_theme_mode">Light mode</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Place controls at bottom</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>

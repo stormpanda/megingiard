@@ -95,7 +95,6 @@ private const val MP_SCROLL_SENSITIVITY_PX = 12f
 @Composable
 fun MacroPadScreen(modifier: Modifier = Modifier) {
     val context     = LocalContext.current
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val profile     by MacroPadState.activeProfile.collectAsState()
     val colors      = LocalAppColors.current
 
@@ -136,7 +135,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         } else {
             PadSurface(
                 profile     = p,
-                accentColor = accentColor,
+                accentColor = colors.accent,
             )
         }
     }

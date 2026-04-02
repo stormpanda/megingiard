@@ -135,7 +135,8 @@ class MainActivity : ComponentActivity() {
             }
 
             val themeMode by SettingsManager.themeMode.collectAsState()
-            val appColors = paletteFor(themeMode)
+            val userAccent by SettingsManager.accentColor.collectAsState()
+            val appColors = paletteFor(themeMode, userAccent)
 
             MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
                 CompositionLocalProvider(LocalAppColors provides appColors) {

@@ -120,7 +120,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
     val context     = LocalContext.current
     val profiles    by MacroPadState.profiles.collectAsState()
     val activeId    by MacroPadState.activeProfileId.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val colors      = LocalAppColors.current
 
     // Stop all uinput virtual devices while the editor is open.
@@ -149,7 +148,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             EditorTopBar(
                 profiles    = profiles,
                 activeId    = activeId,
-                accentColor = accentColor,
+                accentColor = colors.accent,
                 onSelectProfile  = { MacroPadState.setActiveProfileId(it) },
                 onNewProfile     = {
                     val newProfile = PadProfile(
@@ -182,7 +181,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
         } else {
             EditorBody(
                 profile     = profile,
-                accentColor = accentColor,
+                accentColor = colors.accent,
                 modifier    = Modifier.padding(innerPadding),
             )
         }

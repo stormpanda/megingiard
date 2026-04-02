@@ -9,7 +9,16 @@ import androidx.compose.ui.graphics.Color
 
 // ─── Theme mode ──────────────────────────────────────────────────────────────
 
-enum class ThemeMode { DARK, LIGHT }
+/**
+ * [supportsCustomAccent] – true when the user can override the palette's built-in
+ * accent colour from Global Settings. false means the theme ships its own accent
+ * and the colour picker is hidden.
+ */
+enum class ThemeMode(val supportsCustomAccent: Boolean) {
+    DARK(supportsCustomAccent = true),
+    LIGHT(supportsCustomAccent = true),
+    CYBERPUNK(supportsCustomAccent = false),
+}
 
 // ─── Semantic tokens ─────────────────────────────────────────────────────────
 //
@@ -52,9 +61,18 @@ data class AppColors(
     val pickerBackground: Color,
     /** Accent color swatch border. */
     val accentBorder: Color,
+    /**
+     * Primary interactive / accent colour. For [ThemeMode.DARK] and [ThemeMode.LIGHT] this
+     * is the user-overridable accent. For fixed themes like [ThemeMode.CYBERPUNK] it is
+     * baked into the palette and cannot be changed by the user.
+     */
+    val accent: Color,
 )
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
+
+// Default accent for Dark/Light — overridden at runtime by SettingsManager.accentColor.
+private val DEFAULT_DARK_LIGHT_ACCENT = Color(0xFFCC0000)
 
 private val darkPalette = AppColors(
     appBackground       = Color(0xFF121212),
@@ -73,6 +91,7 @@ private val darkPalette = AppColors(
     touchpadIndicator   = Color.White,
     pickerBackground    = Color(0xFF1C1C1E),
     accentBorder        = Color.White.copy(alpha = 0.3f),
+    accent              = DEFAULT_DARK_LIGHT_ACCENT,
 )
 
 private val lightPalette = AppColors(
@@ -92,13 +111,55 @@ private val lightPalette = AppColors(
     touchpadIndicator   = Color(0xFF1C1C1E),
     pickerBackground    = Color(0xFFFFFFFF),
     accentBorder        = Color(0xFF1C1C1E).copy(alpha = 0.2f),
+    accent              = DEFAULT_DARK_LIGHT_ACCENT,
+)
+
+// ─── Cyberpunk palette ────────────────────────────────────────────────────────
+// Colours derived from the Cyberpunk 2077 main menu:
+//   Background → dark blood red     ~0xFF160709
+//   Menu text  → vivid red          ~0xFFED2224
+//   Selection  → cyan               ~0xFF00CCFF
+private val CP_ACCENT   = Color(0xFF00CCFF)   // cyan — primary interactive / accent
+private val CP_BG       = Color(0xFF160709)   // dark blood-red background
+private val CP_SURFACE  = Color(0xFF220C0F)   // slightly lighter surface
+private val CP_SURFACE2 = Color(0xFF2E1115)   // elevated / dragged surface
+private val CP_TEXT     = Color(0xFFED2224)   // vivid red text
+
+private val cyberpunkPalette = AppColors(
+    appBackground       = CP_BG,
+    surface             = CP_SURFACE,
+    surfaceVariant      = CP_SURFACE2,
+    onSurface           = CP_TEXT,
+    onSurfaceSecondary  = CP_TEXT.copy(alpha = 0.55f),
+    divider             = CP_TEXT.copy(alpha = 0.10f),
+    controlOverlay      = Color.Black.copy(alpha = 0.8f),
+    onControlOverlay    = Color.White,
+    fingerCircle        = Color.White.copy(alpha = 0.45f),
+    keyBackground       = CP_SURFACE,
+    keyPressed          = CP_SURFACE2,
+    keyModifierActive   = CP_SURFACE2,
+    touchpadBackground  = CP_BG,
+    touchpadIndicator   = CP_ACCENT,
+    pickerBackground    = CP_SURFACE,
+    accentBorder        = CP_ACCENT.copy(alpha = 0.35f),
+    accent              = CP_ACCENT,
 )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────
 
-fun paletteFor(mode: ThemeMode): AppColors = when (mode) {
-    ThemeMode.DARK  -> darkPalette
-    ThemeMode.LIGHT -> lightPalette
+/**
+ * Returns the [AppColors] palette for [mode], optionally overriding the accent
+ * token with a user-chosen colour.  The override is only applied when
+ * [ThemeMode.supportsCustomAccent] is true; fixed themes (e.g. Cyberpunk) ignore it.
+ */
+fun paletteFor(mode: ThemeMode, userAccent: Color? = null): AppColors {
+    val base = when (mode) {
+        ThemeMode.DARK      -> darkPalette
+        ThemeMode.LIGHT     -> lightPalette
+        ThemeMode.CYBERPUNK -> cyberpunkPalette
+    }
+    return if (mode.supportsCustomAccent && userAccent != null) base.copy(accent = userAccent)
+    else base
 }
 
 // ─── Material 3 ColorScheme bridges ───────────────────────────────────────────
@@ -108,8 +169,9 @@ private val darkColorScheme: ColorScheme = darkColorScheme()
 private val lightColorScheme: ColorScheme = lightColorScheme()
 
 fun colorSchemeFor(mode: ThemeMode): ColorScheme = when (mode) {
-    ThemeMode.DARK  -> darkColorScheme
-    ThemeMode.LIGHT -> lightColorScheme
+    ThemeMode.DARK      -> darkColorScheme
+    ThemeMode.LIGHT     -> lightColorScheme
+    ThemeMode.CYBERPUNK -> darkColorScheme  // Cyberpunk is dark-based
 }
 
 // ─── CompositionLocal ─────────────────────────────────────────────────────────

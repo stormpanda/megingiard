@@ -93,7 +93,6 @@ private const val KB_SCROLL_SENSITIVITY_PX          = 12f
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val kbLayout by SettingsManager.kbLayout.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
@@ -103,6 +102,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
     val colors = LocalAppColors.current
+    val accentColor = colors.accent
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()

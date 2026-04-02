@@ -43,7 +43,6 @@ fun MainAppScreen() {
     val currentMode by AppStateManager.currentMode.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val colors = LocalAppColors.current
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
@@ -116,7 +115,7 @@ fun MainAppScreen() {
                                 Button(
                                     onClick = { AppStateManager.setUserDeclinedCapture(false) },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = accentColor
+                                        containerColor = colors.accent
                                     ),
                                     modifier = Modifier.padding(16.dp).height(72.dp)
                                 ) {

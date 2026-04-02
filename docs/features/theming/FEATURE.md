@@ -9,17 +9,24 @@
 
 ### Overview
 
-Megingiard supports user-selectable colour themes. In Phase 1 the user can switch between a **Dark** theme (default) and a **Light** theme via the Global Settings screen. The architecture is designed to allow additional themes to be added in future phases without per-screen changes.
+Megingiard supports user-selectable colour themes. The app currently provides three themes: **Dark** (default), **Light**, and **Cyberpunk**. The architecture is token-based so new themes can be added without per-screen rewrites, and each theme can decide whether its accent colour is user-configurable or fixed.
 
-### FR-TH1: Manual Theme Toggle
+### FR-TH1: Manual Theme Selection
 
-- The user MUST be able to switch between Dark mode and Light mode from the Global Settings screen.
+- The user MUST be able to switch between all available themes from the Global Settings screen.
 - The selected theme MUST be persisted across app restarts via DataStore.
 - The default theme is **Dark**.
+- The theme selector MUST support more than two options; a binary toggle is insufficient.
+
+### FR-TH1a: Optional Custom Accent Support
+
+- A theme MAY allow the user to override its accent colour.
+- A theme MAY instead ship with a fixed built-in accent colour.
+- Whether the accent picker is shown MUST be derived from theme metadata, not from hardcoded `if (theme == X)` UI exceptions.
 
 ### FR-TH2: Token-Based Colour Architecture
 
-- All screen and component colours MUST be expressed through the 16 semantic tokens defined in `AppColors`.
+- All screen and component colours MUST be expressed through the 17 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
   - HSV colour-wheel rendering math in `ColorWheelPicker.kt` (saturation gradient, brightness overlay, selector dot ring).
   - Text / icon content placed on `accentColor` container surfaces (always white by design contract).
@@ -29,7 +36,7 @@ Megingiard supports user-selectable colour themes. In Phase 1 the user can switc
 
 ### FR-TH3: Real-Time Application
 
-- The theme MUST apply immediately when the user toggles the switch — no restart required.
+- The theme MUST apply immediately when the user changes the theme selection — no restart required.
 - All screens visible on both the primary display (via `MainActivity`) and the secondary display (via `MirrorPresentation`) MUST respect the active theme.
 
 ---
@@ -38,7 +45,7 @@ Megingiard supports user-selectable colour themes. In Phase 1 the user can switc
 
 ### Token Definitions — `ui/AppTheme.kt`
 
-Sixteen semantic `AppColors` tokens cover all theming needs:
+Seventeen semantic `AppColors` tokens cover all theming needs:
 
 | Token                | Semantic purpose                                                            |
 | -------------------- | --------------------------------------------------------------------------- |
@@ -58,15 +65,27 @@ Sixteen semantic `AppColors` tokens cover all theming needs:
 | `touchpadIndicator`  | Touchpad border / hint dots                                                 |
 | `pickerBackground`   | Color-picker dialog background                                              |
 | `accentBorder`       | Accent-colour swatch border                                                 |
+| `accent`            | Primary interactive accent colour (user-overridable or fixed per theme)     |
 
 ### Palettes
 
-Two palettes are defined:
+Three palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `lightPalette` — white/light-grey surfaces with near-black text.
+- `cyberpunkPalette` — dark blood-red surfaces, vivid red text, cyan accent inspired by the Cyberpunk 2077 menu.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
+
+### Theme Metadata — `ThemeMode`
+
+`ThemeMode` carries a `supportsCustomAccent: Boolean` flag:
+
+- `DARK` → `true`
+- `LIGHT` → `true`
+- `CYBERPUNK` → `false`
+
+The Global Settings screen uses this metadata to decide whether to render the accent colour picker.
 
 ### Composition Local
 
@@ -80,21 +99,31 @@ Screens access tokens via:
 val colors = LocalAppColors.current
 ```
 
+For accent-driven UI, screens read `colors.accent` rather than subscribing directly to `SettingsManager.accentColor`.
+
 ### Provider wiring — `MainActivity.kt`
 
-`MainActivity` collects `SettingsManager.themeMode` and wraps the entire app tree:
+`MainActivity` collects both `SettingsManager.themeMode` and `SettingsManager.accentColor`, then wraps the entire app tree:
 
 ```kotlin
 MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
-    CompositionLocalProvider(LocalAppColors provides paletteFor(themeMode)) {
+  CompositionLocalProvider(LocalAppColors provides paletteFor(themeMode, userAccent)) {
         // app content …
     }
 }
 ```
 
+`paletteFor(mode, userAccent)` applies the user-selected accent only when `mode.supportsCustomAccent == true`.
+
 ### Secondary Display — `MirrorPresentation.kt`
 
-`MirrorPresentation` independently collects `SettingsManager.themeMode` and wraps its own Compose tree with the same provider, ensuring the Mirror screen also responds to theme changes.
+`MirrorPresentation` independently collects `SettingsManager.themeMode` and `SettingsManager.accentColor` and wraps its own Compose tree with the same provider, ensuring the Mirror screen also responds to theme changes and uses the same effective accent.
+
+### Settings UI — `GlobalSettingsScreen.kt`
+
+- Theme selection uses a picker/dropdown row, not a binary switch.
+- The Accent Color row is only shown when `themeMode.supportsCustomAccent` is `true`.
+- The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
 ### Persistence — `SettingsManager.kt`
 

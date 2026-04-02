@@ -18,9 +18,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -67,6 +70,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val rememberLastTool by SettingsManager.rememberLastTool.collectAsState()
     val themeMode by SettingsManager.themeMode.collectAsState()
     val colors = LocalAppColors.current
+    val effectiveAccent = colors.accent
 
     var showColorPicker by remember { mutableStateOf(false) }
 
@@ -127,7 +131,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 item {
                     SettingsCategoryHeader(
                         text = stringResource(R.string.settings_section_tools),
-                        accentColor = accentColor,
+                        accentColor = effectiveAccent,
                         colors = colors
                     )
                 }
@@ -139,7 +143,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             isEnabled = isEnabled,
                             isDragging = isDragging,
                             canDisable = enabledTools.size > 1 || !isEnabled,
-                            accentColor = accentColor,
+                            accentColor = effectiveAccent,
                             colors = colors,
                             onToggle = { checked ->
                                 val newEnabled = if (checked) enabledTools + tool else enabledTools - tool
@@ -158,26 +162,26 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 item {
                     SettingsCategoryHeader(
                         text = stringResource(R.string.settings_section_general),
-                        accentColor = accentColor,
+                        accentColor = effectiveAccent,
                         colors = colors
                     )
                     OverlayTimeoutRow(
                         overlayTimeoutMs = overlayTimeoutMs,
-                        accentColor = accentColor,
+                        accentColor = effectiveAccent,
                         colors = colors,
                         onTimeoutChanged = { SettingsManager.setOverlayTimeoutMs(it) }
                     )
                     HorizontalDivider(color = colors.divider)
                     OverlayPositionRow(
                         overlayAtBottom = overlayAtBottom,
-                        accentColor = accentColor,
+                        accentColor = effectiveAccent,
                         colors = colors,
                         onChanged = { SettingsManager.setOverlayAtBottom(it) }
                     )
                     HorizontalDivider(color = colors.divider)
                     RememberLastToolRow(
                         rememberLastTool = rememberLastTool,
-                        accentColor = accentColor,
+                        accentColor = effectiveAccent,
                         colors = colors,
                         onChanged = { SettingsManager.setRememberLastTool(it) }
                     )
@@ -188,21 +192,23 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 item {
                     SettingsCategoryHeader(
                         text = stringResource(R.string.settings_section_appearance),
-                        accentColor = accentColor,
+                        accentColor = effectiveAccent,
                         colors = colors
                     )
-                    ThemeModeRow(
+                    ThemePickerRow(
                         themeMode = themeMode,
-                        accentColor = accentColor,
+                        accentColor = effectiveAccent,
                         colors = colors,
                         onChanged = { SettingsManager.setThemeMode(it) }
                     )
-                    HorizontalDivider(color = colors.divider)
-                    AccentColorRow(
-                        accentColor = accentColor,
-                        colors = colors,
-                        onClick = { showColorPicker = true }
-                    )
+                    if (themeMode.supportsCustomAccent) {
+                        HorizontalDivider(color = colors.divider)
+                        AccentColorRow(
+                            accentColor = accentColor,
+                            colors = colors,
+                            onClick = { showColorPicker = true }
+                        )
+                    }
                 }
             }
         }
@@ -210,7 +216,11 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun SettingsCategoryHeader(text: String, accentColor: Color, colors: com.stormpanda.megingiard.ui.AppColors) {
+private fun SettingsCategoryHeader(
+    text: String,
+    accentColor: Color,
+    colors: com.stormpanda.megingiard.ui.AppColors,
+) {
     Text(
         text = text.uppercase(Locale.ROOT),
         color = accentColor,
@@ -232,7 +242,7 @@ private fun ToolOrderRow(
     accentColor: Color,
     colors: com.stormpanda.megingiard.ui.AppColors,
     onToggle: (Boolean) -> Unit,
-    dragHandleModifier: Modifier
+    dragHandleModifier: Modifier,
 ) {
     Row(
         modifier = Modifier
@@ -276,7 +286,7 @@ private fun OverlayTimeoutRow(
     overlayTimeoutMs: Long,
     accentColor: Color,
     colors: com.stormpanda.megingiard.ui.AppColors,
-    onTimeoutChanged: (Long) -> Unit
+    onTimeoutChanged: (Long) -> Unit,
 ) {
     var sliderValue by remember { mutableFloatStateOf(overlayTimeoutMs.toFloat()) }
     val seconds = (sliderValue / 1000f).roundToInt()
@@ -313,7 +323,7 @@ private fun OverlayPositionRow(
     overlayAtBottom: Boolean,
     accentColor: Color,
     colors: com.stormpanda.megingiard.ui.AppColors,
-    onChanged: (Boolean) -> Unit
+    onChanged: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -344,7 +354,7 @@ private fun RememberLastToolRow(
     rememberLastTool: Boolean,
     accentColor: Color,
     colors: com.stormpanda.megingiard.ui.AppColors,
-    onChanged: (Boolean) -> Unit
+    onChanged: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -376,41 +386,79 @@ private fun RememberLastToolRow(
     }
 }
 
+private fun ThemeMode.displayNameResId(): Int = when (this) {
+    ThemeMode.DARK -> R.string.theme_dark
+    ThemeMode.LIGHT -> R.string.theme_light
+    ThemeMode.CYBERPUNK -> R.string.theme_cyberpunk
+}
+
 @Composable
-private fun ThemeModeRow(
+private fun ThemePickerRow(
     themeMode: ThemeMode,
     accentColor: Color,
     colors: com.stormpanda.megingiard.ui.AppColors,
-    onChanged: (ThemeMode) -> Unit
+    onChanged: (ThemeMode) -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .clickable { expanded = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = stringResource(R.string.settings_theme_mode),
-            color = colors.onSurface,
-            fontSize = 14.sp,
-            modifier = Modifier.weight(1f)
-        )
-        Switch(
-            checked = themeMode == ThemeMode.LIGHT,
-            onCheckedChange = { isLight ->
-                onChanged(if (isLight) ThemeMode.LIGHT else ThemeMode.DARK)
-            },
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = accentColor
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_theme),
+                color = colors.onSurface,
+                fontSize = 14.sp,
             )
-        )
+            Text(
+                text = stringResource(themeMode.displayNameResId()),
+                color = accentColor,
+                fontSize = 12.sp,
+            )
+        }
+        Box {
+            Icon(
+                imageVector = Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(colors.surface)
+            ) {
+                ThemeMode.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(option.displayNameResId()),
+                                color = if (option == themeMode) accentColor else colors.onSurface,
+                                fontSize = 14.sp,
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            if (option != themeMode) onChanged(option)
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun AccentColorRow(accentColor: Color, colors: com.stormpanda.megingiard.ui.AppColors, onClick: () -> Unit) {
+private fun AccentColorRow(
+    accentColor: Color,
+    colors: com.stormpanda.megingiard.ui.AppColors,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

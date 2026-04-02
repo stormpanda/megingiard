@@ -135,7 +135,8 @@ class MirrorPresentation(
         val composeView = ComposeView(context).apply {
             setContent {
                 val themeMode by SettingsManager.themeMode.collectAsState()
-                val appColors = paletteFor(themeMode)
+                val userAccent by SettingsManager.accentColor.collectAsState()
+                val appColors = paletteFor(themeMode, userAccent)
                 CompositionLocalProvider(
                     LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
                     LocalAppColors provides appColors

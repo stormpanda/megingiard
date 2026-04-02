@@ -172,7 +172,6 @@ private fun TopModeHandle(
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val isExpanded by AppStateManager.pillExpanded.collectAsState()
     val fingerXFraction by AppStateManager.pillFingerXFraction.collectAsState()
     val colors = LocalAppColors.current
@@ -223,7 +222,7 @@ private fun TopModeHandle(
                     Box(
                     modifier = Modifier
                         .size(width = pillWidth, height = CO_PILL_ACTIVE_HEIGHT)
-                        .background(accentColor, RoundedCornerShape(50))
+                        .background(colors.accent, RoundedCornerShape(50))
                         .pointerInput(activeTools) {
                             awaitEachGesture {
                                 var down = awaitPointerEvent()

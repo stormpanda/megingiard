@@ -60,7 +60,6 @@ import java.util.UUID
 fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
     val profiles    by MacroPadState.profiles.collectAsState()
     val activeId    by MacroPadState.activeProfileId.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val colors      = LocalAppColors.current
 
     val activeProfile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
@@ -74,23 +73,23 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
                 fontSize = 14.sp,
             )
             Spacer(Modifier.height(4.dp))
-            LayoutActionButtons(accentColor = accentColor, onOpenEditor = onOpenEditor)
+            LayoutActionButtons(accentColor = colors.accent, onOpenEditor = onOpenEditor)
             return@Column
         }
 
         // ── Active profile picker ──────────────────────────────────────────
-        SettingsLabel(stringResource(R.string.settings_macropad_profile), accentColor)
+        SettingsLabel(stringResource(R.string.settings_macropad_profile), colors.accent)
         ProfileDropdown(
             profiles    = profiles,
             activeId    = activeId,
-            accentColor = accentColor,
+            accentColor = colors.accent,
             onSelect    = { MacroPadState.setActiveProfileId(it) },
         )
 
         HorizontalDivider(color = colors.divider)
 
         // ── Layout action buttons ───────────────────────────────────────────
-        LayoutActionButtons(accentColor = accentColor, onOpenEditor = onOpenEditor)
+        LayoutActionButtons(accentColor = colors.accent, onOpenEditor = onOpenEditor)
     }
 }
 

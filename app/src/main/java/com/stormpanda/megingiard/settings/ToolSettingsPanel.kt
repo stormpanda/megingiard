@@ -64,7 +64,6 @@ fun ToolSettingsPanel(
     onOpenGlobalSettings: () -> Unit
 ) {
     val currentMode by AppStateManager.currentMode.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val autoStartCapture by SettingsManager.autoStartCapture.collectAsState()
     val rememberViewport by SettingsManager.rememberViewport.collectAsState()
     val rememberLock by SettingsManager.rememberLock.collectAsState()
@@ -80,6 +79,7 @@ fun ToolSettingsPanel(
     val touchpadTwoFingerTap by SettingsManager.touchpadTwoFingerTap.collectAsState()
     var showMacroPadEditor by remember { mutableStateOf(false) }
     val colors = LocalAppColors.current
+    val accentColor = colors.accent
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -364,7 +364,8 @@ private fun KeyboardToolSettings(
     kbFullscreen: Boolean,
     onKbFullscreenChanged: (Boolean) -> Unit,
 ) {
-    val accentColor by SettingsManager.accentColor.collectAsState()
+    val colors = LocalAppColors.current
+    val accentColor = colors.accent
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         LayoutDropdownRow(
             currentLayout = kbLayout,

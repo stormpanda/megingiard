@@ -91,7 +91,6 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
     val isLocked by ScreenCaptureManager.isLocked.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val colors = LocalAppColors.current
     val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -577,7 +576,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             },
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
-                                .background(accentColor, RoundedCornerShape(50))
+                                .background(colors.accent, RoundedCornerShape(50))
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Stop,
@@ -597,7 +596,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .background(
                                     color = when {
                                         isTouchProjectionActive -> colors.onControlOverlay.copy(alpha = 0.12f)
-                                        isFrozen -> accentColor
+                                        isFrozen -> colors.accent
                                         else -> colors.onControlOverlay.copy(alpha = 0.3f)
                                     },
                                     shape = RoundedCornerShape(50)
@@ -620,7 +619,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
-                                    color = if (isLocked) accentColor else colors.onControlOverlay.copy(alpha = 0.3f),
+                                    color = if (isLocked) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -644,7 +643,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .background(
                                     color = when {
                                         isFrozen -> colors.onControlOverlay.copy(alpha = 0.12f)
-                                        isTouchProjectionActive -> accentColor
+                                        isTouchProjectionActive -> colors.accent
                                         else -> colors.onControlOverlay.copy(alpha = 0.3f)
                                     },
                                     shape = RoundedCornerShape(50)
