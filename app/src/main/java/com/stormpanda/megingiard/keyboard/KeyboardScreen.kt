@@ -57,7 +57,6 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CAROUSEL_PILL_INSET
-import com.stormpanda.megingiard.ui.CP_TP_YELLOW
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -417,7 +416,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     .aspectRatio(16f / 9f)
                     .align(Alignment.Center)
                     .alpha(trackpointAlpha)
-                    .background(colors.controlOverlay.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                    .background(colors.keyBackground, RoundedCornerShape(8.dp))
                     .border(2.dp, colors.navPillBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
@@ -782,7 +781,7 @@ private fun KeyCap(
                     .fillMaxSize(0.55f)
                     .aspectRatio(1f)
                     .clip(CircleShape)
-                    .background(CP_TP_YELLOW)
+                    .background(colors.accent)
             )
         } else {
             val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()

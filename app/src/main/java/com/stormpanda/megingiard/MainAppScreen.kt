@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,7 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -112,20 +113,22 @@ fun MainAppScreen() {
                     ) {
                         if (isValidScreen) {
                             if (!isCapturing && userDeclinedCapture) {
-                                Button(
+                                OutlinedButton(
                                     onClick = { AppStateManager.setUserDeclinedCapture(false) },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = colors.accent
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = colors.buttonBody,
+                                        contentColor = colors.buttonIconTint
                                     ),
+                                    border = BorderStroke(2.dp, colors.navPillBorder),
                                     modifier = Modifier.padding(16.dp).height(72.dp)
                                 ) {
                                     Icon(
                                         Icons.Filled.PlayArrow,
                                         contentDescription = stringResource(R.string.mirror_start_button),
                                         modifier = Modifier.padding(end = 8.dp).size(36.dp),
-                                        tint = colors.onAccent
+                                        tint = colors.buttonIconTint
                                     )
-                                    Text(stringResource(R.string.mirror_start_button), color = colors.onAccent)
+                                    Text(stringResource(R.string.mirror_start_button), color = colors.buttonIconTint)
                                 }
                             }
                         } else {

@@ -183,12 +183,12 @@ private val cyberpunkPalette = AppColors(
     accent                     = CP_ACCENT,
     onAccent                   = CP_DARK_RED,
     pillIdleColor              = CP_TP_YELLOW,
-    controlIndicatorActive     = CP_TEXT,
+    controlIndicatorActive     = CP_ACCENT,
     navPillBody                = CP_SURFACE,
     buttonBody                 = CP_SURFACE,
     controlOverlayBorder       = CP_DARK_RED,
     navPillBorder              = CP_ACCENT,
-    mirrorPillBorder           = CP_TEXT,
+    mirrorPillBorder           = Color.Transparent,
     buttonIconTint             = CP_ACCENT,
 )
 
