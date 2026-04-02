@@ -1,35 +1,17 @@
 package com.stormpanda.megingiard.mirror
 
-import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -69,11 +51,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private val CONTROL_BUTTON_SIZE = 72.dp
-private val CONTROL_ICON_SIZE = 36.dp
-private val CONTROL_BUTTON_GAP = 16.dp
-private val CONTROL_PILL_H_PADDING = 12.dp
-private val CONTROL_PILL_V_PADDING = 10.dp
 private val MR_SWIPE_EDGE_ZONE = 40.dp
 private val MR_SWIPE_THRESHOLD = 25.dp
 private val MR_TOUCH_INDICATOR_SIZE = 24.dp
@@ -554,149 +531,13 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 )
             }
 
-            AnimatedVisibility(
-                visible = (showControls || showButtons) && isCapturing,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .background(colors.controlOverlay, RoundedCornerShape(50))
-                            .border(2.dp, colors.mirrorPillBorder, RoundedCornerShape(50))
-                            .padding(
-                                horizontal = CONTROL_PILL_H_PADDING,
-                                vertical = CONTROL_PILL_V_PADDING
-                            ),
-                        horizontalArrangement = Arrangement.spacedBy(CONTROL_BUTTON_GAP)
-                    ) {
-                        // Stop
-                        IconButton(
-                            onClick = {
-                                SettingsManager.saveMirrorSessionState()
-                                context.stopService(Intent(context, ScreenCaptureService::class.java))
-                                ScreenCaptureManager.setCapturing(false)
-                                ScreenCaptureManager.resetMirrorSessionState()
-                                AppStateManager.setUserDeclinedCapture(true)
-                            },
-                            modifier = Modifier
-                                .size(CONTROL_BUTTON_SIZE)
-                                .background(colors.buttonBody, RoundedCornerShape(50))
-                                .border(2.dp, colors.navPillBorder, RoundedCornerShape(50))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Stop,
-                                contentDescription = stringResource(R.string.cd_stop_mirroring),
-                                tint = colors.buttonIconTint,
-                                modifier = Modifier.size(CONTROL_ICON_SIZE)
-                            )
-                        }
-
-                        // Freeze / Unfreeze — disabled when Touch Projection is active
-                        // (projecting touches to a frozen display would be meaningless).
-                        IconButton(
-                            onClick = { ScreenCaptureManager.toggleFrozen() },
-                            enabled = !isTouchProjectionActive,
-                            modifier = Modifier
-                                .size(CONTROL_BUTTON_SIZE)
-                                .background(
-                                    color = when {
-                                        isTouchProjectionActive -> colors.buttonBody.copy(alpha = 0.12f)
-                                        isFrozen -> colors.buttonBody
-                                        else -> colors.buttonBody.copy(alpha = 0.35f)
-                                    },
-                                    shape = RoundedCornerShape(50)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = colors.navPillBorder.copy(
-                                        alpha = colors.navPillBorder.alpha * when {
-                                            isTouchProjectionActive -> 0.12f
-                                            isFrozen -> 1f
-                                            else -> 0.4f
-                                        }
-                                    ),
-                                    shape = RoundedCornerShape(50)
-                                )
-                        ) {
-                            Icon(
-                                imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                                contentDescription = stringResource(
-                                    if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze
-                                ),
-                                tint = colors.buttonIconTint.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
-                                modifier = Modifier.size(CONTROL_ICON_SIZE)
-                            )
-                        }
-
-                        // Lock / Unlock (also deactivates touch projection when unlocking,
-                        // since projection requires lock as a precondition).
-                        IconButton(
-                            onClick = { ScreenCaptureManager.toggleLocked() },
-                            modifier = Modifier
-                                .size(CONTROL_BUTTON_SIZE)
-                                .background(
-                                    color = if (isLocked) colors.buttonBody else colors.buttonBody.copy(alpha = 0.35f),
-                                    shape = RoundedCornerShape(50)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = colors.navPillBorder.copy(alpha = colors.navPillBorder.alpha * if (isLocked) 1f else 0.4f),
-                                    shape = RoundedCornerShape(50)
-                                )
-                        ) {
-                            Icon(
-                                imageVector = if (isLocked) Icons.Filled.Lock else Icons.Filled.LockOpen,
-                                contentDescription = stringResource(
-                                    if (isLocked) R.string.cd_unlock_view else R.string.cd_lock_view
-                                ),
-                                tint = colors.buttonIconTint,
-                                modifier = Modifier.size(CONTROL_ICON_SIZE)
-                            )
-                        }
-
-                        // Touch Projection on / off — disabled when stream is frozen
-                        // (touches on a still image cannot be forwarded meaningfully).
-                        IconButton(
-                            onClick = { ScreenCaptureManager.toggleTouchProjection() },
-                            enabled = !isFrozen,
-                            modifier = Modifier
-                                .size(CONTROL_BUTTON_SIZE)
-                                .background(
-                                    color = when {
-                                        isFrozen -> colors.buttonBody.copy(alpha = 0.12f)
-                                        isTouchProjectionActive -> colors.buttonBody
-                                        else -> colors.buttonBody.copy(alpha = 0.35f)
-                                    },
-                                    shape = RoundedCornerShape(50)
-                                )
-                                .border(
-                                    width = 2.dp,
-                                    color = colors.navPillBorder.copy(
-                                        alpha = colors.navPillBorder.alpha * when {
-                                            isFrozen -> 0.12f
-                                            isTouchProjectionActive -> 1f
-                                            else -> 0.4f
-                                        }
-                                    ),
-                                    shape = RoundedCornerShape(50)
-                                )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.TouchApp,
-                                contentDescription = stringResource(
-                                    if (isTouchProjectionActive) R.string.cd_touch_projection_off
-                                    else R.string.cd_touch_projection_on
-                                ),
-                                tint = colors.buttonIconTint.copy(alpha = if (isFrozen) 0.38f else 1f),
-                                modifier = Modifier.size(CONTROL_ICON_SIZE)
-                            )
-                        }
-                    }
-                }
-            }
+            MirrorControlPanel(
+                visible = showControls || showButtons,
+                isCapturing = isCapturing,
+                isFrozen = isFrozen,
+                isLocked = isLocked,
+                isTouchProjectionActive = isTouchProjectionActive,
+            )
         }
 
         // CarouselOverlay is a sibling of the gesture Box so its touch events are
@@ -706,59 +547,4 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         // MainAppScreen's CarouselOverlay would be invisible while mirroring.
         CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
     }
-}
-
-/**
- * Maps a raw touch position on the mirror surface back through the current zoom/pan
- * transform to obtain the normalised content coordinate [0, 1] that corresponds to
- * the touched point on the primary display.
- *
- * The SurfaceView is centered in the secondary display's FrameLayout, so its pivot
- * point for the scale/translate transform lies at the screen center (screenW/2, screenH/2),
- * NOT at the SurfaceView's own center in its local coordinate space (sw/2, sh/2).
- * These differ when the content is letterboxed (sw != screenW or sh != screenH).
- *
- * Visual transform (screen → SurfaceView local)::
- *   screenPos = screenCenter + (svPos - svCenter) * scale + offset
- *   svPos     = (screenPos  - screenCenter - offset) / scale + svCenter
- *
- * Returns `null` when the touch lands outside the visible content area (e.g. letterbox
- * bars), in which case the caller should not inject the touch.
- *
- * @param touchX   Raw X of the touch on the secondary display (pixels)
- * @param touchY   Raw Y of the touch on the secondary display (pixels)
- * @param screenW  Full width of the secondary display Compose surface (gestureBoxSize.width)
- * @param screenH  Full height of the secondary display Compose surface (gestureBoxSize.height)
- * @param sw       Width of the letterboxed content area = ScreenCaptureManager.surfaceWidth
- * @param sh       Height of the letterboxed content area = ScreenCaptureManager.surfaceHeight
- * @param scale    Current zoom scale (1.0 = no zoom)
- * @param offsetX  Current pan offset X (pixels)
- * @param offsetY  Current pan offset Y (pixels)
- * @return Pair(normalizedX, normalizedY) or null if out-of-bounds
- */
-private fun projectCoordinates(
-    touchX: Float,
-    touchY: Float,
-    screenW: Float,
-    screenH: Float,
-    sw: Float,
-    sh: Float,
-    scale: Float,
-    offsetX: Float,
-    offsetY: Float
-): Pair<Float, Float>? {
-    if (sw <= 0f || sh <= 0f || scale <= 0f || screenW <= 0f || screenH <= 0f) return null
-    // Screen-space center — this is where the SurfaceView is anchored (CENTER gravity).
-    val screenCenterX = screenW / 2f
-    val screenCenterY = screenH / 2f
-    // SurfaceView-local pivot for the scale transform.
-    val svCenterX = sw / 2f
-    val svCenterY = sh / 2f
-    // Invert: svPos = (screenPos - screenCenter - offset) / scale + svCenter
-    val svX = (touchX - screenCenterX - offsetX) / scale + svCenterX
-    val svY = (touchY - screenCenterY - offsetY) / scale + svCenterY
-    val nx = svX / sw
-    val ny = svY / sh
-    if (nx !in 0f..1f || ny !in 0f..1f) return null
-    return Pair(nx, ny)
 }
