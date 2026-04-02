@@ -191,7 +191,7 @@ private fun TopModeHandle(
                 )
                 .shadow(elevation = CO_PILL_SHADOW_ELEVATION, shape = RoundedCornerShape(50), clip = false)
                 .size(width = CO_PILL_IDLE_WIDTH, height = CO_PILL_IDLE_HEIGHT)
-                .background(colors.onControlOverlay.copy(alpha = CO_PILL_IDLE_ALPHA), RoundedCornerShape(50))
+                .background(colors.pillIdleColor, RoundedCornerShape(50))
         )
 
         // Full control row: title | active pill | gear — all vertically centred
@@ -281,9 +281,8 @@ private fun TopModeHandle(
                     ) {
                         activeTools.forEach { tool ->
                             val dotColor by animateColorAsState(
-                                targetValue = colors.onControlOverlay.copy(
-                                    alpha = if (tool == currentMode) 1f else 0.35f
-                                ),
+                                targetValue = if (tool == currentMode) colors.controlIndicatorActive
+                                              else colors.onControlOverlay.copy(alpha = 0.35f),
                                 animationSpec = tween(durationMillis = CO_DOT_COLOR_ANIM_MS),
                                 label = "dot_color"
                             )

@@ -524,6 +524,11 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
 
             if (!isCapturing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(colors.controlOverlay)
+                )
                 Text(
                     text = stringResource(R.string.mirror_waiting_permission),
                     color = colors.onControlOverlay,
@@ -581,7 +586,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             Icon(
                                 imageVector = Icons.Filled.Stop,
                                 contentDescription = stringResource(R.string.cd_stop_mirroring),
-                                tint = colors.onControlOverlay,
+                                tint = colors.onAccent,
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -595,9 +600,9 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
                                     color = when {
-                                        isTouchProjectionActive -> colors.onControlOverlay.copy(alpha = 0.12f)
+                                        isTouchProjectionActive -> colors.accent.copy(alpha = 0.12f)
                                         isFrozen -> colors.accent
-                                        else -> colors.onControlOverlay.copy(alpha = 0.3f)
+                                        else -> colors.accent.copy(alpha = 0.35f)
                                     },
                                     shape = RoundedCornerShape(50)
                                 )
@@ -607,7 +612,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 contentDescription = stringResource(
                                     if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze
                                 ),
-                                tint = colors.onControlOverlay.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
+                                tint = colors.onAccent.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -619,7 +624,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
-                                    color = if (isLocked) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
+                                    color = if (isLocked) colors.accent else colors.accent.copy(alpha = 0.35f),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -628,7 +633,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 contentDescription = stringResource(
                                     if (isLocked) R.string.cd_unlock_view else R.string.cd_lock_view
                                 ),
-                                tint = colors.onControlOverlay,
+                                tint = colors.onAccent,
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -642,9 +647,9 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
                                     color = when {
-                                        isFrozen -> colors.onControlOverlay.copy(alpha = 0.12f)
+                                        isFrozen -> colors.accent.copy(alpha = 0.12f)
                                         isTouchProjectionActive -> colors.accent
-                                        else -> colors.onControlOverlay.copy(alpha = 0.3f)
+                                        else -> colors.accent.copy(alpha = 0.35f)
                                     },
                                     shape = RoundedCornerShape(50)
                                 )
@@ -655,7 +660,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     if (isTouchProjectionActive) R.string.cd_touch_projection_off
                                     else R.string.cd_touch_projection_on
                                 ),
-                                tint = colors.onControlOverlay.copy(alpha = if (isFrozen) 0.38f else 1f),
+                                tint = colors.onAccent.copy(alpha = if (isFrozen) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }

@@ -123,9 +123,9 @@ fun MainAppScreen() {
                                         Icons.Filled.PlayArrow,
                                         contentDescription = stringResource(R.string.mirror_start_button),
                                         modifier = Modifier.padding(end = 8.dp).size(36.dp),
-                                        tint = Color.White
+                                        tint = colors.onAccent
                                     )
-                                    Text(stringResource(R.string.mirror_start_button), color = Color.White)
+                                    Text(stringResource(R.string.mirror_start_button), color = colors.onAccent)
                                 }
                             }
                         } else {

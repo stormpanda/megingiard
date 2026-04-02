@@ -67,6 +67,12 @@ data class AppColors(
      * baked into the palette and cannot be changed by the user.
      */
     val accent: Color,
+    /** Text / icons on accent / highlighted buttons. */
+    val onAccent: Color,
+    /** Always-visible pull-tab pill colour (already includes the desired alpha). */
+    val pillIdleColor: Color,
+    /** Active mode indicator dot inside the navigation pill. */
+    val controlIndicatorActive: Color,
 )
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
@@ -90,8 +96,11 @@ private val darkPalette = AppColors(
     touchpadBackground  = Color.Black,
     touchpadIndicator   = Color.White,
     pickerBackground    = Color(0xFF1C1C1E),
-    accentBorder        = Color.White.copy(alpha = 0.3f),
-    accent              = DEFAULT_DARK_LIGHT_ACCENT,
+    accentBorder               = Color.White.copy(alpha = 0.3f),
+    accent                     = DEFAULT_DARK_LIGHT_ACCENT,
+    onAccent                   = Color.White,
+    pillIdleColor              = Color.White.copy(alpha = 0.4f),
+    controlIndicatorActive     = Color.White,
 )
 
 private val lightPalette = AppColors(
@@ -110,8 +119,11 @@ private val lightPalette = AppColors(
     touchpadBackground  = Color(0xFFE5E5EA),
     touchpadIndicator   = Color(0xFF1C1C1E),
     pickerBackground    = Color(0xFFFFFFFF),
-    accentBorder        = Color(0xFF1C1C1E).copy(alpha = 0.2f),
-    accent              = DEFAULT_DARK_LIGHT_ACCENT,
+    accentBorder               = Color(0xFF1C1C1E).copy(alpha = 0.2f),
+    accent                     = DEFAULT_DARK_LIGHT_ACCENT,
+    onAccent                   = Color.White,
+    pillIdleColor              = Color.White.copy(alpha = 0.4f),
+    controlIndicatorActive     = Color.White,
 )
 
 // ─── Cyberpunk palette ────────────────────────────────────────────────────────
@@ -119,11 +131,13 @@ private val lightPalette = AppColors(
 //   Background → dark blood red     ~0xFF160709
 //   Menu text  → vivid red          ~0xFFED2224
 //   Selection  → cyan               ~0xFF00CCFF
-private val CP_ACCENT   = Color(0xFF00CCFF)   // cyan — primary interactive / accent
-private val CP_BG       = Color(0xFF160709)   // dark blood-red background
-private val CP_SURFACE  = Color(0xFF220C0F)   // slightly lighter surface
-private val CP_SURFACE2 = Color(0xFF2E1115)   // elevated / dragged surface
-private val CP_TEXT     = Color(0xFFED2224)   // vivid red text
+private val CP_ACCENT      = Color(0xFF00CCFF)   // cyan — primary interactive / accent
+private val CP_BG          = Color(0xFF160709)   // dark blood-red background
+private val CP_SURFACE     = Color(0xFF220C0F)   // slightly lighter surface
+private val CP_SURFACE2    = Color(0xFF2E1115)   // elevated / dragged surface
+private val CP_TEXT        = Color(0xFFED2224)   // vivid red text
+private val CP_DARK_RED    = Color(0xFF8B0000)   // dark red for overlay and button text
+internal val CP_TP_YELLOW   = Color(0xFFFFED00)   // bright yellow for trackpoint dot only
 
 private val cyberpunkPalette = AppColors(
     appBackground       = CP_BG,
@@ -132,8 +146,8 @@ private val cyberpunkPalette = AppColors(
     onSurface           = CP_TEXT,
     onSurfaceSecondary  = CP_TEXT.copy(alpha = 0.55f),
     divider             = CP_TEXT.copy(alpha = 0.10f),
-    controlOverlay      = Color.Black.copy(alpha = 0.8f),
-    onControlOverlay    = Color.White,
+    controlOverlay      = CP_DARK_RED,
+    onControlOverlay    = CP_DARK_RED,
     fingerCircle        = Color.White.copy(alpha = 0.45f),
     keyBackground       = CP_SURFACE,
     keyPressed          = CP_SURFACE2,
@@ -141,8 +155,11 @@ private val cyberpunkPalette = AppColors(
     touchpadBackground  = CP_BG,
     touchpadIndicator   = CP_ACCENT,
     pickerBackground    = CP_SURFACE,
-    accentBorder        = CP_ACCENT.copy(alpha = 0.35f),
-    accent              = CP_ACCENT,
+    accentBorder               = CP_ACCENT.copy(alpha = 0.35f),
+    accent                     = CP_ACCENT,
+    onAccent                   = CP_DARK_RED,
+    pillIdleColor              = CP_TP_YELLOW,
+    controlIndicatorActive     = CP_TEXT,
 )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────

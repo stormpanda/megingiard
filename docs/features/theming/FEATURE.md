@@ -45,7 +45,7 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 ### Token Definitions — `ui/AppTheme.kt`
 
-Seventeen semantic `AppColors` tokens cover all theming needs:
+Eighteen semantic `AppColors` tokens cover all theming needs:
 
 | Token                | Semantic purpose                                                            |
 | -------------------- | --------------------------------------------------------------------------- |
@@ -55,8 +55,8 @@ Seventeen semantic `AppColors` tokens cover all theming needs:
 | `onSurface`          | Primary text                                                                |
 | `onSurfaceSecondary` | Secondary / hint text                                                       |
 | `divider`            | Subtle separator lines                                                      |
-| `controlOverlay`     | Floating control pill background — always dark (overlaid on screen content) |
-| `onControlOverlay`   | Text / icons on the control overlay — always white (theme-invariant)        |
+| `controlOverlay`     | Floating control pill background                                            |
+| `onControlOverlay`   | Text / icons on the control overlay                                         |
 | `fingerCircle`       | Finger-indicator circle — always white-tinted (theme-invariant)             |
 | `keyBackground`      | Key face (normal)                                                           |
 | `keyPressed`         | Key face (pressed)                                                          |
@@ -65,7 +65,8 @@ Seventeen semantic `AppColors` tokens cover all theming needs:
 | `touchpadIndicator`  | Touchpad border / hint dots                                                 |
 | `pickerBackground`   | Color-picker dialog background                                              |
 | `accentBorder`       | Accent-colour swatch border                                                 |
-| `accent`            | Primary interactive accent colour (user-overridable or fixed per theme)     |
+| `accent`             | Primary interactive accent colour (user-overridable or fixed per theme)     |
+| `onAccent`           | Text / icons on accent / highlighted button backgrounds                     |
 
 ### Palettes
 
@@ -73,7 +74,7 @@ Three palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `lightPalette` — white/light-grey surfaces with near-black text.
-- `cyberpunkPalette` — dark blood-red surfaces, vivid red text, cyan accent inspired by the Cyberpunk 2077 menu.
+- `cyberpunkPalette` — dark blood-red surfaces, vivid red text, dark-red overlays with yellow carousel text/pills, and yellow accent buttons with dark-red icons (inspired by the Cyberpunk 2077 menu).
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
