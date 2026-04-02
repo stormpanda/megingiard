@@ -56,6 +56,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.CAROUSEL_PILL_INSET
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -98,6 +99,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
     val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
     val colors = LocalAppColors.current
@@ -373,8 +375,8 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                 .padding(
                     start = 4.dp,
                     end = 4.dp,
-                    top = 4.dp,
-                    bottom = if (kbFullscreen) 4.dp else KB_IME_BOTTOM_PADDING
+                    top = if (overlayAtBottom) 4.dp else CAROUSEL_PILL_INSET,
+                    bottom = if (kbFullscreen) (if (overlayAtBottom) CAROUSEL_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
                 ),
             verticalArrangement = Arrangement.SpaceEvenly
         ) {

@@ -55,6 +55,11 @@ private val CO_PILL_IDLE_WIDTH = 72.dp
 private val CO_PILL_IDLE_HEIGHT = 4.dp
 private const val CO_PILL_IDLE_ALPHA = 0.4f
 private val CO_PILL_SHADOW_ELEVATION = 3.dp
+
+/** Vertical space the always-visible idle pill occupies at the screen edge.
+ *  Screens that fill the display should inset their content by this amount
+ *  on the side where the carousel overlay lives to avoid overlap. */
+internal val CAROUSEL_PILL_INSET: Dp = CO_PILL_TOP_PADDING + CO_PILL_IDLE_HEIGHT + 3.dp
 private val CO_HANDLE_H_PADDING = 12.dp
 private val CO_HANDLE_ROW_V_PADDING = 6.dp
 private val CO_HANDLE_CORNER = 12.dp
