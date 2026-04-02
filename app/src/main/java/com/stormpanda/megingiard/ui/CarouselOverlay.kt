@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -53,6 +54,7 @@ private val CO_PILL_TOP_PADDING = 6.dp
 private val CO_PILL_IDLE_WIDTH = 72.dp
 private val CO_PILL_IDLE_HEIGHT = 4.dp
 private const val CO_PILL_IDLE_ALPHA = 0.4f
+private val CO_PILL_SHADOW_ELEVATION = 3.dp
 private val CO_HANDLE_H_PADDING = 12.dp
 private val CO_HANDLE_ROW_V_PADDING = 6.dp
 private val CO_HANDLE_CORNER = 12.dp
@@ -183,6 +185,7 @@ private fun TopModeHandle(
                     if (overlayAtBottom) Modifier.padding(bottom = CO_PILL_TOP_PADDING)
                     else Modifier.padding(top = CO_PILL_TOP_PADDING)
                 )
+                .shadow(elevation = CO_PILL_SHADOW_ELEVATION, shape = RoundedCornerShape(50), clip = false)
                 .size(width = CO_PILL_IDLE_WIDTH, height = CO_PILL_IDLE_HEIGHT)
                 .background(colors.onControlOverlay.copy(alpha = CO_PILL_IDLE_ALPHA), RoundedCornerShape(50))
         )
