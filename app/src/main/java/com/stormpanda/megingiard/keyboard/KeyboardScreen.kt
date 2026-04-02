@@ -566,6 +566,7 @@ private fun MouseButton(
     modifier: Modifier = Modifier,
 ) {
     var pressed by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
     val alpha by animateFloatAsState(
         targetValue = if (pressed) KB_MOUSE_BTN_PRESSED_ALPHA else KB_MOUSE_BTN_NORMAL_ALPHA,
         animationSpec = tween(if (pressed) KB_MOUSE_BTN_PRESS_ANIM_MS else KB_MOUSE_BTN_RELEASE_ANIM_MS),
@@ -616,7 +617,7 @@ private fun MouseButton(
     ) {
         Text(
             text = label,
-            color = Color.White,
+            color = colors.onSurface,
             fontSize = 11.sp,
         )
     }
@@ -780,8 +781,9 @@ private fun KeyCap(
                 modifier = Modifier
                     .fillMaxSize(0.55f)
                     .aspectRatio(1f)
+                    .border(2.dp, colors.navPillBorder, CircleShape)
                     .clip(CircleShape)
-                    .background(colors.accent)
+                    .background(colors.keyBackground)
             )
         } else {
             val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()

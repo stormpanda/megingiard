@@ -612,7 +612,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .border(
                                     width = 2.dp,
                                     color = colors.navPillBorder.copy(
-                                        alpha = when {
+                                        alpha = colors.navPillBorder.alpha * when {
                                             isTouchProjectionActive -> 0.12f
                                             isFrozen -> 1f
                                             else -> 0.4f
@@ -643,7 +643,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 )
                                 .border(
                                     width = 2.dp,
-                                    color = colors.navPillBorder.copy(alpha = if (isLocked) 1f else 0.4f),
+                                    color = colors.navPillBorder.copy(alpha = colors.navPillBorder.alpha * if (isLocked) 1f else 0.4f),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -675,7 +675,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .border(
                                     width = 2.dp,
                                     color = colors.navPillBorder.copy(
-                                        alpha = when {
+                                        alpha = colors.navPillBorder.alpha * when {
                                             isFrozen -> 0.12f
                                             isTouchProjectionActive -> 1f
                                             else -> 0.4f
