@@ -55,6 +55,8 @@ com.stormpanda.megingiard
 │ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
 │ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
 │ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze/lock/touch-projection + carousel nav)
+│ ├── MirrorControlPanel.kt # Animated control pill (Stop/Freeze/Lock/TouchProjection buttons)
+│ ├── MirrorCoordinateTransform.kt # Pure projectCoordinates() geometry helper
 │ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, lock, projection, etc.)
 │ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
 ├── input/
@@ -65,6 +67,8 @@ com.stormpanda.megingiard
 │ └── ShellMouseInjector.kt # Native binary lifecycle + MOVE-coalescing writer thread (shared)
 ├── keyboard/
 │ ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
+│ ├── KeyboardKeyCap.kt # KeyBounds data class, findKeyInLayout(), KeyCap Composable
+│ ├── KeyboardMouseOverlay.kt # Mouse button overlay (MouseButtonColumn, ScrollWheelButton, etc.)
 │ ├── KeyboardState.kt # Modifier key state machine (INACTIVE/STICKY/HELD)
 │ ├── KeyboardLayout.kt # Layout definitions & KeyDef data class
 │ ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
@@ -73,12 +77,22 @@ com.stormpanda.megingiard
 │ └── LinuxKeycodes.kt # Linux input-event-codes constants
 ├── settings/
 │ ├── ColorWheelPicker.kt # HSV color picker Dialog (hue wheel + brightness slider)
-│ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable
+│ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable (scaffold + state only)
+│ ├── GlobalSettingsComponents.kt # Extracted setting row Composables for GlobalSettingsScreen
 │ ├── SettingsManager.kt # App-wide settings persistence via DataStore
-│ └── ToolSettingsPanel.kt # Per-tool settings Dialog (tool toggle, reorder, accent color)
+│ ├── ToolSettingsPanel.kt # Per-tool settings Dialog orchestrator (mode dispatch only)
+│ ├── ToolSettingsComponents.kt # Reusable row Composables (RememberSettingRow, dropdowns, etc.)
+│ ├── MirrorToolSettings.kt # Mirror-mode settings Composable
+│ ├── KeyboardToolSettings.kt # Keyboard-mode settings Composable
+│ └── TouchpadToolSettings.kt # Touchpad-mode settings Composable
 ├── macropad/
 │ ├── MacroPadScreen.kt # Use-mode Composable (pad render, multi-touch, injector lifecycle)
+│ ├── MacroPadButton.kt # PadButton & ScrollWheelFace Composables + button constants
+│ ├── MacroPadActionDispatch.kt # injectActionDown/Up helpers (delegates to injectors)
 │ ├── MacroPadEditor.kt # Full-screen layout editor (profile CRUD, drag-repositioning)
+│ ├── PadCanvas.kt # Draggable editor canvas (DraggableButton, PadCanvas)
+│ ├── PadButtonEditDialog.kt # Button create/edit dialog (ButtonEditDialog, SectionLabel)
+│ ├── PadActionPicker.kt # Action-selection UI (ActionPicker, sub-pickers, KEYBOARD_KEY_PRESETS)
 │ ├── MacroPadToolSettings.kt # Tool-settings panel (profile picker, shape/size, Edit Layout)
 │ ├── MacroPadState.kt # Singleton state: profiles + active profile, CRUD, persistence
 │ ├── MacroPadLayout.kt # Serializable data model: PadProfile, PadButton, PadAction
