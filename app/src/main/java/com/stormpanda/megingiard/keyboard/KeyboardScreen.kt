@@ -781,7 +781,7 @@ private fun KeyCap(
                 modifier = Modifier
                     .fillMaxSize(0.55f)
                     .aspectRatio(1f)
-                    .border(2.dp, colors.navPillBorder, CircleShape)
+                    .border(2.dp, colors.accent, CircleShape)
                     .clip(CircleShape)
                     .background(colors.keyBackground)
             )

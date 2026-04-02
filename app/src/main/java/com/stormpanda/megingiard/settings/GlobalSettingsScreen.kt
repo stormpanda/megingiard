@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.ThemeMode
 import kotlin.math.roundToInt
@@ -219,7 +220,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
 private fun SettingsCategoryHeader(
     text: String,
     accentColor: Color,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
 ) {
     Text(
         text = text.uppercase(Locale.ROOT),
@@ -240,7 +241,7 @@ private fun ToolOrderRow(
     isDragging: Boolean,
     canDisable: Boolean,
     accentColor: Color,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
     onToggle: (Boolean) -> Unit,
     dragHandleModifier: Modifier,
 ) {
@@ -285,7 +286,7 @@ private fun ToolOrderRow(
 private fun OverlayTimeoutRow(
     overlayTimeoutMs: Long,
     accentColor: Color,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
     onTimeoutChanged: (Long) -> Unit,
 ) {
     var sliderValue by remember { mutableFloatStateOf(overlayTimeoutMs.toFloat()) }
@@ -322,7 +323,7 @@ private fun OverlayTimeoutRow(
 private fun OverlayPositionRow(
     overlayAtBottom: Boolean,
     accentColor: Color,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
     onChanged: (Boolean) -> Unit,
 ) {
     Row(
@@ -353,7 +354,7 @@ private fun OverlayPositionRow(
 private fun RememberLastToolRow(
     rememberLastTool: Boolean,
     accentColor: Color,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
     onChanged: (Boolean) -> Unit,
 ) {
     Row(
@@ -396,7 +397,7 @@ private fun ThemeMode.displayNameResId(): Int = when (this) {
 private fun ThemePickerRow(
     themeMode: ThemeMode,
     accentColor: Color,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
     onChanged: (ThemeMode) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -456,7 +457,7 @@ private fun ThemePickerRow(
 @Composable
 private fun AccentColorRow(
     accentColor: Color,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
     onClick: () -> Unit,
 ) {
     Row(

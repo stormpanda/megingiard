@@ -23,7 +23,7 @@ enum class ThemeMode(val supportsCustomAccent: Boolean) {
 // ─── Semantic tokens ─────────────────────────────────────────────────────────
 //
 // All UI colors are expressed through these tokens.  Each screen replaces its
-// private file-scoped color constants with references to LocalAppTheme.current.
+// private file-scoped color constants with references to LocalAppColors.current.
 // Adding a new theme requires only a new ThemePalette entry below — no
 // per-screen changes are necessary.
 
