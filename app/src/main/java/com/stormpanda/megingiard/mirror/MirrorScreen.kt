@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -527,11 +528,11 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(colors.controlOverlay)
+                        .background(colors.appBackground)
                 )
                 Text(
                     text = stringResource(R.string.mirror_waiting_permission),
-                    color = colors.onControlOverlay,
+                    color = colors.onSurface,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -564,6 +565,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                         modifier = Modifier
                             .align(Alignment.Center)
                             .background(colors.controlOverlay, RoundedCornerShape(50))
+                            .border(2.dp, colors.mirrorPillBorder, RoundedCornerShape(50))
                             .padding(
                                 horizontal = CONTROL_PILL_H_PADDING,
                                 vertical = CONTROL_PILL_V_PADDING
@@ -581,12 +583,13 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             },
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
-                                .background(colors.accent, RoundedCornerShape(50))
+                                .background(colors.buttonBody, RoundedCornerShape(50))
+                                .border(2.dp, colors.navPillBorder, RoundedCornerShape(50))
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Stop,
                                 contentDescription = stringResource(R.string.cd_stop_mirroring),
-                                tint = colors.onAccent,
+                                tint = colors.buttonIconTint,
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -600,10 +603,21 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
                                     color = when {
-                                        isTouchProjectionActive -> colors.accent.copy(alpha = 0.12f)
-                                        isFrozen -> colors.accent
-                                        else -> colors.accent.copy(alpha = 0.35f)
+                                        isTouchProjectionActive -> colors.buttonBody.copy(alpha = 0.12f)
+                                        isFrozen -> colors.buttonBody
+                                        else -> colors.buttonBody.copy(alpha = 0.35f)
                                     },
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = colors.navPillBorder.copy(
+                                        alpha = when {
+                                            isTouchProjectionActive -> 0.12f
+                                            isFrozen -> 1f
+                                            else -> 0.4f
+                                        }
+                                    ),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -612,7 +626,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 contentDescription = stringResource(
                                     if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze
                                 ),
-                                tint = colors.onAccent.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
+                                tint = colors.buttonIconTint.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -624,7 +638,12 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
-                                    color = if (isLocked) colors.accent else colors.accent.copy(alpha = 0.35f),
+                                    color = if (isLocked) colors.buttonBody else colors.buttonBody.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = colors.navPillBorder.copy(alpha = if (isLocked) 1f else 0.4f),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -633,7 +652,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 contentDescription = stringResource(
                                     if (isLocked) R.string.cd_unlock_view else R.string.cd_lock_view
                                 ),
-                                tint = colors.onAccent,
+                                tint = colors.buttonIconTint,
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -647,10 +666,21 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
                                     color = when {
-                                        isFrozen -> colors.accent.copy(alpha = 0.12f)
-                                        isTouchProjectionActive -> colors.accent
-                                        else -> colors.accent.copy(alpha = 0.35f)
+                                        isFrozen -> colors.buttonBody.copy(alpha = 0.12f)
+                                        isTouchProjectionActive -> colors.buttonBody
+                                        else -> colors.buttonBody.copy(alpha = 0.35f)
                                     },
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = colors.navPillBorder.copy(
+                                        alpha = when {
+                                            isFrozen -> 0.12f
+                                            isTouchProjectionActive -> 1f
+                                            else -> 0.4f
+                                        }
+                                    ),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -660,7 +690,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     if (isTouchProjectionActive) R.string.cd_touch_projection_off
                                     else R.string.cd_touch_projection_on
                                 ),
-                                tint = colors.onAccent.copy(alpha = if (isFrozen) 0.38f else 1f),
+                                tint = colors.buttonIconTint.copy(alpha = if (isFrozen) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }

@@ -418,7 +418,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     .align(Alignment.Center)
                     .alpha(trackpointAlpha)
                     .background(colors.controlOverlay.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
-                    .border(1.dp, colors.accent, RoundedCornerShape(8.dp)),
+                    .border(2.dp, colors.navPillBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

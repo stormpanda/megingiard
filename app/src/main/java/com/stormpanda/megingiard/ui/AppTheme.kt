@@ -73,6 +73,18 @@ data class AppColors(
     val pillIdleColor: Color,
     /** Active mode indicator dot inside the navigation pill. */
     val controlIndicatorActive: Color,
+    /** Background of the navigation pill (overrides accent for custom-accent themes). */
+    val navPillBody: Color,
+    /** Background of mirror control buttons. */
+    val buttonBody: Color,
+    /** Border/outline of the carousel control overlay container. */
+    val controlOverlayBorder: Color,
+    /** Border/outline of the navigation pill. */
+    val navPillBorder: Color,
+    /** Border/outline of the mirror control pill. */
+    val mirrorPillBorder: Color,
+    /** Icon tint on mirror control buttons. */
+    val buttonIconTint: Color,
 )
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
@@ -101,6 +113,12 @@ private val darkPalette = AppColors(
     onAccent                   = Color.White,
     pillIdleColor              = Color.White.copy(alpha = 0.4f),
     controlIndicatorActive     = Color.White,
+    navPillBody                = DEFAULT_DARK_LIGHT_ACCENT,
+    buttonBody                 = DEFAULT_DARK_LIGHT_ACCENT,
+    controlOverlayBorder       = Color.Transparent,
+    navPillBorder              = Color.Transparent,
+    mirrorPillBorder           = Color.Transparent,
+    buttonIconTint             = Color.White,
 )
 
 private val lightPalette = AppColors(
@@ -124,6 +142,12 @@ private val lightPalette = AppColors(
     onAccent                   = Color.White,
     pillIdleColor              = Color.White.copy(alpha = 0.4f),
     controlIndicatorActive     = Color.White,
+    navPillBody                = DEFAULT_DARK_LIGHT_ACCENT,
+    buttonBody                 = DEFAULT_DARK_LIGHT_ACCENT,
+    controlOverlayBorder       = Color.Transparent,
+    navPillBorder              = Color.Transparent,
+    mirrorPillBorder           = Color.Transparent,
+    buttonIconTint             = Color.White,
 )
 
 // ─── Cyberpunk palette ────────────────────────────────────────────────────────
@@ -146,7 +170,7 @@ private val cyberpunkPalette = AppColors(
     onSurface           = CP_TEXT,
     onSurfaceSecondary  = CP_TEXT.copy(alpha = 0.55f),
     divider             = CP_TEXT.copy(alpha = 0.10f),
-    controlOverlay      = CP_DARK_RED,
+    controlOverlay      = CP_SURFACE,
     onControlOverlay    = CP_DARK_RED,
     fingerCircle        = Color.White.copy(alpha = 0.45f),
     keyBackground       = CP_SURFACE,
@@ -160,6 +184,12 @@ private val cyberpunkPalette = AppColors(
     onAccent                   = CP_DARK_RED,
     pillIdleColor              = CP_TP_YELLOW,
     controlIndicatorActive     = CP_TEXT,
+    navPillBody                = CP_SURFACE,
+    buttonBody                 = CP_SURFACE,
+    controlOverlayBorder       = CP_DARK_RED,
+    navPillBorder              = CP_ACCENT,
+    mirrorPillBorder           = CP_TEXT,
+    buttonIconTint             = CP_ACCENT,
 )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────
@@ -175,8 +205,10 @@ fun paletteFor(mode: ThemeMode, userAccent: Color? = null): AppColors {
         ThemeMode.LIGHT     -> lightPalette
         ThemeMode.CYBERPUNK -> cyberpunkPalette
     }
-    return if (mode.supportsCustomAccent && userAccent != null) base.copy(accent = userAccent)
-    else base
+    return if (mode.supportsCustomAccent) {
+        val eff = userAccent ?: base.accent
+        base.copy(accent = eff, navPillBody = eff, buttonBody = eff)
+    } else base
 }
 
 // ─── Material 3 ColorScheme bridges ───────────────────────────────────────────

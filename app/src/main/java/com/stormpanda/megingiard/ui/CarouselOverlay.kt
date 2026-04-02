@@ -10,6 +10,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -205,6 +206,7 @@ private fun TopModeHandle(
                     .fillMaxWidth()
                     .padding(horizontal = CO_HANDLE_H_PADDING, vertical = CO_HANDLE_ROW_V_PADDING)
                     .background(colors.controlOverlay, RoundedCornerShape(CO_HANDLE_CORNER))
+                    .border(2.dp, colors.controlOverlayBorder, RoundedCornerShape(CO_HANDLE_CORNER))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -222,7 +224,8 @@ private fun TopModeHandle(
                     Box(
                     modifier = Modifier
                         .size(width = pillWidth, height = CO_PILL_ACTIVE_HEIGHT)
-                        .background(colors.accent, RoundedCornerShape(50))
+                        .background(colors.navPillBody, RoundedCornerShape(50))
+                        .border(2.dp, colors.navPillBorder, RoundedCornerShape(50))
                         .pointerInput(activeTools) {
                             awaitEachGesture {
                                 var down = awaitPointerEvent()

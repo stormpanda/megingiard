@@ -47,26 +47,26 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 Eighteen semantic `AppColors` tokens cover all theming needs:
 
-| Token                | Semantic purpose                                                            |
-| -------------------- | --------------------------------------------------------------------------- |
-| `appBackground`      | Full-screen background                                                      |
-| `surface`            | Card / panel / row surface                                                  |
-| `surfaceVariant`     | Elevated surface (e.g. dragged item)                                        |
-| `onSurface`          | Primary text                                                                |
-| `onSurfaceSecondary` | Secondary / hint text                                                       |
-| `divider`            | Subtle separator lines                                                      |
-| `controlOverlay`     | Floating control pill background                                            |
-| `onControlOverlay`   | Text / icons on the control overlay                                         |
-| `fingerCircle`       | Finger-indicator circle — always white-tinted (theme-invariant)             |
-| `keyBackground`      | Key face (normal)                                                           |
-| `keyPressed`         | Key face (pressed)                                                          |
-| `keyModifierActive`  | Modifier key when sticky/held                                               |
-| `touchpadBackground` | Touchpad surface                                                            |
-| `touchpadIndicator`  | Touchpad border / hint dots                                                 |
-| `pickerBackground`   | Color-picker dialog background                                              |
-| `accentBorder`       | Accent-colour swatch border                                                 |
-| `accent`             | Primary interactive accent colour (user-overridable or fixed per theme)     |
-| `onAccent`           | Text / icons on accent / highlighted button backgrounds                     |
+| Token                | Semantic purpose                                                        |
+| -------------------- | ----------------------------------------------------------------------- |
+| `appBackground`      | Full-screen background                                                  |
+| `surface`            | Card / panel / row surface                                              |
+| `surfaceVariant`     | Elevated surface (e.g. dragged item)                                    |
+| `onSurface`          | Primary text                                                            |
+| `onSurfaceSecondary` | Secondary / hint text                                                   |
+| `divider`            | Subtle separator lines                                                  |
+| `controlOverlay`     | Floating control pill background                                        |
+| `onControlOverlay`   | Text / icons on the control overlay                                     |
+| `fingerCircle`       | Finger-indicator circle — always white-tinted (theme-invariant)         |
+| `keyBackground`      | Key face (normal)                                                       |
+| `keyPressed`         | Key face (pressed)                                                      |
+| `keyModifierActive`  | Modifier key when sticky/held                                           |
+| `touchpadBackground` | Touchpad surface                                                        |
+| `touchpadIndicator`  | Touchpad border / hint dots                                             |
+| `pickerBackground`   | Color-picker dialog background                                          |
+| `accentBorder`       | Accent-colour swatch border                                             |
+| `accent`             | Primary interactive accent colour (user-overridable or fixed per theme) |
+| `onAccent`           | Text / icons on accent / highlighted button backgrounds                 |
 
 ### Palettes
 
