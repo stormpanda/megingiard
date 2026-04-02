@@ -46,6 +46,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -94,7 +95,7 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
     }
 
     Box(
-        modifier = modifier.fillMaxSize().background(Color.Black),
+        modifier = modifier.fillMaxSize().background(LocalAppColors.current.touchpadBackground),
         contentAlignment = Alignment.Center
     ) {
         TouchSurface(
@@ -117,6 +118,7 @@ private fun TouchSurface(
     var touchPos by remember { mutableStateOf<Offset?>(null) }
 
     val density         = LocalDensity.current
+    val colors          = LocalAppColors.current
     val indicatorSizePx = remember(density) { with(density) { TOUCH_INDICATOR_SIZE.toPx() } }
 
     val overlayVisible      by AppStateManager.overlayVisible.collectAsState()
@@ -130,7 +132,7 @@ private fun TouchSurface(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(TOUCH_AREA_ASPECT_RATIO)
-            .border(TOUCH_AREA_BORDER_WIDTH, Color.White.copy(alpha = 0.25f), RoundedCornerShape(TOUCH_AREA_CORNER_RADIUS))
+            .border(TOUCH_AREA_BORDER_WIDTH, colors.touchpadIndicator, RoundedCornerShape(TOUCH_AREA_CORNER_RADIUS))
             .onGloballyPositioned { coords -> surfaceSize = coords.size }
             // Re-create the pointer handler whenever the input method changes so
             // all per-mode tracking state is cleanly initialised.
@@ -284,7 +286,7 @@ private fun TouchSurface(
                 text = stringResource(
                     if (useMouse) R.string.touchpad_hint_mouse else R.string.touchpad_hint
                 ),
-                color = Color.White.copy(alpha = 0.2f),
+                color = colors.touchpadIndicator,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
@@ -306,7 +308,7 @@ private fun TouchSurface(
                                 y = (pos.y - indicatorSizePx / 2f).roundToInt()
                             )
                         }
-                        .background(Color.White.copy(alpha = TOUCH_INDICATOR_ALPHA), CircleShape)
+                        .background(colors.fingerCircle, CircleShape)
                 )
             }
         }

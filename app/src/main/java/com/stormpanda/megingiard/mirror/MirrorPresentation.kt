@@ -25,12 +25,18 @@ import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.colorSchemeFor
+import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -128,8 +134,14 @@ class MirrorPresentation(
 
         val composeView = ComposeView(context).apply {
             setContent {
-                CompositionLocalProvider(LocalOnBackPressedDispatcherOwner provides backDispatcherOwner) {
-                    MaterialTheme {
+                val themeMode by SettingsManager.themeMode.collectAsState()
+                val userAccent by SettingsManager.accentColor.collectAsState()
+                val appColors = paletteFor(themeMode, userAccent)
+                CompositionLocalProvider(
+                    LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
+                    LocalAppColors provides appColors
+                ) {
+                    MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
                         MirrorScreen()
                     }
                 }

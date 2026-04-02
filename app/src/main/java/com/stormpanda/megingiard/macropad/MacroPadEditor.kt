@@ -79,6 +79,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,13 +88,6 @@ import kotlinx.coroutines.launch
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-
-private val ED_BG              = Color(0xFF121212)
-private val ED_SURFACE         = Color(0xFF1C1C1E)
-private val ED_TEXT            = Color.White
-private val ED_TEXT_SECONDARY  = Color.White.copy(alpha = 0.6f)
-private val ED_DIVIDER         = Color.White.copy(alpha = 0.12f)
-private val ED_BORDER          = Color.White.copy(alpha = 0.20f)
 
 private val ED_TOP_BAR_HEIGHT  = 56.dp
 private val ED_PADDING         = 16.dp
@@ -126,7 +120,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
     val context     = LocalContext.current
     val profiles    by MacroPadState.profiles.collectAsState()
     val activeId    by MacroPadState.activeProfileId.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
+    val colors      = LocalAppColors.current
 
     // Stop all uinput virtual devices while the editor is open.
     // keyinjector_arm64 registers as a hardware keyboard via uinput, which causes
@@ -149,12 +143,12 @@ fun MacroPadEditor(onDone: () -> Unit) {
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
 
     Scaffold(
-        containerColor = ED_BG,
+        containerColor = colors.appBackground,
         topBar = {
             EditorTopBar(
                 profiles    = profiles,
                 activeId    = activeId,
-                accentColor = accentColor,
+                accentColor = colors.accent,
                 onSelectProfile  = { MacroPadState.setActiveProfileId(it) },
                 onNewProfile     = {
                     val newProfile = PadProfile(
@@ -179,7 +173,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             ) {
                 Text(
                     text  = stringResource(R.string.macropad_no_profile),
-                    color = ED_TEXT_SECONDARY,
+                    color = colors.onSurfaceSecondary,
                     textAlign = TextAlign.Center,
                     modifier  = Modifier.padding(ED_PADDING),
                 )
@@ -187,7 +181,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
         } else {
             EditorBody(
                 profile     = profile,
-                accentColor = accentColor,
+                accentColor = colors.accent,
                 modifier    = Modifier.padding(innerPadding),
             )
         }
@@ -215,12 +209,13 @@ private fun EditorTopBar(
     var showDeleteConfirm   by remember { mutableStateOf(false) }
 
     val activeProfile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
+    val colors        = LocalAppColors.current
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(ED_TOP_BAR_HEIGHT)
-            .background(ED_SURFACE)
+            .background(colors.surface)
             .padding(horizontal = ED_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -235,27 +230,27 @@ private fun EditorTopBar(
             ) {
                 Text(
                     text     = activeProfile?.name ?: stringResource(R.string.macropad_editor_new_profile_name),
-                    color    = ED_TEXT,
+                    color    = colors.onSurface,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = ED_TEXT_SECONDARY)
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
             }
 
             DropdownMenu(
                 expanded          = profileMenuExpanded,
                 onDismissRequest  = { profileMenuExpanded = false },
-                modifier          = Modifier.background(ED_SURFACE),
+                modifier          = Modifier.background(colors.surface),
             ) {
                 profiles.forEach { p ->
                     DropdownMenuItem(
                         text = {
                             Text(
                                 text  = p.name,
-                                color = if (p.id == activeId) accentColor else ED_TEXT,
+                                color = if (p.id == activeId) accentColor else colors.onSurface,
                                 fontSize = 14.sp,
                             )
                         },
@@ -265,7 +260,7 @@ private fun EditorTopBar(
                         },
                     )
                 }
-                HorizontalDivider(color = ED_DIVIDER)
+                HorizontalDivider(color = colors.divider)
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, fontSize = 14.sp) },
                     onClick = { profileMenuExpanded = false; showNewDialog = true },
@@ -276,10 +271,10 @@ private fun EditorTopBar(
         // Rename & delete buttons (only when a profile exists)
         if (activeProfile != null) {
             IconButton(onClick = { showRenameDialog = true }) {
-                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.macropad_editor_rename), tint = ED_TEXT_SECONDARY)
+                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.macropad_editor_rename), tint = colors.onSurfaceSecondary)
             }
             IconButton(onClick = { showDeleteConfirm = true }) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_profile), tint = ED_TEXT_SECONDARY)
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_profile), tint = colors.onSurfaceSecondary)
             }
         }
 
@@ -315,10 +310,10 @@ private fun EditorTopBar(
 
     if (showDeleteConfirm && activeProfile != null) {
         AlertDialog(
-            containerColor = ED_SURFACE,
+            containerColor = colors.surface,
             onDismissRequest = { showDeleteConfirm = false },
-            title   = { Text(stringResource(R.string.macropad_editor_delete_profile), color = ED_TEXT) },
-            text    = { Text(stringResource(R.string.macropad_editor_confirm_delete), color = ED_TEXT_SECONDARY) },
+            title   = { Text(stringResource(R.string.macropad_editor_delete_profile), color = colors.onSurface) },
+            text    = { Text(stringResource(R.string.macropad_editor_confirm_delete), color = colors.onSurfaceSecondary) },
             confirmButton = {
                 TextButton(onClick = { onDeleteProfile(activeProfile.id); showDeleteConfirm = false }) {
                     Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
@@ -326,7 +321,7 @@ private fun EditorTopBar(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = ED_TEXT_SECONDARY)
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                 }
             },
         )
@@ -343,6 +338,7 @@ private fun EditorBody(
     accentColor: Color,
     modifier:    Modifier = Modifier,
 ) {
+    val colors = LocalAppColors.current
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -392,12 +388,12 @@ private fun EditorBody(
             modifier = Modifier.padding(horizontal = ED_PADDING),
             verticalArrangement = Arrangement.spacedBy(ED_PADDING),
         ) {
-            HorizontalDivider(color = ED_DIVIDER)
+            HorizontalDivider(color = colors.divider)
 
             // Toolbar: Add button
             EditorToolbar(profile = profile, accentColor = accentColor)
 
-            HorizontalDivider(color = ED_DIVIDER)
+            HorizontalDivider(color = colors.divider)
 
             // Button list — tap to edit
             ButtonList(profile = profile, accentColor = accentColor)
@@ -412,6 +408,7 @@ private fun DeviceCheckboxRow(
     accentColor:     Color,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val colors = LocalAppColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -424,11 +421,11 @@ private fun DeviceCheckboxRow(
             onCheckedChange = onCheckedChange,
             colors          = CheckboxDefaults.colors(
                 checkedColor   = accentColor,
-                checkmarkColor = ED_BG,
-                uncheckedColor = ED_TEXT_SECONDARY,
+                checkmarkColor = colors.appBackground,
+                uncheckedColor = colors.onSurfaceSecondary,
             ),
         )
-        Text(label, color = ED_TEXT, fontSize = 14.sp)
+        Text(label, color = colors.onSurface, fontSize = 14.sp)
     }
 }
 
@@ -439,13 +436,14 @@ private fun DeviceCheckboxRow(
 @Composable
 private fun PadCanvas(profile: PadProfile, accentColor: Color) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val colors     = LocalAppColors.current
 
     val padModifier = Modifier
         .fillMaxWidth()
         .aspectRatio(16f / 9f)
-        .border(1.dp, ED_BORDER, RoundedCornerShape(4.dp))
+        .border(1.dp, colors.accentBorder, RoundedCornerShape(4.dp))
         .clip(RoundedCornerShape(4.dp))
-        .background(ED_SURFACE)
+        .background(colors.surface)
         .onSizeChanged { canvasSize = it }
 
     Box(modifier = padModifier) {
@@ -483,6 +481,7 @@ private fun DraggableButton(
     enableMouse:       Boolean,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
+    val colors = LocalAppColors.current
     // rememberUpdatedState lets the pointerInput closure (keyed only on btn.id +
     // canvasSize) see the live btn even though its lambda is NOT restarted when
     // btn.posX/posY change between drags.
@@ -586,14 +585,14 @@ private fun DraggableButton(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = ED_TEXT, modifier = Modifier.size(14.dp))
-                Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = ED_TEXT.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(14.dp))
+                Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = colors.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                 Spacer(Modifier.height(2.dp))
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = ED_TEXT.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = ED_TEXT, modifier = Modifier.size(14.dp))
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = colors.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(14.dp))
             }
         } else {
-            Text(btn.label, color = ED_TEXT, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(btn.label, color = colors.onSurface, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -667,11 +666,12 @@ private fun EditorActionChip(
 
 @Composable
 private fun ButtonList(profile: PadProfile, accentColor: Color) {
+    val colors = LocalAppColors.current
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (profile.buttons.isEmpty()) {
             Text(
                 text     = stringResource(R.string.macropad_editor_add_button),
-                color    = ED_TEXT_SECONDARY,
+                color    = colors.onSurfaceSecondary,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(vertical = 8.dp),
             )
@@ -694,7 +694,7 @@ private fun ButtonList(profile: PadProfile, accentColor: Color) {
                     )
                 },
             )
-            HorizontalDivider(color = ED_DIVIDER)
+            HorizontalDivider(color = colors.divider)
         }
     }
 }
@@ -711,6 +711,7 @@ private fun ButtonListItem(
 ) {
     var showEdit    by remember { mutableStateOf(false) }
     var showDelete  by remember { mutableStateOf(false) }
+    val colors      = LocalAppColors.current
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val isDeviceDisabled = when (btn.action) {
@@ -742,9 +743,9 @@ private fun ButtonListItem(
             contentAlignment = Alignment.Center,
         ) {
             if (isTrackpoint) {
-                Text("●", color = ED_TEXT, fontSize = 10.sp)
+                Text("●", color = colors.onSurface, fontSize = 10.sp)
             } else {
-                Text(btn.label.take(2), color = ED_TEXT, fontSize = 10.sp)
+                Text(btn.label.take(2), color = colors.onSurface, fontSize = 10.sp)
             }
         }
 
@@ -757,16 +758,16 @@ private fun ButtonListItem(
                     TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
                     TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
                 }
-                Text(stringResource(R.string.macropad_action_trackpoint), color = ED_TEXT, fontSize = 14.sp, maxLines = 1)
-                Text(sizeLabel, color = ED_TEXT_SECONDARY, fontSize = 12.sp, maxLines = 1)
+                Text(stringResource(R.string.macropad_action_trackpoint), color = colors.onSurface, fontSize = 14.sp, maxLines = 1)
+                Text(sizeLabel, color = colors.onSurfaceSecondary, fontSize = 12.sp, maxLines = 1)
             } else {
-                Text(btn.label, color = ED_TEXT, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(btn.action.displayLabel(), color = ED_TEXT_SECONDARY, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.label, color = colors.onSurface, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.action.displayLabel(), color = colors.onSurfaceSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
 
         IconButton(onClick = { showDelete = true }) {
-            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = ED_TEXT_SECONDARY)
+            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = colors.onSurfaceSecondary)
         }
     }
 
@@ -784,13 +785,13 @@ private fun ButtonListItem(
 
     if (showDelete) {
         AlertDialog(
-            containerColor   = ED_SURFACE,
+            containerColor   = colors.surface,
             onDismissRequest = { showDelete = false },
-            title   = { Text(stringResource(R.string.macropad_editor_delete_button), color = ED_TEXT) },
+            title   = { Text(stringResource(R.string.macropad_editor_delete_button), color = colors.onSurface) },
             text    = {
                 Text(
                     if (isTrackpoint) stringResource(R.string.macropad_action_trackpoint) else btn.label,
-                    color = ED_TEXT_SECONDARY,
+                    color = colors.onSurfaceSecondary,
                 )
             },
             confirmButton = {
@@ -800,7 +801,7 @@ private fun ButtonListItem(
             },
             dismissButton = {
                 TextButton(onClick = { showDelete = false }) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = ED_TEXT_SECONDARY)
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                 }
             },
         )
@@ -826,6 +827,7 @@ private fun ButtonEditDialog(
     var buttonSize    by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
     var showSizeMenu  by remember { mutableStateOf(false) }
     var action        by remember { mutableStateOf(button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")) }
+    val colors        = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
         action = newAction
@@ -842,14 +844,14 @@ private fun ButtonEditDialog(
     val isConfirmEnabled = label.isNotBlank() || action is PadAction.ScrollWheel || action is PadAction.TrackpointMove
 
     AlertDialog(
-        containerColor   = ED_SURFACE,
+        containerColor   = colors.surface,
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text  = if (button == null) stringResource(R.string.macropad_editor_add_button)
                         else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
                         else button.label,
-                color = ED_TEXT,
+                color = colors.onSurface,
             )
         },
         text = {
@@ -862,13 +864,13 @@ private fun ButtonEditDialog(
                     OutlinedTextField(
                         value         = label,
                         onValueChange = { label = it },
-                        label         = { Text(stringResource(R.string.macropad_editor_button_label), color = ED_TEXT_SECONDARY) },
+                        label         = { Text(stringResource(R.string.macropad_editor_button_label), color = colors.onSurfaceSecondary) },
                         singleLine    = true,
                         colors        = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor   = accentColor,
-                            unfocusedBorderColor = ED_BORDER,
-                            focusedTextColor     = ED_TEXT,
-                            unfocusedTextColor   = ED_TEXT,
+                            unfocusedBorderColor = colors.accentBorder,
+                            focusedTextColor     = colors.onSurface,
+                            unfocusedTextColor   = colors.onSurface,
                             cursorColor          = accentColor,
                         ),
                     )
@@ -882,10 +884,10 @@ private fun ButtonEditDialog(
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
-                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else ED_SURFACE)
+                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
                                     .border(
                                         width = if (selected) 2.dp else 1.dp,
-                                        color = if (selected) accentColor else ED_BORDER,
+                                        color = if (selected) accentColor else colors.accentBorder,
                                         shape = if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp),
                                     )
                                     .clickable { buttonShape = shape },
@@ -895,7 +897,7 @@ private fun ButtonEditDialog(
                                         stringResource(R.string.macropad_editor_shape_circle)
                                     else
                                         stringResource(R.string.macropad_editor_shape_square),
-                                    color = if (selected) accentColor else ED_TEXT_SECONDARY,
+                                    color = if (selected) accentColor else colors.onSurfaceSecondary,
                                     fontSize = 10.sp,
                                     textAlign = TextAlign.Center,
                                 )
@@ -915,7 +917,7 @@ private fun ButtonEditDialog(
                 if (action is PadAction.ScrollWheel) {
                     Text(
                         text     = ButtonSize.SIZE_1X2.displayLabel(),
-                        color    = ED_TEXT_SECONDARY,
+                        color    = colors.onSurfaceSecondary,
                         fontSize = 14.sp,
                     )
                 } else if (action is PadAction.TrackpointMove) {
@@ -933,16 +935,16 @@ private fun ButtonEditDialog(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else ED_SURFACE)
+                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
                                     .border(
                                         width = if (selected) 2.dp else 1.dp,
-                                        color = if (selected) accentColor else ED_BORDER,
+                                        color = if (selected) accentColor else colors.accentBorder,
                                         shape = RoundedCornerShape(8.dp),
                                     )
                                     .clickable { action = PadAction.TrackpointMove(sz) }
                                     .padding(vertical = 10.dp),
                             ) {
-                                Text(szLabel, color = if (selected) accentColor else ED_TEXT_SECONDARY, fontSize = 12.sp)
+                                Text(szLabel, color = if (selected) accentColor else colors.onSurfaceSecondary, fontSize = 12.sp)
                             }
                         }
                     }
@@ -951,28 +953,28 @@ private fun ButtonEditDialog(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(ED_SURFACE)
-                                .border(1.dp, ED_BORDER, RoundedCornerShape(8.dp))
+                                .background(colors.surface)
+                                .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
                                 .clickable { showSizeMenu = true }
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text(buttonSize.displayLabel(), color = ED_TEXT, fontSize = 14.sp)
+                            Text(buttonSize.displayLabel(), color = colors.onSurface, fontSize = 14.sp)
                             Icon(
                                 imageVector = Icons.Filled.ArrowDropDown,
                                 contentDescription = null,
-                                tint = ED_TEXT_SECONDARY,
+                                tint = colors.onSurfaceSecondary,
                             )
                         }
                         DropdownMenu(
                             expanded         = showSizeMenu,
                             onDismissRequest = { showSizeMenu = false },
-                            modifier         = Modifier.background(ED_SURFACE),
+                            modifier         = Modifier.background(colors.surface),
                         ) {
                             ButtonSize.entries.forEach { size ->
                                 DropdownMenuItem(
-                                    text    = { Text(size.displayLabel(), color = ED_TEXT) },
+                                    text    = { Text(size.displayLabel(), color = colors.onSurface) },
                                     onClick = { buttonSize = size; showSizeMenu = false },
                                 )
                             }
@@ -1015,12 +1017,12 @@ private fun ButtonEditDialog(
                 },
                 enabled = isConfirmEnabled,
             ) {
-                Text(stringResource(R.string.macropad_editor_done), color = if (isConfirmEnabled) accentColor else ED_TEXT_SECONDARY)
+                Text(stringResource(R.string.macropad_editor_done), color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = ED_TEXT_SECONDARY)
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
             }
         },
     )
@@ -1041,6 +1043,7 @@ private fun ActionPicker(
 ) {
     // Action category selection
     var categoryExpanded by remember { mutableStateOf(false) }
+    val colors           = LocalAppColors.current
 
     val categoryLabel = stringResource(current.categoryResId())
 
@@ -1050,19 +1053,19 @@ private fun ActionPicker(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, ED_BORDER, RoundedCornerShape(8.dp))
+                .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
                 .clickable { categoryExpanded = true }
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(categoryLabel, color = ED_TEXT, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = ED_TEXT_SECONDARY)
+            Text(categoryLabel, color = colors.onSurface, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
         }
 
         DropdownMenu(
             expanded         = categoryExpanded,
             onDismissRequest = { categoryExpanded = false },
-            modifier         = Modifier.background(ED_SURFACE),
+            modifier         = Modifier.background(colors.surface),
         ) {
             ActionCategory.entries.forEach { cat ->
                 val catEnabled = when (cat) {
@@ -1074,7 +1077,7 @@ private fun ActionPicker(
                 }
                 if (catEnabled) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(cat.labelResId()), color = ED_TEXT, fontSize = 14.sp) },
+                        text = { Text(stringResource(cat.labelResId()), color = colors.onSurface, fontSize = 14.sp) },
                         onClick = {
                             categoryExpanded = false
                             onChange(cat.defaultAction())
@@ -1104,6 +1107,7 @@ private fun KeyboardKeyPicker(
     onChange: (PadAction) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val colors   = LocalAppColors.current
 
     Box {
         Row(
@@ -1122,11 +1126,11 @@ private fun KeyboardKeyPicker(
         DropdownMenu(
             expanded         = expanded,
             onDismissRequest = { expanded = false },
-            modifier         = Modifier.background(ED_SURFACE),
+            modifier         = Modifier.background(colors.surface),
         ) {
             KEYBOARD_KEY_PRESETS.forEach { (code, label) ->
                 DropdownMenuItem(
-                    text = { Text(label, color = if (code == current.keycode) accentColor else ED_TEXT, fontSize = 14.sp) },
+                    text = { Text(label, color = if (code == current.keycode) accentColor else colors.onSurface, fontSize = 14.sp) },
                     onClick = { onChange(PadAction.KeyboardKey(code, label)); expanded = false },
                 )
             }
@@ -1141,6 +1145,7 @@ private fun MouseButtonPicker(
     onChange: (PadAction) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val colors   = LocalAppColors.current
 
     Box {
         Row(
@@ -1159,11 +1164,11 @@ private fun MouseButtonPicker(
         DropdownMenu(
             expanded         = expanded,
             onDismissRequest = { expanded = false },
-            modifier         = Modifier.background(ED_SURFACE),
+            modifier         = Modifier.background(colors.surface),
         ) {
             MouseButton.entries.forEach { btn ->
                 DropdownMenuItem(
-                    text    = { Text(btn.displayLabel(), color = if (btn == current.button) accentColor else ED_TEXT, fontSize = 14.sp) },
+                    text    = { Text(btn.displayLabel(), color = if (btn == current.button) accentColor else colors.onSurface, fontSize = 14.sp) },
                     onClick = { onChange(PadAction.MouseButton(btn)); expanded = false },
                 )
             }
@@ -1178,6 +1183,7 @@ private fun GamepadButtonPicker(
     onChange: (PadAction) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val colors   = LocalAppColors.current
 
     Box {
         Row(
@@ -1196,11 +1202,11 @@ private fun GamepadButtonPicker(
         DropdownMenu(
             expanded         = expanded,
             onDismissRequest = { expanded = false },
-            modifier         = Modifier.background(ED_SURFACE),
+            modifier         = Modifier.background(colors.surface),
         ) {
             GamepadKeycodes.PRESETS.forEach { preset ->
                 DropdownMenuItem(
-                    text = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else ED_TEXT, fontSize = 14.sp) },
+                    text = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else colors.onSurface, fontSize = 14.sp) },
                     onClick = { onChange(PadAction.GamepadButton(preset.code, preset.shortLabel)); expanded = false },
                 )
             }
@@ -1226,11 +1232,12 @@ private fun NameInputDialog(
     onDismiss:    () -> Unit,
 ) {
     var text by remember { mutableStateOf(initialValue) }
+    val colors = LocalAppColors.current
 
     AlertDialog(
-        containerColor   = ED_SURFACE,
+        containerColor   = colors.surface,
         onDismissRequest = onDismiss,
-        title   = { Text(title, color = ED_TEXT) },
+        title   = { Text(title, color = colors.onSurface) },
         text    = {
             OutlinedTextField(
                 value         = text,
@@ -1238,21 +1245,21 @@ private fun NameInputDialog(
                 singleLine    = true,
                 colors        = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = accentColor,
-                    unfocusedBorderColor = ED_BORDER,
-                    focusedTextColor     = ED_TEXT,
-                    unfocusedTextColor   = ED_TEXT,
+                    unfocusedBorderColor = colors.accentBorder,
+                    focusedTextColor     = colors.onSurface,
+                    unfocusedTextColor   = colors.onSurface,
                     cursorColor          = accentColor,
                 ),
             )
         },
         confirmButton = {
             TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }, enabled = text.isNotBlank()) {
-                Text(stringResource(R.string.macropad_editor_done), color = if (text.isNotBlank()) accentColor else ED_TEXT_SECONDARY)
+                Text(stringResource(R.string.macropad_editor_done), color = if (text.isNotBlank()) accentColor else colors.onSurfaceSecondary)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = ED_TEXT_SECONDARY)
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
             }
         },
     )

@@ -56,6 +56,8 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.CAROUSEL_PILL_INSET
+import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -66,13 +68,6 @@ import kotlinx.coroutines.withContext
 // Layout constants
 // ---------------------------------------------------------------------------
 private const val F_ROW_HEIGHT_WEIGHT = 0.7f
-private val KB_BG = Color(0xFF1A1A1A)
-private val KEY_BG = Color(0xFF2C2C2E)
-private val KEY_BG_PRESSED = Color(0xFF48484A)
-private val KEY_BG_MODIFIER_ACTIVE = Color(0xFF3A3A3C)
-private val KEY_TEXT = Color.White
-private val KEY_TEXT_SECONDARY = Color.White.copy(alpha = 0.7f)
-private val KEY_BORDER = Color.White.copy(alpha = 0.08f)
 private val KEY_CORNER = 6.dp
 private val KEY_PADDING_H = 2.dp
 private val KEY_PADDING_V = 2.dp
@@ -98,14 +93,16 @@ private const val KB_SCROLL_SENSITIVITY_PX          = 12f
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val kbLayout by SettingsManager.kbLayout.collectAsState()
     val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
     val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val overlayVisible by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
+    val colors = LocalAppColors.current
+    val accentColor = colors.accent
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -195,7 +192,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(KB_BG)
+            .background(colors.appBackground)
             .onGloballyPositioned { boxCoordsState.value = it }
             .pointerInput(layout) {
                 awaitPointerEventScope {
@@ -378,8 +375,8 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                 .padding(
                     start = 4.dp,
                     end = 4.dp,
-                    top = 4.dp,
-                    bottom = if (kbFullscreen) 4.dp else KB_IME_BOTTOM_PADDING
+                    top = if (overlayAtBottom) 4.dp else CAROUSEL_PILL_INSET,
+                    bottom = if (kbFullscreen) (if (overlayAtBottom) CAROUSEL_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
                 ),
             verticalArrangement = Arrangement.SpaceEvenly
         ) {
@@ -419,13 +416,13 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     .aspectRatio(16f / 9f)
                     .align(Alignment.Center)
                     .alpha(trackpointAlpha)
-                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(8.dp)),
+                    .background(colors.keyBackground, RoundedCornerShape(8.dp))
+                    .border(2.dp, colors.navPillBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = stringResource(R.string.cd_keyboard_trackpoint),
-                    color = Color.White.copy(alpha = 0.25f),
+                    color = colors.onAccent.copy(alpha = 0.25f),
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                 )
@@ -569,6 +566,7 @@ private fun MouseButton(
     modifier: Modifier = Modifier,
 ) {
     var pressed by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
     val alpha by animateFloatAsState(
         targetValue = if (pressed) KB_MOUSE_BTN_PRESSED_ALPHA else KB_MOUSE_BTN_NORMAL_ALPHA,
         animationSpec = tween(if (pressed) KB_MOUSE_BTN_PRESS_ANIM_MS else KB_MOUSE_BTN_RELEASE_ANIM_MS),
@@ -619,7 +617,7 @@ private fun MouseButton(
     ) {
         Text(
             text = label,
-            color = Color.White,
+            color = colors.onSurface,
             fontSize = 11.sp,
         )
     }
@@ -746,10 +744,11 @@ private fun KeyCap(
     onBoundsUpdate: (KeyBounds) -> Unit,
 ) {
     val isModifierActive = modifierState != ModifierState.INACTIVE
+    val colors = LocalAppColors.current
     val bg = when {
-        isPressed -> KEY_BG_PRESSED
-        isModifierActive -> KEY_BG_MODIFIER_ACTIVE
-        else -> KEY_BG
+        isPressed -> colors.keyPressed
+        isModifierActive -> colors.keyModifierActive
+        else -> colors.keyBackground
     }
 
     Box(
@@ -760,7 +759,7 @@ private fun KeyCap(
             .background(bg)
             .border(
                 width = if (isModifierActive) 1.dp else 0.5.dp,
-                color = if (isModifierActive) accentColor.copy(alpha = 0.7f) else KEY_BORDER,
+                color = if (isModifierActive) accentColor.copy(alpha = 0.7f) else colors.divider,
                 shape = RoundedCornerShape(KEY_CORNER)
             )
             .onGloballyPositioned { coords ->
@@ -782,8 +781,9 @@ private fun KeyCap(
                 modifier = Modifier
                     .fillMaxSize(0.55f)
                     .aspectRatio(1f)
+                    .border(2.dp, colors.accent, CircleShape)
                     .clip(CircleShape)
-                    .background(accentColor)
+                    .background(colors.keyBackground)
             )
         } else {
             val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
@@ -795,7 +795,7 @@ private fun KeyCap(
             }
             Text(
                 text = displayLabel,
-                color = if (isPressed) KEY_TEXT else KEY_TEXT_SECONDARY,
+                color = if (isPressed) colors.onSurface else colors.onSurfaceSecondary,
                 fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 12.sp,
                 fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,

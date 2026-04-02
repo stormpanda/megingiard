@@ -52,11 +52,8 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadToolSettings
+import com.stormpanda.megingiard.ui.LocalAppColors
 
-private val PANEL_BG = Color(0xFF1C1C1E)
-private val PANEL_TEXT = Color.White
-private val PANEL_TEXT_SECONDARY = Color.White.copy(alpha = 0.6f)
-private val PANEL_DIVIDER = Color.White.copy(alpha = 0.12f)
 private val PANEL_CORNER = 16.dp
 private val PANEL_PADDING = 20.dp
 private val PANEL_SCREEN_MARGIN = 24.dp
@@ -67,7 +64,6 @@ fun ToolSettingsPanel(
     onOpenGlobalSettings: () -> Unit
 ) {
     val currentMode by AppStateManager.currentMode.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val autoStartCapture by SettingsManager.autoStartCapture.collectAsState()
     val rememberViewport by SettingsManager.rememberViewport.collectAsState()
     val rememberLock by SettingsManager.rememberLock.collectAsState()
@@ -82,6 +78,8 @@ fun ToolSettingsPanel(
     val touchpadTapToClick by SettingsManager.touchpadTapToClick.collectAsState()
     val touchpadTwoFingerTap by SettingsManager.touchpadTwoFingerTap.collectAsState()
     var showMacroPadEditor by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
+    val accentColor = colors.accent
 
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
@@ -99,7 +97,7 @@ fun ToolSettingsPanel(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - PANEL_SCREEN_MARGIN * 2)
-                .background(PANEL_BG, RoundedCornerShape(PANEL_CORNER))
+                .background(colors.surface, RoundedCornerShape(PANEL_CORNER))
                 // Prevent clicks on the card itself from propagating to the scrim
                 .clickable(enabled = true, onClick = {})
         ) {
@@ -112,7 +110,7 @@ fun ToolSettingsPanel(
             ) {
                 Text(
                     text = stringResource(currentMode.displayNameResId()),
-                    color = PANEL_TEXT,
+                    color = colors.onSurface,
                     fontSize = 18.sp,
                     modifier = Modifier.weight(1f)
                 )
@@ -120,14 +118,14 @@ fun ToolSettingsPanel(
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = stringResource(R.string.settings_close),
-                        tint = PANEL_TEXT
+                        tint = colors.onSurface
                     )
                 }
             }
 
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = PANEL_PADDING),
-                color = PANEL_DIVIDER
+                color = colors.divider
             )
 
             Box(modifier = Modifier
@@ -152,7 +150,7 @@ fun ToolSettingsPanel(
                     AppMode.MEDIA -> {
                         Text(
                             text = stringResource(R.string.settings_no_tool_settings),
-                            color = PANEL_TEXT_SECONDARY,
+                            color = colors.onSurfaceSecondary,
                             fontSize = 14.sp
                         )
                     }
@@ -183,7 +181,7 @@ fun ToolSettingsPanel(
 
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = PANEL_PADDING),
-                color = PANEL_DIVIDER
+                color = colors.divider
             )
 
             // Footer: navigate to global settings
@@ -197,12 +195,12 @@ fun ToolSettingsPanel(
                 Icon(
                     imageVector = Icons.Filled.Settings,
                     contentDescription = null,
-                    tint = PANEL_TEXT_SECONDARY,
+                    tint = colors.onSurfaceSecondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = stringResource(R.string.cd_open_global_settings),
-                    color = PANEL_TEXT_SECONDARY,
+                    color = colors.onSurfaceSecondary,
                     fontSize = 14.sp,
                     modifier = Modifier
                         .weight(1f)
@@ -211,7 +209,7 @@ fun ToolSettingsPanel(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    tint = PANEL_TEXT_SECONDARY,
+                    tint = colors.onSurfaceSecondary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -245,6 +243,7 @@ private fun MirrorToolSettings(
     pinchWhileProjecting: Boolean,
     onPinchWhileProjectingChanged: (Boolean) -> Unit
 ) {
+    val colors = LocalAppColors.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Auto-start capture
         Row(
@@ -254,12 +253,12 @@ private fun MirrorToolSettings(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.settings_auto_start_capture),
-                    color = PANEL_TEXT,
+                    color = colors.onSurface,
                     fontSize = 14.sp
                 )
                 Text(
                     text = stringResource(R.string.settings_auto_start_capture_desc),
-                    color = PANEL_TEXT_SECONDARY,
+                    color = colors.onSurfaceSecondary,
                     fontSize = 12.sp
                 )
             }
@@ -273,7 +272,7 @@ private fun MirrorToolSettings(
             )
         }
 
-        HorizontalDivider(color = PANEL_DIVIDER)
+        HorizontalDivider(color = colors.divider)
 
         // Remember viewport
         RememberSettingRow(
@@ -302,7 +301,7 @@ private fun MirrorToolSettings(
             onCheckedChange = onRememberProjectionChanged
         )
 
-        HorizontalDivider(color = PANEL_DIVIDER)
+        HorizontalDivider(color = colors.divider)
 
         // Pinch-to-zoom while projecting
         RememberSettingRow(
@@ -323,6 +322,7 @@ private fun RememberSettingRow(
     accentColor: Color,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val colors = LocalAppColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -330,12 +330,12 @@ private fun RememberSettingRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
-                color = PANEL_TEXT,
+                color = colors.onSurface,
                 fontSize = 14.sp
             )
             Text(
                 text = description,
-                color = PANEL_TEXT_SECONDARY,
+                color = colors.onSurfaceSecondary,
                 fontSize = 12.sp
             )
         }
@@ -345,7 +345,7 @@ private fun RememberSettingRow(
             colors = CheckboxDefaults.colors(
                 checkedColor = accentColor,
                 checkmarkColor = Color.White,
-                uncheckedColor = PANEL_TEXT_SECONDARY
+                uncheckedColor = colors.onSurfaceSecondary
             )
         )
     }
@@ -364,7 +364,8 @@ private fun KeyboardToolSettings(
     kbFullscreen: Boolean,
     onKbFullscreenChanged: (Boolean) -> Unit,
 ) {
-    val accentColor by SettingsManager.accentColor.collectAsState()
+    val colors = LocalAppColors.current
+    val accentColor = colors.accent
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         LayoutDropdownRow(
             currentLayout = kbLayout,
@@ -409,6 +410,7 @@ private fun LayoutDropdownRow(
     accentColor: Color,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -416,12 +418,12 @@ private fun LayoutDropdownRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.settings_kb_layout),
-                color = PANEL_TEXT,
+                color = colors.onSurface,
                 fontSize = 14.sp
             )
             Text(
                 text = stringResource(R.string.settings_kb_layout_desc),
-                color = PANEL_TEXT_SECONDARY,
+                color = colors.onSurfaceSecondary,
                 fontSize = 12.sp
             )
         }
@@ -429,32 +431,32 @@ private fun LayoutDropdownRow(
             Row(
                 modifier = Modifier
                     .clickable { expanded = true }
-                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                    .background(colors.onSurface.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(currentLayout.labelResId()),
-                    color = PANEL_TEXT,
+                    color = colors.onSurface,
                     fontSize = 14.sp
                 )
                 Icon(
                     imageVector = Icons.Filled.ArrowDropDown,
                     contentDescription = null,
-                    tint = PANEL_TEXT_SECONDARY,
+                    tint = colors.onSurfaceSecondary,
                 )
             }
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                modifier = Modifier.background(PANEL_BG)
+                modifier = Modifier.background(colors.surface)
             ) {
                 KbLayout.entries.forEach { layout ->
                     DropdownMenuItem(
                         text = {
                             Text(
                                 text = stringResource(layout.labelResId()),
-                                color = if (layout == currentLayout) accentColor else PANEL_TEXT,
+                                color = if (layout == currentLayout) accentColor else colors.onSurface,
                                 fontSize = 14.sp
                             )
                         },
@@ -485,6 +487,7 @@ private fun MouseBtnPosDropdownRow(
     accentColor: Color,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -492,12 +495,12 @@ private fun MouseBtnPosDropdownRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.settings_kb_mouse_btn_pos),
-                color = PANEL_TEXT,
+                color = colors.onSurface,
                 fontSize = 14.sp
             )
             Text(
                 text = stringResource(R.string.settings_kb_mouse_btn_pos_desc),
-                color = PANEL_TEXT_SECONDARY,
+                color = colors.onSurfaceSecondary,
                 fontSize = 12.sp
             )
         }
@@ -505,32 +508,32 @@ private fun MouseBtnPosDropdownRow(
             Row(
                 modifier = Modifier
                     .clickable { expanded = true }
-                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                    .background(colors.onSurface.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(currentPos.labelResId()),
-                    color = PANEL_TEXT,
+                    color = colors.onSurface,
                     fontSize = 14.sp
                 )
                 Icon(
                     imageVector = Icons.Filled.ArrowDropDown,
                     contentDescription = null,
-                    tint = PANEL_TEXT_SECONDARY,
+                    tint = colors.onSurfaceSecondary,
                 )
             }
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                modifier = Modifier.background(PANEL_BG)
+                modifier = Modifier.background(colors.surface)
             ) {
                 KbMouseBtnPos.entries.forEach { pos ->
                     DropdownMenuItem(
                         text = {
                             Text(
                                 text = stringResource(pos.labelResId()),
-                                color = if (pos == currentPos) accentColor else PANEL_TEXT,
+                                color = if (pos == currentPos) accentColor else colors.onSurface,
                                 fontSize = 14.sp
                             )
                         },
@@ -561,7 +564,7 @@ private fun TouchpadToolSettings(
             accentColor = accentColor
         )
         if (touchpadUseMouse) {
-            HorizontalDivider(color = PANEL_DIVIDER)
+            HorizontalDivider(color = LocalAppColors.current.divider)
             RememberSettingRow(
                 label = stringResource(R.string.settings_tap_to_click),
                 description = stringResource(R.string.settings_tap_to_click_desc),
@@ -588,13 +591,14 @@ private fun InputMethodRow(
     onUseMouseChanged: (Boolean) -> Unit,
     accentColor: Color,
 ) {
+    val colors = LocalAppColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = PANEL_TEXT, fontSize = 14.sp)
-            Text(text = description, color = PANEL_TEXT_SECONDARY, fontSize = 12.sp)
+            Text(text = label, color = colors.onSurface, fontSize = 14.sp)
+            Text(text = description, color = colors.onSurfaceSecondary, fontSize = 12.sp)
         }
         Switch(
             checked = useMouse,

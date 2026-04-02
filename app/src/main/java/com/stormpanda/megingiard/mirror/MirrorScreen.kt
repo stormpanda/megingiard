@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -44,7 +45,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -63,6 +63,7 @@ import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
+import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -73,7 +74,6 @@ private val CONTROL_ICON_SIZE = 36.dp
 private val CONTROL_BUTTON_GAP = 16.dp
 private val CONTROL_PILL_H_PADDING = 12.dp
 private val CONTROL_PILL_V_PADDING = 10.dp
-private val MR_CONTROL_PILL_BG = Color.Black.copy(alpha = 0.8f)
 private val MR_SWIPE_EDGE_ZONE = 40.dp
 private val MR_SWIPE_THRESHOLD = 25.dp
 private val MR_TOUCH_INDICATOR_SIZE = 24.dp
@@ -92,7 +92,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
     val isLocked by ScreenCaptureManager.isLocked.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
+    val colors = LocalAppColors.current
     val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -525,9 +525,14 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
 
             if (!isCapturing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(colors.appBackground)
+                )
                 Text(
                     text = stringResource(R.string.mirror_waiting_permission),
-                    color = Color.White,
+                    color = colors.onSurface,
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -545,7 +550,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 y = (indicatorPos.y - indicatorSizePx / 2f).roundToInt()
                             )
                         }
-                        .background(Color.White.copy(alpha = MR_TOUCH_INDICATOR_ALPHA), CircleShape)
+                        .background(colors.fingerCircle, CircleShape)
                 )
             }
 
@@ -559,7 +564,8 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                     Row(
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .background(MR_CONTROL_PILL_BG, RoundedCornerShape(50))
+                            .background(colors.controlOverlay, RoundedCornerShape(50))
+                            .border(2.dp, colors.mirrorPillBorder, RoundedCornerShape(50))
                             .padding(
                                 horizontal = CONTROL_PILL_H_PADDING,
                                 vertical = CONTROL_PILL_V_PADDING
@@ -577,12 +583,13 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             },
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
-                                .background(accentColor, RoundedCornerShape(50))
+                                .background(colors.buttonBody, RoundedCornerShape(50))
+                                .border(2.dp, colors.navPillBorder, RoundedCornerShape(50))
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Stop,
                                 contentDescription = stringResource(R.string.cd_stop_mirroring),
-                                tint = Color.White,
+                                tint = colors.buttonIconTint,
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -596,10 +603,21 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
                                     color = when {
-                                        isTouchProjectionActive -> Color.White.copy(alpha = 0.12f)
-                                        isFrozen -> accentColor
-                                        else -> Color.White.copy(alpha = 0.3f)
+                                        isTouchProjectionActive -> colors.buttonBody.copy(alpha = 0.12f)
+                                        isFrozen -> colors.buttonBody
+                                        else -> colors.buttonBody.copy(alpha = 0.35f)
                                     },
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = colors.navPillBorder.copy(
+                                        alpha = colors.navPillBorder.alpha * when {
+                                            isTouchProjectionActive -> 0.12f
+                                            isFrozen -> 1f
+                                            else -> 0.4f
+                                        }
+                                    ),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -608,7 +626,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 contentDescription = stringResource(
                                     if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze
                                 ),
-                                tint = Color.White.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
+                                tint = colors.buttonIconTint.copy(alpha = if (isTouchProjectionActive) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -620,7 +638,12 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
-                                    color = if (isLocked) accentColor else Color.White.copy(alpha = 0.3f),
+                                    color = if (isLocked) colors.buttonBody else colors.buttonBody.copy(alpha = 0.35f),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = colors.navPillBorder.copy(alpha = colors.navPillBorder.alpha * if (isLocked) 1f else 0.4f),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -629,7 +652,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 contentDescription = stringResource(
                                     if (isLocked) R.string.cd_unlock_view else R.string.cd_lock_view
                                 ),
-                                tint = Color.White,
+                                tint = colors.buttonIconTint,
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }
@@ -643,10 +666,21 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                 .size(CONTROL_BUTTON_SIZE)
                                 .background(
                                     color = when {
-                                        isFrozen -> Color.White.copy(alpha = 0.12f)
-                                        isTouchProjectionActive -> accentColor
-                                        else -> Color.White.copy(alpha = 0.3f)
+                                        isFrozen -> colors.buttonBody.copy(alpha = 0.12f)
+                                        isTouchProjectionActive -> colors.buttonBody
+                                        else -> colors.buttonBody.copy(alpha = 0.35f)
                                     },
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .border(
+                                    width = 2.dp,
+                                    color = colors.navPillBorder.copy(
+                                        alpha = colors.navPillBorder.alpha * when {
+                                            isFrozen -> 0.12f
+                                            isTouchProjectionActive -> 1f
+                                            else -> 0.4f
+                                        }
+                                    ),
                                     shape = RoundedCornerShape(50)
                                 )
                         ) {
@@ -656,7 +690,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                                     if (isTouchProjectionActive) R.string.cd_touch_projection_off
                                     else R.string.cd_touch_projection_on
                                 ),
-                                tint = Color.White.copy(alpha = if (isFrozen) 0.38f else 1f),
+                                tint = colors.buttonIconTint.copy(alpha = if (isFrozen) 0.38f else 1f),
                                 modifier = Modifier.size(CONTROL_ICON_SIZE)
                             )
                         }

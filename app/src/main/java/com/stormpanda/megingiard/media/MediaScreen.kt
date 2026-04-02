@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.stormpanda.megingiard.ui.LocalAppColors
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
@@ -92,11 +93,12 @@ fun MediaScreen(modifier: Modifier = Modifier) {
     
     var scrubPosition by remember { mutableStateOf<Long?>(null) }
     val displayProgress = scrubPosition ?: localProgress
+    val colors = LocalAppColors.current
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(colors.appBackground)
             .padding(MEDIA_CONTENT_PADDING),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -104,7 +106,7 @@ fun MediaScreen(modifier: Modifier = Modifier) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
-            color = Color.White
+            color = colors.onSurface
         )
         Spacer(modifier = Modifier.height(MEDIA_CONTENT_PADDING))
 
@@ -113,10 +115,10 @@ fun MediaScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { MediaState.controller?.transportControls?.skipToPrevious() }) {
-                Icon(Icons.Default.SkipPrevious, stringResource(R.string.cd_skip_previous), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Default.SkipPrevious, stringResource(R.string.cd_skip_previous), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(max(0L, progress - SEEK_STEP_MS)) }) {
-                Icon(Icons.Default.Replay10, stringResource(R.string.cd_replay_10), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Default.Replay10, stringResource(R.string.cd_replay_10), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = {
                 if (isPlaying) {
@@ -128,15 +130,15 @@ fun MediaScreen(modifier: Modifier = Modifier) {
                 Icon(
                     if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     stringResource(R.string.cd_play_pause),
-                    tint = Color.White,
+                    tint = colors.onSurface,
                     modifier = Modifier.size(PLAY_PAUSE_ICON_SIZE)
                 )
             }
             IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(min(maxProgress, progress + SEEK_STEP_MS)) }) {
-                Icon(Icons.Default.Forward10, stringResource(R.string.cd_forward_10), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Default.Forward10, stringResource(R.string.cd_forward_10), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = { MediaState.controller?.transportControls?.skipToNext() }) {
-                Icon(Icons.Default.SkipNext, stringResource(R.string.cd_skip_next), tint = Color.White, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Default.SkipNext, stringResource(R.string.cd_skip_next), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
         }
 
@@ -147,7 +149,7 @@ fun MediaScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = formatTime(localProgress), color = Color.White)
+            Text(text = formatTime(localProgress), color = colors.onSurface)
             
             Slider(
                 value = if (maxProgress > 0) displayProgress.toFloat() / maxProgress.toFloat() else 0f,
@@ -161,14 +163,14 @@ fun MediaScreen(modifier: Modifier = Modifier) {
                     }
                 },
                 colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
+                    thumbColor = colors.onSurface,
                     activeTrackColor = Color.LightGray,
                     inactiveTrackColor = Color.DarkGray
                 ),
                 modifier = Modifier.weight(1f).padding(horizontal = SLIDER_HORIZONTAL_PADDING)
             )
             
-            Text(text = formatTime(max(0L, maxProgress)), color = Color.White)
+            Text(text = formatTime(max(0L, maxProgress)), color = colors.onSurface)
         }
         
         Spacer(modifier = Modifier.height(SCRUB_HINT_SPACING))
@@ -176,7 +178,7 @@ fun MediaScreen(modifier: Modifier = Modifier) {
         if (scrubPosition != null) {
             Text(
                 text = stringResource(R.string.media_scrubbing_to, formatTime(scrubPosition!!)),
-                color = Color.LightGray,
+                color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodyMedium
             )
         }

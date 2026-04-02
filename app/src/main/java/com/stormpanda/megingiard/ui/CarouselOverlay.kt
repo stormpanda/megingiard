@@ -10,6 +10,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -47,17 +49,21 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ToolSettingsPanel
-
 // ── Top mode handle ────────────────────────────────────────────────────────
 private val CO_PILL_TOP_PADDING = 6.dp
 // Idle pull-tab pill (always visible)
 private val CO_PILL_IDLE_WIDTH = 72.dp
 private val CO_PILL_IDLE_HEIGHT = 4.dp
 private const val CO_PILL_IDLE_ALPHA = 0.4f
+private val CO_PILL_SHADOW_ELEVATION = 3.dp
+
+/** Vertical space the always-visible idle pill occupies at the screen edge.
+ *  Screens that fill the display should inset their content by this amount
+ *  on the side where the carousel overlay lives to avoid overlap. */
+internal val CAROUSEL_PILL_INSET: Dp = CO_PILL_TOP_PADDING + CO_PILL_IDLE_HEIGHT + 3.dp
 private val CO_HANDLE_H_PADDING = 12.dp
 private val CO_HANDLE_ROW_V_PADDING = 6.dp
 private val CO_HANDLE_CORNER = 12.dp
-private val CO_HANDLE_BG = Color.Black.copy(alpha = 0.55f)
 
 // ── Dot indicators ───────────────────────────────────────────────────────────
 private val CO_DOT_SIZE = 30.dp
@@ -65,7 +71,6 @@ private val CO_FINGER_CIRCLE_SIZE = 44.dp
 private val CO_PILL_ACTIVE_HEIGHT = CO_FINGER_CIRCLE_SIZE
 // Uniform spacing: same on all four sides AND between dots = vertical clearance
 private val CO_DOT_SPACING = (CO_PILL_ACTIVE_HEIGHT - CO_DOT_SIZE) / 2
-private val CO_FINGER_CIRCLE_COLOR = Color.White.copy(alpha = 0.45f)
 private const val CO_HYSTERESIS = 0.28f  // fraction past boundary required to switch
 private const val CO_DOT_COLOR_ANIM_MS = 250
 
@@ -168,9 +173,9 @@ private fun TopModeHandle(
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val isExpanded by AppStateManager.pillExpanded.collectAsState()
     val fingerXFraction by AppStateManager.pillFingerXFraction.collectAsState()
+    val colors = LocalAppColors.current
 
     val overlayEdgeAlignment = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter
     val overlayExpandFrom = if (overlayAtBottom) Alignment.Bottom else Alignment.Top
@@ -185,8 +190,9 @@ private fun TopModeHandle(
                     if (overlayAtBottom) Modifier.padding(bottom = CO_PILL_TOP_PADDING)
                     else Modifier.padding(top = CO_PILL_TOP_PADDING)
                 )
+                .shadow(elevation = CO_PILL_SHADOW_ELEVATION, shape = RoundedCornerShape(50), clip = false)
                 .size(width = CO_PILL_IDLE_WIDTH, height = CO_PILL_IDLE_HEIGHT)
-                .background(Color.White.copy(alpha = CO_PILL_IDLE_ALPHA), RoundedCornerShape(50))
+                .background(colors.pillIdleColor, RoundedCornerShape(50))
         )
 
         // Full control row: title | active pill | gear — all vertically centred
@@ -199,14 +205,15 @@ private fun TopModeHandle(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = CO_HANDLE_H_PADDING, vertical = CO_HANDLE_ROW_V_PADDING)
-                    .background(CO_HANDLE_BG, RoundedCornerShape(CO_HANDLE_CORNER))
+                    .background(colors.controlOverlay, RoundedCornerShape(CO_HANDLE_CORNER))
+                    .border(2.dp, colors.controlOverlayBorder, RoundedCornerShape(CO_HANDLE_CORNER))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Tool name – pinned to start
                 Text(
                     text = stringResource(currentMode.nameResId()),
-                    color = Color.White,
+                    color = colors.onControlOverlay,
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.align(Alignment.CenterStart)
                 )
@@ -217,7 +224,8 @@ private fun TopModeHandle(
                     Box(
                     modifier = Modifier
                         .size(width = pillWidth, height = CO_PILL_ACTIVE_HEIGHT)
-                        .background(accentColor, RoundedCornerShape(50))
+                        .background(colors.navPillBody, RoundedCornerShape(50))
+                        .border(2.dp, colors.navPillBorder, RoundedCornerShape(50))
                         .pointerInput(activeTools) {
                             awaitEachGesture {
                                 var down = awaitPointerEvent()
@@ -265,7 +273,7 @@ private fun TopModeHandle(
                                 .align(Alignment.CenterStart)
                                 .offset(x = (pillWidth - CO_FINGER_CIRCLE_SIZE) * fingerXFraction)
                                 .size(CO_FINGER_CIRCLE_SIZE)
-                                .background(CO_FINGER_CIRCLE_COLOR, CircleShape)
+                                .background(colors.fingerCircle, CircleShape)
                         )
                     }
                     // Dot indicators (top Z)
@@ -276,9 +284,8 @@ private fun TopModeHandle(
                     ) {
                         activeTools.forEach { tool ->
                             val dotColor by animateColorAsState(
-                                targetValue = Color.White.copy(
-                                    alpha = if (tool == currentMode) 1f else 0.35f
-                                ),
+                                targetValue = if (tool == currentMode) colors.controlIndicatorActive
+                                              else colors.onControlOverlay.copy(alpha = 0.35f),
                                 animationSpec = tween(durationMillis = CO_DOT_COLOR_ANIM_MS),
                                 label = "dot_color"
                             )
@@ -302,7 +309,7 @@ private fun TopModeHandle(
                     Icon(
                         imageVector = Icons.Filled.Settings,
                         contentDescription = stringResource(R.string.cd_open_settings),
-                        tint = Color.White,
+                        tint = colors.onControlOverlay,
                         modifier = Modifier.size(CO_SETTINGS_ICON_SIZE)
                     )
                 }

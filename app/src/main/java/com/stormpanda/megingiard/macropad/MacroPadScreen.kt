@@ -61,6 +61,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -70,14 +71,9 @@ import kotlin.math.roundToInt
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val MP_BG                    = Color(0xFF0D0D0D)
-private val MP_PAD_BG                = Color(0xFF1A1A1A)
-private val MP_PAD_BORDER            = Color.White.copy(alpha = 0.25f)
 private val MP_BTN_PRESSED_ALPHA        = 0.80f
 private val MP_BTN_NORMAL_ALPHA         = 0.25f
 private const val MP_BTN_DISABLED_ALPHA = 0.38f
-private val MP_BTN_TEXT                 = Color.White
-private val MP_HINT_TEXT             = Color.White.copy(alpha = 0.25f)
 
 private val MP_BUTTON_UNIT_DP        = 60.dp   // 1×1 = this size on-screen; matches editor
 private val MP_CORNER_RADIUS         = 8.dp
@@ -99,8 +95,8 @@ private const val MP_SCROLL_SENSITIVITY_PX = 12f
 @Composable
 fun MacroPadScreen(modifier: Modifier = Modifier) {
     val context     = LocalContext.current
-    val accentColor by SettingsManager.accentColor.collectAsState()
     val profile     by MacroPadState.activeProfile.collectAsState()
+    val colors      = LocalAppColors.current
 
     // Start injectors after the carousel overlay has closed (same pattern as KeyboardScreen)
     LaunchedEffect(Unit) {
@@ -123,7 +119,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     }
 
     Box(
-        modifier           = modifier.fillMaxSize().background(MP_BG),
+        modifier           = modifier.fillMaxSize().background(colors.appBackground),
         contentAlignment   = Alignment.Center,
     ) {
         val p = profile
@@ -131,7 +127,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
             // No profile yet
             Text(
                 text      = stringResource(R.string.macropad_no_profile),
-                color     = MP_HINT_TEXT,
+                color     = colors.onSurfaceSecondary,
                 fontSize  = 14.sp,
                 textAlign = TextAlign.Center,
                 modifier  = Modifier.padding(32.dp),
@@ -139,7 +135,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         } else {
             PadSurface(
                 profile     = p,
-                accentColor = accentColor,
+                accentColor = colors.accent,
             )
         }
     }
@@ -153,6 +149,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 private fun PadSurface(profile: PadProfile, accentColor: Color) {
     val density      = LocalDensity.current
     val context      = LocalContext.current
+    val colors       = LocalAppColors.current
     var canvasSize   by remember { mutableStateOf(IntSize.Zero) }
     val overlayVisible      by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState  = rememberUpdatedState(overlayVisible)
@@ -176,8 +173,8 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(MP_CORNER_RADIUS))
-                .background(MP_PAD_BG)
-                .border(1.dp, MP_PAD_BORDER, RoundedCornerShape(MP_CORNER_RADIUS))
+                .background(colors.surface)
+                .border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
                 .onSizeChanged { canvasSize = it }
                 .pointerInput(profile, canvasSize) {
                     awaitPointerEventScope {
@@ -364,6 +361,7 @@ private fun PadButton(
     isDeviceDisabled: Boolean,
 ) {
     val density = LocalDensity.current
+    val colors  = LocalAppColors.current
 
     val alphaTarget  = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
@@ -428,7 +426,7 @@ private fun PadButton(
         } else {
             Text(
                 text     = btn.label,
-                color    = MP_BTN_TEXT,
+                color    = colors.onSurface,
                 fontSize = (11 * btn.buttonSize.cols).sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

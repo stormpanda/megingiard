@@ -40,17 +40,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private val PICKER_BG = Color(0xFF1C1C1E)
-private val PICKER_TEXT = Color.White
 private val TITLE_FONT_SIZE = 18.sp
 private val SUBTITLE_FONT_SIZE = 12.sp
-private val PICKER_TEXT_SECONDARY = Color.White.copy(alpha = 0.6f)
 private val PICKER_CORNER = 16.dp
 private val WHEEL_SIZE = 240.dp
 
@@ -62,6 +60,8 @@ fun ColorWheelPicker(
 ) {
     val initHsv = FloatArray(3)
     AndroidColor.colorToHSV(initialColor.toArgb(), initHsv)
+
+    val colors = LocalAppColors.current
 
     var hue by remember { mutableFloatStateOf(initHsv[0]) }
     var sat by remember { mutableFloatStateOf(initHsv[1]) }
@@ -85,7 +85,7 @@ fun ColorWheelPicker(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(PICKER_BG, RoundedCornerShape(PICKER_CORNER))
+                .background(colors.pickerBackground, RoundedCornerShape(PICKER_CORNER))
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -93,7 +93,7 @@ fun ColorWheelPicker(
         ) {
             Text(
                 text = stringResource(R.string.settings_accent_color_picker_title),
-                color = PICKER_TEXT,
+                color = colors.onSurface,
                 fontSize = TITLE_FONT_SIZE
             )
 
@@ -159,7 +159,7 @@ fun ColorWheelPicker(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = stringResource(R.string.settings_color_brightness),
-                    color = PICKER_TEXT_SECONDARY,
+                    color = colors.onSurfaceSecondary,
                     fontSize = SUBTITLE_FONT_SIZE
                 )
                 Slider(
@@ -183,7 +183,7 @@ fun ColorWheelPicker(
                 TextButton(onClick = onDismiss) {
                     Text(
                         text = stringResource(R.string.settings_color_cancel),
-                        color = PICKER_TEXT_SECONDARY
+                        color = colors.onSurfaceSecondary
                     )
                 }
                 Spacer(modifier = Modifier.size(8.dp))

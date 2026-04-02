@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,7 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
+import com.stormpanda.megingiard.ui.LocalAppColors
 
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
@@ -42,7 +44,7 @@ fun MainAppScreen() {
     val currentMode by AppStateManager.currentMode.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
+    val colors = LocalAppColors.current
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -106,31 +108,33 @@ fun MainAppScreen() {
                 AppMode.MIRROR -> {
                     val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
                     Box(
-                        modifier = Modifier.fillMaxSize().background(Color.Black),
+                        modifier = Modifier.fillMaxSize().background(colors.appBackground),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isValidScreen) {
                             if (!isCapturing && userDeclinedCapture) {
-                                Button(
+                                OutlinedButton(
                                     onClick = { AppStateManager.setUserDeclinedCapture(false) },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = accentColor
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = colors.buttonBody,
+                                        contentColor = colors.buttonIconTint
                                     ),
+                                    border = BorderStroke(2.dp, colors.navPillBorder),
                                     modifier = Modifier.padding(16.dp).height(72.dp)
                                 ) {
                                     Icon(
                                         Icons.Filled.PlayArrow,
                                         contentDescription = stringResource(R.string.mirror_start_button),
                                         modifier = Modifier.padding(end = 8.dp).size(36.dp),
-                                        tint = Color.White
+                                        tint = colors.buttonIconTint
                                     )
-                                    Text(stringResource(R.string.mirror_start_button), color = Color.White)
+                                    Text(stringResource(R.string.mirror_start_button), color = colors.buttonIconTint)
                                 }
                             }
                         } else {
                             Text(
                                 text = stringResource(R.string.mirror_wrong_screen),
-                                color = Color.White,
+                                color = colors.onSurface,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(32.dp)
                             )
