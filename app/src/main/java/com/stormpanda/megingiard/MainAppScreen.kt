@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -10,19 +12,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +58,10 @@ fun MainAppScreen() {
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
+
+    val context = LocalContext.current
+    var showExitDialog by remember { mutableStateOf(false) }
+    BackHandler { showExitDialog = true }
 
     Box(
         modifier = Modifier
@@ -149,6 +160,25 @@ fun MainAppScreen() {
         }
 
         CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
+    }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text(stringResource(R.string.exit_dialog_title), color = colors.onSurface) },
+            text = { Text(stringResource(R.string.exit_dialog_message), color = colors.onSurface) },
+            confirmButton = {
+                TextButton(onClick = { (context as ComponentActivity).finishAndRemoveTask() }) {
+                    Text(stringResource(R.string.exit_dialog_confirm), color = colors.accent)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text(stringResource(R.string.exit_dialog_cancel), color = colors.accent)
+                }
+            },
+            containerColor = colors.surface,
+        )
     }
 }
 

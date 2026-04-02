@@ -35,6 +35,14 @@ import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
+private const val TS_DROPDOWN_BG_ALPHA = 0.08f
+private val TS_DROPDOWN_H_PADDING = 12.dp
+private val TS_DROPDOWN_V_PADDING = 6.dp
+private val TS_DROPDOWN_CORNER = 8.dp
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Reusable setting row components
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -103,8 +111,8 @@ internal fun LayoutDropdownRow(
             Row(
                 modifier = Modifier
                     .clickable { expanded = true }
-                    .background(colors.onSurface.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .background(colors.onSurface.copy(alpha = TS_DROPDOWN_BG_ALPHA), RoundedCornerShape(TS_DROPDOWN_CORNER))
+                    .padding(horizontal = TS_DROPDOWN_H_PADDING, vertical = TS_DROPDOWN_V_PADDING),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -168,8 +176,8 @@ internal fun MouseBtnPosDropdownRow(
             Row(
                 modifier = Modifier
                     .clickable { expanded = true }
-                    .background(colors.onSurface.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .background(colors.onSurface.copy(alpha = TS_DROPDOWN_BG_ALPHA), RoundedCornerShape(TS_DROPDOWN_CORNER))
+                    .padding(horizontal = TS_DROPDOWN_H_PADDING, vertical = TS_DROPDOWN_V_PADDING),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(

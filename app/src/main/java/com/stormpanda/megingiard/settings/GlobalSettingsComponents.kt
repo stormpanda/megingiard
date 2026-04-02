@@ -46,6 +46,20 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
+private val GS_TOOL_ROW_PADDING = 4.dp
+private const val GS_TIMEOUT_SLIDER_MIN_MS = 1000f
+private const val GS_TIMEOUT_SLIDER_MAX_MS = 15000f
+private const val GS_TIMEOUT_SNAP_MIN_S = 1L
+private const val GS_TIMEOUT_SNAP_MAX_S = 15L
+private val GS_DROPDOWN_ICON_SIZE = 20.dp
+private val GS_COLOR_PREVIEW_SIZE = 28.dp
+private val GS_COLOR_ICON_SPACER = 8.dp
+private val GS_ACCENT_ARROW_SIZE = 16.dp
+private val GS_DIVIDER_START_INSET = 56.dp
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Global settings UI components
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -82,7 +96,7 @@ internal fun ToolOrderRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (isDragging) colors.surfaceVariant else colors.surface)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .padding(horizontal = GS_TOOL_ROW_PADDING, vertical = GS_TOOL_ROW_PADDING),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
@@ -139,10 +153,10 @@ internal fun OverlayTimeoutRow(
             value = sliderValue,
             onValueChange = { sliderValue = it },
             onValueChangeFinished = {
-                val snapped = (sliderValue / 1000f).roundToInt().toLong().coerceIn(1L, 15L) * 1000L
+                val snapped = (sliderValue / 1000f).roundToInt().toLong().coerceIn(GS_TIMEOUT_SNAP_MIN_S, GS_TIMEOUT_SNAP_MAX_S) * 1000L
                 onTimeoutChanged(snapped)
             },
-            valueRange = 1000f..15000f,
+            valueRange = GS_TIMEOUT_SLIDER_MIN_MS..GS_TIMEOUT_SLIDER_MAX_MS,
             colors = SliderDefaults.colors(
                 thumbColor = accentColor,
                 activeTrackColor = accentColor
@@ -260,7 +274,7 @@ internal fun ThemePickerRow(
                 imageVector = Icons.Filled.ArrowDropDown,
                 contentDescription = null,
                 tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)
             )
             DropdownMenu(
                 expanded = expanded,
@@ -309,17 +323,83 @@ internal fun AccentColorRow(
         )
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(GS_COLOR_PREVIEW_SIZE)
                 .clip(CircleShape)
                 .background(accentColor)
                 .border(1.dp, colors.accentBorder, CircleShape)
         )
-        Spacer(modifier = Modifier.size(8.dp))
+        Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
             tint = colors.onSurfaceSecondary,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(GS_ACCENT_ARROW_SIZE)
         )
+    }
+}
+
+internal fun AppLanguage.displayNameResId(): Int = when (this) {
+    AppLanguage.SYSTEM -> R.string.settings_language_system
+    AppLanguage.EN     -> R.string.settings_language_en
+    AppLanguage.DE     -> R.string.settings_language_de
+}
+
+@Composable
+internal fun LanguagePickerRow(
+    language: AppLanguage,
+    accentColor: Color,
+    colors: AppColors,
+    onChanged: (AppLanguage) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .clickable { expanded = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_language),
+                color = colors.onSurface,
+                fontSize = 14.sp,
+            )
+            Text(
+                text = stringResource(language.displayNameResId()),
+                color = accentColor,
+                fontSize = 12.sp,
+            )
+        }
+        Box {
+            Icon(
+                imageVector = Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(colors.surface)
+            ) {
+                AppLanguage.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(option.displayNameResId()),
+                                color = if (option == language) accentColor else colors.onSurface,
+                                fontSize = 14.sp,
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            if (option != language) onChanged(option)
+                        }
+                    )
+                }
+            }
+        }
     }
 }

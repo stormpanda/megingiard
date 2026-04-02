@@ -5,6 +5,7 @@ import android.util.Log
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -61,7 +62,8 @@ object ShellKeyInjector {
             // Read the readiness signal with a bounded timeout so a binary that
             // never prints "R" doesn't hang the caller indefinitely.
             val reader = p.inputStream.bufferedReader()
-            val readyFuture = java.util.concurrent.Executors.newSingleThreadExecutor().submit<String?> {
+            val executor = Executors.newSingleThreadExecutor()
+            val readyFuture = executor.submit<String?> {
                 try { reader.readLine() } catch (_: Exception) { null }
             }
             val ready = try {
@@ -71,6 +73,8 @@ object ShellKeyInjector {
                 readyFuture.cancel(true)
                 p.destroy()
                 return
+            } finally {
+                executor.shutdownNow()
             }
             if (ready != "R") {
                 Log.e(TAG, "Unexpected ready signal: $ready")

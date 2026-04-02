@@ -43,6 +43,9 @@ import kotlinx.serialization.json.Json
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 private const val DEFAULT_OVERLAY_TIMEOUT_MS = 3_000L
 
+/** Per-app language preference. [SYSTEM] follows the device locale. */
+enum class AppLanguage { SYSTEM, EN, DE }
+
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = SETTINGS_DATASTORE_NAME
 )
@@ -84,6 +87,9 @@ object SettingsManager {
     private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
     private val KEY_KB_MOUSE_BTN_POS = stringPreferencesKey("kb_mouse_btn_pos")
 
+    // Language
+    private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
+
     // Touchpad settings
     private val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
     private val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
@@ -92,6 +98,8 @@ object SettingsManager {
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
+    // App-lifetime scope: intentionally never cancelled — this singleton lives for the
+    // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
@@ -170,6 +178,10 @@ object SettingsManager {
     private val _rememberLastTool = MutableStateFlow(false)
     val rememberLastTool: StateFlow<Boolean> = _rememberLastTool.asStateFlow()
 
+    // App language
+    private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
+    val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -214,6 +226,7 @@ object SettingsManager {
                 _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
+                _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -360,6 +373,11 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_LAST_TOOL] = value }
         }
+    }
+
+    fun setAppLanguage(value: AppLanguage) {
+        _appLanguage.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_APP_LANGUAGE] = value.name } }
     }
 
     fun setKbLayout(value: KbLayout) {

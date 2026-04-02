@@ -45,6 +45,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val rememberLastTool by SettingsManager.rememberLastTool.collectAsState()
     val themeMode by SettingsManager.themeMode.collectAsState()
+    val appLanguage by SettingsManager.appLanguage.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
@@ -160,6 +161,13 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                         accentColor = effectiveAccent,
                         colors = colors,
                         onChanged = { SettingsManager.setRememberLastTool(it) }
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    LanguagePickerRow(
+                        language = appLanguage,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onChanged = { SettingsManager.setAppLanguage(it) }
                     )
                     HorizontalDivider(color = colors.divider)
                 }
