@@ -149,14 +149,15 @@ Default:       ThemeMode.DARK
 
 ### Source Files
 
-The two canonical source images live in `design/app-icon/`:
+`design/app-icon/` contains the app icon design assets. Only the two PNG files below are the authoritative inputs to `scripts/generate_icon_assets.py`:
 
-| File                                 | Purpose                                                                           |
-| ------------------------------------ | --------------------------------------------------------------------------------- |
-| `Megingiard_App_Icon_Foreground.png` | Belt artwork on a **white** background                                            |
-| `Megingiard_App_Icon_Background.png` | Solid-color reference image; its average center color becomes the icon background |
+| File                                 | Purpose                                                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `Megingiard_App_Icon_Foreground.png` | Belt artwork on a **white** background; foreground source for the generator                                    |
+| `Megingiard_App_Icon_Background.png` | Solid-color reference image; its average center color becomes the icon background                              |
+| `Megingiard_Icon.svg`                | Vector / reference artwork for design use — **not** consumed by the generator                                  |
 
-These files are the single source of truth. Never edit the generated assets in `res/` directly.
+The two PNG files are the source of truth for generated Android launcher assets. Never edit the generated assets in `res/` directly.
 
 ### Updating the Icon
 
@@ -170,7 +171,7 @@ pip install Pillow
 
 ```bash
 python3 scripts/generate_icon_assets.py \
-  "design/app-icon/Megingiard_App_Icon-Foreground.png" \
+  "design/app-icon/Megingiard_App_Icon_Foreground.png" \
   "design/app-icon/Megingiard_App_Icon_Background.png"
 ```
 

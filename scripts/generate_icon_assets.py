@@ -79,19 +79,20 @@ WHITE_FEATHER   = 20
 def remove_white_background(img: Image.Image) -> Image.Image:
     """Replace near-white pixels with transparency, feathering anti-aliased edges."""
     img = img.convert("RGBA")
-    data = list(img.getdata())
-    out: list[tuple[int, int, int, int]] = []
-    for r, g, b, a in data:
-        min_ch = min(r, g, b)
-        if min_ch >= WHITE_THRESHOLD:
-            out.append((r, g, b, 0))
-        elif min_ch >= WHITE_THRESHOLD - WHITE_FEATHER:
-            ratio   = (WHITE_THRESHOLD - min_ch) / WHITE_FEATHER
-            new_a   = int(255 * ratio)
-            out.append((r, g, b, new_a))
-        else:
-            out.append((r, g, b, a))
-    img.putdata(out)
+    pixels = img.load()
+    width, height = img.size
+    for y in range(height):
+        for x in range(width):
+            r, g, b, a = pixels[x, y]
+            min_ch = min(r, g, b)
+            if min_ch >= WHITE_THRESHOLD:
+                pixels[x, y] = (r, g, b, 0)
+            elif min_ch >= WHITE_THRESHOLD - WHITE_FEATHER:
+                ratio   = (WHITE_THRESHOLD - min_ch) / WHITE_FEATHER
+                new_a   = int(255 * ratio)
+                pixels[x, y] = (r, g, b, new_a)
+            else:
+                pixels[x, y] = (r, g, b, a)
     return img
 
 
@@ -100,12 +101,18 @@ def sample_center_color(img: Image.Image) -> tuple[int, int, int]:
     img = img.convert("RGB")
     w, h = img.size
     region = img.crop((w // 4, h // 4, 3 * w // 4, 3 * h // 4))
-    pixels = list(region.getdata())
-    n = len(pixels)
-    r = sum(p[0] for p in pixels) // n
-    g = sum(p[1] for p in pixels) // n
-    b = sum(p[2] for p in pixels) // n
-    return r, g, b
+    sample_size = 64
+    region = region.resize((sample_size, sample_size), Image.BILINEAR)
+    px = region.load()
+    r_total = g_total = b_total = 0
+    for y in range(sample_size):
+        for x in range(sample_size):
+            r, g, b = px[x, y]
+            r_total += r
+            g_total += g
+            b_total += b
+    n = sample_size * sample_size
+    return r_total // n, g_total // n, b_total // n
 
 
 def fit_to_canvas(
@@ -140,14 +147,14 @@ def fit_to_canvas(
 
 
 def apply_circle_mask(img: Image.Image) -> Image.Image:
-    """Return an RGB image with pixels outside the inscribed circle set to black."""
+    """Return an RGBA image with pixels outside the inscribed circle transparent."""
     size = img.size[0]
     assert img.size[0] == img.size[1], "apply_circle_mask expects a square image"
     mask = Image.new("L", (size, size), 0)
     draw = ImageDraw.Draw(mask)
     draw.ellipse((0, 0, size - 1, size - 1), fill=255)
-    result = Image.new("RGB", (size, size), (0, 0, 0))
-    result.paste(img.convert("RGB"), mask=mask)
+    result = img.convert("RGBA")
+    result.putalpha(mask)
     return result
 
 
