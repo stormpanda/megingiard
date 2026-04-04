@@ -151,11 +151,11 @@ Default:       ThemeMode.DARK
 
 `design/app-icon/` contains the app icon design assets. Only the two PNG files below are the authoritative inputs to `scripts/generate_icon_assets.py`:
 
-| File                                 | Purpose                                                                                                        |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `Megingiard_App_Icon_Foreground.png` | Belt artwork on a **white** background; foreground source for the generator                                    |
-| `Megingiard_App_Icon_Background.png` | Solid-color reference image; its average center color becomes the icon background                              |
-| `Megingiard_Icon.svg`                | Vector / reference artwork for design use — **not** consumed by the generator                                  |
+| File                                 | Purpose                                                                           |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| `Megingiard_App_Icon_Foreground.png` | Belt artwork on a **white** background; foreground source for the generator       |
+| `Megingiard_App_Icon_Background.png` | Solid-color reference image; its average center color becomes the icon background |
+| `Megingiard_Icon.svg`                | Vector / reference artwork for design use — **not** consumed by the generator     |
 
 The two PNG files are the source of truth for generated Android launcher assets. Never edit the generated assets in `res/` directly.
 
