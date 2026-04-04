@@ -169,7 +169,8 @@ internal fun ActionPicker(
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
             is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick -> { /* no further config needed */ }
+            is PadAction.MouseRightClick,
+            is PadAction.Macro -> { /* no further config needed */ }
         }
     }
 }

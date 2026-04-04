@@ -31,15 +31,15 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 Each button supports one of the following actions:
 
-| Action type       | Injection target          | Native binary           |
-| ----------------- | ------------------------- | ----------------------- |
-| `KeyboardKey`     | Linux keycode via uinput  | `keyinjector_arm64`     |
-| `GamepadButton`   | Linux BTN\_\* via uinput  | `gamepadinjector_arm64` |
-| `MouseButton`     | BTN_LEFT/RIGHT/MIDDLE/4/5 | `mouseinjector_arm64`   |
-| `ScrollWheel`     | REL_WHEEL via uinput      | `mouseinjector_arm64`   |
-| `TrackpointMove`  | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
-| `MouseLeftClick`  | BTN_LEFT (legacy alias)   | `mouseinjector_arm64`   |
-| `MouseRightClick` | BTN_RIGHT (legacy alias)  | `mouseinjector_arm64`   |
+| Action type       | Injection target              | Native binary           |
+| ----------------- | ----------------------------- | ----------------------- |
+| `KeyboardKey`     | Linux keycode via uinput      | `keyinjector_arm64`     |
+| `GamepadButton`   | Linux BTN\_\* via uinput      | `gamepadinjector_arm64` |
+| `MouseButton`     | BTN_LEFT/RIGHT/MIDDLE/4/5     | `mouseinjector_arm64`   |
+| `ScrollWheel`     | REL_WHEEL via uinput          | `mouseinjector_arm64`   |
+| `TrackpointMove`  | REL_X / REL_Y via uinput      | `mouseinjector_arm64`   |
+| `MouseLeftClick`  | BTN_LEFT (legacy alias)       | `mouseinjector_arm64`   |
+| `MouseRightClick` | BTN_RIGHT (legacy alias)      | `mouseinjector_arm64`   |
 | `Macro`           | Replays recorded evdev events | `gamepadinjector_arm64` |
 
 - `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package.
@@ -75,12 +75,12 @@ Each button supports one of the following actions:
 
 #### Visual states (Macro button)
 
-| State             | Visual                                         |
-| ----------------- | ---------------------------------------------- |
-| Recording active  | Pulsing red Stop icon                          |
-| Playback active   | Pulsing accent-color PlayArrow icon            |
-| No recording yet  | Red FiberManualRecord icon                     |
-| Idle (recorded)   | Button label + small FiberManualRecord dot     |
+| State            | Visual                                     |
+| ---------------- | ------------------------------------------ |
+| Recording active | Pulsing red Stop icon                      |
+| Playback active  | Pulsing accent-color PlayArrow icon        |
+| No recording yet | Red FiberManualRecord icon                 |
+| Idle (recorded)  | Button label + small FiberManualRecord dot |
 
 ### FR-P5: Trackpoint Button
 
@@ -255,18 +255,18 @@ AABB hit detection is conservative for circular buttons (slightly over-accepts a
 
 ### Source Files
 
-| File                         | Responsibility                                                               |
-| ---------------------------- | ---------------------------------------------------------------------------- |
+| File                         | Responsibility                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
 | `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, macro recording/playback, injector lifecycle |
-| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button/macro config |
-| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button |
-| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger        |
+| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button/macro config                 |
+| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                     |
+| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                            |
 | `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction`, `MacroEvent`, `MacroInputEvent` |
-| `MacroRecordingReader.kt`    | Native binary wrapper: deploys `macroreader_arm64`, collects evdev events    |
-| `MacroPadActionDispatch.kt`  | Injection helpers: `injectMacroEvent()`, `autoTrim()`                        |
-| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector`                                    |
-| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread for gamepad injection (buttons + axes) |
-| `GamepadKeycodes.kt`         | Linux BTN\_\* constants + preset list for editor picker                      |
-| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                      |
-| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection  |
-| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)               |
+| `MacroRecordingReader.kt`    | Native binary wrapper: deploys `macroreader_arm64`, collects evdev events                        |
+| `MacroPadActionDispatch.kt`  | Injection helpers: `injectMacroEvent()`, `autoTrim()`                                            |
+| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector`                                                        |
+| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread for gamepad injection (buttons + axes)                   |
+| `GamepadKeycodes.kt`         | Linux BTN\_\* constants + preset list for editor picker                                          |
+| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                          |
+| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                      |
+| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                   |
