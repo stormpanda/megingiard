@@ -1,8 +1,8 @@
 # Feature: MacroPad
 
 > **Related source:** `app/src/main/java/com/stormpanda/megingiard/macropad/`
-> **Native source:** `app/src/main/cpp/gamepadinjector.c`, `app/src/main/cpp/mouseinjector.c`
-> **Binary assets:** `app/src/main/assets/gamepadinjector_arm64`, `app/src/main/assets/mouseinjector_arm64`
+> **Native source:** `app/src/main/cpp/gamepadinjector.c`, `app/src/main/cpp/mouseinjector.c`, `app/src/main/cpp/macroreader.c`
+> **Binary assets:** `app/src/main/assets/gamepadinjector_arm64`, `app/src/main/assets/mouseinjector_arm64`, `app/src/main/assets/macroreader_arm64`
 > **Build instructions:** [`docs/BUILD_NATIVE.md`](../BUILD_NATIVE.md)
 
 ---
@@ -11,7 +11,7 @@
 
 ### Overview
 
-The MacroPad feature turns the secondary display into a fully configurable button pad. The user can create named profiles, freely place buttons on a canvas, and assign each button one of several action types: keyboard keystroke, gamepad button, mouse button, scroll wheel, or trackpoint (relative mouse movement). Each profile independently controls which virtual input devices (keyboard, gamepad, mouse) are active. Multiple profiles can be created and switched without leaving the use-mode screen. All configuration persists across sessions.
+The MacroPad feature turns the secondary display into a fully configurable button pad. The user can create named profiles, freely place buttons on a canvas, and assign each button one of several action types: keyboard keystroke, gamepad button, mouse button, scroll wheel, trackpoint (relative mouse movement), or **macro** (recorded sequence of physical hardware gamepad inputs). Each profile independently controls which virtual input devices (keyboard, gamepad, mouse) are active. Multiple profiles can be created and switched without leaving the use-mode screen. All configuration persists across sessions.
 
 ### FR-P1: Configurable Layout Profiles
 
@@ -40,6 +40,7 @@ Each button supports one of the following actions:
 | `TrackpointMove`  | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
 | `MouseLeftClick`  | BTN_LEFT (legacy alias)   | `mouseinjector_arm64`   |
 | `MouseRightClick` | BTN_RIGHT (legacy alias)  | `mouseinjector_arm64`   |
+| `Macro`           | Replays recorded evdev events | `gamepadinjector_arm64` |
 
 - `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package.
 - `GamepadButton` and all mouse actions use dedicated injectors (`GamepadInjector`, `MouseInjector`) backed by their own native binary processes.
@@ -51,6 +52,35 @@ Each button supports one of the following actions:
 - The editor shows a **"Simulated Devices"** section with one checkbox per device. Unchecking a device immediately disables it.
 - When a device is **disabled**: its native injector binary is not started when entering MacroPad mode, and the corresponding action categories (Keyboard Key / Gamepad Button / Mouse Button, Scroll Wheel, Trackpoint) are **hidden** from the action picker in the editor.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
+- **Macro buttons are not affected by device flags** — they are never grayed out and can always be tapped.
+
+### FR-P7: Macro Recording and Playback
+
+- The editor MUST offer an **"Add Macro"** button (alongside "Add Button") that opens a `ButtonEditDialog` in macro mode.
+- A Macro button has a user-defined **label** and an internal `PadAction.Macro(events)` that stores a sequence of timed gamepad input events.
+- Recording captures **physical hardware gamepad inputs** from the AYN Thor's built-in controller (device auto-detected via `/proc/bus/input/devices`, Vendor 0x2020). Recorded event types: gamepad buttons (BTN_GAMEPAD range 304–318, BTN_DPAD 544–547) and analog axes (ABS_X/Y/Z/RZ/GAS/BRAKE, ABS_HAT0X/Y).
+
+#### Recording lifecycle
+
+1. **Tap an unrecorded Macro button** (events list empty) → `macroreader_arm64` binary is started via `MacroRecordingReader`; button shows a pulsing red Stop icon; a toast says "Recording… Tap again to stop".
+2. **Tap the same button again** → recording stops; events are auto-trimmed (first event becomes t=0); the `PadAction.Macro` is updated with the new event list and persisted.
+3. **Tap a different button while recording is active** → toast: "Another macro is recording".
+
+#### Playback lifecycle
+
+1. **Tap a recorded Macro button** (events list non-empty) → playback starts on a coroutine; button shows a pulsing PlayArrow icon.
+2. Playback replays each `MacroEvent` at its original relative timing using `delay()`. Button codes and axis events are dispatched to `GamepadInjector` via `injectMacroEvent()`.
+3. **Tap the button again during playback** → playback is cancelled; any still-held buttons are immediately released via `GamepadInjector.buttonUp()`.
+4. A `try/finally` block in `playMacro()` ensures held buttons are always released regardless of how playback ends.
+
+#### Visual states (Macro button)
+
+| State             | Visual                                         |
+| ----------------- | ---------------------------------------------- |
+| Recording active  | Pulsing red Stop icon                          |
+| Playback active   | Pulsing accent-color PlayArrow icon            |
+| No recording yet  | Red FiberManualRecord icon                     |
+| Idle (recorded)   | Button label + small FiberManualRecord dot     |
 
 ### FR-P5: Trackpoint Button
 
@@ -115,6 +145,15 @@ PadProfile
               ScrollWheel
               TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
               MouseLeftClick / MouseRightClick  (legacy)
+              Macro(events: List<MacroEvent>)
+
+MacroEvent
+  ├── relativeTimeMs: Long     (offset from start of sequence; first event = 0)
+  └── input: MacroInputEvent   (sealed)
+        GamepadButtonDown(code: Int)
+        GamepadButtonUp(code: Int)
+        GamepadAxis(axis: Int, value: Int)
+        GamepadHat(axis: Int, value: Int)
 ```
 
 Legacy fields `hasTrackpoint`, `trackpointPosX/Y`, `trackpointSize`, `padShape`, and `padSizePercent` are kept as `@Suppress("unused")` in `PadProfile` for JSON deserialization compatibility. Profiles loaded with `hasTrackpoint=true` are migrated to a `TrackpointMove` button in `MacroPadState.loadFrom()`.
@@ -128,9 +167,22 @@ Two new native binaries are introduced:
 - `GD <btnCode>\n` — button down
 - `GU <btnCode>\n` — button up
 - `HD <axis> <value>\n` — D-Pad hat event (axis 0 = X, 1 = Y; value −1/0/+1)
+- `AX <code> <value>\n` — analog axis event (ABS_X/Y/Z/RZ/GAS/BRAKE)
 - `R\n` on stdout when ready
 
-Supported button codes: `BTN_SOUTH (304)`, `BTN_EAST (305)`, `BTN_NORTH (308)`, `BTN_WEST (307)`, `BTN_TL (310)`, `BTN_TR (311)`, `BTN_TL2 (312)`, `BTN_TR2 (313)`, `BTN_THUMBL (317)`, `BTN_THUMBR (318)`, `BTN_START (315)`, `BTN_SELECT (314)`, `BTN_MODE (316)`.
+Supported button codes: `BTN_SOUTH (304)`, `BTN_EAST (305)`, `BTN_C (306)`, `BTN_NORTH (308)`, `BTN_WEST (307)`, `BTN_Z (309)`, `BTN_TL (310)`, `BTN_TR (311)`, `BTN_TL2 (312)`, `BTN_TR2 (313)`, `BTN_THUMBL (317)`, `BTN_THUMBR (318)`, `BTN_START (315)`, `BTN_SELECT (314)`, `BTN_MODE (316)`, `BTN_DPAD_UP (544)`, `BTN_DPAD_DOWN (545)`, `BTN_DPAD_LEFT (546)`, `BTN_DPAD_RIGHT (547)`.
+
+Analog axes: ABS_X/Y/Z/RZ (range −32767..32767), ABS_GAS/BRAKE (range 0..32767), ABS_HAT0X/Y (range −1..1).
+
+**`macroreader_arm64`** — Reads raw evdev events from the physical AYN Thor gamepad (`/dev/input/eventN`) and outputs them as text on stdout:
+
+- Accepts one argument: the device path (e.g. `/dev/input/event9`)
+- Outputs `R\n` when ready
+- For each captured event outputs:
+  - `K <code> <value> <ts_ms>\n` — EV_KEY event (button press/release)
+  - `A <code> <value> <ts_ms>\n` — EV_ABS event (axis position)
+- Filters: EV_KEY codes 304–318 and 544–547; EV_ABS codes 0, 1, 2, 5, 6, 7, 16, 17
+- `MacroRecordingReader` (Kotlin) wraps this binary with the standard deploy-and-launch pattern
 
 **`mouseinjector_arm64`** — Creates a `BUS_VIRTUAL` uinput mouse device and accepts commands on stdin:
 
@@ -205,13 +257,15 @@ AABB hit detection is conservative for circular buttons (slightly over-accepts a
 
 | File                         | Responsibility                                                               |
 | ---------------------------- | ---------------------------------------------------------------------------- |
-| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle       |
-| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config   |
+| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, macro recording/playback, injector lifecycle |
+| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button/macro config |
 | `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button |
 | `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger        |
-| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction`              |
+| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction`, `MacroEvent`, `MacroInputEvent` |
+| `MacroRecordingReader.kt`    | Native binary wrapper: deploys `macroreader_arm64`, collects evdev events    |
+| `MacroPadActionDispatch.kt`  | Injection helpers: `injectMacroEvent()`, `autoTrim()`                        |
 | `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector`                                    |
-| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread for gamepad injection                |
+| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread for gamepad injection (buttons + axes) |
 | `GamepadKeycodes.kt`         | Linux BTN\_\* constants + preset list for editor picker                      |
 | `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                      |
 | `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection  |

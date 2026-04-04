@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -410,6 +411,7 @@ private fun DeviceCheckboxRow(
 @Composable
 private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
     var showButtonDialog by remember { mutableStateOf(false) }
+    var showMacroDialog  by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -423,15 +425,24 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
             onClick     = { showButtonDialog = true },
             modifier    = Modifier.weight(1f),
         )
+        // Add Macro
+        EditorActionChip(
+            label       = stringResource(R.string.macropad_editor_add_macro),
+            icon        = Icons.Filled.FiberManualRecord,
+            accentColor = accentColor,
+            onClick     = { showMacroDialog = true },
+            modifier    = Modifier.weight(1f),
+        )
     }
 
     if (showButtonDialog) {
         ButtonEditDialog(
-            button         = null,  // null = new button
+            button         = null,
             accentColor    = accentColor,
             enableKeyboard = profile.enableKeyboard,
             enableGamepad  = profile.enableGamepad,
             enableMouse    = profile.enableMouse,
+            isMacroMode    = false,
             onConfirm      = { newBtn ->
                 MacroPadState.updateProfile(
                     profile.copy(buttons = profile.buttons + newBtn)
@@ -439,6 +450,24 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
                 showButtonDialog = false
             },
             onDismiss      = { showButtonDialog = false },
+        )
+    }
+
+    if (showMacroDialog) {
+        ButtonEditDialog(
+            button         = null,
+            accentColor    = accentColor,
+            enableKeyboard = profile.enableKeyboard,
+            enableGamepad  = profile.enableGamepad,
+            enableMouse    = profile.enableMouse,
+            isMacroMode    = true,
+            onConfirm      = { newBtn ->
+                MacroPadState.updateProfile(
+                    profile.copy(buttons = profile.buttons + newBtn)
+                )
+                showMacroDialog = false
+            },
+            onDismiss      = { showMacroDialog = false },
         )
     }
 }
@@ -520,6 +549,7 @@ private fun ButtonListItem(
     val colors      = LocalAppColors.current
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
+    val isMacro      = btn.action is PadAction.Macro
     val isDeviceDisabled = when (btn.action) {
         is PadAction.KeyboardKey                 -> !enableKeyboard
         is PadAction.GamepadButton               -> !enableGamepad
@@ -528,6 +558,7 @@ private fun ButtonListItem(
         is PadAction.TrackpointMove,
         is PadAction.MouseLeftClick,
         is PadAction.MouseRightClick             -> !enableMouse
+        is PadAction.Macro                       -> false  // Macro buttons are never grayed out
     }
 
     Row(
@@ -550,6 +581,8 @@ private fun ButtonListItem(
         ) {
             if (isTrackpoint) {
                 Text("●", color = colors.onSurface, fontSize = 10.sp)
+            } else if (isMacro) {
+                Icon(Icons.Filled.FiberManualRecord, contentDescription = null, tint = accentColor, modifier = Modifier.size(14.dp))
             } else {
                 Text(btn.label.take(2), color = colors.onSurface, fontSize = 10.sp)
             }
@@ -566,6 +599,9 @@ private fun ButtonListItem(
                 }
                 Text(stringResource(R.string.macropad_action_trackpoint), color = colors.onSurface, fontSize = 14.sp, maxLines = 1)
                 Text(sizeLabel, color = colors.onSurfaceSecondary, fontSize = 12.sp, maxLines = 1)
+            } else if (isMacro) {
+                Text(btn.label.ifBlank { stringResource(R.string.macropad_action_macro) }, color = colors.onSurface, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.action.displayLabel(), color = colors.onSurfaceSecondary, fontSize = 12.sp, maxLines = 1)
             } else {
                 Text(btn.label, color = colors.onSurface, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(btn.action.displayLabel(), color = colors.onSurfaceSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -584,6 +620,7 @@ private fun ButtonListItem(
             enableKeyboard = enableKeyboard,
             enableGamepad  = enableGamepad,
             enableMouse    = enableMouse,
+            isMacroMode    = btn.action is PadAction.Macro,
             onConfirm      = { onUpdate(it); showEdit = false },
             onDismiss      = { showEdit = false },
         )

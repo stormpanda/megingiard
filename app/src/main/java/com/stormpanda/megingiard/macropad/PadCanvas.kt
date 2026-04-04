@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
@@ -132,6 +133,7 @@ private fun DraggableButton(
         is PadAction.TrackpointMove,
         is PadAction.MouseLeftClick,
         is PadAction.MouseRightClick             -> !enableMouse
+        is PadAction.Macro                       -> false  // Macro buttons are never grayed out
     }
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val chipWidthPx  = with(density) {
@@ -205,6 +207,20 @@ private fun DraggableButton(
     ) {
         if (btn.action is PadAction.TrackpointMove) {
             Text("●", color = accentColor, fontSize = 14.sp)
+        } else if (btn.action is PadAction.Macro) {
+            val macroEvents = (btn.action as PadAction.Macro).events
+            if (macroEvents.isEmpty()) {
+                Icon(Icons.Filled.FiberManualRecord, contentDescription = null, tint = accentColor, modifier = Modifier.size(14.dp))
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize().padding(2.dp),
+                ) {
+                    Text(btn.label, color = colors.onSurface, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Icon(Icons.Filled.FiberManualRecord, contentDescription = null, tint = accentColor, modifier = Modifier.size(8.dp))
+                }
+            }
         } else if (btn.action is PadAction.ScrollWheel) {
             // Show mini scroll icon in editor chip
             Column(

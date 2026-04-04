@@ -20,4 +20,7 @@ object GamepadInjector {
 
     /** Sends a D-Pad hat event. axis: 0 = X (−1 left / +1 right), 1 = Y (−1 up / +1 down) */
     fun hat(axis: Int, value: Int) = ShellGamepadInjector.hat(axis, value)
+
+    /** Sends an analogue axis event. [code] is the ABS_* Linux constant; [value] range depends on axis. */
+    fun axis(code: Int, value: Int) = ShellGamepadInjector.axis(code, value)
 }

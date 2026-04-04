@@ -91,6 +91,19 @@ sealed class PadAction {
         val size: TrackpointSize = TrackpointSize.MEDIUM,
     ) : PadAction()
 
+    /**
+     * A recorded sequence of hardware gamepad inputs that is replayed on tap.
+     * On first tap (events empty): starts recording from the physical controller.
+     * On second tap while recording: stops recording and persists the captured events.
+     * On subsequent taps: replays the events with original timing.
+     * Long-press to re-record an existing macro.
+     */
+    @Serializable
+    @SerialName("macro")
+    data class Macro(
+        val events: List<MacroEvent> = emptyList(),
+    ) : PadAction()
+
     // ── Legacy: retained for JSON back-compat only ─────────────────────────
     // Old profiles saved these types before MouseButton was introduced.
     // They are deserialized normally; the app treats them as MouseButton(LEFT/RIGHT).
@@ -105,6 +118,50 @@ sealed class PadAction {
     @SerialName("mouse_right_click")
     data object MouseRightClick : PadAction()
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Macro event types — recorded hardware inputs for macro playback
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A single raw hardware input event captured from the physical gamepad.
+ * The sealed hierarchy is designed for future extension to keyboard / mouse events.
+ */
+@Serializable
+sealed class MacroInputEvent {
+
+    /** Physical gamepad button pressed (EV_KEY, value 1). */
+    @Serializable
+    @SerialName("gpbtn_down")
+    data class GamepadButtonDown(val code: Int) : MacroInputEvent()
+
+    /** Physical gamepad button released (EV_KEY, value 0). */
+    @Serializable
+    @SerialName("gpbtn_up")
+    data class GamepadButtonUp(val code: Int) : MacroInputEvent()
+
+    /** Analogue axis moved (EV_ABS, codes ABS_X/Y/Z/RZ/GAS/BRAKE). */
+    @Serializable
+    @SerialName("gp_axis")
+    data class GamepadAxis(val axis: Int, val value: Int) : MacroInputEvent()
+
+    /** D-Pad hat event (EV_ABS, ABS_HAT0X/Y). axis 0 = X, 1 = Y; value −1/0/+1. */
+    @Serializable
+    @SerialName("gp_hat")
+    data class GamepadHat(val axis: Int, val value: Int) : MacroInputEvent()
+}
+
+/**
+ * One event in a recorded macro, with its timing offset from the start of playback.
+ *
+ * [relativeTimeMs] is 0 for the first event (leading dead time is auto-trimmed).
+ * Trailing dead time is also auto-trimmed (recording ends at the last event).
+ */
+@Serializable
+data class MacroEvent(
+    val relativeTimeMs: Long,
+    val input: MacroInputEvent,
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PadButton — a single interactable element on the pad

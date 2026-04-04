@@ -20,6 +20,7 @@ internal fun injectActionDown(action: PadAction) {
         }
         is PadAction.ScrollWheel     -> { /* handled via drag events */ }
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
+        is PadAction.Macro           -> { /* handled by MacroPadScreen recording/playback logic */ }
         is PadAction.MouseLeftClick  -> MouseInjector.leftDown()
         is PadAction.MouseRightClick -> MouseInjector.rightDown()
     }
@@ -38,7 +39,33 @@ internal fun injectActionUp(action: PadAction) {
         }
         is PadAction.ScrollWheel     -> { /* handled via drag events */ }
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
+        is PadAction.Macro           -> { /* handled by MacroPadScreen recording/playback logic */ }
         is PadAction.MouseLeftClick  -> MouseInjector.leftUp()
         is PadAction.MouseRightClick -> MouseInjector.rightUp()
     }
 }
+
+/**
+ * Replays a single [MacroInputEvent] through the appropriate injector.
+ * Call from the macro playback coroutine on any thread — injectors are thread-safe.
+ */
+internal fun injectMacroEvent(event: MacroInputEvent) {
+    when (event) {
+        is MacroInputEvent.GamepadButtonDown -> GamepadInjector.buttonDown(event.code)
+        is MacroInputEvent.GamepadButtonUp   -> GamepadInjector.buttonUp(event.code)
+        is MacroInputEvent.GamepadAxis       -> GamepadInjector.axis(event.axis, event.value)
+        is MacroInputEvent.GamepadHat        -> GamepadInjector.hat(event.axis, event.value)
+    }
+}
+
+/**
+ * Auto-trims a raw list of timestamped events: the first event becomes t=0
+ * (eliminating leading dead time) and returns only up to the last recorded event
+ * (trailing dead time is never stored since recording stops on user tap).
+ */
+internal fun autoTrim(raw: List<Pair<Long, MacroInputEvent>>): List<MacroEvent> {
+    if (raw.isEmpty()) return emptyList()
+    val firstMs = raw.first().first
+    return raw.map { (ts, input) -> MacroEvent(relativeTimeMs = ts - firstMs, input = input) }
+}
+

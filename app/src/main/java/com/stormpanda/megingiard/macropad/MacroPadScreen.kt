@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,7 +44,10 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
@@ -125,6 +129,19 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
     val overlayVisible      by AppStateManager.overlayVisible.collectAsState()
     val overlayVisibleState  = rememberUpdatedState(overlayVisible)
 
+    val scope = rememberCoroutineScope()
+
+    // Macro recording/playback state
+    val macroReader      = remember { MacroRecordingReader() }
+    var recordingButtonId by remember { mutableStateOf<String?>(null) }
+    var playingButtonId   by remember { mutableStateOf<String?>(null) }
+    var playbackJob       by remember { mutableStateOf<Job?>(null) }
+    val pressedDuringPlayback = remember { mutableSetOf<Int>() }
+
+    DisposableEffect(macroReader) {
+        onDispose { macroReader.destroy() }
+    }
+
     // Track which button IDs are currently pressed (multi-touch)
     var pressedIds  by remember { mutableStateOf(setOf<String>()) }
     // Pointer → button/trackpoint mapping for multi-touch release
@@ -199,22 +216,84 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                     is PadAction.TrackpointMove,
                                                     is PadAction.MouseLeftClick,
                                                     is PadAction.MouseRightClick -> if (!profile.enableMouse) R.string.macropad_device_disabled_mouse else null
+                                                    is PadAction.Macro -> null
                                                 }
                                                 if (disabledMsgRes != null) {
                                                     Toast.makeText(context, disabledMsgRes, Toast.LENGTH_SHORT).show()
                                                 } else {
-                                                pointerMap[id] = hitButton.id
                                                 when {
-                                                    hitButton.action is PadAction.ScrollWheel -> {
-                                                        // Scroll wheel: record start Y, do not inject down
-                                                        scrollStartY[id] = py
+                                                    // ── Macro buttons: handled without adding to pointerMap ──
+                                                    hitButton.action is PadAction.Macro -> {
+                                                        val macroAction = hitButton.action as PadAction.Macro
+                                                        when {
+                                                            // Tap again to stop recording
+                                                            recordingButtonId == hitButton.id -> {
+                                                                scope.launch {
+                                                                    val raw = withContext(Dispatchers.IO) { macroReader.stop() }
+                                                                    val trimmed = autoTrim(raw)
+                                                                    val updatedBtn = hitButton.copy(action = PadAction.Macro(trimmed))
+                                                                    MacroPadState.updateProfile(
+                                                                        profile.copy(buttons = profile.buttons.map { if (it.id == hitButton.id) updatedBtn else it })
+                                                                    )
+                                                                    recordingButtonId = null
+                                                                    Toast.makeText(context, R.string.macropad_recording_saved, Toast.LENGTH_SHORT).show()
+                                                                }
+                                                            }
+                                                            // Another button is already recording
+                                                            recordingButtonId != null -> {
+                                                                Toast.makeText(context, R.string.macropad_recording_in_progress, Toast.LENGTH_SHORT).show()
+                                                            }
+                                                            // Cancel playback
+                                                            playingButtonId == hitButton.id -> {
+                                                                playbackJob?.cancel()
+                                                                playbackJob = null
+                                                                pressedDuringPlayback.forEach { code -> GamepadInjector.buttonUp(code) }
+                                                                pressedDuringPlayback.clear()
+                                                                playingButtonId = null
+                                                            }
+                                                            // No events recorded yet: start recording
+                                                            macroAction.events.isEmpty() -> {
+                                                                scope.launch {
+                                                                    val devicePath = withContext(Dispatchers.IO) {
+                                                                        MacroRecordingReader.findGamepadDevice() ?: MacroRecordingReader.DEFAULT_DEVICE_PATH
+                                                                    }
+                                                                    val started = withContext(Dispatchers.IO) { macroReader.start(context, devicePath) }
+                                                                    if (started) {
+                                                                        recordingButtonId = hitButton.id
+                                                                        Toast.makeText(context, R.string.macropad_recording_started, Toast.LENGTH_SHORT).show()
+                                                                    } else {
+                                                                        Toast.makeText(context, R.string.macropad_recording_failed, Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                            }
+                                                            // Has events: play back
+                                                            else -> {
+                                                                val job = scope.launch {
+                                                                    playingButtonId = hitButton.id
+                                                                    playMacro(macroAction.events, pressedDuringPlayback)
+                                                                    playingButtonId = null
+                                                                    playbackJob = null
+                                                                }
+                                                                playbackJob = job
+                                                            }
+                                                        }
                                                     }
-                                                    hitButton.action is PadAction.TrackpointMove -> {
-                                                        lastTpPos = change.position
-                                                    }
+                                                    // ── All other buttons ──
                                                     else -> {
-                                                        pressedIds = pressedIds + hitButton.id
-                                                        injectActionDown(hitButton.action)
+                                                        pointerMap[id] = hitButton.id
+                                                        when {
+                                                            hitButton.action is PadAction.ScrollWheel -> {
+                                                                // Scroll wheel: record start Y, do not inject down
+                                                                scrollStartY[id] = py
+                                                            }
+                                                            hitButton.action is PadAction.TrackpointMove -> {
+                                                                lastTpPos = change.position
+                                                            }
+                                                            else -> {
+                                                                pressedIds = pressedIds + hitButton.id
+                                                                injectActionDown(hitButton.action)
+                                                            }
+                                                        }
                                                     }
                                                 }
                                                 } // end device-enabled check
@@ -305,6 +384,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                     is PadAction.TrackpointMove,
                     is PadAction.MouseLeftClick,
                     is PadAction.MouseRightClick             -> !profile.enableMouse
+                    is PadAction.Macro                       -> false
                 }
                 val isPressed = btn.id in pressedIds
                 PadButton(
@@ -313,10 +393,44 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                     canvasSize       = canvasSize,
                     accentColor      = accentColor,
                     isDeviceDisabled = isDeviceDisabled,
+                    isMacroRecording = recordingButtonId == btn.id,
+                    isMacroPlaying   = playingButtonId == btn.id,
                 )
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Macro playback
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Plays back a recorded macro sequence with accurate timing.
+ * Cleans up any held buttons via [pressedDuringPlayback] in a finally block,
+ * so cancellation (e.g. re-tap) always leaves the gamepad in a clean state.
+ */
+private suspend fun playMacro(
+    events: List<MacroEvent>,
+    pressedDuringPlayback: MutableSet<Int>,
+) {
+    var lastMs = 0L
+    try {
+        for (event in events) {
+            val deltaMs = event.relativeTimeMs - lastMs
+            if (deltaMs > 0) delay(deltaMs)
+            lastMs = event.relativeTimeMs
+            injectMacroEvent(event.input)
+            when (val input = event.input) {
+                is MacroInputEvent.GamepadButtonDown -> pressedDuringPlayback.add(input.code)
+                is MacroInputEvent.GamepadButtonUp   -> pressedDuringPlayback.remove(input.code)
+                else -> {}
+            }
+        }
+    } finally {
+        // Release any buttons still held at end or on cancellation
+        pressedDuringPlayback.forEach { code -> GamepadInjector.buttonUp(code) }
+        pressedDuringPlayback.clear()
+    }
+}
 

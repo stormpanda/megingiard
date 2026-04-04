@@ -65,6 +65,7 @@ internal fun PadAction.categoryResId(): Int = when (this) {
     is PadAction.MouseButton     -> R.string.macropad_action_mouse_button
     is PadAction.ScrollWheel     -> R.string.macropad_action_scroll_wheel
     is PadAction.TrackpointMove  -> R.string.macropad_action_trackpoint
+    is PadAction.Macro           -> R.string.macropad_action_macro
     is PadAction.MouseLeftClick  -> R.string.macropad_action_mouse_button
     is PadAction.MouseRightClick -> R.string.macropad_action_mouse_button
 }
@@ -78,6 +79,11 @@ internal fun PadAction.displayLabel(): String {
         is PadAction.MouseButton     -> context.getString(R.string.macropad_display_mouse_button, button.displayLabel())
         is PadAction.ScrollWheel     -> context.getString(R.string.macropad_display_scroll_wheel)
         is PadAction.TrackpointMove  -> context.getString(R.string.macropad_display_trackpoint)
+        is PadAction.Macro           -> {
+            val m = this
+            if (m.events.isEmpty()) context.getString(R.string.macropad_display_macro_empty)
+            else context.getString(R.string.macropad_display_macro_recorded, m.events.size, m.events.last().relativeTimeMs / 1000.0f)
+        }
         is PadAction.MouseLeftClick  -> context.getString(R.string.macropad_display_mouse_button, "Left")
         is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_button, "Right")
     }

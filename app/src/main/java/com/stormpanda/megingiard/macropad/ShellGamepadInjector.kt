@@ -31,6 +31,8 @@ object ShellGamepadInjector {
     private sealed class GamepadCommand {
         data class Button(val down: Boolean, val btnCode: Int) : GamepadCommand()
         data class Hat(val axis: Int, val value: Int) : GamepadCommand()
+        /** AX command: analogue axis event for macro playback. */
+        data class Axis(val code: Int, val value: Int) : GamepadCommand()
     }
 
     @Volatile private var process:      Process?       = null
@@ -111,6 +113,12 @@ object ShellGamepadInjector {
         queue.offer(GamepadCommand.Hat(axis = axis, value = value))
     }
 
+    /** Sends an analogue axis event (AX command). Used for macro playback of stick/trigger events. */
+    fun axis(code: Int, value: Int) {
+        if (!running) return
+        queue.offer(GamepadCommand.Axis(code = code, value = value))
+    }
+
     // -------------------------------------------------------------------------
     // Writer thread — no coalescing, every event delivered in order
     // -------------------------------------------------------------------------
@@ -131,6 +139,7 @@ object ShellGamepadInjector {
         val line = when (cmd) {
             is GamepadCommand.Button -> "${if (cmd.down) "GD" else "GU"} ${cmd.btnCode}\n"
             is GamepadCommand.Hat    -> "HD ${cmd.axis} ${cmd.value}\n"
+            is GamepadCommand.Axis   -> "AX ${cmd.code} ${cmd.value}\n"
         }
         try {
             w.write(line)

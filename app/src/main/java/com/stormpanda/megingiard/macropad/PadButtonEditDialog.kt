@@ -54,14 +54,21 @@ internal fun ButtonEditDialog(
     enableKeyboard: Boolean = true,
     enableGamepad:  Boolean = true,
     enableMouse:    Boolean = true,
+    isMacroMode:    Boolean = false,  // true when creating/editing a Macro button
     onConfirm:      (PadButton) -> Unit,
     onDismiss:      () -> Unit,
 ) {
+    // In macro mode the action is always PadAction.Macro (preserving any recorded events).
+    val initialAction = if (isMacroMode) {
+        button?.action as? PadAction.Macro ?: PadAction.Macro()
+    } else {
+        button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
+    }
     var label         by remember { mutableStateOf(button?.label ?: "") }
     var buttonShape   by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
     var buttonSize    by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
     var showSizeMenu  by remember { mutableStateOf(false) }
-    var action        by remember { mutableStateOf(button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")) }
+    var action        by remember { mutableStateOf(initialAction) }
     val colors        = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -78,14 +85,21 @@ internal fun ButtonEditDialog(
 
     val isConfirmEnabled = label.isNotBlank() || action is PadAction.ScrollWheel || action is PadAction.TrackpointMove
 
+    // Title text: "Add Macro" when creating a new macro button, otherwise follow existing logic
+    val titleText = when {
+        isMacroMode && button == null -> stringResource(R.string.macropad_editor_add_macro)
+        isMacroMode                   -> button!!.label.ifBlank { stringResource(R.string.macropad_action_macro) }
+        button == null                -> stringResource(R.string.macropad_editor_add_button)
+        button.action is PadAction.TrackpointMove -> stringResource(R.string.macropad_action_trackpoint)
+        else -> button.label
+    }
+
     AlertDialog(
         containerColor   = colors.surface,
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text  = if (button == null) stringResource(R.string.macropad_editor_add_button)
-                        else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
-                        else button.label,
+                text  = titleText,
                 color = colors.onSurface,
             )
         },
@@ -217,16 +231,18 @@ internal fun ButtonEditDialog(
                     }
                 }
 
-                // Action picker
-                SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
-                ActionPicker(
-                    current        = action,
-                    accentColor    = accentColor,
-                    enableKeyboard = enableKeyboard,
-                    enableGamepad  = enableGamepad,
-                    enableMouse    = enableMouse,
-                    onChange       = ::onActionChanged,
-                )
+                // Action picker — hidden for ScrollWheel, TrackpointMove, and Macro buttons
+                if (!isMacroMode) {
+                    SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
+                    ActionPicker(
+                        current        = action,
+                        accentColor    = accentColor,
+                        enableKeyboard = enableKeyboard,
+                        enableGamepad  = enableGamepad,
+                        enableMouse    = enableMouse,
+                        onChange       = ::onActionChanged,
+                    )
+                }
             }
         },
         confirmButton = {
