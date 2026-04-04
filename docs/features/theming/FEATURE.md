@@ -142,3 +142,60 @@ Default:       ThemeMode.DARK
 ```
 
 `SettingsManager.setThemeMode(value)` persists and exposes `themeMode: StateFlow<ThemeMode>`.
+
+---
+
+## App Icon
+
+### Source Files
+
+The two canonical source images live in `design/app-icon/`:
+
+| File                                 | Purpose                                                                           |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| `Megingiard_App_Icon_Foreground.png` | Belt artwork on a **white** background                                            |
+| `Megingiard_App_Icon_Background.png` | Solid-color reference image; its average center color becomes the icon background |
+
+These files are the single source of truth. Never edit the generated assets in `res/` directly.
+
+### Updating the Icon
+
+**Prerequisites:**
+
+```bash
+pip install Pillow
+```
+
+**Run the generator** from the repository root:
+
+```bash
+python3 scripts/generate_icon_assets.py \
+  "design/app-icon/Megingiard_App_Icon-Foreground.png" \
+  "design/app-icon/Megingiard_App_Icon_Background.png"
+```
+
+**What the script does:**
+
+1. Removes the white background from the foreground PNG → transparent RGBA.
+2. Samples the average center color of the background PNG.
+3. Writes `app/src/main/res/drawable/ic_launcher_foreground.png` (432×432 px adaptive layer) and removes the old `ic_launcher_foreground.xml` so Android resolves the PNG.
+4. Overwrites `app/src/main/res/drawable/ic_launcher_background.xml` with the sampled hex color.
+5. Composites and saves square + round WebP launcher icons for all five density buckets (`mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}`).
+
+**After running:** do **File → Sync Project with Gradle Files** in Android Studio so the new assets are picked up by the resource merger.
+
+### Generated Outputs (never edit manually)
+
+```
+app/src/main/res/
+  drawable/
+    ic_launcher_foreground.png       ← adaptive icon foreground layer
+    ic_launcher_background.xml       ← solid background fill color
+  mipmap-mdpi/
+    ic_launcher.webp                 ← 48 px square fallback
+    ic_launcher_round.webp           ← 48 px round fallback
+  mipmap-hdpi/    ic_launcher{,_round}.webp   (72 px)
+  mipmap-xhdpi/   ic_launcher{,_round}.webp   (96 px)
+  mipmap-xxhdpi/  ic_launcher{,_round}.webp   (144 px)
+  mipmap-xxxhdpi/ ic_launcher{,_round}.webp   (192 px)
+```
