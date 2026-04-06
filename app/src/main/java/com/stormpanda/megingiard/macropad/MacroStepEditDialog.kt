@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -21,8 +20,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -46,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,6 +53,10 @@ import kotlin.math.sqrt
 private const val MSD_GRID_CELL_SIZE        = 44
 private const val MSD_GRID_SPACING          = 4
 private const val MSD_DEFAULT_DURATION_MS   = 100L
+private const val MSD_TIMING_MAX_MS         = 10000
+private const val MSD_TIMING_STEP_MS        = 100
+private const val MSD_TIMING_FINE_MS        = 10
+private const val MSD_TIMING_SLIDER_STEPS   = 99
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step type (editor-internal)
@@ -108,8 +110,8 @@ internal fun MacroStepEditDialog(
         null                          -> StepType.GAMEPAD
     }
     var stepType  by remember { mutableStateOf(initialType) }
-    var startText by remember { mutableStateOf((step?.startTimeMs ?: 0L).toString()) }
-    var durText   by remember { mutableStateOf((step?.durationMs ?: MSD_DEFAULT_DURATION_MS).toString()) }
+    var startMs by remember { mutableIntStateOf((step?.startTimeMs ?: 0L).toInt().coerceIn(0, MSD_TIMING_MAX_MS)) }
+    var durMs   by remember { mutableIntStateOf((step?.durationMs ?: MSD_DEFAULT_DURATION_MS).toInt().coerceIn(0, MSD_TIMING_MAX_MS)) }
 
     // GamepadButtonTap state
     val initPreset = if (step is MacroStep.GamepadButtonTap)
@@ -147,8 +149,6 @@ internal fun MacroStepEditDialog(
     var dpadDirY by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirY else -1) }
 
     // ── Confirm guard ─────────────────────────────────────────────────────────
-    val durMs            = durText.toLongOrNull() ?: 0L
-    val startMs          = startText.toLongOrNull() ?: 0L
     val isConfirmEnabled = durMs > 0 && when (stepType) {
         StepType.GAMEPAD  -> true
         StepType.JOYSTICK -> !(joyDirX == 0 && joyDirY == 0)
@@ -187,24 +187,24 @@ internal fun MacroStepEditDialog(
                 onClick = {
                     val builtStep = when (stepType) {
                         StepType.GAMEPAD -> MacroStep.GamepadButtonTap(
-                            startTimeMs = startMs.coerceAtLeast(0L),
-                            durationMs  = durMs.coerceAtLeast(1L),
+                            startTimeMs = startMs.toLong(),
+                            durationMs  = durMs.toLong().coerceAtLeast(1L),
                             btnCode     = selectedPreset.code,
                             label       = selectedPreset.shortLabel,
                         )
                         StepType.JOYSTICK -> {
                             val norm = sqrt((joyDirX * joyDirX + joyDirY * joyDirY).toFloat())
                             MacroStep.JoystickMove(
-                                startTimeMs = startMs.coerceAtLeast(0L),
-                                durationMs  = durMs.coerceAtLeast(1L),
+                                startTimeMs = startMs.toLong(),
+                                durationMs  = durMs.toLong().coerceAtLeast(1L),
                                 stick       = joyStick,
                                 x           = if (norm > 0f) joyDirX / norm * joyMagnitude else 0f,
                                 y           = if (norm > 0f) joyDirY / norm * joyMagnitude else 0f,
                             )
                         }
                         StepType.DPAD -> MacroStep.DPadTap(
-                            startTimeMs = startMs.coerceAtLeast(0L),
-                            durationMs  = durMs.coerceAtLeast(1L),
+                            startTimeMs = startMs.toLong(),
+                            durationMs  = durMs.toLong().coerceAtLeast(1L),
                             dirX        = dpadDirX,
                             dirY        = dpadDirY,
                         )
@@ -225,7 +225,6 @@ internal fun MacroStepEditDialog(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -379,40 +378,58 @@ internal fun MacroStepEditDialog(
                 }
             }
 
-            // Timing fields
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value         = startText,
-                    onValueChange = { startText = it },
-                    label         = {
-                        Text(stringResource(R.string.macropad_macro_step_start_ms), fontSize = 12.sp)
-                    },
-                    singleLine    = true,
-                    colors        = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = accentColor,
-                        unfocusedBorderColor = colors.accentBorder,
-                        focusedTextColor     = colors.onSurface,
-                        unfocusedTextColor   = colors.onSurface,
-                        cursorColor          = accentColor,
-                    ),
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value         = durText,
-                    onValueChange = { durText = it },
-                    label         = {
-                        Text(stringResource(R.string.macropad_macro_step_duration_ms), fontSize = 12.sp)
-                    },
-                    singleLine    = true,
-                    colors        = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor   = accentColor,
-                        unfocusedBorderColor = colors.accentBorder,
-                        focusedTextColor     = colors.onSurface,
-                        unfocusedTextColor   = colors.onSurface,
-                        cursorColor          = accentColor,
-                    ),
-                    modifier = Modifier.weight(1f),
-                )
+            // Timing
+            MsdTimingRow(
+                label       = stringResource(R.string.macropad_macro_step_start_ms),
+                valueMs     = startMs,
+                accentColor = accentColor,
+                onChange    = { startMs = it },
+            )
+            MsdTimingRow(
+                label       = stringResource(R.string.macropad_macro_step_duration_ms),
+                valueMs     = durMs,
+                accentColor = accentColor,
+                onChange    = { durMs = it },
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Timing row — label + current value + slider + +fine button
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun MsdTimingRow(
+    label:       String,
+    valueMs:     Int,
+    accentColor: Color,
+    onChange:    (Int) -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically,
+        ) {
+            Text(label, color = colors.onSurfaceSecondary, fontSize = 12.sp)
+            Text("$valueMs ms", color = colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value         = valueMs.toFloat(),
+                onValueChange = { onChange(it.roundToInt().coerceIn(0, MSD_TIMING_MAX_MS)) },
+                valueRange    = 0f..MSD_TIMING_MAX_MS.toFloat(),
+                steps         = MSD_TIMING_SLIDER_STEPS,
+                colors        = SliderDefaults.colors(
+                    thumbColor       = accentColor,
+                    activeTrackColor = accentColor,
+                ),
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { onChange((valueMs + MSD_TIMING_FINE_MS).coerceAtMost(MSD_TIMING_MAX_MS)) }) {
+                Text("+${MSD_TIMING_FINE_MS}ms", color = accentColor, fontSize = 12.sp)
             }
         }
     }
