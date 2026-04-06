@@ -34,8 +34,8 @@ object GamepadKeycodes {
 
     const val ABS_X  = 0   // Left stick — horizontal
     const val ABS_Y  = 1   // Left stick — vertical
-    const val ABS_RX = 3   // Right stick — horizontal
-    const val ABS_RY = 4   // Right stick — vertical
+    const val ABS_Z  = 2   // Right stick — horizontal (Android standard: AXIS_Z)
+    const val ABS_RZ = 5   // Right stick — vertical   (Android standard: AXIS_RZ)
 
     // -------------------------------------------------------------------------
     // Preset list — used by MacroPad editor to populate the gamepad-button picker

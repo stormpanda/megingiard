@@ -114,7 +114,7 @@ object ShellGamepadInjector {
 
     /**
      * Sends an analog joystick axis event.
-     * [axisCode]: one of [ABS_X]=0, [ABS_Y]=1, [ABS_RX]=3, [ABS_RY]=4.
+     * [axisCode]: one of [ABS_X]=0, [ABS_Y]=1, [ABS_Z]=2, [ABS_RZ]=5.
      * [value]: raw int16 range −32768…+32767 (use [GamepadKeycodes] constants for axes).
      */
     fun joystick(axisCode: Int, value: Int) {
