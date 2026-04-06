@@ -7,17 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -43,8 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.sqrt
@@ -53,11 +50,10 @@ import kotlin.math.sqrt
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private const val MSD_DIALOG_WIDTH_FRACTION = 0.88f
-private const val MSD_DIALOG_PADDING        = 20
 private const val MSD_GRID_CELL_SIZE        = 44
 private const val MSD_GRID_SPACING          = 4
 private const val MSD_DEFAULT_DURATION_MS   = 100L
+private const val MSD_CONTENT_MAX_HEIGHT    = 380
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step type (editor-internal)
@@ -100,6 +96,7 @@ internal fun MacroStepEditDialog(
     accentColor: Color,
     onConfirm:   (MacroStep) -> Unit,
     onDismiss:   () -> Unit,
+    modifier:    Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
 
@@ -160,31 +157,26 @@ internal fun MacroStepEditDialog(
         StepType.DPAD     -> !(dpadDirX == 0 && dpadDirY == 0)
     }
 
-    // ── Dialog ────────────────────────────────────────────────────────────────
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties       = DialogProperties(usePlatformDefaultWidth = false),
+    // ── Card content (rendered inline — no nested AlertDialog) ───────────────
+    Column(
+        modifier            = modifier.padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        Text(
+            text       = stringResource(
+                if (step == null) R.string.macropad_macro_step_new
+                else             R.string.macropad_macro_step_edit
+            ),
+            color      = colors.onSurface,
+            fontSize   = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
         Column(
-            modifier = Modifier
-                .fillMaxWidth(MSD_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(12.dp))
-                .padding(MSD_DIALOG_PADDING.dp)
+            modifier            = Modifier
+                .heightIn(max = MSD_CONTENT_MAX_HEIGHT.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Title
-            Text(
-                text       = stringResource(
-                    if (step == null) R.string.macropad_macro_step_new
-                    else             R.string.macropad_macro_step_edit
-                ),
-                color      = colors.onSurface,
-                fontSize   = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            // Step-type chips
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StepType.entries.forEach { type ->
                     val selected = type == stepType
@@ -337,90 +329,82 @@ internal fun MacroStepEditDialog(
             // Timing fields
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value           = startText,
-                    onValueChange   = { v -> startText = v.filter { c -> c.isDigit() } },
-                    label           = {
+                    value         = startText,
+                    onValueChange = { startText = it },
+                    label         = {
                         Text(stringResource(R.string.macropad_macro_step_start_ms), fontSize = 12.sp)
                     },
-                    singleLine      = true,
+                    singleLine    = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors          = OutlinedTextFieldDefaults.colors(
+                    colors        = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor   = accentColor,
                         unfocusedBorderColor = colors.accentBorder,
                         focusedTextColor     = colors.onSurface,
                         unfocusedTextColor   = colors.onSurface,
                         cursorColor          = accentColor,
-                        focusedLabelColor    = accentColor,
-                        unfocusedLabelColor  = colors.onSurfaceSecondary,
                     ),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
-                    value           = durText,
-                    onValueChange   = { v -> durText = v.filter { c -> c.isDigit() } },
-                    label           = {
+                    value         = durText,
+                    onValueChange = { durText = it },
+                    label         = {
                         Text(stringResource(R.string.macropad_macro_step_duration_ms), fontSize = 12.sp)
                     },
-                    singleLine      = true,
+                    singleLine    = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    colors          = OutlinedTextFieldDefaults.colors(
+                    colors        = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor   = accentColor,
                         unfocusedBorderColor = colors.accentBorder,
                         focusedTextColor     = colors.onSurface,
                         unfocusedTextColor   = colors.onSurface,
                         cursorColor          = accentColor,
-                        focusedLabelColor    = accentColor,
-                        unfocusedLabelColor  = colors.onSurfaceSecondary,
                     ),
                     modifier = Modifier.weight(1f),
                 )
             }
-
-            // Action buttons
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment     = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-                Spacer(Modifier.width(8.dp))
-                TextButton(
-                    onClick = {
-                        val builtStep = when (stepType) {
-                            StepType.GAMEPAD -> MacroStep.GamepadButtonTap(
+        }
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+            }
+            TextButton(
+                onClick = {
+                    val builtStep = when (stepType) {
+                        StepType.GAMEPAD -> MacroStep.GamepadButtonTap(
+                            startTimeMs = startMs.coerceAtLeast(0L),
+                            durationMs  = durMs.coerceAtLeast(1L),
+                            btnCode     = selectedPreset.code,
+                            label       = selectedPreset.shortLabel,
+                        )
+                        StepType.JOYSTICK -> {
+                            val norm = sqrt((joyDirX * joyDirX + joyDirY * joyDirY).toFloat())
+                            MacroStep.JoystickMove(
                                 startTimeMs = startMs.coerceAtLeast(0L),
                                 durationMs  = durMs.coerceAtLeast(1L),
-                                btnCode     = selectedPreset.code,
-                                label       = selectedPreset.shortLabel,
-                            )
-                            StepType.JOYSTICK -> {
-                                val norm = sqrt((joyDirX * joyDirX + joyDirY * joyDirY).toFloat())
-                                MacroStep.JoystickMove(
-                                    startTimeMs = startMs.coerceAtLeast(0L),
-                                    durationMs  = durMs.coerceAtLeast(1L),
-                                    stick       = joyStick,
-                                    x           = if (norm > 0f) joyDirX / norm * joyMagnitude else 0f,
-                                    y           = if (norm > 0f) joyDirY / norm * joyMagnitude else 0f,
-                                )
-                            }
-                            StepType.DPAD -> MacroStep.DPadTap(
-                                startTimeMs = startMs.coerceAtLeast(0L),
-                                durationMs  = durMs.coerceAtLeast(1L),
-                                dirX        = dpadDirX,
-                                dirY        = dpadDirY,
+                                stick       = joyStick,
+                                x           = if (norm > 0f) joyDirX / norm * joyMagnitude else 0f,
+                                y           = if (norm > 0f) joyDirY / norm * joyMagnitude else 0f,
                             )
                         }
-                        onConfirm(builtStep)
-                    },
-                    enabled = isConfirmEnabled,
-                ) {
-                    Text(
-                        stringResource(R.string.macropad_editor_done),
-                        color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
-                    )
-                }
+                        StepType.DPAD -> MacroStep.DPadTap(
+                            startTimeMs = startMs.coerceAtLeast(0L),
+                            durationMs  = durMs.coerceAtLeast(1L),
+                            dirX        = dpadDirX,
+                            dirY        = dpadDirY,
+                        )
+                    }
+                    onConfirm(builtStep)
+                },
+                enabled = isConfirmEnabled,
+            ) {
+                Text(
+                    stringResource(R.string.macropad_editor_done),
+                    color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
+                )
             }
         }
     }
