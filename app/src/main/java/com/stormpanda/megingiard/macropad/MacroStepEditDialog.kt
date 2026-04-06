@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -40,8 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
+
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,8 +107,8 @@ internal fun MacroStepEditDialog(
         null                          -> StepType.GAMEPAD
     }
     var stepType  by remember { mutableStateOf(initialType) }
-    var startValue by remember { mutableStateOf(TextFieldValue((step?.startTimeMs ?: 0L).toString())) }
-    var durValue   by remember { mutableStateOf(TextFieldValue((step?.durationMs ?: MSD_DEFAULT_DURATION_MS).toString())) }
+    var startText by remember { mutableStateOf((step?.startTimeMs ?: 0L).toString()) }
+    var durText   by remember { mutableStateOf((step?.durationMs ?: MSD_DEFAULT_DURATION_MS).toString()) }
 
     // GamepadButtonTap state
     val initPreset = if (step is MacroStep.GamepadButtonTap)
@@ -148,8 +146,8 @@ internal fun MacroStepEditDialog(
     var dpadDirY by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirY else -1) }
 
     // ── Confirm guard ─────────────────────────────────────────────────────────
-    val durMs            = durValue.text.toLongOrNull() ?: 0L
-    val startMs          = startValue.text.toLongOrNull() ?: 0L
+    val durMs            = durText.toLongOrNull() ?: 0L
+    val startMs          = startText.toLongOrNull() ?: 0L
     val isConfirmEnabled = durMs > 0 && when (stepType) {
         StepType.GAMEPAD  -> true
         StepType.JOYSTICK -> !(joyDirX == 0 && joyDirY == 0)
@@ -382,16 +380,12 @@ internal fun MacroStepEditDialog(
             // Timing fields
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value         = startValue,
-                    onValueChange = { new ->
-                        val filtered = new.text.filter { it.isDigit() }
-                        startValue = if (filtered == new.text) new else new.copy(text = filtered)
-                    },
+                    value         = startText,
+                    onValueChange = { startText = it },
                     label         = {
                         Text(stringResource(R.string.macropad_macro_step_start_ms), fontSize = 12.sp)
                     },
                     singleLine    = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     colors        = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor   = accentColor,
                         unfocusedBorderColor = colors.accentBorder,
@@ -402,16 +396,12 @@ internal fun MacroStepEditDialog(
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
-                    value         = durValue,
-                    onValueChange = { new ->
-                        val filtered = new.text.filter { it.isDigit() }
-                        durValue = if (filtered == new.text) new else new.copy(text = filtered)
-                    },
+                    value         = durText,
+                    onValueChange = { durText = it },
                     label         = {
                         Text(stringResource(R.string.macropad_macro_step_duration_ms), fontSize = 12.sp)
                     },
                     singleLine    = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     colors        = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor   = accentColor,
                         unfocusedBorderColor = colors.accentBorder,
