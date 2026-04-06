@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,7 +47,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -277,34 +275,21 @@ internal fun MacroTimelineEditor(
     // ── Step edit overlay (same window as outer Dialog — IME works) ─────────
     if (showAddStep || editingStepIndex != null) {
         val stepToEdit: MacroStep? = editingStepIndex?.let { steps[it] }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
-                .clickable { showAddStep = false; editingStepIndex = null },
-            contentAlignment = Alignment.Center,
-        ) {
-            MacroStepEditDialog(
-                step        = stepToEdit,
-                accentColor = accentColor,
-                modifier    = Modifier
-                    .fillMaxWidth(0.88f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.surface)
-                    .pointerInput(Unit) { detectTapGestures { } },
-                onConfirm   = { newStep ->
-                    if (editingStepIndex != null) {
-                        val idx = editingStepIndex!!
-                        steps = steps.toMutableList().also { it[idx] = newStep }
-                        editingStepIndex = null
-                    } else {
-                        steps = steps + newStep
-                        showAddStep = false
-                    }
-                },
-                onDismiss   = { showAddStep = false; editingStepIndex = null },
-            )
-        }
+        MacroStepEditDialog(
+            step        = stepToEdit,
+            accentColor = accentColor,
+            onConfirm   = { newStep ->
+                if (editingStepIndex != null) {
+                    val idx = editingStepIndex!!
+                    steps = steps.toMutableList().also { it[idx] = newStep }
+                    editingStepIndex = null
+                } else {
+                    steps = steps + newStep
+                    showAddStep = false
+                }
+            },
+            onDismiss   = { showAddStep = false; editingStepIndex = null },
+        )
     }
 
     if (deleteStepIndex != null) {
