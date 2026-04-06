@@ -212,6 +212,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_delete_title">Delete Macro</string>
     <string name="macropad_macro_delete_confirm">Delete this macro? Pad buttons that reference it will stop working.</string>
     <string name="macropad_macro_delete_confirm_referenced">This macro is used by %d button(s). Delete anyway?</string>
+    <string name="macropad_macro_duplicate">Duplicate Macro</string>
 
     <!-- MacroTimelineEditor -->
     <string name="macropad_macro_editor_save">Save</string>

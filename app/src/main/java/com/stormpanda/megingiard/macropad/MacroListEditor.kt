@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -78,8 +79,22 @@ internal fun MacroListEditor(onDone: () -> Unit) {
 
     if (editingMacro == null) {
         MacroListView(
-            accentColor = accentColor,
-            onEditMacro = { editingMacro = it },
+            accentColor  = accentColor,
+            onEditMacro  = { editingMacro = it },
+            onDuplicateMacro = { original ->
+                val existingNames = MacroState.macros.value.map { it.name }.toSet()
+                val baseName = "${original.name} Copy"
+                val copyName = if (baseName !in existingNames) {
+                    baseName
+                } else {
+                    var n = 2
+                    while ("$baseName ($n)" in existingNames) n++
+                    "$baseName ($n)"
+                }
+                MacroState.addMacro(
+                    original.copy(id = UUID.randomUUID().toString(), name = copyName)
+                )
+            },
             onNewMacro  = {
                 editingMacro = Macro(
                     id    = UUID.randomUUID().toString(),
@@ -109,10 +124,11 @@ internal fun MacroListEditor(onDone: () -> Unit) {
 
 @Composable
 private fun MacroListView(
-    accentColor:  Color,
-    onEditMacro:  (Macro) -> Unit,
-    onNewMacro:   () -> Unit,
-    onDone:       () -> Unit,
+    accentColor:      Color,
+    onEditMacro:      (Macro) -> Unit,
+    onDuplicateMacro: (Macro) -> Unit,
+    onNewMacro:       () -> Unit,
+    onDone:           () -> Unit,
 ) {
     val macros   by MacroState.macros.collectAsState()
     val colors   = LocalAppColors.current
@@ -173,6 +189,7 @@ private fun MacroListView(
                     macro       = macro,
                     accentColor = accentColor,
                     onEdit      = { onEditMacro(macro) },
+                    onDuplicate = { onDuplicateMacro(macro) },
                     onDelete    = { deletingId = macro.id },
                 )
                 HorizontalDivider(color = colors.divider)
@@ -256,6 +273,7 @@ private fun MacroRow(
     macro:       Macro,
     accentColor: Color,
     onEdit:      () -> Unit,
+    onDuplicate: () -> Unit,
     onDelete:    () -> Unit,
 ) {
     val colors        = LocalAppColors.current
@@ -289,6 +307,13 @@ private fun MacroRow(
             Icon(
                 Icons.Filled.Edit,
                 contentDescription = stringResource(R.string.macropad_editor_rename),
+                tint               = colors.onSurfaceSecondary,
+            )
+        }
+        IconButton(onClick = onDuplicate) {
+            Icon(
+                Icons.Filled.ContentCopy,
+                contentDescription = stringResource(R.string.macropad_macro_duplicate),
                 tint               = colors.onSurfaceSecondary,
             )
         }
