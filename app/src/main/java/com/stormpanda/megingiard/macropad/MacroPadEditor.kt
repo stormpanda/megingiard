@@ -57,8 +57,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -118,7 +116,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
+    var showMacroListEditor by remember { mutableStateOf(false) }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = colors.appBackground,
         topBar = {
@@ -157,12 +157,21 @@ fun MacroPadEditor(onDone: () -> Unit) {
             }
         } else {
             EditorBody(
-                profile     = profile,
-                accentColor = colors.accent,
-                modifier    = Modifier.padding(innerPadding),
+                profile         = profile,
+                accentColor     = colors.accent,
+                onManageMacros  = { showMacroListEditor = true },
+                modifier        = Modifier.padding(innerPadding),
             )
         }
     }
+
+    // Render MacroListEditor as a full-screen inline overlay (same window — no nested Dialog)
+    if (showMacroListEditor) {
+        MacroListEditor(
+            onDone = { showMacroListEditor = false },
+        )
+    }
+    } // end Box
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -311,9 +320,10 @@ private fun EditorTopBar(
 
 @Composable
 private fun EditorBody(
-    profile:     PadProfile,
-    accentColor: Color,
-    modifier:    Modifier = Modifier,
+    profile:        PadProfile,
+    accentColor:    Color,
+    onManageMacros: () -> Unit,
+    modifier:       Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     Column(
@@ -368,7 +378,7 @@ private fun EditorBody(
             HorizontalDivider(color = colors.divider)
 
             // Toolbar: Add button
-            EditorToolbar(profile = profile, accentColor = accentColor)
+            EditorToolbar(profile = profile, accentColor = accentColor, onManageMacros = onManageMacros)
 
             HorizontalDivider(color = colors.divider)
 
@@ -411,9 +421,8 @@ private fun DeviceCheckboxRow(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
-    var showButtonDialog    by remember { mutableStateOf(false) }
-    var showMacroListEditor by remember { mutableStateOf(false) }
+private fun EditorToolbar(profile: PadProfile, accentColor: Color, onManageMacros: () -> Unit) {
+    var showButtonDialog      by remember { mutableStateOf(false) }
     var showMacroButtonDialog by remember { mutableStateOf(false) }
 
     Row(
@@ -433,7 +442,7 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
             label       = stringResource(R.string.macropad_editor_manage_macros),
             icon        = Icons.Filled.Edit,
             accentColor = accentColor,
-            onClick     = { showMacroListEditor = true },
+            onClick     = onManageMacros,
             modifier    = Modifier.weight(1f),
         )
         // Add Macro Button
@@ -461,18 +470,6 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
             },
             onDismiss      = { showButtonDialog = false },
         )
-    }
-
-    if (showMacroListEditor) {
-        Dialog(
-            onDismissRequest = { showMacroListEditor = false },
-            properties       = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows  = false,
-            ),
-        ) {
-            MacroListEditor(onDone = { showMacroListEditor = false })
-        }
     }
 
     if (showMacroButtonDialog) {
