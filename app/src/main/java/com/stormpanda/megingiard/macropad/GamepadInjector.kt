@@ -20,4 +20,12 @@ object GamepadInjector {
 
     /** Sends a D-Pad hat event. axis: 0 = X (−1 left / +1 right), 1 = Y (−1 up / +1 down) */
     fun hat(axis: Int, value: Int) = ShellGamepadInjector.hat(axis, value)
+
+    /**
+     * Sends an analog joystick axis event.
+     * [axisCode]: [GamepadKeycodes.ABS_X]=0, [GamepadKeycodes.ABS_Y]=1,
+     *             [GamepadKeycodes.ABS_RX]=3, [GamepadKeycodes.ABS_RY]=4.
+     * [value]: raw int16, range −32768…+32767.
+     */
+    fun joystick(axisCode: Int, value: Int) = ShellGamepadInjector.joystick(axisCode, value)
 }

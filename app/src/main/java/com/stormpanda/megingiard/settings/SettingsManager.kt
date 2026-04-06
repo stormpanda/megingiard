@@ -20,7 +20,9 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.ThemeMode
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
+import com.stormpanda.megingiard.macropad.Macro
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.MacroState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
@@ -79,6 +81,7 @@ object SettingsManager {
     // MacroPad settings
     private val KEY_MACROPAD_PROFILES           = stringPreferencesKey("macropad_profiles")
     private val KEY_MACROPAD_ACTIVE_PROFILE_ID  = stringPreferencesKey("macropad_active_profile_id")
+    private val KEY_MACROPAD_MACROS             = stringPreferencesKey("macropad_macros")
 
     // Keyboard settings
     private val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
@@ -236,6 +239,15 @@ object SettingsManager {
                     }.getOrElse { emptyList() }
                     val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
                     MacroPadState.loadFrom(profiles, activeId)
+                }
+
+                // MacroPad macros (global library)
+                val macrosJson = prefs[KEY_MACROPAD_MACROS]
+                if (macrosJson != null) {
+                    val macros = runCatching {
+                        macropadJson.decodeFromString<List<Macro>>(macrosJson)
+                    }.getOrElse { emptyList() }
+                    MacroState.loadFrom(macros)
                 }
             }
         }
@@ -418,6 +430,19 @@ object SettingsManager {
     fun setTouchpadTwoFingerTap(value: Boolean) {
         _touchpadTwoFingerTap.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
+    }
+
+    /**
+     * Persists the global macro library to DataStore.
+     * Called by [MacroState] mutators whenever the macro list changes.
+     */
+    fun saveMacroData() {
+        val macros = MacroState.macros.value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_MACROPAD_MACROS] = macropadJson.encodeToString(macros)
+            }
+        }
     }
 
     /**

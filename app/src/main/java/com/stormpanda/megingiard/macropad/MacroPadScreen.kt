@@ -199,6 +199,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                     is PadAction.TrackpointMove,
                                                     is PadAction.MouseLeftClick,
                                                     is PadAction.MouseRightClick -> if (!profile.enableMouse) R.string.macropad_device_disabled_mouse else null
+                                                    is PadAction.Macro           -> null
                                                 }
                                                 if (disabledMsgRes != null) {
                                                     Toast.makeText(context, disabledMsgRes, Toast.LENGTH_SHORT).show()
@@ -305,6 +306,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                     is PadAction.TrackpointMove,
                     is PadAction.MouseLeftClick,
                     is PadAction.MouseRightClick             -> !profile.enableMouse
+                    is PadAction.Macro                       -> false
                 }
                 val isPressed = btn.id in pressedIds
                 PadButton(

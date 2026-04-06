@@ -29,6 +29,15 @@ object GamepadKeycodes {
     const val BTN_MODE    = 316  // Guide / Home
 
     // -------------------------------------------------------------------------
+    // Analog joystick axes (Linux ABS_* codes from <linux/input-event-codes.h>)
+    // -------------------------------------------------------------------------
+
+    const val ABS_X  = 0   // Left stick — horizontal
+    const val ABS_Y  = 1   // Left stick — vertical
+    const val ABS_RX = 3   // Right stick — horizontal
+    const val ABS_RY = 4   // Right stick — vertical
+
+    // -------------------------------------------------------------------------
     // Preset list — used by MacroPad editor to populate the gamepad-button picker
     // -------------------------------------------------------------------------
 

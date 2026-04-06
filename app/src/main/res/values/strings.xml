@@ -190,4 +190,47 @@ Open Settings to create a layout.</string>
 
     <!-- Media empty state -->
     <string name="media_no_media_hint">Start media playback on the top screen to control it here.</string>
+
+    <!-- MacroPad macro action -->
+    <string name="macropad_action_macro">Macro</string>
+    <string name="macropad_display_macro">Macro: %s</string>
+
+    <!-- MacroPad macro picker (PadActionPicker) -->
+    <string name="macropad_macro_picker_no_macros">No macros available</string>
+    <string name="macropad_macro_picker_unknown">Unknown Macro</string>
+
+    <!-- MacroPad editor toolbar -->
+    <string name="macropad_editor_manage_macros">Macros…</string>
+    <string name="macropad_editor_add_macro_button">Add Macro Button</string>
+
+    <!-- MacroListEditor -->
+    <string name="macropad_macro_list_title">Macros</string>
+    <string name="macropad_macro_list_new">New Macro</string>
+    <string name="macropad_macro_list_empty">No macros yet. Tap + to create one.</string>
+    <string name="macropad_macro_list_steps">%1$d steps • %2$d ms</string>
+    <string name="macropad_macro_default_name">New Macro</string>
+    <string name="macropad_macro_delete_title">Delete Macro</string>
+    <string name="macropad_macro_delete_confirm">Delete this macro? Pad buttons that reference it will stop working.</string>
+    <string name="macropad_macro_delete_confirm_referenced">This macro is used by %d button(s). Delete anyway?</string>
+
+    <!-- MacroTimelineEditor -->
+    <string name="macropad_macro_editor_save">Save</string>
+    <string name="macropad_macro_editor_cancel">Cancel</string>
+    <string name="macropad_macro_add_step">Add Step</string>
+    <string name="macropad_macro_no_steps">No steps yet. Tap + to add one.</string>
+    <string name="macropad_macro_step_delete_title">Delete Step</string>
+    <string name="macropad_macro_step_delete_confirm">Remove this step from the macro?</string>
+
+    <!-- MacroStepEditDialog -->
+    <string name="macropad_macro_step_new">Add Step</string>
+    <string name="macropad_macro_step_edit">Edit Step</string>
+    <string name="macropad_macro_step_type_gamepad">Gamepad Button</string>
+    <string name="macropad_macro_step_type_joystick">Joystick</string>
+    <string name="macropad_macro_step_type_dpad">D-Pad</string>
+    <string name="macropad_macro_step_start_ms">Start time (ms)</string>
+    <string name="macropad_macro_step_duration_ms">Duration (ms)</string>
+    <string name="macropad_macro_step_stick_left">Left Stick</string>
+    <string name="macropad_macro_step_stick_right">Right Stick</string>
+    <string name="macropad_macro_step_magnitude">Magnitude: %.1f</string>
+    <string name="macropad_macro_step_direction">Direction</string>
 </resources>

@@ -54,14 +54,22 @@ internal fun ButtonEditDialog(
     enableKeyboard: Boolean = true,
     enableGamepad:  Boolean = true,
     enableMouse:    Boolean = true,
+    initialAction:  PadAction? = null,  // pre-set action for new buttons; ignored if button != null
     onConfirm:      (PadButton) -> Unit,
     onDismiss:      () -> Unit,
 ) {
-    var label         by remember { mutableStateOf(button?.label ?: "") }
+    val initAction = button?.action
+        ?: initialAction
+        ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
+    val initLabel = button?.label ?: when (val ia = initialAction) {
+        is PadAction.Macro -> MacroState.macros.value.firstOrNull { it.id == ia.macroId }?.name ?: ""
+        else               -> ""
+    }
+    var label         by remember { mutableStateOf(initLabel) }
     var buttonShape   by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
     var buttonSize    by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
     var showSizeMenu  by remember { mutableStateOf(false) }
-    var action        by remember { mutableStateOf(button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")) }
+    var action        by remember { mutableStateOf(initAction) }
     val colors        = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -74,9 +82,18 @@ internal fun ButtonEditDialog(
             label = ""
             buttonShape = ButtonShape.CIRCLE
         }
+        if (newAction is PadAction.Macro && label.isBlank()) {
+            val macroName = MacroState.macros.value.firstOrNull { it.id == newAction.macroId }?.name
+            if (macroName != null) label = macroName
+        }
     }
 
-    val isConfirmEnabled = label.isNotBlank() || action is PadAction.ScrollWheel || action is PadAction.TrackpointMove
+    val isConfirmEnabled = when {
+        action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
+        action is PadAction.Macro -> label.isNotBlank() &&
+            MacroState.macros.value.any { it.id == (action as PadAction.Macro).macroId }
+        else -> label.isNotBlank()
+    }
 
     AlertDialog(
         containerColor   = colors.surface,

@@ -91,6 +91,15 @@ sealed class PadAction {
         val size: TrackpointSize = TrackpointSize.MEDIUM,
     ) : PadAction()
 
+    /**
+     * Executes a [Macro] from the global [MacroState] library when this button is pressed.
+     * The macro is identified by [macroId] (UUID string). If the referenced macro has been
+     * deleted, the button press is silently ignored.
+     */
+    @Serializable
+    @SerialName("macro")
+    data class Macro(val macroId: String) : PadAction()
+
     // ── Legacy: retained for JSON back-compat only ─────────────────────────
     // Old profiles saved these types before MouseButton was introduced.
     // They are deserialized normally; the app treats them as MouseButton(LEFT/RIGHT).

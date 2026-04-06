@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -56,6 +57,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -409,7 +412,9 @@ private fun DeviceCheckboxRow(
 
 @Composable
 private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
-    var showButtonDialog by remember { mutableStateOf(false) }
+    var showButtonDialog    by remember { mutableStateOf(false) }
+    var showMacroListEditor by remember { mutableStateOf(false) }
+    var showMacroButtonDialog by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -421,6 +426,22 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
             icon        = Icons.Filled.Add,
             accentColor = accentColor,
             onClick     = { showButtonDialog = true },
+            modifier    = Modifier.weight(1f),
+        )
+        // Manage Macros
+        EditorActionChip(
+            label       = stringResource(R.string.macropad_editor_manage_macros),
+            icon        = Icons.Filled.Edit,
+            accentColor = accentColor,
+            onClick     = { showMacroListEditor = true },
+            modifier    = Modifier.weight(1f),
+        )
+        // Add Macro Button
+        EditorActionChip(
+            label       = stringResource(R.string.macropad_editor_add_macro_button),
+            icon        = Icons.Filled.PlayArrow,
+            accentColor = accentColor,
+            onClick     = { showMacroButtonDialog = true },
             modifier    = Modifier.weight(1f),
         )
     }
@@ -439,6 +460,37 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color) {
                 showButtonDialog = false
             },
             onDismiss      = { showButtonDialog = false },
+        )
+    }
+
+    if (showMacroListEditor) {
+        Dialog(
+            onDismissRequest = { showMacroListEditor = false },
+            properties       = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows  = false,
+            ),
+        ) {
+            MacroListEditor(onDone = { showMacroListEditor = false })
+        }
+    }
+
+    if (showMacroButtonDialog) {
+        val firstMacroId = MacroState.macros.value.firstOrNull()?.id ?: ""
+        ButtonEditDialog(
+            button         = null,
+            accentColor    = accentColor,
+            enableKeyboard = profile.enableKeyboard,
+            enableGamepad  = profile.enableGamepad,
+            enableMouse    = profile.enableMouse,
+            initialAction  = PadAction.Macro(firstMacroId),
+            onConfirm      = { newBtn ->
+                MacroPadState.updateProfile(
+                    profile.copy(buttons = profile.buttons + newBtn)
+                )
+                showMacroButtonDialog = false
+            },
+            onDismiss      = { showMacroButtonDialog = false },
         )
     }
 }
@@ -528,6 +580,7 @@ private fun ButtonListItem(
         is PadAction.TrackpointMove,
         is PadAction.MouseLeftClick,
         is PadAction.MouseRightClick             -> !enableMouse
+        is PadAction.Macro                       -> false
     }
 
     Row(
