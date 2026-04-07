@@ -320,19 +320,24 @@ private fun GridOverlay(gridMode: GridMode, gridStepPx: Float, gridColor: Color)
                 val centerDotRadius = centerDotPx
                 val dotColor = gridColor.copy(alpha = PC_RADIAL_DOT_ALPHA)
 
-                // Concentric circles with evenly-distributed snap dots
+                // Concentric circles with evenly-distributed snap dots.
+                // Odd circles (1, 3, 5 …): phase 45° → diagonals as anchors.
+                // Even circles (2, 4, 6 …): phase 0° → cardinal directions as anchors.
                 var r = gridStepPx
+                var circleIndex = 1
                 while (r <= maxRadius) {
                     drawCircle(gridColor, radius = r, center = Offset(cx, cy), style = Stroke(PC_GRID_STROKE_PX))
                     val n = radialPointCount(r, buttonUnitPx)
-                    val angleStep = (2.0 * PI / n).toFloat()
+                    val phaseOffset = if (circleIndex % 2 == 1) PI / 4.0 else 0.0
+                    val angleStep = 2.0 * PI / n
                     for (i in 0 until n) {
-                        val angle = i * angleStep
+                        val angle = (phaseOffset + i * angleStep).toFloat()
                         val px = cx + r * cos(angle)
                         val py = cy + r * sin(angle)
                         drawCircle(dotColor, radius = dotRadius, center = Offset(px, py))
                     }
                     r += gridStepPx
+                    circleIndex++
                 }
 
                 // Center snap point
@@ -380,8 +385,9 @@ private fun snapRectangular(
 
 /**
  * Snap to the nearest evenly-distributed point on a concentric circle, or to the
- * center point. Each circle's point count scales with its circumference relative
- * to the button unit size.
+ * center point. Circles alternate phase:
+ *   odd  (1, 3, 5 …) → 45° offset → diagonal anchors
+ *   even (2, 4, 6 …) → 0° offset  → cardinal anchors
  */
 private fun snapRadial(
     rawNormX: Float,
@@ -410,15 +416,19 @@ private fun snapRadial(
         return (cx / canvasW) to (cy / canvasH)
     }
 
-    // Determine how many points sit on this circle
+    // Determine phase offset for this circle
+    val circleIndex = round(snappedRadius / gridStepPx).toInt()
+    val phaseOffset = if (circleIndex % 2 == 1) PI / 4.0 else 0.0
+
     val n = radialPointCount(snappedRadius, buttonUnitPx)
     val angleStep = 2.0 * PI / n
 
-    // Snap to nearest point by angle
-    val rawAngle = atan2(dy.toDouble(), dx.toDouble())       // −π..π
-    val rawAnglePos = if (rawAngle < 0) rawAngle + 2 * PI else rawAngle  // 0..2π
-    val nearestIndex = round(rawAnglePos / angleStep).toInt() % n
-    val snappedAngle = nearestIndex * angleStep
+    // Snap to nearest point: work in phase-relative angle space
+    val rawAngle = atan2(dy.toDouble(), dx.toDouble())           // −π..π
+    val relAngle = rawAngle - phaseOffset                         // shift to phase origin
+    val relAnglePos = if (relAngle < 0) relAngle + 2 * PI else relAngle  // 0..2π
+    val nearestIndex = round(relAnglePos / angleStep).toInt() % n
+    val snappedAngle = phaseOffset + nearestIndex * angleStep
 
     val snappedPxX = cx + snappedRadius * cos(snappedAngle).toFloat()
     val snappedPxY = cy + snappedRadius * sin(snappedAngle).toFloat()
@@ -442,10 +452,14 @@ private fun dist(x1: Float, y1: Float, x2: Float, y2: Float): Float {
 
 /**
  * How many evenly-distributed snap points to place on a circle of the given radius.
- * Scales with circumference — roughly one point per [buttonUnitPx] of arc length,
- * with a minimum of [PC_RADIAL_MIN_POINTS].
+ * Scales with circumference — roughly one point per [buttonUnitPx] of arc length.
+ * Always rounded to the nearest multiple of 4 (minimum 4) so the 4 phase-anchor
+ * points (cardinal or diagonal) land at exact positions.
  */
 private fun radialPointCount(radiusPx: Float, buttonUnitPx: Float): Int {
     val circumference = (2.0 * PI * radiusPx).toFloat()
-    return maxOf(PC_RADIAL_MIN_POINTS, round(circumference / buttonUnitPx).toInt())
+    val raw = round(circumference / buttonUnitPx).toInt().coerceAtLeast(1)
+    // Round to nearest multiple of 4, minimum 4
+    val rounded4 = ((raw + 2) / 4) * 4
+    return maxOf(PC_RADIAL_MIN_POINTS, rounded4)
 }
