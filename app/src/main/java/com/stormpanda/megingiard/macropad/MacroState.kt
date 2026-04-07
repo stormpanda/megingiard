@@ -51,4 +51,9 @@ object MacroState {
         }
         SettingsManager.saveMacroData()
     }
+
+    fun reorderMacros(newList: List<Macro>) {
+        _macros.value = newList
+        SettingsManager.saveMacroData()
+    }
 }

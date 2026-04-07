@@ -14,13 +14,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -47,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -135,6 +139,14 @@ private fun MacroListView(
     val colors   = LocalAppColors.current
     var deletingId by remember { mutableStateOf<String?>(null) }
 
+    val lazyListState = rememberLazyListState()
+    val reorderState  = rememberReorderableLazyListState(lazyListState) { from, to ->
+        val newMacros  = macros.toMutableList()
+        val safeToIdx  = to.index.coerceIn(0, newMacros.lastIndex)
+        newMacros.add(safeToIdx, newMacros.removeAt(from.index))
+        MacroState.reorderMacros(newMacros)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -167,62 +179,68 @@ private fun MacroListView(
 
         HorizontalDivider(color = colors.divider)
 
-        // Scrollable list
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+        LazyColumn(
+            state    = lazyListState,
+            modifier = Modifier.fillMaxSize(),
         ) {
             if (macros.isEmpty()) {
-                Text(
-                    stringResource(R.string.macropad_macro_list_empty),
-                    color     = colors.onSurfaceSecondary,
-                    textAlign = TextAlign.Center,
-                    fontSize  = 13.sp,
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                )
+                item(key = "empty") {
+                    Text(
+                        stringResource(R.string.macropad_macro_list_empty),
+                        color     = colors.onSurfaceSecondary,
+                        textAlign = TextAlign.Center,
+                        fontSize  = 13.sp,
+                        modifier  = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                    )
+                }
             }
 
-            macros.forEach { macro ->
-                MacroRow(
-                    macro       = macro,
-                    accentColor = accentColor,
-                    onEdit      = { onEditMacro(macro) },
-                    onDuplicate = { onDuplicateMacro(macro) },
-                    onDelete    = { deletingId = macro.id },
-                )
-                HorizontalDivider(color = colors.divider)
+            itemsIndexed(macros, key = { _, m -> m.id }) { _, macro ->
+                ReorderableItem(reorderState, key = macro.id) { isDragging ->
+                    MacroRow(
+                        macro              = macro,
+                        accentColor        = accentColor,
+                        isDragging         = isDragging,
+                        onEdit             = { onEditMacro(macro) },
+                        onDuplicate        = { onDuplicateMacro(macro) },
+                        onDelete           = { deletingId = macro.id },
+                        dragHandleModifier = Modifier.draggableHandle(),
+                    )
+                    HorizontalDivider(color = colors.divider)
+                }
             }
 
             // New Macro chip
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = ML_PADDING.dp, vertical = 12.dp),
-            ) {
+            item(key = "new_macro") {
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable(onClick = onNewMacro)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
+                        .fillMaxWidth()
+                        .padding(horizontal = ML_PADDING.dp, vertical = 12.dp),
                 ) {
-                    Icon(
-                        Icons.Filled.Add,
-                        contentDescription = null,
-                        tint     = accentColor,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.macropad_macro_list_new),
-                        color    = accentColor,
-                        fontSize = 13.sp,
-                    )
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .clickable(onClick = onNewMacro)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = null,
+                            tint     = accentColor,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            stringResource(R.string.macropad_macro_list_new),
+                            color    = accentColor,
+                            fontSize = 13.sp,
+                        )
+                    }
                 }
             }
         }
@@ -271,11 +289,13 @@ private fun MacroListView(
 
 @Composable
 private fun MacroRow(
-    macro:       Macro,
-    accentColor: Color,
-    onEdit:      () -> Unit,
-    onDuplicate: () -> Unit,
-    onDelete:    () -> Unit,
+    macro:              Macro,
+    accentColor:        Color,
+    isDragging:         Boolean,
+    onEdit:             () -> Unit,
+    onDuplicate:        () -> Unit,
+    onDelete:           () -> Unit,
+    dragHandleModifier: Modifier,
 ) {
     val colors        = LocalAppColors.current
     val stepCount     = macro.steps.size
@@ -285,6 +305,7 @@ private fun MacroRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(if (isDragging) colors.surfaceVariant else Color.Transparent)
             .clickable(onClick = onEdit)
             .padding(start = ML_PADDING.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -325,5 +346,13 @@ private fun MacroRow(
                 tint               = colors.onSurfaceSecondary,
             )
         }
+        Icon(
+            imageVector        = Icons.Filled.DragHandle,
+            contentDescription = stringResource(R.string.cd_drag_reorder),
+            tint               = colors.onSurfaceSecondary,
+            modifier           = Modifier
+                .padding(horizontal = 12.dp)
+                .then(dragHandleModifier),
+        )
     }
 }

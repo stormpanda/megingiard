@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,14 +16,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.GridOff
@@ -47,6 +50,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +73,8 @@ import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -409,96 +415,28 @@ private fun EditorBody(
     onEditButton:     (PadButton) -> Unit,
     modifier:         Modifier = Modifier,
 ) {
-    val colors = LocalAppColors.current
-    var gridMode by remember { mutableStateOf(GridMode.OFF) }
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(vertical = ED_PADDING),
-        verticalArrangement = Arrangement.spacedBy(ED_PADDING),
+    val colors     = LocalAppColors.current
+    var gridMode   by remember { mutableStateOf(GridMode.OFF) }
+    val profileRef by rememberUpdatedState(profile)
+
+    val lazyListState = rememberLazyListState()
+    // Items before buttons: toolbar(0), canvas(1), divider_1(2), devices(3), divider_2(4) → offset = 5
+    val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        val offset     = 5
+        val newButtons = profileRef.buttons.toMutableList()
+        val fromIdx    = (from.index - offset).coerceIn(0, newButtons.lastIndex)
+        val toIdx      = (to.index - offset).coerceIn(0, newButtons.lastIndex)
+        newButtons.add(toIdx, newButtons.removeAt(fromIdx))
+        MacroPadState.updateProfile(profileRef.copy(buttons = newButtons))
+    }
+
+    LazyColumn(
+        state          = lazyListState,
+        modifier       = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = ED_PADDING),
     ) {
-        // Device checkboxes
-        Column(modifier = Modifier.padding(horizontal = ED_PADDING)) {
-            Text(
-                text  = stringResource(R.string.macropad_editor_devices),
-                color = accentColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(4.dp))
-            DeviceCheckboxRow(
-                label       = stringResource(R.string.macropad_editor_device_keyboard),
-                checked     = profile.enableKeyboard,
-                accentColor = accentColor,
-                onCheckedChange = {
-                    MacroPadState.updateProfile(profile.copy(enableKeyboard = it))
-                },
-            )
-            DeviceCheckboxRow(
-                label       = stringResource(R.string.macropad_editor_device_gamepad),
-                checked     = profile.enableGamepad,
-                accentColor = accentColor,
-                onCheckedChange = {
-                    MacroPadState.updateProfile(profile.copy(enableGamepad = it))
-                },
-            )
-            DeviceCheckboxRow(
-                label       = stringResource(R.string.macropad_editor_device_mouse),
-                checked     = profile.enableMouse,
-                accentColor = accentColor,
-                onCheckedChange = {
-                    MacroPadState.updateProfile(profile.copy(enableMouse = it))
-                },
-            )
-        }
-
-        // Pad canvas with grid toggle overlay — full width, no horizontal padding so it matches use-mode
-        Box {
-            PadCanvas(profile = profile, accentColor = accentColor, gridMode = gridMode)
-
-            // Grid toggle button — top-end corner of canvas
-            val gridIcon = when (gridMode) {
-                GridMode.OFF         -> Icons.Outlined.GridOff
-                GridMode.RECTANGULAR -> Icons.Outlined.Grid4x4
-                GridMode.RADIAL      -> Icons.Outlined.TripOrigin
-            }
-            val gridCd = when (gridMode) {
-                GridMode.OFF         -> stringResource(R.string.macropad_editor_grid_off)
-                GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular)
-                GridMode.RADIAL      -> stringResource(R.string.macropad_editor_grid_radial)
-            }
-            IconButton(
-                onClick = {
-                    gridMode = when (gridMode) {
-                        GridMode.OFF         -> GridMode.RECTANGULAR
-                        GridMode.RECTANGULAR -> GridMode.RADIAL
-                        GridMode.RADIAL      -> GridMode.OFF
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(ED_GRID_TOGGLE_MARGIN)
-                    .size(ED_GRID_TOGGLE_SIZE)
-                    .clip(CircleShape)
-                    .background(colors.surface.copy(alpha = 0.8f)),
-            ) {
-                Icon(
-                    gridIcon,
-                    contentDescription = gridCd,
-                    tint = if (gridMode == GridMode.OFF) colors.onSurfaceSecondary else accentColor,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier.padding(horizontal = ED_PADDING),
-            verticalArrangement = Arrangement.spacedBy(ED_PADDING),
-        ) {
-            HorizontalDivider(color = colors.divider)
-
-            // Toolbar: Add button
+        // 1. Action toolbar (Add Button / Macros… / Add Macro Button)
+        item(key = "toolbar") {
             EditorToolbar(
                 profile          = profile,
                 accentColor      = accentColor,
@@ -506,15 +444,155 @@ private fun EditorBody(
                 onManageMacros   = onManageMacros,
                 onAddButton      = onAddButton,
                 onAddMacroButton = onAddMacroButton,
+                modifier         = Modifier
+                    .padding(horizontal = ED_PADDING)
+                    .padding(bottom = ED_PADDING),
             )
+        }
 
-            HorizontalDivider(color = colors.divider)
+        // 2. Pad canvas with grid toggle overlay
+        item(key = "canvas") {
+            Box {
+                PadCanvas(profile = profile, accentColor = accentColor, gridMode = gridMode)
 
-            // Button list — tap to edit
-            ButtonList(
-                profile      = profile,
-                accentColor  = accentColor,
-                onEditButton = onEditButton,
+                val gridIcon = when (gridMode) {
+                    GridMode.OFF         -> Icons.Outlined.GridOff
+                    GridMode.RECTANGULAR -> Icons.Outlined.Grid4x4
+                    GridMode.RADIAL      -> Icons.Outlined.TripOrigin
+                }
+                val gridCd = when (gridMode) {
+                    GridMode.OFF         -> stringResource(R.string.macropad_editor_grid_off)
+                    GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular)
+                    GridMode.RADIAL      -> stringResource(R.string.macropad_editor_grid_radial)
+                }
+                IconButton(
+                    onClick = {
+                        gridMode = when (gridMode) {
+                            GridMode.OFF         -> GridMode.RECTANGULAR
+                            GridMode.RECTANGULAR -> GridMode.RADIAL
+                            GridMode.RADIAL      -> GridMode.OFF
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(ED_GRID_TOGGLE_MARGIN)
+                        .size(ED_GRID_TOGGLE_SIZE)
+                        .clip(CircleShape)
+                        .background(colors.surface.copy(alpha = 0.8f)),
+                ) {
+                    Icon(
+                        gridIcon,
+                        contentDescription = gridCd,
+                        tint     = if (gridMode == GridMode.OFF) colors.onSurfaceSecondary else accentColor,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+
+        // 3. Divider
+        item(key = "divider_1") {
+            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(horizontal = ED_PADDING))
+        }
+
+        // 4. Simulated-device checkboxes — shown in a horizontal row
+        item(key = "devices") {
+            DevicesSection(
+                profile     = profile,
+                accentColor = accentColor,
+                modifier    = Modifier
+                    .padding(horizontal = ED_PADDING)
+                    .padding(vertical = 4.dp),
+            )
+        }
+
+        // 5. Divider
+        item(key = "divider_2") {
+            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(horizontal = ED_PADDING))
+        }
+
+        // 6. Button list — tap to edit, drag handle to reorder
+        if (profile.buttons.isEmpty()) {
+            item(key = "empty") {
+                Text(
+                    text     = stringResource(R.string.macropad_editor_add_button),
+                    color    = colors.onSurfaceSecondary,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .padding(horizontal = ED_PADDING)
+                        .padding(vertical = 8.dp),
+                )
+            }
+        } else {
+            itemsIndexed(profile.buttons, key = { _, btn -> btn.id }) { _, btn ->
+                ReorderableItem(reorderState, key = btn.id) { isDragging ->
+                    ButtonListItem(
+                        btn                = btn,
+                        accentColor        = accentColor,
+                        enableKeyboard     = profile.enableKeyboard,
+                        enableGamepad      = profile.enableGamepad,
+                        enableMouse        = profile.enableMouse,
+                        isDragging         = isDragging,
+                        onEdit             = { onEditButton(btn) },
+                        onUpdate           = { updated ->
+                            MacroPadState.updateProfile(
+                                profile.copy(buttons = profile.buttons.map { if (it.id == btn.id) updated else it })
+                            )
+                        },
+                        onDelete           = {
+                            MacroPadState.updateProfile(
+                                profile.copy(buttons = profile.buttons.filter { it.id != btn.id })
+                            )
+                        },
+                        dragHandleModifier = Modifier.draggableHandle(),
+                        modifier           = Modifier.padding(horizontal = ED_PADDING),
+                    )
+                    HorizontalDivider(
+                        color    = colors.divider,
+                        modifier = Modifier.padding(horizontal = ED_PADDING),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DevicesSection(
+    profile:     PadProfile,
+    accentColor: Color,
+    modifier:    Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    Column(modifier = modifier) {
+        Text(
+            text       = stringResource(R.string.macropad_editor_devices),
+            color      = accentColor,
+            fontSize   = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            DeviceCheckboxRow(
+                label           = stringResource(R.string.macropad_editor_device_keyboard),
+                checked         = profile.enableKeyboard,
+                accentColor     = accentColor,
+                onCheckedChange = { MacroPadState.updateProfile(profile.copy(enableKeyboard = it)) },
+                modifier        = Modifier.weight(1f),
+            )
+            DeviceCheckboxRow(
+                label           = stringResource(R.string.macropad_editor_device_gamepad),
+                checked         = profile.enableGamepad,
+                accentColor     = accentColor,
+                onCheckedChange = { MacroPadState.updateProfile(profile.copy(enableGamepad = it)) },
+                modifier        = Modifier.weight(1f),
+            )
+            DeviceCheckboxRow(
+                label           = stringResource(R.string.macropad_editor_device_mouse),
+                checked         = profile.enableMouse,
+                accentColor     = accentColor,
+                onCheckedChange = { MacroPadState.updateProfile(profile.copy(enableMouse = it)) },
+                modifier        = Modifier.weight(1f),
             )
         }
     }
@@ -526,11 +604,11 @@ private fun DeviceCheckboxRow(
     checked:         Boolean,
     accentColor:     Color,
     onCheckedChange: (Boolean) -> Unit,
+    modifier:        Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -553,9 +631,17 @@ private fun DeviceCheckboxRow(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun EditorToolbar(profile: PadProfile, accentColor: Color, hasMacros: Boolean, onManageMacros: () -> Unit, onAddButton: () -> Unit, onAddMacroButton: () -> Unit) {
+private fun EditorToolbar(
+    profile:         PadProfile,
+    accentColor:     Color,
+    hasMacros:       Boolean,
+    onManageMacros:  () -> Unit,
+    onAddButton:     () -> Unit,
+    onAddMacroButton: () -> Unit,
+    modifier:        Modifier = Modifier,
+) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier              = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(ED_ITEM_PADDING),
     ) {
         // Add Button
@@ -612,55 +698,22 @@ private fun EditorActionChip(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Button list
+// Button list item
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ButtonList(profile: PadProfile, accentColor: Color, onEditButton: (PadButton) -> Unit) {
-    val colors = LocalAppColors.current
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        if (profile.buttons.isEmpty()) {
-            Text(
-                text     = stringResource(R.string.macropad_editor_add_button),
-                color    = colors.onSurfaceSecondary,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(vertical = 8.dp),
-            )
-        }
-        profile.buttons.forEach { btn ->
-            ButtonListItem(
-                btn            = btn,
-                accentColor    = accentColor,
-                enableKeyboard = profile.enableKeyboard,
-                enableGamepad  = profile.enableGamepad,
-                enableMouse    = profile.enableMouse,
-                onEdit         = { onEditButton(btn) },
-                onUpdate       = { updated ->
-                    MacroPadState.updateProfile(
-                        profile.copy(buttons = profile.buttons.map { if (it.id == btn.id) updated else it })
-                    )
-                },
-                onDelete       = {
-                    MacroPadState.updateProfile(
-                        profile.copy(buttons = profile.buttons.filter { it.id != btn.id })
-                    )
-                },
-            )
-            HorizontalDivider(color = colors.divider)
-        }
-    }
-}
-
-@Composable
 private fun ButtonListItem(
-    btn:            PadButton,
-    accentColor:    Color,
-    enableKeyboard: Boolean,
-    enableGamepad:  Boolean,
-    enableMouse:    Boolean,
-    onEdit:         () -> Unit,
-    onUpdate:       (PadButton) -> Unit,
-    onDelete:       () -> Unit,
+    btn:                PadButton,
+    accentColor:        Color,
+    enableKeyboard:     Boolean,
+    enableGamepad:      Boolean,
+    enableMouse:        Boolean,
+    isDragging:         Boolean,
+    onEdit:             () -> Unit,
+    onUpdate:           (PadButton) -> Unit,
+    onDelete:           () -> Unit,
+    dragHandleModifier: Modifier,
+    modifier:           Modifier = Modifier,
 ) {
     var showDelete  by remember { mutableStateOf(false) }
     val colors      = LocalAppColors.current
@@ -678,9 +731,10 @@ private fun ButtonListItem(
     }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .alpha(if (isDeviceDisabled) 0.38f else 1f)
+            .background(if (isDragging) colors.surfaceVariant else Color.Transparent)
             .clickable { onEdit() }
             .padding(horizontal = 4.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -722,6 +776,14 @@ private fun ButtonListItem(
         IconButton(onClick = { showDelete = true }) {
             Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = colors.onSurfaceSecondary)
         }
+        Icon(
+            imageVector        = Icons.Filled.DragHandle,
+            contentDescription = stringResource(R.string.cd_drag_reorder),
+            tint               = colors.onSurfaceSecondary,
+            modifier           = Modifier
+                .padding(horizontal = 12.dp)
+                .then(dragHandleModifier),
+        )
     }
 
     if (showDelete) {
