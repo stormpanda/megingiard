@@ -6,7 +6,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val MAC_ABS_FULL_DEFLECTION = 32767
+// Scale factor for float axis values (-1..1) → int16 (-32768..32767).
+// Using 32768 so -1.0 maps exactly to -32768; positive side is clamped below.
+private const val MAC_ABS_FULL_DEFLECTION = 32768
 
 private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT }
 
@@ -16,6 +18,15 @@ private data class MacroEvent(
     val code: Int,
     val value: Int,
 )
+
+// "Reset" events (BUTTON_UP, JOYSTICK_SET to 0, HAT to 0) should be dispatched
+// before "set" events that share the same timestamp, to avoid incorrect final state
+// when one step ends exactly as another begins.
+private val MacroEvent.isReset: Boolean get() = when (type) {
+    MacroEventType.BUTTON_UP   -> true
+    MacroEventType.BUTTON_DOWN -> false
+    MacroEventType.JOYSTICK_SET, MacroEventType.HAT -> value == 0
+}
 
 /**
  * Executes [Macro] sequences by compiling their overlapping [MacroStep] list into a
@@ -60,8 +71,8 @@ object MacroExecutor {
                     events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.BUTTON_UP, step.btnCode, 0)
                 }
                 is MacroStep.JoystickMove -> {
-                    val rawX = (step.x.coerceIn(-1f, 1f) * MAC_ABS_FULL_DEFLECTION).toInt()
-                    val rawY = (step.y.coerceIn(-1f, 1f) * MAC_ABS_FULL_DEFLECTION).toInt()
+                    val rawX = (step.x.coerceIn(-1f, 1f) * MAC_ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
+                    val rawY = (step.y.coerceIn(-1f, 1f) * MAC_ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
                     val axisX = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
                     val axisY = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
                     events += MacroEvent(step.startTimeMs,               MacroEventType.JOYSTICK_SET, axisX, rawX)
@@ -77,7 +88,7 @@ object MacroExecutor {
                 }
             }
         }
-        events.sortBy { it.timeMs }
+        events.sortWith(compareBy({ it.timeMs }, { if (it.isReset) 0 else 1 }))
         return events
     }
 

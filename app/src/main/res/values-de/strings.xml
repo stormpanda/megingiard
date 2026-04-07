@@ -194,6 +194,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="exit_dialog_confirm">Schließen</string>
     <string name="exit_dialog_cancel">Abbrechen</string>
 
-    <!-- Media empty state -->
+    <!-- Abschlusstext in der Medienleerszene -->
     <string name="media_no_media_hint">Starte eine Medienwiedergabe auf dem oberen Bildschirm, um sie hier zu steuern.</string>
+    <!-- Makro-Duplikat-Name: %1$s = originaler Makro-Name -->
+    <string name="macropad_macro_copy_name">%1$s Kopie</string>
+    <!-- Zeitachsen-Tick-Label: %1$d = Zeit in ms -->
+    <string name="macropad_macro_timeline_tick">%1$d ms</string>
+    <!-- Schritt-Timing: %1$d = Startzeit ms, %2$d = Dauer ms -->
+    <string name="macropad_macro_step_timing">@%1$d ms  ⟶  %2$d ms</string>
 </resources>

@@ -76,6 +76,7 @@ internal fun MacroListEditor(onDone: () -> Unit) {
     val accentColor = colors.accent
     var editingMacro by remember { mutableStateOf<Macro?>(null) }
     val defaultName  = stringResource(R.string.macropad_macro_default_name)
+    val copyNameFormat = stringResource(R.string.macropad_macro_copy_name)
 
     if (editingMacro == null) {
         MacroListView(
@@ -83,7 +84,7 @@ internal fun MacroListEditor(onDone: () -> Unit) {
             onEditMacro  = { editingMacro = it },
             onDuplicateMacro = { original ->
                 val existingNames = MacroState.macros.value.map { it.name }.toSet()
-                val baseName = "${original.name} Copy"
+                val baseName = copyNameFormat.format(original.name)
                 val copyName = if (baseName !in existingNames) {
                     baseName
                 } else {

@@ -114,11 +114,16 @@ object ShellGamepadInjector {
 
     /**
      * Sends an analog joystick axis event.
-     * [axisCode]: one of [ABS_X]=0, [ABS_Y]=1, [ABS_Z]=2, [ABS_RZ]=5.
-     * [value]: raw int16 range −32768…+32767 (use [GamepadKeycodes] constants for axes).
+     * [axisCode]: one of [GamepadKeycodes.ABS_X]=0, [GamepadKeycodes.ABS_Y]=1,
+     *             [GamepadKeycodes.ABS_Z]=2, [GamepadKeycodes.ABS_RZ]=5.
+     * [value]: raw int16 range −32768…+32767.
      */
     fun joystick(axisCode: Int, value: Int) {
         if (!running) return
+        require(axisCode in setOf(GamepadKeycodes.ABS_X, GamepadKeycodes.ABS_Y, GamepadKeycodes.ABS_Z, GamepadKeycodes.ABS_RZ)) {
+            "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)"
+        }
+        require(value in -32768..32767) { "value must be in int16 range -32768..32767" }
         queue.offer(GamepadCommand.Joystick(axisCode = axisCode, value = value))
     }
 

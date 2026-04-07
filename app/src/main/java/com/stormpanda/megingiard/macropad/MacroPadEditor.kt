@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -121,11 +122,24 @@ fun MacroPadEditor(onDone: () -> Unit) {
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
+    val macros by MacroState.macros.collectAsState()
     var showMacroListEditor by remember { mutableStateOf(false) }
     var showAddButton       by remember { mutableStateOf(false) }
     var showAddMacroButton  by remember { mutableStateOf(false) }
     var editingButton       by remember { mutableStateOf<PadButton?>(null) }
     var editingButtonActive by remember { mutableStateOf(false) }
+
+    // Intercept system Back when an overlay is visible, so Back closes the overlay
+    // instead of dismissing the whole editor dialog.
+    val anyOverlayVisible = showMacroListEditor || showAddButton || showAddMacroButton || editingButtonActive
+    BackHandler(enabled = anyOverlayVisible) {
+        when {
+            showMacroListEditor -> showMacroListEditor = false
+            showAddButton       -> showAddButton = false
+            showAddMacroButton  -> showAddMacroButton = false
+            editingButtonActive -> { editingButtonActive = false; editingButton = null }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
@@ -168,6 +182,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             EditorBody(
                 profile            = profile,
                 accentColor        = colors.accent,
+                hasMacros          = macros.isNotEmpty(),
                 onManageMacros     = { showMacroListEditor = true },
                 onAddButton        = { showAddButton = true },
                 onAddMacroButton   = { showAddMacroButton = true },
@@ -387,6 +402,7 @@ private fun EditorTopBar(
 private fun EditorBody(
     profile:          PadProfile,
     accentColor:      Color,
+    hasMacros:        Boolean,
     onManageMacros:   () -> Unit,
     onAddButton:      () -> Unit,
     onAddMacroButton: () -> Unit,
@@ -486,6 +502,7 @@ private fun EditorBody(
             EditorToolbar(
                 profile          = profile,
                 accentColor      = accentColor,
+                hasMacros        = hasMacros,
                 onManageMacros   = onManageMacros,
                 onAddButton      = onAddButton,
                 onAddMacroButton = onAddMacroButton,
@@ -536,7 +553,7 @@ private fun DeviceCheckboxRow(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun EditorToolbar(profile: PadProfile, accentColor: Color, onManageMacros: () -> Unit, onAddButton: () -> Unit, onAddMacroButton: () -> Unit) {
+private fun EditorToolbar(profile: PadProfile, accentColor: Color, hasMacros: Boolean, onManageMacros: () -> Unit, onAddButton: () -> Unit, onAddMacroButton: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(ED_ITEM_PADDING),
@@ -562,6 +579,7 @@ private fun EditorToolbar(profile: PadProfile, accentColor: Color, onManageMacro
             label       = stringResource(R.string.macropad_editor_add_macro_button),
             icon        = Icons.Filled.PlayArrow,
             accentColor = accentColor,
+            enabled     = hasMacros,
             onClick     = onAddMacroButton,
             modifier    = Modifier.weight(1f),
         )
@@ -575,19 +593,21 @@ private fun EditorActionChip(
     accentColor: Color,
     onClick:     () -> Unit,
     modifier:    Modifier = Modifier,
+    enabled:     Boolean = true,
 ) {
+    val effectiveColor = if (enabled) accentColor else accentColor.copy(alpha = 0.38f)
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
+            .border(1.dp, effectiveColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment    = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, tint = effectiveColor, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, color = accentColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, color = effectiveColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

@@ -62,8 +62,8 @@ import kotlin.math.sqrt
 
 private val ED_BUTTON_UNIT_DP      = 60.dp
 private val ED_BTN_SQUARE_RADIUS   = 4.dp
-// Must match MP_SCREEN_PADDING in MacroPadScreen.kt so the editor canvas is pixel-identical to use mode
-private val PC_SCREEN_PADDING      = 4.dp
+// Reuse the shared screen padding so the editor canvas remains pixel-identical to use mode.
+private val PC_SCREEN_PADDING      = MP_SCREEN_PADDING
 private const val ED_BTN_DISABLED_ALPHA = 0.38f
 private const val ED_EDGE_MARGIN        = 0.05f
 

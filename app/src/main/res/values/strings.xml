@@ -239,4 +239,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_stick_right">Right Stick</string>
     <string name="macropad_macro_step_magnitude">Magnitude: %.1f</string>
     <string name="macropad_macro_step_direction">Direction</string>
+    <!-- %1$s = original macro name; result: "Name Copy", "Name Copy (2)", etc. -->
+    <string name="macropad_macro_copy_name">%1$s Copy</string>
+    <!-- %1$d = time in ms (tick label on the timeline) -->
+    <string name="macropad_macro_timeline_tick">%1$dms</string>
+    <!-- %1$d = start time ms, %2$d = duration ms -->
+    <string name="macropad_macro_step_timing">@%1$dms  ⟶  %2$dms</string>
 </resources>

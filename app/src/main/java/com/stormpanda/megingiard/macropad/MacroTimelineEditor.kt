@@ -68,7 +68,7 @@ private const val MT_AXIS_HEIGHT_DP            = 24     // time-label row height
 private const val MT_MIN_TIMELINE_MS           = 1000L  // minimum canvas width in ms
 private const val MT_TICK_INTERVAL_MS          = 500L   // vertical grid line interval
 private const val MT_STEP_BAR_PADDING          = 2f     // px padding inside each bar
-private const val MT_AXIS_TEXT_SIZE            = 28f    // native paint text size
+private const val MT_AXIS_TEXT_SIZE_SP          = 11    // sp — scaled at runtime via density/fontScale
 private const val MT_BAR_CORNER_RADIUS         = 4      // dp
 private val MT_COLOR_JOYSTICK                  = Color(0xFFFF9800) // orange
 private val MT_COLOR_DPAD                      = Color(0xFF2196F3) // blue
@@ -338,10 +338,10 @@ private fun MacroTimeline(
     val laneHeightPx   = with(density) { MT_LANE_HEIGHT_DP.dp.toPx() }
     val colors         = LocalAppColors.current
 
-    val textPaint = remember {
+    val textPaint = remember(density) {
         NativePaint().apply {
             isAntiAlias = true
-            textSize    = MT_AXIS_TEXT_SIZE
+            textSize    = with(density) { MT_AXIS_TEXT_SIZE_SP.sp.toPx() }
             color       = 0xFFA0A0A0.toInt()
         }
     }
@@ -373,6 +373,7 @@ private fun MacroTimeline(
             }
 
             // Draw tick lines and time labels
+            val tickFormat = stringResource(R.string.macropad_macro_timeline_tick)
             drawTimeTicks(
                 totalMs      = totalMs,
                 numLanes     = numLanes,
@@ -380,6 +381,7 @@ private fun MacroTimeline(
                 laneHeightPx = laneHeightPx,
                 textPaint    = textPaint,
                 dividerColor = colors.divider,
+                tickLabel    = { ms -> tickFormat.format(ms) },
             )
         }
     }
@@ -398,6 +400,7 @@ private fun DrawScope.drawTimeTicks(
     laneHeightPx: Float,
     textPaint:    NativePaint,
     dividerColor: Color,
+    tickLabel:    (Long) -> String,
 ) {
     val laneAreaHeight  = numLanes * laneHeightPx
     val labelY          = laneAreaHeight + MT_AXIS_HEIGHT_DP.dp.toPx() - 6.dp.toPx()
@@ -410,7 +413,7 @@ private fun DrawScope.drawTimeTicks(
             end         = Offset(tickX, laneAreaHeight),
             strokeWidth = 1f,
         )
-        drawContext.canvas.nativeCanvas.drawText("${tick}ms", tickX + 2f, labelY, textPaint)
+        drawContext.canvas.nativeCanvas.drawText(tickLabel(tick), tickX + 2f, labelY, textPaint)
         tick += MT_TICK_INTERVAL_MS
     }
 }
@@ -468,7 +471,7 @@ private fun StepListItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "@${step.startTimeMs}ms  ⟶  ${step.durationMs}ms",
+                stringResource(R.string.macropad_macro_step_timing, step.startTimeMs, step.durationMs),
                 color    = colors.onSurfaceSecondary,
                 fontSize = 12.sp,
             )
