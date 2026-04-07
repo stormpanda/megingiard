@@ -175,6 +175,10 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_ambient_hint">Requires active Screen Mirror</string>
     <string name="settings_macropad_blur">Blur</string>
     <string name="settings_macropad_dim">Dimming</string>
+    <string name="settings_macropad_vignette">Vignette</string>
+    <string name="settings_macropad_vignette_size">Size</string>
+    <string name="settings_macropad_vignette_opacity">Opacity</string>
+    <string name="settings_macropad_vignette_color">Color</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>

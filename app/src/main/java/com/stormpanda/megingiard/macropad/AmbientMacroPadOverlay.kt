@@ -14,6 +14,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -44,6 +47,8 @@ import kotlinx.coroutines.withContext
 
 private val AMO_SWIPE_EDGE_ZONE = 40.dp
 private val AMO_SWIPE_THRESHOLD = 25.dp
+// At vignetteSize = 1.0 the gradient radius equals half the diagonal, reaching all four corners.
+private const val AMO_VIGNETTE_RADIUS_FACTOR = 1.4142f // sqrt(2)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ambient MacroPad Overlay — renders MacroPad buttons over the screen mirror
@@ -57,6 +62,10 @@ internal fun AmbientMacroPadOverlay() {
 
     val blurRadius by SettingsManager.macropadAmbientBlur.collectAsState()
     val dimAlpha by SettingsManager.macropadAmbientDim.collectAsState()
+    val vignetteEnabled by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
+    val vignetteSize by SettingsManager.macropadAmbientVignetteSize.collectAsState()
+    val vignetteOpacity by SettingsManager.macropadAmbientVignetteOpacity.collectAsState()
+    val vignetteColorInt by SettingsManager.macropadAmbientVignetteColor.collectAsState()
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val ambientFrame by ScreenCaptureManager.ambientFrame.collectAsState()
 
@@ -66,9 +75,10 @@ internal fun AmbientMacroPadOverlay() {
     val edgeZonePx = with(density) { AMO_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AMO_SWIPE_THRESHOLD.toPx() }
 
-    // Effective blur/dim: overridden to 0 when peeking
+    // Effective blur/dim/vignette: overridden to 0 when peeking
     val effectiveBlur = if (isPeekActive) 0f else blurRadius
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
+    val effectiveVignetteOpacity = if (isPeekActive) 0f else vignetteOpacity
 
     // Start injectors after the carousel overlay has closed (same pattern as MacroPadScreen)
     LaunchedEffect(Unit) {
@@ -162,7 +172,29 @@ internal fun AmbientMacroPadOverlay() {
             )
         }
 
-        // Layer 3: MacroPad buttons
+        // Layer 3: Vignette overlay (radial gradient darkening the edges)
+        if (vignetteEnabled && effectiveVignetteOpacity > 0f) {
+            val vColor = Color(vignetteColorInt)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawBehind {
+                        val radius = (size.minDimension / 2f) * vignetteSize * AMO_VIGNETTE_RADIUS_FACTOR
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    vColor.copy(alpha = effectiveVignetteOpacity),
+                                ),
+                                center = Offset(size.width / 2f, size.height / 2f),
+                                radius = radius,
+                            )
+                        )
+                    }
+            )
+        }
+
+        // Layer 4: MacroPad buttons
         val p = profile
         if (p == null) {
             Box(
@@ -188,7 +220,7 @@ internal fun AmbientMacroPadOverlay() {
             }
         }
 
-        // Layer 4: Carousel overlay for mode switching
+        // Layer 5: Carousel overlay for mode switching
         CarouselOverlay(
             visible = showControls,
             onInteraction = { AppStateManager.triggerOverlay() },

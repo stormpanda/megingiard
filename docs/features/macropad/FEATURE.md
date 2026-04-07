@@ -113,7 +113,8 @@ Each button supports one of the following actions:
 - Enabled via a **toggle** in MacroPad tool settings (default: off). Only functional when the `ScreenCaptureService` is actively capturing.
 - When ambient is enabled and capturing is active, the `MirrorPresentation` renders `AmbientMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
 - **Blur** (0–25 dp radius, adjustable via slider, default 0) applies a `Modifier.blur()` to a periodically captured `Bitmap` of the `SurfaceView`. When blur = 0, the `SurfaceView` is visible directly (live hardware-accelerated, no PixelCopy overhead). Captures occur every 200 ms via `PixelCopy`.
-- **Dimming** (0–90%, adjustable via slider, default 30%) draws a semi-transparent black overlay on top of the mirror background.
+- **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
+- **Vignette** (optional, default off) draws a radial gradient that darkens the screen edges. Configurable via three settings: **Size** (0–100%, controls how far the gradient extends inward; internally maps to 0–1 where 1 = gradient radius extends to all four screen corners), **Opacity** (0–100%), and **Color** (any ARGB color, selected via `ColorWheelPicker`, default black `0xFF000000`). Like blur/dim, the vignette is hidden when Peek is active.
 - A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, blur and dim are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
 
@@ -144,10 +145,11 @@ MacroPadEditor (Composable, opened from MacroPadToolSettings)
 When Ambient Display is enabled and `ScreenCaptureService` is capturing:
 
 1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `AmbientMacroPadOverlay` in its `ComposeView`.
-2. If blur > 0, a periodic `PixelCopy` coroutine captures the `SurfaceView` every 200 ms into `ScreenCaptureManager.ambientFrame`. The `SurfaceView` is hidden (`INVISIBLE`) and the captured `Bitmap` is drawn with `Modifier.blur()`. If blur = 0, the `SurfaceView` remains visible (live hardware path) and no PixelCopy runs.
+2. If blur > 0, a periodic `PixelCopy` coroutine captures the `SurfaceView` every 200 ms into `ScreenCaptureManager.ambientFrame`. The captured `Bitmap` is drawn with `Modifier.blur()`. If blur = 0, the `SurfaceView` remains visible (live hardware path) and no PixelCopy runs.
 3. A dim overlay (`Color.Black.copy(alpha = ambientDim)`) is drawn on top.
-4. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
-5. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered, and blur/dim are overridden to 0.
+4. If vignette is enabled, a `Brush.radialGradient` layer is drawn between the dim overlay and the MacroPad buttons. The gradient is transparent at the center and uses the selected vignette color at the edges. Radius = `minDimension / 2 * vignetteSize * √2`, so at `vignetteSize = 1.0` the gradient just reaches all four corners.
+5. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
+6. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered, and blur/dim/vignette are overridden to 0.
 
 ### Data Model
 

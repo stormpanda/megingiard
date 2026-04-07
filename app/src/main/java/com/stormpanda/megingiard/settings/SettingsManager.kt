@@ -104,6 +104,10 @@ object SettingsManager {
     private val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
     private val KEY_MACROPAD_AMBIENT_BLUR = floatPreferencesKey("macropad_ambient_blur")
     private val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED = booleanPreferencesKey("macropad_ambient_vignette_enabled")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_SIZE = floatPreferencesKey("macropad_ambient_vignette_size")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY = floatPreferencesKey("macropad_ambient_vignette_opacity")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR = intPreferencesKey("macropad_ambient_vignette_color")
 
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
@@ -202,6 +206,18 @@ object SettingsManager {
     private val _macropadAmbientDim = MutableStateFlow(0f)
     val macropadAmbientDim: StateFlow<Float> = _macropadAmbientDim.asStateFlow()
 
+    private val _macropadAmbientVignetteEnabled = MutableStateFlow(false)
+    val macropadAmbientVignetteEnabled: StateFlow<Boolean> = _macropadAmbientVignetteEnabled.asStateFlow()
+
+    private val _macropadAmbientVignetteSize = MutableStateFlow(0.7f)
+    val macropadAmbientVignetteSize: StateFlow<Float> = _macropadAmbientVignetteSize.asStateFlow()
+
+    private val _macropadAmbientVignetteOpacity = MutableStateFlow(0.6f)
+    val macropadAmbientVignetteOpacity: StateFlow<Float> = _macropadAmbientVignetteOpacity.asStateFlow()
+
+    private val _macropadAmbientVignetteColor = MutableStateFlow(0xFF000000.toInt())
+    val macropadAmbientVignetteColor: StateFlow<Int> = _macropadAmbientVignetteColor.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -250,6 +266,10 @@ object SettingsManager {
                 _macropadAmbientEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
                 _macropadAmbientBlur.value = prefs[KEY_MACROPAD_AMBIENT_BLUR] ?: 0f
                 _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0f
+                _macropadAmbientVignetteEnabled.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] ?: false
+                _macropadAmbientVignetteSize.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_SIZE] ?: 0.7f
+                _macropadAmbientVignetteOpacity.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY] ?: 0.6f
+                _macropadAmbientVignetteColor.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR] ?: 0xFF000000.toInt()
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -478,6 +498,26 @@ object SettingsManager {
     fun setMacropadAmbientDim(value: Float) {
         _macropadAmbientDim.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_DIM] = value } }
+    }
+
+    fun setMacropadAmbientVignetteEnabled(value: Boolean) {
+        _macropadAmbientVignetteEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] = value } }
+    }
+
+    fun setMacropadAmbientVignetteSize(value: Float) {
+        _macropadAmbientVignetteSize.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_SIZE] = value } }
+    }
+
+    fun setMacropadAmbientVignetteOpacity(value: Float) {
+        _macropadAmbientVignetteOpacity.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY] = value } }
+    }
+
+    fun setMacropadAmbientVignetteColor(value: Int) {
+        _macropadAmbientVignetteColor.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR] = value } }
     }
 
     /**
