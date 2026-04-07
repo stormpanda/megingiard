@@ -84,6 +84,11 @@ internal fun ButtonEditDialog(
             label = ""
             buttonShape = ButtonShape.CIRCLE
         }
+        if (newAction is PadAction.AmbientPeek) {
+            label = ""
+            buttonShape = ButtonShape.CIRCLE
+            buttonSize = ButtonSize.SIZE_1X1
+        }
         if (newAction is PadAction.Macro && label.isBlank()) {
             val macroName = MacroState.macros.value.firstOrNull { it.id == newAction.macroId }?.name
             if (macroName != null) label = macroName
@@ -91,7 +96,7 @@ internal fun ButtonEditDialog(
     }
 
     val isConfirmEnabled = when {
-        action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
+        action is PadAction.ScrollWheel || action is PadAction.TrackpointMove || action is PadAction.AmbientPeek -> true
         action is PadAction.Macro -> label.isNotBlank() &&
             MacroState.macros.value.any { it.id == (action as PadAction.Macro).macroId }
         else -> label.isNotBlank()
@@ -118,6 +123,7 @@ internal fun ButtonEditDialog(
             Text(
                 text = if (button == null) stringResource(R.string.macropad_editor_add_button)
                        else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
+                       else if (button.action is PadAction.AmbientPeek) stringResource(R.string.macropad_action_ambient_peek)
                        else button.label,
                 color      = colors.onSurface,
                 fontWeight = FontWeight.SemiBold,
@@ -163,7 +169,7 @@ internal fun ButtonEditDialog(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
                 // Label input and shape — hidden for ScrollWheel and TrackpointMove
-                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
+                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AmbientPeek) {
                     OutlinedTextField(
                         value         = label,
                         onValueChange = { label = it },

@@ -81,7 +81,7 @@ com.stormpanda.megingiard
 │ ├── GlobalSettingsComponents.kt # Extracted setting row Composables for GlobalSettingsScreen
 │ ├── SettingsManager.kt # App-wide settings persistence via DataStore
 │ ├── ToolSettingsPanel.kt # Per-tool settings Dialog orchestrator (mode dispatch only)
-│ ├── ToolSettingsComponents.kt # Reusable row Composables (RememberSettingRow, dropdowns, etc.)
+│ ├── ToolSettingsComponents.kt # Reusable row Composables (RememberSettingRow, SliderSettingRow, dropdowns, etc.)
 │ ├── MirrorToolSettings.kt # Mirror-mode settings Composable
 │ ├── KeyboardToolSettings.kt # Keyboard-mode settings Composable
 │ └── TouchpadToolSettings.kt # Touchpad-mode settings Composable
@@ -94,6 +94,7 @@ com.stormpanda.megingiard
 │ ├── PadButtonEditDialog.kt # Button create/edit dialog (ButtonEditDialog, SectionLabel)
 │ ├── PadActionPicker.kt # Action-selection UI (ActionPicker, sub-pickers, KEYBOARD_KEY_PRESETS)
 │ ├── MacroPadToolSettings.kt # Tool-settings panel (profile picker, shape/size, Edit Layout)
+│ ├── AmbientMacroPadOverlay.kt # Ambient Display overlay (mirror background + blur/dim + MacroPad)
 │ ├── MacroPadState.kt # Singleton state: profiles + active profile, CRUD, persistence
 │ ├── MacroPadLayout.kt # Serializable data model: PadProfile, PadButton, PadAction
 │ ├── GamepadInjector.kt # Public facade over ShellGamepadInjector

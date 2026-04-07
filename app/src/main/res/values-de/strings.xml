@@ -164,6 +164,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_mouse_button">Maustaste</string>
     <string name="macropad_action_scroll_wheel">Scrollrad</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative Maus)</string>
+    <string name="macropad_action_ambient_peek">Ambient Peek</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
     <string name="settings_macropad_profile">Aktives Profil</string>
@@ -174,6 +175,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_pad_size">Pad-Größe: %d%%</string>
     <string name="settings_macropad_edit_layout">Layout bearbeiten\u2026</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
+
+    <!-- MacroPad-Ambient-Display-Einstellungen -->
+    <string name="settings_macropad_ambient">Ambient Display</string>
+    <string name="settings_macropad_ambient_hint">Erfordert aktive Bildschirmspiegelung</string>
+    <string name="settings_macropad_blur">Unschärfe</string>
+    <string name="settings_macropad_dim">Abdunkelung</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Taste: %s</string>

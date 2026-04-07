@@ -21,12 +21,15 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.SliderSettingRow
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,6 +95,11 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
 
         // ── Layout action buttons ───────────────────────────────────────────
         LayoutActionButtons(accentColor = colors.accent, onOpenEditor = onOpenEditor)
+
+        HorizontalDivider(color = colors.divider)
+
+        // ── Ambient Display settings ────────────────────────────────────────
+        AmbientSettingsSection(accentColor = colors.accent)
     }
 }
 
@@ -219,6 +229,73 @@ private fun LayoutActionButtons(accentColor: Color, onOpenEditor: () -> Unit) {
                 modifier   = Modifier.padding(start = 6.dp),
             )
         }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ambient Display settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+private const val MTS_BLUR_MAX = 25f
+private const val MTS_BLUR_PERCENT_DIVISOR = 100f
+private const val MTS_DIM_MAX = 0.9f
+
+@Composable
+private fun AmbientSettingsSection(accentColor: Color) {
+    val scope = rememberCoroutineScope()
+    val colors = LocalAppColors.current
+    val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+    val ambientBlur    by SettingsManager.macropadAmbientBlur.collectAsState()
+    val ambientDim     by SettingsManager.macropadAmbientDim.collectAsState()
+
+    SettingsLabel(stringResource(R.string.settings_macropad_ambient), accentColor)
+
+    // Toggle
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_macropad_ambient),
+                color = colors.onSurface,
+                fontSize = 14.sp
+            )
+            Text(
+                text = stringResource(R.string.settings_macropad_ambient_hint),
+                color = colors.onSurfaceSecondary,
+                fontSize = 12.sp
+            )
+        }
+        Switch(
+            checked = ambientEnabled,
+            onCheckedChange = { scope.launch { SettingsManager.setMacropadAmbientEnabled(it) } },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = accentColor
+            )
+        )
+    }
+
+    // Sliders – only shown when ambient is enabled
+    if (ambientEnabled) {
+        SliderSettingRow(
+            label = stringResource(R.string.settings_macropad_blur),
+            value = ambientBlur,
+            valueRange = 0f..MTS_BLUR_MAX,
+            formatLabel = { "${(it / MTS_BLUR_MAX * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
+            accentColor = accentColor,
+            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientBlur(it) } }
+        )
+
+        SliderSettingRow(
+            label = stringResource(R.string.settings_macropad_dim),
+            value = ambientDim,
+            valueRange = 0f..MTS_DIM_MAX,
+            formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
+            accentColor = accentColor,
+            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientDim(it) } }
+        )
     }
 }
 

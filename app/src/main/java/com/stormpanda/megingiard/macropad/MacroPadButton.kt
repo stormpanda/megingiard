@@ -18,9 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,6 +133,8 @@ internal fun PadButton(
             Text("●", color = accentColor.copy(alpha = 0.7f), fontSize = 18.sp)
         } else if (btn.action is PadAction.ScrollWheel) {
             ScrollWheelFace(accentColor = accentColor)
+        } else if (btn.action is PadAction.AmbientPeek) {
+            AmbientPeekFace(accentColor = accentColor)
         } else {
             Text(
                 text     = btn.label,
@@ -161,4 +166,19 @@ internal fun ScrollWheelFace(accentColor: Color) {
         Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ambient Peek face — visibility toggle icon
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+internal fun AmbientPeekFace(accentColor: Color) {
+    val isPeekActive by MacroPadState.isPeekActive.collectAsState()
+    Icon(
+        imageVector = if (isPeekActive) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+        contentDescription = null,
+        tint = accentColor,
+        modifier = Modifier.size(24.dp),
+    )
 }

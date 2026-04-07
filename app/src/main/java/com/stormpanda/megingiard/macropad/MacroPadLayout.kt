@@ -100,6 +100,15 @@ sealed class PadAction {
     @SerialName("macro")
     data class Macro(val macroId: String) : PadAction()
 
+    /**
+     * Toggles the Ambient Peek mode. When active, all other MacroPad buttons are hidden
+     * and blur/dim are set to zero, revealing the clear screen mirror behind the pad.
+     * Tapping again restores the previous state.
+     */
+    @Serializable
+    @SerialName("ambient_peek")
+    data object AmbientPeek : PadAction()
+
     // ── Legacy: retained for JSON back-compat only ─────────────────────────
     // Old profiles saved these types before MouseButton was introduced.
     // They are deserialized normally; the app treats them as MouseButton(LEFT/RIGHT).

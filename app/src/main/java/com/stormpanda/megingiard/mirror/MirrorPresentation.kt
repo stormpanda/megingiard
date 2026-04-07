@@ -33,6 +33,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.colorSchemeFor
@@ -41,10 +42,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val TAG = "MirrorPresentation"
+private const val MP_AMBIENT_CAPTURE_INTERVAL_MS = 200L
 
 class MirrorPresentation(
     context: Context, 
@@ -142,7 +146,13 @@ class MirrorPresentation(
                     LocalAppColors provides appColors
                 ) {
                     MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
-                        MirrorScreen()
+                        val mode by AppStateManager.currentMode.collectAsState()
+                        val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+                        val capturing by ScreenCaptureManager.isCapturing.collectAsState()
+                        when {
+                            mode == AppMode.MIRROR -> MirrorScreen()
+                            mode == AppMode.MACROPAD && ambientEnabled && capturing -> AmbientMacroPadOverlay()
+                        }
                     }
                 }
             }
@@ -174,9 +184,14 @@ class MirrorPresentation(
             combine(
                 AppStateManager.currentMode,
                 AppStateManager.isActivityResumed,
-                AppStateManager.isOnValidScreen
-            ) { mode, isResumed, isValid ->
-                mode == AppMode.MIRROR && isResumed && isValid
+                AppStateManager.isOnValidScreen,
+                SettingsManager.macropadAmbientEnabled,
+                ScreenCaptureManager.isCapturing
+            ) { mode, isResumed, isValid, ambientEnabled, capturing ->
+                isResumed && isValid && (
+                    mode == AppMode.MIRROR ||
+                    (mode == AppMode.MACROPAD && ambientEnabled && capturing)
+                )
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }
@@ -218,6 +233,50 @@ class MirrorPresentation(
                 } else if (!frozen) {
                     sv.visibility = View.VISIBLE
                     ScreenCaptureManager.setFrozenBitmap(null)
+                }
+            }
+        }
+        // Periodic PixelCopy for ambient display blur background
+        scope.launch {
+            combine(
+                AppStateManager.currentMode,
+                SettingsManager.macropadAmbientEnabled,
+                ScreenCaptureManager.isCapturing,
+                SettingsManager.macropadAmbientBlur
+            ) { mode, ambientEnabled, capturing, blur ->
+                mode == AppMode.MACROPAD && ambientEnabled && capturing && blur > 0f
+            }.collectLatest { needsCapture ->
+                if (needsCapture) {
+                    sv.visibility = View.INVISIBLE
+                    while (true) {
+                        if (sv.width > 0 && sv.height > 0) {
+                            try {
+                                val bitmap = Bitmap.createBitmap(
+                                    sv.width, sv.height, Bitmap.Config.ARGB_8888
+                                )
+                                PixelCopy.request(
+                                    sv, bitmap,
+                                    { result ->
+                                        if (result == PixelCopy.SUCCESS) {
+                                            ScreenCaptureManager.setAmbientFrame(bitmap)
+                                        } else {
+                                            bitmap.recycle()
+                                        }
+                                    },
+                                    Handler(Looper.getMainLooper())
+                                )
+                            } catch (_: Exception) { /* ignore transient errors */ }
+                        }
+                        delay(MP_AMBIENT_CAPTURE_INTERVAL_MS)
+                    }
+                } else {
+                    // Blur disabled or not in ambient mode — show SurfaceView, clear cached frame
+                    val mode = AppStateManager.currentMode.value
+                    val frozen = ScreenCaptureManager.isFrozen.value
+                    if (mode == AppMode.MACROPAD || mode == AppMode.MIRROR) {
+                        sv.visibility = if (frozen) View.INVISIBLE else View.VISIBLE
+                    }
+                    ScreenCaptureManager.clearAmbientFrame()
                 }
             }
         }

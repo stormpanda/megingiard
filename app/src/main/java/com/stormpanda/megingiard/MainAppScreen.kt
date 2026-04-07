@@ -155,7 +155,16 @@ fun MainAppScreen() {
                 AppMode.MEDIA -> MediaScreen()
                 AppMode.TOUCHPAD -> TouchpadScreen()
                 AppMode.KEYBOARD -> KeyboardScreen()
-                AppMode.MACROPAD -> MacroPadScreen()
+                AppMode.MACROPAD -> {
+                    val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+                    val macroCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+                    if (ambientEnabled && macroCapturing) {
+                        // Presentation handles rendering — show empty black background
+                        Box(Modifier.fillMaxSize().background(colors.appBackground))
+                    } else {
+                        MacroPadScreen()
+                    }
+                }
             }
         }
 

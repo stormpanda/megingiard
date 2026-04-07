@@ -118,4 +118,14 @@ object MacroPadState {
         _activeProfileId.value = id
         SettingsManager.saveMacroPadData()
     }
+
+    // -------------------------------------------------------------------------
+    // Ambient Peek state
+    // -------------------------------------------------------------------------
+
+    private val _isPeekActive = MutableStateFlow(false)
+    val isPeekActive: StateFlow<Boolean> = _isPeekActive.asStateFlow()
+
+    fun togglePeek() { _isPeekActive.value = !_isPeekActive.value }
+    fun resetPeek() { _isPeekActive.value = false }
 }

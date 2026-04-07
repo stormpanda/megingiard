@@ -100,6 +100,11 @@ object SettingsManager {
     private val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
     private val KEY_TOUCHPAD_TWO_FINGER_TAP = booleanPreferencesKey("touchpad_two_finger_tap")
 
+    // MacroPad ambient display settings
+    private val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
+    private val KEY_MACROPAD_AMBIENT_BLUR = floatPreferencesKey("macropad_ambient_blur")
+    private val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
+
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
@@ -187,6 +192,16 @@ object SettingsManager {
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
+    // MacroPad ambient display
+    private val _macropadAmbientEnabled = MutableStateFlow(false)
+    val macropadAmbientEnabled: StateFlow<Boolean> = _macropadAmbientEnabled.asStateFlow()
+
+    private val _macropadAmbientBlur = MutableStateFlow(0f)
+    val macropadAmbientBlur: StateFlow<Float> = _macropadAmbientBlur.asStateFlow()
+
+    private val _macropadAmbientDim = MutableStateFlow(0.3f)
+    val macropadAmbientDim: StateFlow<Float> = _macropadAmbientDim.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -232,6 +247,9 @@ object SettingsManager {
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
+                _macropadAmbientEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
+                _macropadAmbientBlur.value = prefs[KEY_MACROPAD_AMBIENT_BLUR] ?: 0f
+                _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0.3f
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -445,6 +463,21 @@ object SettingsManager {
     fun setTouchpadTwoFingerTap(value: Boolean) {
         _touchpadTwoFingerTap.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
+    }
+
+    fun setMacropadAmbientEnabled(value: Boolean) {
+        _macropadAmbientEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_ENABLED] = value } }
+    }
+
+    fun setMacropadAmbientBlur(value: Float) {
+        _macropadAmbientBlur.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_BLUR] = value } }
+    }
+
+    fun setMacropadAmbientDim(value: Float) {
+        _macropadAmbientDim.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_DIM] = value } }
     }
 
     /**

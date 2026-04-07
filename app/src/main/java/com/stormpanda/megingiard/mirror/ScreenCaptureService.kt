@@ -20,6 +20,7 @@ import android.view.WindowManager
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -88,7 +89,11 @@ class ScreenCaptureService : Service() {
             presentation.onSurfaceReady = { surface ->
                 currentSurface = surface
                 virtualDisplay?.release()
-                if (AppStateManager.currentMode.value == AppMode.MIRROR) {
+                val mode = AppStateManager.currentMode.value
+                val ambientEnabled = SettingsManager.macropadAmbientEnabled.value
+                val shouldCreateVd = mode == AppMode.MIRROR ||
+                    (mode == AppMode.MACROPAD && ambientEnabled)
+                if (shouldCreateVd) {
                     try {
                         val isFrozen = ScreenCaptureManager.isFrozen.value
                         virtualDisplay = mediaProjection?.createVirtualDisplay(

@@ -85,4 +85,19 @@ object ScreenCaptureManager {
         _isFrozen.value = false
         setFrozenBitmap(null)
     }
+
+    // ── Ambient Display (MacroPad background mirror) ─────────────────────
+
+    private val _ambientFrame = MutableStateFlow<Bitmap?>(null)
+    val ambientFrame: StateFlow<Bitmap?> = _ambientFrame.asStateFlow()
+
+    fun setAmbientFrame(bitmap: Bitmap?) {
+        _ambientFrame.value?.recycle()
+        _ambientFrame.value = bitmap
+    }
+
+    fun clearAmbientFrame() {
+        _ambientFrame.value?.recycle()
+        _ambientFrame.value = null
+    }
 }
