@@ -245,4 +245,17 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_timeline_tick">%1$dms</string>
     <!-- %1$d = start time ms, %2$d = duration ms -->
     <string name="macropad_macro_step_timing">@%1$dms  ⟶  %2$dms</string>
+
+    <!-- MacroPad macro folders -->
+    <string name="macro_folder_unassigned">Unassigned</string>
+    <string name="macro_folder_new">New Folder</string>
+    <string name="macro_folder_rename">Rename Folder</string>
+    <string name="macro_folder_delete">Delete Folder</string>
+    <string name="macro_folder_delete_confirm">All macros in this folder will be moved to &#8220;Unassigned&#8221;.</string>
+    <string name="macro_folder_name_hint">Folder name</string>
+    <string name="macro_folder_move_title">Move to Folder</string>
+    <string name="macro_folder_move_up">Move Up</string>
+    <string name="macro_folder_move_down">Move Down</string>
+    <string name="macro_move_to_folder">Move to Folder…</string>
+    <string name="macro_picker_folder_empty">No macros in this folder</string>
 </resources>

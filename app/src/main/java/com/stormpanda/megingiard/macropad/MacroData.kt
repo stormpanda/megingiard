@@ -85,13 +85,33 @@ sealed class MacroStep {
 fun List<MacroStep>.totalDurationMs(): Long = maxOfOrNull { it.endTimeMs() } ?: 0L
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MacroFolder — a named group for organising macros
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @param id   Stable unique identifier (UUID string).
+ * @param name User-visible folder name.
+ *
+ * Macros without a [Macro.folderId] (or with [folderId] = null) belong to the implicit
+ * "Unassigned" group and are never stored inside a folder object.
+ */
+@Serializable
+data class MacroFolder(
+    val id: String,
+    val name: String,
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Macro — a named sequence of timed steps
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param id    Stable unique identifier (UUID string).
- * @param name  User-visible name shown in editors and on pad buttons.
- * @param steps Ordered list of timed steps; steps may overlap for parallel execution.
+ * @param id       Stable unique identifier (UUID string).
+ * @param name     User-visible name shown in editors and on pad buttons.
+ * @param folderId Optional reference to a [MacroFolder.id]. `null` means the macro is
+ *                 in the implicit "Unassigned" section. Defaults to `null` so that
+ *                 existing saved JSON without this field is deserialized correctly.
+ * @param steps    Ordered list of timed steps; steps may overlap for parallel execution.
  *
  * The data is exported/imported as a standalone JSON array via [kotlinx.serialization].
  */
@@ -99,5 +119,6 @@ fun List<MacroStep>.totalDurationMs(): Long = maxOfOrNull { it.endTimeMs() } ?: 
 data class Macro(
     val id: String,
     val name: String,
+    val folderId: String? = null,
     val steps: List<MacroStep> = emptyList(),
 )
