@@ -4,9 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -52,6 +50,8 @@ import kotlin.math.roundToInt
 // ─────────────────────────────────────────────────────────────────────────────
 
 private val MP_CORNER_RADIUS = 8.dp
+// Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
+internal val MP_SCREEN_PADDING = 4.dp
 
 // Sensitivity of trackpoint drag: px input → mouse delta
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
@@ -90,7 +90,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     }
 
     Box(
-        modifier           = modifier.fillMaxSize().background(colors.appBackground),
+        modifier           = modifier.fillMaxSize().background(colors.appBackground).padding(MP_SCREEN_PADDING),
         contentAlignment   = Alignment.Center,
     ) {
         val p = profile
@@ -141,8 +141,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+                .fillMaxSize()
                 .clip(RoundedCornerShape(MP_CORNER_RADIUS))
                 .background(colors.surface)
                 .border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
@@ -199,6 +198,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                     is PadAction.TrackpointMove,
                                                     is PadAction.MouseLeftClick,
                                                     is PadAction.MouseRightClick -> if (!profile.enableMouse) R.string.macropad_device_disabled_mouse else null
+                                                    is PadAction.Macro           -> if (!profile.enableGamepad) R.string.macropad_device_disabled_gamepad else null
                                                 }
                                                 if (disabledMsgRes != null) {
                                                     Toast.makeText(context, disabledMsgRes, Toast.LENGTH_SHORT).show()
@@ -305,6 +305,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                     is PadAction.TrackpointMove,
                     is PadAction.MouseLeftClick,
                     is PadAction.MouseRightClick             -> !profile.enableMouse
+                    is PadAction.Macro                       -> !profile.enableGamepad
                 }
                 val isPressed = btn.id in pressedIds
                 PadButton(

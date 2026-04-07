@@ -31,6 +31,7 @@ object ShellGamepadInjector {
     private sealed class GamepadCommand {
         data class Button(val down: Boolean, val btnCode: Int) : GamepadCommand()
         data class Hat(val axis: Int, val value: Int) : GamepadCommand()
+        data class Joystick(val axisCode: Int, val value: Int) : GamepadCommand()
     }
 
     @Volatile private var process:      Process?       = null
@@ -111,6 +112,21 @@ object ShellGamepadInjector {
         queue.offer(GamepadCommand.Hat(axis = axis, value = value))
     }
 
+    /**
+     * Sends an analog joystick axis event.
+     * [axisCode]: one of [GamepadKeycodes.ABS_X]=0, [GamepadKeycodes.ABS_Y]=1,
+     *             [GamepadKeycodes.ABS_Z]=2, [GamepadKeycodes.ABS_RZ]=5.
+     * [value]: raw int16 range −32768…+32767.
+     */
+    fun joystick(axisCode: Int, value: Int) {
+        if (!running) return
+        require(axisCode in setOf(GamepadKeycodes.ABS_X, GamepadKeycodes.ABS_Y, GamepadKeycodes.ABS_Z, GamepadKeycodes.ABS_RZ)) {
+            "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)"
+        }
+        require(value in -32768..32767) { "value must be in int16 range -32768..32767" }
+        queue.offer(GamepadCommand.Joystick(axisCode = axisCode, value = value))
+    }
+
     // -------------------------------------------------------------------------
     // Writer thread — no coalescing, every event delivered in order
     // -------------------------------------------------------------------------
@@ -129,8 +145,9 @@ object ShellGamepadInjector {
     private fun send(cmd: GamepadCommand) {
         val w = writer ?: return
         val line = when (cmd) {
-            is GamepadCommand.Button -> "${if (cmd.down) "GD" else "GU"} ${cmd.btnCode}\n"
-            is GamepadCommand.Hat    -> "HD ${cmd.axis} ${cmd.value}\n"
+            is GamepadCommand.Button   -> "${if (cmd.down) "GD" else "GU"} ${cmd.btnCode}\n"
+            is GamepadCommand.Hat      -> "HD ${cmd.axis} ${cmd.value}\n"
+            is GamepadCommand.Joystick -> "JS ${cmd.axisCode} ${cmd.value}\n"
         }
         try {
             w.write(line)

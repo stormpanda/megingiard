@@ -17,6 +17,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,7 +38,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 // Action category enum
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT }
+internal enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO }
 
 internal fun ActionCategory.labelResId(): Int = when (this) {
     ActionCategory.KEYBOARD_KEY   -> R.string.macropad_action_keyboard_key
@@ -45,6 +46,7 @@ internal fun ActionCategory.labelResId(): Int = when (this) {
     ActionCategory.MOUSE_BUTTON   -> R.string.macropad_action_mouse_button
     ActionCategory.SCROLL_WHEEL   -> R.string.macropad_action_scroll_wheel
     ActionCategory.TRACKPOINT     -> R.string.macropad_action_trackpoint
+    ActionCategory.MACRO          -> R.string.macropad_action_macro
 }
 
 internal fun ActionCategory.defaultAction(): PadAction = when (this) {
@@ -53,6 +55,7 @@ internal fun ActionCategory.defaultAction(): PadAction = when (this) {
     ActionCategory.MOUSE_BUTTON   -> PadAction.MouseButton(MouseButton.LEFT)
     ActionCategory.SCROLL_WHEEL   -> PadAction.ScrollWheel
     ActionCategory.TRACKPOINT     -> PadAction.TrackpointMove()
+    ActionCategory.MACRO          -> PadAction.Macro(MacroState.macros.value.firstOrNull()?.id ?: "")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,6 +68,7 @@ internal fun PadAction.categoryResId(): Int = when (this) {
     is PadAction.MouseButton     -> R.string.macropad_action_mouse_button
     is PadAction.ScrollWheel     -> R.string.macropad_action_scroll_wheel
     is PadAction.TrackpointMove  -> R.string.macropad_action_trackpoint
+    is PadAction.Macro           -> R.string.macropad_action_macro
     is PadAction.MouseLeftClick  -> R.string.macropad_action_mouse_button
     is PadAction.MouseRightClick -> R.string.macropad_action_mouse_button
 }
@@ -78,6 +82,10 @@ internal fun PadAction.displayLabel(): String {
         is PadAction.MouseButton     -> context.getString(R.string.macropad_display_mouse_button, button.displayLabel())
         is PadAction.ScrollWheel     -> context.getString(R.string.macropad_display_scroll_wheel)
         is PadAction.TrackpointMove  -> context.getString(R.string.macropad_display_trackpoint)
+        is PadAction.Macro           -> {
+            val macroName = MacroState.macros.value.firstOrNull { it.id == macroId }?.name ?: macroId
+            context.getString(R.string.macropad_display_macro, macroName)
+        }
         is PadAction.MouseLeftClick  -> context.getString(R.string.macropad_display_mouse_button, "Left")
         is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_button, "Right")
     }
@@ -143,6 +151,7 @@ internal fun ActionPicker(
                     ActionCategory.MOUSE_BUTTON,
                     ActionCategory.SCROLL_WHEEL,
                     ActionCategory.TRACKPOINT     -> enableMouse
+                    ActionCategory.MACRO          -> MacroState.macros.value.isNotEmpty()
                 }
                 if (catEnabled) {
                     DropdownMenuItem(
@@ -160,6 +169,7 @@ internal fun ActionPicker(
             is PadAction.KeyboardKey    -> KeyboardKeyPicker(current, accentColor, onChange)
             is PadAction.GamepadButton  -> GamepadButtonPicker(current, accentColor, onChange)
             is PadAction.MouseButton    -> MouseButtonPicker(current, accentColor, onChange)
+            is PadAction.Macro          -> MacroPicker(current, accentColor, onChange)
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
             is PadAction.MouseLeftClick,
@@ -277,6 +287,65 @@ internal fun GamepadButtonPicker(
                     text = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else colors.onSurface, fontSize = 14.sp) },
                     onClick = { onChange(PadAction.GamepadButton(preset.code, preset.shortLabel)); expanded = false },
                 )
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Macro picker — lists global macros from MacroState
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+internal fun MacroPicker(
+    current:     PadAction.Macro,
+    accentColor: Color,
+    onChange:    (PadAction) -> Unit,
+) {
+    val macros   by MacroState.macros.collectAsState()
+    var expanded by remember { mutableStateOf(false) }
+    val colors   = LocalAppColors.current
+
+    val currentMacroName = macros.firstOrNull { it.id == current.macroId }?.name
+        ?: stringResource(R.string.macropad_macro_picker_unknown)
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(currentMacroName, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+        }
+
+        DropdownMenu(
+            expanded         = expanded,
+            onDismissRequest = { expanded = false },
+            modifier         = Modifier.background(colors.surface),
+        ) {
+            if (macros.isEmpty()) {
+                DropdownMenuItem(
+                    text    = { Text(stringResource(R.string.macropad_macro_picker_no_macros), color = colors.onSurfaceSecondary, fontSize = 14.sp) },
+                    onClick = { expanded = false },
+                )
+            } else {
+                macros.forEach { macro ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                macro.name,
+                                color    = if (macro.id == current.macroId) accentColor else colors.onSurface,
+                                fontSize = 14.sp,
+                            )
+                        },
+                        onClick = { onChange(PadAction.Macro(macro.id)); expanded = false },
+                    )
+                }
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,9 +15,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -54,14 +55,23 @@ internal fun ButtonEditDialog(
     enableKeyboard: Boolean = true,
     enableGamepad:  Boolean = true,
     enableMouse:    Boolean = true,
+    initialAction:  PadAction? = null,  // pre-set action for new buttons; ignored if button != null
     onConfirm:      (PadButton) -> Unit,
     onDismiss:      () -> Unit,
+    modifier:       Modifier = Modifier,
 ) {
-    var label         by remember { mutableStateOf(button?.label ?: "") }
+    val initAction = button?.action
+        ?: initialAction
+        ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
+    val initLabel = button?.label ?: when (val ia = initialAction) {
+        is PadAction.Macro -> MacroState.macros.value.firstOrNull { it.id == ia.macroId }?.name ?: ""
+        else               -> ""
+    }
+    var label         by remember { mutableStateOf(initLabel) }
     var buttonShape   by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
     var buttonSize    by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
     var showSizeMenu  by remember { mutableStateOf(false) }
-    var action        by remember { mutableStateOf(button?.action ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")) }
+    var action        by remember { mutableStateOf(initAction) }
     val colors        = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -74,26 +84,84 @@ internal fun ButtonEditDialog(
             label = ""
             buttonShape = ButtonShape.CIRCLE
         }
+        if (newAction is PadAction.Macro && label.isBlank()) {
+            val macroName = MacroState.macros.value.firstOrNull { it.id == newAction.macroId }?.name
+            if (macroName != null) label = macroName
+        }
     }
 
-    val isConfirmEnabled = label.isNotBlank() || action is PadAction.ScrollWheel || action is PadAction.TrackpointMove
+    val isConfirmEnabled = when {
+        action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
+        action is PadAction.Macro -> label.isNotBlank() &&
+            MacroState.macros.value.any { it.id == (action as PadAction.Macro).macroId }
+        else -> label.isNotBlank()
+    }
 
-    AlertDialog(
-        containerColor   = colors.surface,
-        onDismissRequest = onDismiss,
-        title = {
+    // ── Full-screen layout (no AlertDialog — stays in same window for IME) ─────────────
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.appBackground),
+    ) {
+        // ── Top bar ────────────────────────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(colors.surface)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+            }
             Text(
-                text  = if (button == null) stringResource(R.string.macropad_editor_add_button)
-                        else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
-                        else button.label,
-                color = colors.onSurface,
+                text = if (button == null) stringResource(R.string.macropad_editor_add_button)
+                       else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
+                       else button.label,
+                color      = colors.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                modifier   = Modifier.weight(1f),
+                textAlign  = TextAlign.Center,
             )
-        },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            TextButton(
+                onClick = {
+                    if (isConfirmEnabled) {
+                        val result = button?.copy(
+                            label       = label,
+                            buttonShape = buttonShape,
+                            buttonSize  = buttonSize,
+                            action      = action,
+                        ) ?: PadButton(
+                            id          = UUID.randomUUID().toString(),
+                            label       = label,
+                            posX        = 0.5f,
+                            posY        = 0.5f,
+                            buttonShape = buttonShape,
+                            buttonSize  = buttonSize,
+                            action      = action,
+                        )
+                        onConfirm(result)
+                    }
+                },
+                enabled = isConfirmEnabled,
             ) {
+                Text(
+                    stringResource(R.string.macropad_editor_done),
+                    color      = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
+        // ── Scrollable form body ──────────────────────────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
                 // Label input and shape — hidden for ScrollWheel and TrackpointMove
                 if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
                     OutlinedTextField(
@@ -228,41 +296,8 @@ internal fun ButtonEditDialog(
                     onChange       = ::onActionChanged,
                 )
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (isConfirmEnabled) {
-                        val result = button?.copy(
-                            label       = label,
-                            buttonShape = buttonShape,
-                            buttonSize  = buttonSize,
-                            action      = action,
-                        ) ?: PadButton(
-                            id          = UUID.randomUUID().toString(),
-                            label       = label,
-                            posX        = 0.5f,
-                            posY        = 0.5f,
-                            buttonShape = buttonShape,
-                            buttonSize  = buttonSize,
-                            action      = action,
-                        )
-                        onConfirm(result)
-                    }
-                },
-                enabled = isConfirmEnabled,
-            ) {
-                Text(stringResource(R.string.macropad_editor_done), color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-        },
-    )
-}
-
+        }
+    }
 // ─────────────────────────────────────────────────────────────────────────────
 // Section label helper
 // ─────────────────────────────────────────────────────────────────────────────
