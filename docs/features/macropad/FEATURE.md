@@ -28,7 +28,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - Buttons MUST be repositioned by **drag** inside the editor canvas.
 - The editor provides a **grid snap overlay** that can be toggled on and off at any time during layout editing. Two grid modes are available:
   - **Rectangular** — vertical and horizontal lines spaced at 30 dp (half the 60 dp button unit), forming a uniform grid. Crossing points are the snap targets.
-  - **Radial** — concentric circles (centred on the canvas) combined with horizontal lines, both spaced at 30 dp. Snap targets are the intersections of circles with horizontal lines, enabling accurate circular button arrangements.
+  - **Radial** — concentric circles (centred on the canvas) spaced at 30 dp, with **evenly distributed snap points** along each circle. The number of snap points per circle scales with its circumference (roughly one point per 60 dp of arc length, minimum 4). A dedicated snap point sits at the exact centre of the canvas. No horizontal or vertical lines are shown.
 - The grid mode cycles **Off → Rectangular → Radial → Off** via a single toggle button overlaid on the canvas (top-end corner).
 - When a grid is active, dragged buttons **magnetically snap** to the nearest grid intersection point. When the grid is off, buttons position freely.
 - Grid mode is **local editor state** — it is not persisted and resets to Off each time the editor opens.
@@ -228,39 +228,39 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 The editor canvas supports an optional snap grid rendered behind the draggable buttons. Grid state (`GridMode` enum: `OFF`, `RECTANGULAR`, `RADIAL`) is local to the `EditorBody` composable and not persisted.
 
-**Rendering** — A `Canvas` composable in `PadCanvas` draws the grid lines when mode ≠ `OFF`:
+**Rendering** — A `Canvas` composable in `PadCanvas` draws the grid when mode ≠ `OFF`:
 
 - **Rectangular:** vertical and horizontal lines at every `PC_GRID_STEP_DP` (30 dp) increment. Accent colour at 12 % alpha, 1 px stroke.
-- **Radial:** concentric circles centred at `(0.5, 0.5)` with radii stepping by 30 dp, plus horizontal lines at the same spacing. Same stroke style.
+- **Radial:** concentric circles centred at `(0.5, 0.5)` with radii stepping by 30 dp. Each circle has evenly-distributed snap-point dots; the count is `max(4, round(circumference / buttonUnit))` via `radialPointCount()`. A larger dot marks the canvas centre. No horizontal/vertical lines.
 
 **Snapping** — During drag, the raw normalised position is passed through `snapPosition()` which delegates to `snapRectangular()` or `snapRadial()`:
 
 - **`snapRectangular`** rounds both pixel coordinates to the nearest grid step (integer multiples of `gridStepPx`).
-- **`snapRadial`** snaps the vertical coordinate to the nearest horizontal grid line, snaps the distance-from-centre to the nearest circle radius, then computes the X-axis intersection of that circle with that horizontal line. The side closest to the raw position is chosen. If the horizontal line lies outside the circle (no valid intersection), it falls back to rectangular snapping.
+- **`snapRadial`** snaps the distance-from-centre to the nearest circle radius, then snaps the angle to the nearest of the circle's evenly-distributed points. The centre point is always considered as a competing candidate; whichever snap target is closest to the raw position wins.
 
 **Toggle** — A small `IconButton` in the top-end corner of the canvas cycles the grid mode. Icons: `GridOff` (off), `Grid4x4` (rectangular), `TripOrigin` (radial). The button has a semi-transparent surface background for contrast.
 
 ### Source Files
 
-| File                         | Responsibility                                                                                                             |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                     |
-| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay |
+| File                         | Responsibility                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                                           |
+| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay  |
 | `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`) |
-| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                               |
-| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                      |
-| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                  |
-| `MacroData.kt`               | Macro data model: `Macro`, `MacroStep` sealed class, `JoystickStick` enum                                                  |
-| `MacroState.kt`              | Singleton global macro library: CRUD methods, loaded by `SettingsManager`                                                  |
-| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                         |
-| `MacroListEditor.kt`         | Full-screen macro library editor (list view + inline navigation to timeline)                                               |
-| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                      |
-| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                     |
-| `PadActionPicker.kt`         | Action-type picker for button editing, including `MacroPicker` for Macro type                                              |
-| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                              |
-| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                |
-| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                      |
-| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                            |
-| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                    |
-| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                |
-| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                             |
+| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                     |
+| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                                            |
+| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                        |
+| `MacroData.kt`               | Macro data model: `Macro`, `MacroStep` sealed class, `JoystickStick` enum                                                                        |
+| `MacroState.kt`              | Singleton global macro library: CRUD methods, loaded by `SettingsManager`                                                                        |
+| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                                               |
+| `MacroListEditor.kt`         | Full-screen macro library editor (list view + inline navigation to timeline)                                                                     |
+| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                                            |
+| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                                           |
+| `PadActionPicker.kt`         | Action-type picker for button editing, including `MacroPicker` for Macro type                                                                    |
+| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                    |
+| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                      |
+| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                            |
+| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                  |
+| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                          |
+| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                      |
+| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                   |

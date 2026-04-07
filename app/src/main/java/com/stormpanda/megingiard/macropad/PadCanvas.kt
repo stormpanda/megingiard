@@ -48,8 +48,12 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlin.math.abs
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.round
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +73,12 @@ private const val PC_GRID_LINE_ALPHA    = 0.12f
 private const val PC_GRID_STROKE_PX     = 1f
 private const val PC_RADIAL_CENTER_X    = 0.5f
 private const val PC_RADIAL_CENTER_Y    = 0.5f
+
+// Radial grid: snap points evenly distributed along each circle
+private val PC_RADIAL_DOT_RADIUS    = 2.dp
+private val PC_RADIAL_CENTER_DOT    = 3.dp
+private const val PC_RADIAL_DOT_ALPHA   = 0.35f
+private const val PC_RADIAL_MIN_POINTS  = 4
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid mode
@@ -276,6 +286,10 @@ private fun DraggableButton(
 
 @Composable
 private fun GridOverlay(gridMode: GridMode, gridStepPx: Float, gridColor: Color) {
+    val density = LocalDensity.current
+    val dotRadiusPx  = with(density) { PC_RADIAL_DOT_RADIUS.toPx() }
+    val centerDotPx  = with(density) { PC_RADIAL_CENTER_DOT.toPx() }
+    val buttonUnitPx = with(density) { ED_BUTTON_UNIT_DP.toPx() }
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
@@ -302,19 +316,27 @@ private fun GridOverlay(gridMode: GridMode, gridStepPx: Float, gridColor: Color)
                 val cx = w * PC_RADIAL_CENTER_X
                 val cy = h * PC_RADIAL_CENTER_Y
                 val maxRadius = maxOf(w, h) / 2f
+                val dotRadius = dotRadiusPx
+                val centerDotRadius = centerDotPx
+                val dotColor = gridColor.copy(alpha = PC_RADIAL_DOT_ALPHA)
 
-                // Concentric circles
+                // Concentric circles with evenly-distributed snap dots
                 var r = gridStepPx
                 while (r <= maxRadius) {
                     drawCircle(gridColor, radius = r, center = Offset(cx, cy), style = Stroke(PC_GRID_STROKE_PX))
+                    val n = radialPointCount(r, buttonUnitPx)
+                    val angleStep = (2.0 * PI / n).toFloat()
+                    for (i in 0 until n) {
+                        val angle = i * angleStep
+                        val px = cx + r * cos(angle)
+                        val py = cy + r * sin(angle)
+                        drawCircle(dotColor, radius = dotRadius, center = Offset(px, py))
+                    }
                     r += gridStepPx
                 }
-                // Horizontal lines (same as rectangular)
-                var y = gridStepPx
-                while (y < h) {
-                    drawLine(gridColor, Offset(0f, y), Offset(w, y), strokeWidth = PC_GRID_STROKE_PX)
-                    y += gridStepPx
-                }
+
+                // Center snap point
+                drawCircle(dotColor, radius = centerDotRadius, center = Offset(cx, cy))
             }
         }
     }
@@ -357,15 +379,9 @@ private fun snapRectangular(
 }
 
 /**
- * Snap to the nearest intersection of a concentric circle with a horizontal grid line.
- *
- * 1. Find the nearest horizontal grid line (same as rectangular Y-snap).
- * 2. Find the nearest circle (snap distance from center to nearest radius step).
- * 3. Compute x-intersection of that circle with that horizontal line.
- * 4. Pick the side (left/right of center) closest to the raw position.
- *
- * Falls back to the rectangular snap if no valid intersection exists (horizontal
- * line is outside the circle).
+ * Snap to the nearest evenly-distributed point on a concentric circle, or to the
+ * center point. Each circle's point count scales with its circumference relative
+ * to the button unit size.
  */
 private fun snapRadial(
     rawNormX: Float,
@@ -379,32 +395,57 @@ private fun snapRadial(
     val cx = canvasW * PC_RADIAL_CENTER_X
     val cy = canvasH * PC_RADIAL_CENTER_Y
 
-    // Snap Y to nearest horizontal grid line
-    val snappedPxY = (rawPxY / gridStepPx).roundToInt() * gridStepPx
-
-    // Snap radius to nearest circle
     val dx = rawPxX - cx
     val dy = rawPxY - cy
     val rawRadius = sqrt(dx * dx + dy * dy)
-    val snappedRadius = ((rawRadius / gridStepPx).roundToInt() * gridStepPx).coerceAtLeast(gridStepPx)
 
-    // Compute x-intersection: x² = r² - (snappedY - cy)²
-    val dySnapped = snappedPxY - cy
-    val xSqr = snappedRadius * snappedRadius - dySnapped * dySnapped
+    // Grid step is always half the button unit
+    val buttonUnitPx = gridStepPx * 2f
 
-    return if (xSqr >= 0f) {
-        val xOffset = sqrt(xSqr)
-        // Choose intersection side closest to raw position
-        val candidateLeft  = cx - xOffset
-        val candidateRight = cx + xOffset
-        val snappedPxX = if (abs(rawPxX - candidateLeft) < abs(rawPxX - candidateRight)) {
-            candidateLeft
-        } else {
-            candidateRight
-        }
-        (snappedPxX / canvasW) to (snappedPxY / canvasH)
-    } else {
-        // Horizontal line doesn't intersect the circle — fall back to rectangular
-        snapRectangular(rawNormX, rawNormY, canvasW, canvasH, gridStepPx)
+    // Snap radius to nearest circle (or 0 = center)
+    val snappedRadius = (round(rawRadius / gridStepPx) * gridStepPx)
+
+    // Center snap
+    if (snappedRadius < gridStepPx * 0.5f) {
+        return (cx / canvasW) to (cy / canvasH)
     }
+
+    // Determine how many points sit on this circle
+    val n = radialPointCount(snappedRadius, buttonUnitPx)
+    val angleStep = 2.0 * PI / n
+
+    // Snap to nearest point by angle
+    val rawAngle = atan2(dy.toDouble(), dx.toDouble())       // −π..π
+    val rawAnglePos = if (rawAngle < 0) rawAngle + 2 * PI else rawAngle  // 0..2π
+    val nearestIndex = round(rawAnglePos / angleStep).toInt() % n
+    val snappedAngle = nearestIndex * angleStep
+
+    val snappedPxX = cx + snappedRadius * cos(snappedAngle).toFloat()
+    val snappedPxY = cy + snappedRadius * sin(snappedAngle).toFloat()
+
+    // Also consider the center point — pick whichever is closer
+    val distToCircle = dist(rawPxX, rawPxY, snappedPxX, snappedPxY)
+    val distToCenter = dist(rawPxX, rawPxY, cx, cy)
+    return if (distToCenter < distToCircle) {
+        (cx / canvasW) to (cy / canvasH)
+    } else {
+        (snappedPxX / canvasW) to (snappedPxY / canvasH)
+    }
+}
+
+/** Euclidean distance between two points. */
+private fun dist(x1: Float, y1: Float, x2: Float, y2: Float): Float {
+    val dx = x1 - x2
+    val dy = y1 - y2
+    return sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * How many evenly-distributed snap points to place on a circle of the given radius.
+ * Scales with circumference — roughly one point per [buttonUnitPx] of arc length,
+ * with a minimum of [PC_RADIAL_MIN_POINTS].
+ */
+private fun radialPointCount(radiusPx: Float, buttonUnitPx: Float): Int {
+    val circumference = (2.0 * PI * radiusPx).toFloat()
+    return maxOf(PC_RADIAL_MIN_POINTS, round(circumference / buttonUnitPx).toInt())
 }
