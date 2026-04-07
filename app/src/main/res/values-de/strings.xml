@@ -196,6 +196,52 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Abschlusstext in der Medienleerszene -->
     <string name="media_no_media_hint">Starte eine Medienwiedergabe auf dem oberen Bildschirm, um sie hier zu steuern.</string>
+
+    <!-- MacroPad-Aktionstyp und Anzeigetext -->
+    <string name="macropad_action_macro">Makro</string>
+    <string name="macropad_display_macro">Makro: %s</string>
+
+    <!-- MacroPad-Picker -->
+    <string name="macropad_macro_picker_no_macros">Keine Makros verfügbar</string>
+    <string name="macropad_macro_picker_unknown">Unbekanntes Makro</string>
+
+    <!-- MacroPad-Editor-Toolbar -->
+    <string name="macropad_editor_manage_macros">Makros…</string>
+    <string name="macropad_editor_add_macro_button">Makro-Taste hinzufügen</string>
+
+    <!-- Makro-Listenverwaltung -->
+    <string name="macropad_macro_list_title">Makros</string>
+    <string name="macropad_macro_list_new">Neues Makro</string>
+    <string name="macropad_macro_list_empty">Noch keine Makros. Tippe auf +, um eines zu erstellen.</string>
+    <!-- %1$d = Anzahl Schritte, %2$d = Gesamtdauer ms -->
+    <string name="macropad_macro_list_steps">%1$d Schritte • %2$d ms</string>
+    <string name="macropad_macro_default_name">Neues Makro</string>
+    <string name="macropad_macro_delete_title">Makro löschen</string>
+    <string name="macropad_macro_delete_confirm">Dieses Makro löschen? Pad-Tasten, die es verwenden, funktionieren danach nicht mehr.</string>
+    <!-- %d = Anzahl referenzierender Tasten -->
+    <string name="macropad_macro_delete_confirm_referenced">Dieses Makro wird von %d Taste(n) verwendet. Trotzdem löschen?</string>
+    <string name="macropad_macro_duplicate">Makro duplizieren</string>
+    <string name="macropad_macro_editor_save">Speichern</string>
+    <string name="macropad_macro_editor_cancel">Abbrechen</string>
+
+    <!-- Makro-Schritte -->
+    <string name="macropad_macro_add_step">Schritt hinzufügen</string>
+    <string name="macropad_macro_no_steps">Noch keine Schritte. Tippe auf +, um einen hinzuzufügen.</string>
+    <string name="macropad_macro_step_delete_title">Schritt löschen</string>
+    <string name="macropad_macro_step_delete_confirm">Diesen Schritt aus dem Makro entfernen?</string>
+    <string name="macropad_macro_step_new">Schritt hinzufügen</string>
+    <string name="macropad_macro_step_edit">Schritt bearbeiten</string>
+    <string name="macropad_macro_step_type_gamepad">Gamepad-Taste</string>
+    <string name="macropad_macro_step_type_joystick">Joystick</string>
+    <string name="macropad_macro_step_type_dpad">D-Pad</string>
+    <string name="macropad_macro_step_start_ms">Startzeit (ms)</string>
+    <string name="macropad_macro_step_duration_ms">Dauer (ms)</string>
+    <string name="macropad_macro_step_stick_left">Linker Stick</string>
+    <string name="macropad_macro_step_stick_right">Rechter Stick</string>
+    <!-- %.1f = Stärke des Joystick-Ausschlags -->
+    <string name="macropad_macro_step_magnitude">Stärke: %.1f</string>
+    <string name="macropad_macro_step_direction">Richtung</string>
+
     <!-- Makro-Duplikat-Name: %1$s = originaler Makro-Name -->
     <string name="macropad_macro_copy_name">%1$s Kopie</string>
     <!-- Zeitachsen-Tick-Label: %1$d = Zeit in ms -->

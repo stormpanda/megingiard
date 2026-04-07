@@ -248,6 +248,8 @@ object SettingsManager {
                         macropadJson.decodeFromString<List<Macro>>(macrosJson)
                     }.getOrElse { emptyList() }
                     MacroState.loadFrom(macros)
+                } else {
+                    MacroState.loadFrom(emptyList())
                 }
             }
         }
