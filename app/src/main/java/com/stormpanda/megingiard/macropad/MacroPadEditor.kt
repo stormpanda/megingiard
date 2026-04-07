@@ -728,6 +728,7 @@ private fun ButtonListItem(
         is PadAction.MouseLeftClick,
         is PadAction.MouseRightClick             -> !enableMouse
         is PadAction.Macro                       -> !enableGamepad
+        is PadAction.AmbientPeek                 -> false
     }
 
     Row(
