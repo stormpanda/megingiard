@@ -203,6 +203,11 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_manage_macros">Macros…</string>
     <string name="macropad_editor_add_macro_button">Add Macro Button</string>
 
+    <!-- MacroPad editor grid -->
+    <string name="macropad_editor_grid_off">Grid off</string>
+    <string name="macropad_editor_grid_rectangular">Rectangular grid</string>
+    <string name="macropad_editor_grid_radial">Radial grid</string>
+
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>
     <string name="macropad_macro_list_new">New Macro</string>

@@ -24,6 +24,9 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.GridOff
+import androidx.compose.material.icons.outlined.Grid4x4
+import androidx.compose.material.icons.outlined.TripOrigin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -73,6 +76,8 @@ import kotlinx.coroutines.launch
 private val ED_TOP_BAR_HEIGHT = 56.dp
 private val ED_PADDING        = 16.dp
 private val ED_ITEM_PADDING   = 12.dp
+private val ED_GRID_TOGGLE_SIZE = 36.dp
+private val ED_GRID_TOGGLE_MARGIN = 8.dp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -389,6 +394,7 @@ private fun EditorBody(
     modifier:         Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    var gridMode by remember { mutableStateOf(GridMode.OFF) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -431,8 +437,44 @@ private fun EditorBody(
             )
         }
 
-        // Pad canvas — full width, no horizontal padding so it matches use-mode
-        PadCanvas(profile = profile, accentColor = accentColor)
+        // Pad canvas with grid toggle overlay — full width, no horizontal padding so it matches use-mode
+        Box {
+            PadCanvas(profile = profile, accentColor = accentColor, gridMode = gridMode)
+
+            // Grid toggle button — top-end corner of canvas
+            val gridIcon = when (gridMode) {
+                GridMode.OFF         -> Icons.Outlined.GridOff
+                GridMode.RECTANGULAR -> Icons.Outlined.Grid4x4
+                GridMode.RADIAL      -> Icons.Outlined.TripOrigin
+            }
+            val gridCd = when (gridMode) {
+                GridMode.OFF         -> stringResource(R.string.macropad_editor_grid_off)
+                GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular)
+                GridMode.RADIAL      -> stringResource(R.string.macropad_editor_grid_radial)
+            }
+            IconButton(
+                onClick = {
+                    gridMode = when (gridMode) {
+                        GridMode.OFF         -> GridMode.RECTANGULAR
+                        GridMode.RECTANGULAR -> GridMode.RADIAL
+                        GridMode.RADIAL      -> GridMode.OFF
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(ED_GRID_TOGGLE_MARGIN)
+                    .size(ED_GRID_TOGGLE_SIZE)
+                    .clip(CircleShape)
+                    .background(colors.surface.copy(alpha = 0.8f)),
+            ) {
+                Icon(
+                    gridIcon,
+                    contentDescription = gridCd,
+                    tint = if (gridMode == GridMode.OFF) colors.onSurfaceSecondary else accentColor,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
 
         Column(
             modifier = Modifier.padding(horizontal = ED_PADDING),

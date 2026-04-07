@@ -153,6 +153,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_cancel">Abbrechen</string>
     <string name="macropad_editor_confirm">Löschen</string>
 
+    <!-- MacroPad editor grid -->
+    <string name="macropad_editor_grid_off">Raster aus</string>
+    <string name="macropad_editor_grid_rectangular">Rechteckiges Raster</string>
+    <string name="macropad_editor_grid_radial">Radiales Raster</string>
+
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Tastaturtaste</string>
     <string name="macropad_action_gamepad_button">Gamepad-Taste</string>

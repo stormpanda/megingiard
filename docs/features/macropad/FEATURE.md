@@ -26,6 +26,12 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - Button positions are stored as **normalised coordinates** [0.0, 1.0] relative to the pad dimensions, so the layout scales correctly at any pad size.
 - Each button has a user-defined **label**, a **shape** (circle or square), a **size weight** (1.0 = default unit size), and an **action** (see FR-P3).
 - Buttons MUST be repositioned by **drag** inside the editor canvas.
+- The editor provides a **grid snap overlay** that can be toggled on and off at any time during layout editing. Two grid modes are available:
+  - **Rectangular** — vertical and horizontal lines spaced at 30 dp (half the 60 dp button unit), forming a uniform grid. Crossing points are the snap targets.
+  - **Radial** — concentric circles (centred on the canvas) combined with horizontal lines, both spaced at 30 dp. Snap targets are the intersections of circles with horizontal lines, enabling accurate circular button arrangements.
+- The grid mode cycles **Off → Rectangular → Radial → Off** via a single toggle button overlaid on the canvas (top-end corner).
+- When a grid is active, dragged buttons **magnetically snap** to the nearest grid intersection point. When the grid is off, buttons position freely.
+- Grid mode is **local editor state** — it is not persisted and resets to Off each time the editor opens.
 
 ### FR-P3: Action Types
 
@@ -218,12 +224,29 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 `MacroPadEditor` is opened as a full-screen `Dialog(usePlatformDefaultWidth = false)` from `MacroPadToolSettings` (shown inside `ToolSettingsPanel`). Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor canvas is scrollable (it is embedded in a `verticalScroll` Column), so the full-size canvas can extend beyond the visible area of the editor's content region.
 
+### Grid Snap Overlay
+
+The editor canvas supports an optional snap grid rendered behind the draggable buttons. Grid state (`GridMode` enum: `OFF`, `RECTANGULAR`, `RADIAL`) is local to the `EditorBody` composable and not persisted.
+
+**Rendering** — A `Canvas` composable in `PadCanvas` draws the grid lines when mode ≠ `OFF`:
+
+- **Rectangular:** vertical and horizontal lines at every `PC_GRID_STEP_DP` (30 dp) increment. Accent colour at 12 % alpha, 1 px stroke.
+- **Radial:** concentric circles centred at `(0.5, 0.5)` with radii stepping by 30 dp, plus horizontal lines at the same spacing. Same stroke style.
+
+**Snapping** — During drag, the raw normalised position is passed through `snapPosition()` which delegates to `snapRectangular()` or `snapRadial()`:
+
+- **`snapRectangular`** rounds both pixel coordinates to the nearest grid step (integer multiples of `gridStepPx`).
+- **`snapRadial`** snaps the vertical coordinate to the nearest horizontal grid line, snaps the distance-from-centre to the nearest circle radius, then computes the X-axis intersection of that circle with that horizontal line. The side closest to the raw position is chosen. If the horizontal line lies outside the circle (no valid intersection), it falls back to rectangular snapping.
+
+**Toggle** — A small `IconButton` in the top-end corner of the canvas cycles the grid mode. Icons: `GridOff` (off), `Grid4x4` (rectangular), `TripOrigin` (radial). The button has a semi-transparent surface background for contrast.
+
 ### Source Files
 
 | File                         | Responsibility                                                                                                             |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                     |
-| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button |
+| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay |
+| `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`) |
 | `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                               |
 | `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                      |
 | `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                  |
