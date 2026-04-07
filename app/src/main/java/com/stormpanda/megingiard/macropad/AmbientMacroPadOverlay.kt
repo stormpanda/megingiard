@@ -278,6 +278,9 @@ private fun DrawScope.drawLetterboxVignette(
 ) {
     val innerFrac = (1f - visibleArea) / 2f   // fraction of height that is dark band (each side)
     if (innerFrac <= 0f) return
+    // When visibleArea=0 both gradient stops land at 0.5f (same position) → Brush crash.
+    // Full-coverage case: just fill solid.
+    if (innerFrac >= 0.5f) { drawRect(color = vignetteColor.copy(alpha = opacity)); return }
     val transitionFrac = innerFrac * (1f - transition)
     val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
     val vColor = vignetteColor.copy(alpha = opacity)
@@ -304,6 +307,9 @@ private fun DrawScope.drawPillarboxVignette(
 ) {
     val innerFrac = (1f - visibleArea) / 2f   // fraction of width that is dark band (each side)
     if (innerFrac <= 0f) return
+    // When visibleArea=0 both gradient stops land at 0.5f (same position) → Brush crash.
+    // Full-coverage case: just fill solid.
+    if (innerFrac >= 0.5f) { drawRect(color = vignetteColor.copy(alpha = opacity)); return }
     val transitionFrac = innerFrac * (1f - transition)
     val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
     val vColor = vignetteColor.copy(alpha = opacity)

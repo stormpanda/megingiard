@@ -92,12 +92,16 @@ object ScreenCaptureManager {
     val ambientFrame: StateFlow<Bitmap?> = _ambientFrame.asStateFlow()
 
     fun setAmbientFrame(bitmap: Bitmap?) {
-        _ambientFrame.value?.recycle()
+        // Do NOT recycle the previous bitmap here. It may still be referenced by a
+        // Compose display list that the hardware RenderThread is currently rendering.
+        // Recycling it on the main thread while the RenderThread reads its pixel data
+        // causes a "Canvas: trying to use a recycled bitmap" crash.
+        // The old bitmap loses its only strong reference here and will be collected by GC.
         _ambientFrame.value = bitmap
     }
 
     fun clearAmbientFrame() {
-        _ambientFrame.value?.recycle()
+        // Same reasoning as setAmbientFrame: no immediate recycle.
         _ambientFrame.value = null
     }
 }
