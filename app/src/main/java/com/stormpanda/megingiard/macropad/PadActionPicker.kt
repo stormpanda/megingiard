@@ -17,6 +17,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -313,14 +314,21 @@ internal fun MacroPicker(
     val macros          by MacroState.macros.collectAsState()
     val folders         by MacroState.folders.collectAsState()
     val colors          = LocalAppColors.current
-    val unassignedLabel = stringResource(R.string.macro_folder_unassigned)
-    val folderEmptyLabel = stringResource(R.string.macro_picker_folder_empty)
+    val unassignedLabel = stringResource(R.string.macropad_folder_unassigned)
+    val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
 
-    // Derive the selected folder from the current macro; reset when macroId changes
-    val initialFolderId = remember(current.macroId) {
-        macros.firstOrNull { it.id == current.macroId }?.folderId
+    // selectedFolderId is derived from the macro's persisted folderId once macros load.
+    // A LaunchedEffect keeps it in sync when macros arrive from DataStore.
+    // Once the user explicitly picks a folder, userHasChosenFolder prevents the effect
+    // from overwriting that deliberate choice.
+    var userHasChosenFolder by remember(current.macroId) { mutableStateOf(false) }
+    var selectedFolderId    by remember(current.macroId) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(current.macroId, macros) {
+        if (!userHasChosenFolder) {
+            selectedFolderId = macros.firstOrNull { it.id == current.macroId }?.folderId
+        }
     }
-    var selectedFolderId by remember(current.macroId) { mutableStateOf(initialFolderId) }
 
     val macrosInFolder = remember(macros, selectedFolderId) {
         macros.filter { it.folderId == selectedFolderId }
@@ -330,7 +338,7 @@ internal fun MacroPicker(
     var macroExpanded  by remember { mutableStateOf(false) }
 
     // Folder display list: (label, folderId)
-    val folderItems = remember(folders) {
+    val folderItems = remember(folders, unassignedLabel) {
         buildList {
             add(unassignedLabel to null as String?)
             folders.forEach { f -> add(f.name to f.id) }
@@ -365,8 +373,9 @@ internal fun MacroPicker(
                     DropdownMenuItem(
                         text    = { Text(label, color = if (fId == selectedFolderId) accentColor else colors.onSurface, fontSize = 14.sp) },
                         onClick = {
-                            selectedFolderId = fId
-                            folderExpanded   = false
+                            userHasChosenFolder = true
+                            selectedFolderId    = fId
+                            folderExpanded      = false
                             val first = macros.filter { it.folderId == fId }.firstOrNull()
                             if (first != null) onChange(PadAction.Macro(first.id))
                         },

@@ -178,7 +178,7 @@ private fun MacroListView(
     val macros         by MacroState.macros.collectAsState()
     val folders        by MacroState.folders.collectAsState()
     val colors         = LocalAppColors.current
-    val unassignedLabel = stringResource(R.string.macro_folder_unassigned)
+    val unassignedLabel = stringResource(R.string.macropad_folder_unassigned)
 
     // Section expand/collapse: null key = "Unassigned"; absent = expanded
     val expandedSections = remember { mutableStateMapOf<String?, Boolean>() }
@@ -256,7 +256,7 @@ private fun MacroListView(
             IconButton(onClick = { showNewFolder = true }) {
                 Icon(
                     Icons.Filled.CreateNewFolder,
-                    contentDescription = stringResource(R.string.macro_folder_new),
+                    contentDescription = stringResource(R.string.macropad_folder_new),
                     tint               = accentColor,
                 )
             }
@@ -371,7 +371,7 @@ private fun MacroListView(
         val macroId        = movingMacroId!!
         val currentFolderId = macros.firstOrNull { it.id == macroId }?.folderId
         FolderPickerDialog(
-            title            = stringResource(R.string.macro_folder_move_title),
+            title            = stringResource(R.string.macropad_folder_move_title),
             folders          = folders,
             selectedFolderId = currentFolderId,
             unassignedLabel  = unassignedLabel,
@@ -385,8 +385,8 @@ private fun MacroListView(
         val fId         = renamingFolderId!!
         val currentName = folders.firstOrNull { it.id == fId }?.name ?: ""
         TextInputDialog(
-            title       = stringResource(R.string.macro_folder_rename),
-            hint        = stringResource(R.string.macro_folder_name_hint),
+            title       = stringResource(R.string.macropad_folder_rename),
+            hint        = stringResource(R.string.macropad_folder_name_hint),
             initialValue = currentName,
             accentColor = accentColor,
             onConfirm   = { name ->
@@ -402,8 +402,8 @@ private fun MacroListView(
         AlertDialog(
             containerColor   = colors.surface,
             onDismissRequest = { deletingFolderId = null },
-            title   = { Text(stringResource(R.string.macro_folder_delete), color = colors.onSurface) },
-            text    = { Text(stringResource(R.string.macro_folder_delete_confirm), color = colors.onSurfaceSecondary) },
+            title   = { Text(stringResource(R.string.macropad_folder_delete), color = colors.onSurface) },
+            text    = { Text(stringResource(R.string.macropad_folder_delete_confirm), color = colors.onSurfaceSecondary) },
             confirmButton = {
                 TextButton(onClick = { MacroState.deleteFolder(fId); deletingFolderId = null }) {
                     Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
@@ -419,8 +419,8 @@ private fun MacroListView(
 
     if (showNewFolder) {
         TextInputDialog(
-            title        = stringResource(R.string.macro_folder_new),
-            hint         = stringResource(R.string.macro_folder_name_hint),
+            title        = stringResource(R.string.macropad_folder_new),
+            hint         = stringResource(R.string.macropad_folder_name_hint),
             initialValue = "",
             accentColor  = accentColor,
             onConfirm    = { name ->
@@ -489,7 +489,7 @@ private fun FolderSectionHeader(
         if (isNamedFolder) {
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = null, tint = colors.onSurfaceSecondary)
+                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
                 }
                 DropdownMenu(
                     expanded         = menuExpanded,
@@ -498,22 +498,22 @@ private fun FolderSectionHeader(
                 ) {
                     if (folderIndex > 0) {
                         DropdownMenuItem(
-                            text    = { Text(stringResource(R.string.macro_folder_move_up), color = colors.onSurface, fontSize = 14.sp) },
+                            text    = { Text(stringResource(R.string.macropad_folder_move_up), color = colors.onSurface, fontSize = 14.sp) },
                             onClick = { menuExpanded = false; onMoveUp() },
                         )
                     }
                     if (folderIndex < foldersCount - 1) {
                         DropdownMenuItem(
-                            text    = { Text(stringResource(R.string.macro_folder_move_down), color = colors.onSurface, fontSize = 14.sp) },
+                            text    = { Text(stringResource(R.string.macropad_folder_move_down), color = colors.onSurface, fontSize = 14.sp) },
                             onClick = { menuExpanded = false; onMoveDown() },
                         )
                     }
                     DropdownMenuItem(
-                        text    = { Text(stringResource(R.string.macro_folder_rename), color = colors.onSurface, fontSize = 14.sp) },
+                        text    = { Text(stringResource(R.string.macropad_folder_rename), color = colors.onSurface, fontSize = 14.sp) },
                         onClick = { menuExpanded = false; onRename() },
                     )
                     DropdownMenuItem(
-                        text    = { Text(stringResource(R.string.macro_folder_delete), color = Color(0xFFCF6679), fontSize = 14.sp) },
+                        text    = { Text(stringResource(R.string.macropad_folder_delete), color = Color(0xFFCF6679), fontSize = 14.sp) },
                         onClick = { menuExpanded = false; onDelete() },
                     )
                 }
@@ -564,7 +564,7 @@ private fun MacroRow(
 
         Box {
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Filled.MoreVert, contentDescription = null, tint = colors.onSurfaceSecondary)
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
             }
             DropdownMenu(
                 expanded         = menuExpanded,
@@ -580,7 +580,7 @@ private fun MacroRow(
                     onClick = { menuExpanded = false; onDuplicate() },
                 )
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macro_move_to_folder), color = colors.onSurface, fontSize = 14.sp) },
+                    text    = { Text(stringResource(R.string.macropad_move_to_folder), color = colors.onSurface, fontSize = 14.sp) },
                     onClick = { menuExpanded = false; onMoveToFolder() },
                 )
                 DropdownMenuItem(

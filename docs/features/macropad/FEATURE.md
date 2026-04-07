@@ -92,14 +92,14 @@ Each button supports one of the following actions:
 - Folders are stored as `List<MacroFolder>` under the DataStore key `macropad_macro_folders`. The `Macro.folderId` field defaults to `null` — existing saved data is therefore **automatically backward-compatible** with no migration required.
 - The **Macro Library editor** (`MacroListEditor`) groups macros into folder sections:
   - The **"Nicht zugeordnet"** section is always displayed **first**. It cannot be renamed or deleted.
-  - Named folders follow in user-defined order and can be reordered via drag handles on their section headers.
+  - Named folders follow in user-defined order and can be reordered via **Move Up** / **Move Down** context menu actions on their section headers.
   - Each section is **collapsible** (expand/collapse toggle on the header).
   - Within a section, macros can be **reordered** by drag handle (reorder is scoped to the section).
 - Folder **CRUD** is available via context menus in the section header:
   - **Rename** — In-place rename dialog.
   - **Delete** — Confirmation dialog warns that all macros in the folder will be moved to "Nicht zugeordnet". After confirmation, all affected macros have their `folderId` set to `null`.
 - A **"Neuer Ordner"** button is provided in the macro library top bar to create a new folder.
-- Macros can be **moved to a different folder** via a context menu entry ("In Ordner verschieben…") on each macro row. A simple dialog presents a flat list of available folders (including "Nicht zugeordnet" at the top). Selecting an entry updates `Macro.folderId` and immediately repersists.
+- Macros can be **moved to a different folder** via a context menu entry ("In Ordner verschieben…") on each macro row. A simple dialog presents a flat list of available folders (including "Nicht zugeordnet" at the top). Selecting an entry updates `Macro.folderId` and immediately persists.
 - Duplicating a macro preserves the original's `folderId` — the copy lands in the same folder.
 - The **`MacroPicker`** in `PadActionPicker` uses a two-step selection flow:
   1. **Folder dropdown** — lists "Nicht zugeordnet" first, then all named folders in their stored order. Pre-selects the folder of the currently assigned macro (if any).
