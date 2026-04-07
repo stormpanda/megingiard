@@ -168,8 +168,6 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_pad_size">Pad size: %d%%</string>
     <string name="settings_macropad_edit_layout">Edit Layout…</string>
     <string name="settings_macropad_new_layout">New Layout</string>
-    <string name="settings_macropad_fullscreen">Fullscreen MacroPad</string>
-    <string name="settings_macropad_fullscreen_desc">No bottom gap — pad fills the entire screen</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>

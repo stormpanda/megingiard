@@ -8,9 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +37,7 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -54,6 +53,8 @@ import kotlin.math.roundToInt
 
 private val ED_BUTTON_UNIT_DP      = 60.dp
 private val ED_BTN_SQUARE_RADIUS   = 4.dp
+// Must match MP_SCREEN_PADDING in MacroPadScreen.kt so the editor canvas is pixel-identical to use mode
+private val PC_SCREEN_PADDING      = 4.dp
 private const val ED_BTN_DISABLED_ALPHA = 0.38f
 private const val ED_EDGE_MARGIN        = 0.05f
 
@@ -65,10 +66,13 @@ private const val ED_EDGE_MARGIN        = 0.05f
 internal fun PadCanvas(profile: PadProfile, accentColor: Color) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val colors     = LocalAppColors.current
+    val configuration = LocalConfiguration.current
+    val padWidth      = configuration.screenWidthDp.dp  - PC_SCREEN_PADDING * 2
+    val padHeight     = configuration.screenHeightDp.dp - PC_SCREEN_PADDING * 2
 
     val padModifier = Modifier
-        .fillMaxWidth()
-        .aspectRatio(16f / 9f)
+        .width(padWidth)
+        .height(padHeight)
         .border(1.dp, colors.accentBorder, RoundedCornerShape(4.dp))
         .clip(RoundedCornerShape(4.dp))
         .background(colors.surface)

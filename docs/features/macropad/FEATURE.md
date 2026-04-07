@@ -208,22 +208,15 @@ In use mode, all button hit testing (including `TrackpointMove` buttons) uses an
 
 AABB hit detection is conservative for circular buttons (slightly over-accepts at corners) but this is acceptable for a game-pad-style UI.
 
-### Pad Sizing and Overlay Pill Awareness
+### Pad Canvas Sizing
 
-`MacroPadScreen` applies dynamic padding to its outer `Box` using the same rules as `KeyboardScreen`:
+The pad surface occupies the full screen with a uniform **4 dp padding** on all sides (`MP_SCREEN_PADDING = 4.dp` in `MacroPadScreen.kt`). No aspect-ratio constraint is applied; the pad grows or shrinks with the available display area.
 
-| Setting              | `top` padding          | `bottom` padding                               |
-| -------------------- | ---------------------- | ---------------------------------------------- |
-| overlay at **top**   | `CAROUSEL_PILL_INSET`  | `4.dp` (fullscreen) / `MP_BOTTOM_PADDING` (default) |
-| overlay at **bottom**| `4.dp`                 | `CAROUSEL_PILL_INSET` (fullscreen) / `MP_BOTTOM_PADDING` (default) |
-
-`CAROUSEL_PILL_INSET` (13 dp) ensures the idle drag-pill is never covered by the 16:9 pad surface. `MP_BOTTOM_PADDING` (56 dp) leaves comfortable space below the pad in the default non-fullscreen mode.
-
-A **"Fullscreen MacroPad"** toggle (boolean, default `false`) is exposed in `MacroPadToolSettings` via `SettingsManager.mpFullscreen` / `SettingsManager.setMpFullscreen()`, with the DataStore key `mp_fullscreen`. When enabled, bottom padding is reduced to 4 dp (or `CAROUSEL_PILL_INSET` when the overlay is at the bottom), mirroring the keyboard's fullscreen behaviour.
+The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfiguration.current` and sets an explicit `width`/`height` of `(screenWidth − 8 dp) × (screenHeight − 8 dp)` — **pixel-identical** to the use-mode pad. Because button positions are stored as normalised coordinates [0.0, 1.0], any button placed in the editor maps to the exact same physical pixel in use mode, enabling true 1:1 WYSIWYG layout design.
 
 ### Layout Editor
 
-`MacroPadEditor` is opened as a full-screen `Dialog(usePlatformDefaultWidth = false)` from `MacroPadToolSettings` (shown inside `ToolSettingsPanel`). Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor.
+`MacroPadEditor` is opened as a full-screen `Dialog(usePlatformDefaultWidth = false)` from `MacroPadToolSettings` (shown inside `ToolSettingsPanel`). Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor canvas is scrollable (it is embedded in a `verticalScroll` Column), so the full-size canvas can extend beyond the visible area of the editor's content region.
 
 ### Source Files
 
