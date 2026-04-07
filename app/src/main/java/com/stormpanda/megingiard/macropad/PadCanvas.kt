@@ -298,17 +298,27 @@ private fun GridOverlay(gridMode: GridMode, gridStepPx: Float, gridColor: Color)
             GridMode.OFF -> { /* no-op */ }
 
             GridMode.RECTANGULAR -> {
-                // Vertical lines
-                var x = gridStepPx
-                while (x < w) {
-                    drawLine(gridColor, Offset(x, 0f), Offset(x, h), strokeWidth = PC_GRID_STROKE_PX)
-                    x += gridStepPx
+                // Lines are centred on the canvas midpoint so the rectangular
+                // grid shares its origin with the radial grid's circle centre.
+                val cx = w * PC_RADIAL_CENTER_X
+                val cy = h * PC_RADIAL_CENTER_Y
+                // Vertical lines outward from centre
+                var dx = 0f
+                while (cx - dx >= 0f || cx + dx <= w) {
+                    if (cx + dx <= w)
+                        drawLine(gridColor, Offset(cx + dx, 0f), Offset(cx + dx, h), strokeWidth = PC_GRID_STROKE_PX)
+                    if (dx > 0f && cx - dx >= 0f)
+                        drawLine(gridColor, Offset(cx - dx, 0f), Offset(cx - dx, h), strokeWidth = PC_GRID_STROKE_PX)
+                    dx += gridStepPx
                 }
-                // Horizontal lines
-                var y = gridStepPx
-                while (y < h) {
-                    drawLine(gridColor, Offset(0f, y), Offset(w, y), strokeWidth = PC_GRID_STROKE_PX)
-                    y += gridStepPx
+                // Horizontal lines outward from centre
+                var dy = 0f
+                while (cy - dy >= 0f || cy + dy <= h) {
+                    if (cy + dy <= h)
+                        drawLine(gridColor, Offset(0f, cy + dy), Offset(w, cy + dy), strokeWidth = PC_GRID_STROKE_PX)
+                    if (dy > 0f && cy - dy >= 0f)
+                        drawLine(gridColor, Offset(0f, cy - dy), Offset(w, cy - dy), strokeWidth = PC_GRID_STROKE_PX)
+                    dy += gridStepPx
                 }
             }
 
@@ -368,7 +378,10 @@ private fun snapPosition(
     GridMode.RADIAL      -> snapRadial(rawNormX, rawNormY, canvasW, canvasH, gridStepPx)
 }
 
-/** Round to nearest grid intersection. */
+/**
+ * Round to nearest grid intersection. The grid is centred on the canvas midpoint
+ * (same origin as the radial circles) so the centre is always a cross-point.
+ */
 private fun snapRectangular(
     rawNormX: Float,
     rawNormY: Float,
@@ -378,8 +391,10 @@ private fun snapRectangular(
 ): Pair<Float, Float> {
     val rawPxX = rawNormX * canvasW
     val rawPxY = rawNormY * canvasH
-    val snappedPxX = (rawPxX / gridStepPx).roundToInt() * gridStepPx
-    val snappedPxY = (rawPxY / gridStepPx).roundToInt() * gridStepPx
+    val cx = canvasW * PC_RADIAL_CENTER_X
+    val cy = canvasH * PC_RADIAL_CENTER_Y
+    val snappedPxX = cx + ((rawPxX - cx) / gridStepPx).roundToInt() * gridStepPx
+    val snappedPxY = cy + ((rawPxY - cy) / gridStepPx).roundToInt() * gridStepPx
     return (snappedPxX / canvasW) to (snappedPxY / canvasH)
 }
 
