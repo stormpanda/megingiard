@@ -182,9 +182,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_blur">Unschärfe</string>
     <string name="settings_macropad_dim">Abdunkelung</string>
     <string name="settings_macropad_vignette">Vignette</string>
-    <string name="settings_macropad_vignette_size">Größe</string>
+    <string name="settings_macropad_vignette_visible_area">Sichtbarer Bereich</string>
+    <string name="settings_macropad_vignette_transition">Übergang</string>
+    <string name="settings_macropad_vignette_transition_soft">Weich</string>
+    <string name="settings_macropad_vignette_transition_hard">Hart</string>
     <string name="settings_macropad_vignette_opacity">Stärke</string>
     <string name="settings_macropad_vignette_color">Farbe</string>
+    <string name="settings_macropad_vignette_shape">Form</string>
+    <string name="settings_macropad_vignette_shape_radial">Radial</string>
+    <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
+    <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Taste: %s</string>

@@ -46,6 +46,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.SliderSettingRow
+import com.stormpanda.megingiard.settings.VignetteShape
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.launch
@@ -54,6 +55,21 @@ import java.util.UUID
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
+
+private const val MTS_DROPDOWN_BG_ALPHA = 0.08f
+private val MTS_DROPDOWN_H_PADDING = 12.dp
+private val MTS_DROPDOWN_V_PADDING = 6.dp
+private val MTS_DROPDOWN_CORNER = 6.dp
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enum label helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+private fun VignetteShape.labelResId(): Int = when (this) {
+    VignetteShape.RADIAL    -> R.string.settings_macropad_vignette_shape_radial
+    VignetteShape.LETTERBOX -> R.string.settings_macropad_vignette_shape_letterbox
+    VignetteShape.PILLARBOX -> R.string.settings_macropad_vignette_shape_pillarbox
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -243,8 +259,9 @@ private fun LayoutActionButtons(accentColor: Color, onOpenEditor: () -> Unit) {
 private const val MTS_BLUR_MAX = 25f
 private const val MTS_BLUR_PERCENT_DIVISOR = 100f
 private const val MTS_DIM_MAX = 0.9f
-private const val MTS_VIGNETTE_SIZE_MAX = 1f
+private const val MTS_VIGNETTE_VISIBLE_AREA_MAX = 1f
 private const val MTS_VIGNETTE_OPACITY_MAX = 1f
+private const val MTS_VIGNETTE_TRANSITION_MAX = 1f
 private val MTS_VIGNETTE_SWATCH_SIZE = 24.dp
 
 @Composable
@@ -320,10 +337,15 @@ private fun AmbientSettingsSection(accentColor: Color) {
 private fun VignetteSettingsSubSection(accentColor: Color) {
     val scope = rememberCoroutineScope()
     val colors = LocalAppColors.current
-    val vignetteEnabled by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
-    val vignetteSize    by SettingsManager.macropadAmbientVignetteSize.collectAsState()
-    val vignetteOpacity by SettingsManager.macropadAmbientVignetteOpacity.collectAsState()
-    val vignetteColor   by SettingsManager.macropadAmbientVignetteColor.collectAsState()
+    val vignetteEnabled   by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
+    val vignetteVisibleArea by SettingsManager.macropadAmbientVignetteVisibleArea.collectAsState()
+    val vignetteTransition by SettingsManager.macropadAmbientVignetteTransition.collectAsState()
+    val vignetteOpacity   by SettingsManager.macropadAmbientVignetteOpacity.collectAsState()
+    val vignetteColor     by SettingsManager.macropadAmbientVignetteColor.collectAsState()
+    val vignetteShape     by SettingsManager.macropadAmbientVignetteShape.collectAsState()
+
+    val labelSoft = stringResource(R.string.settings_macropad_vignette_transition_soft)
+    val labelHard = stringResource(R.string.settings_macropad_vignette_transition_hard)
 
     SettingsLabel(stringResource(R.string.settings_macropad_vignette), accentColor)
 
@@ -349,13 +371,34 @@ private fun VignetteSettingsSubSection(accentColor: Color) {
     }
 
     if (vignetteEnabled) {
+        VignetteShapeRow(
+            currentShape = vignetteShape,
+            accentColor = accentColor,
+            onShapeSelected = { scope.launch { SettingsManager.setMacropadAmbientVignetteShape(it) } }
+        )
+
         SliderSettingRow(
-            label = stringResource(R.string.settings_macropad_vignette_size),
-            value = vignetteSize,
-            valueRange = 0f..MTS_VIGNETTE_SIZE_MAX,
+            label = stringResource(R.string.settings_macropad_vignette_visible_area),
+            value = vignetteVisibleArea,
+            valueRange = 0f..MTS_VIGNETTE_VISIBLE_AREA_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteSize(it) } }
+            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteVisibleArea(it) } }
+        )
+
+        SliderSettingRow(
+            label = stringResource(R.string.settings_macropad_vignette_transition),
+            value = vignetteTransition,
+            valueRange = 0f..MTS_VIGNETTE_TRANSITION_MAX,
+            formatLabel = { v ->
+                when {
+                    v <= 0f -> labelSoft
+                    v >= 1f -> labelHard
+                    else    -> "${(v * MTS_BLUR_PERCENT_DIVISOR).toInt()}%"
+                }
+            },
+            accentColor = accentColor,
+            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteTransition(it) } }
         )
 
         SliderSettingRow(
@@ -373,6 +416,68 @@ private fun VignetteSettingsSubSection(accentColor: Color) {
             colors = colors,
             onColorSelected = { scope.launch { SettingsManager.setMacropadAmbientVignetteColor(it.toArgb()) } }
         )
+    }
+}
+
+@Composable
+private fun VignetteShapeRow(
+    currentShape: VignetteShape,
+    accentColor: Color,
+    onShapeSelected: (VignetteShape) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.settings_macropad_vignette_shape),
+            color = colors.onSurface,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Box {
+            Row(
+                modifier = Modifier
+                    .clickable { expanded = true }
+                    .background(
+                        colors.onSurface.copy(alpha = MTS_DROPDOWN_BG_ALPHA),
+                        RoundedCornerShape(MTS_DROPDOWN_CORNER)
+                    )
+                    .padding(horizontal = MTS_DROPDOWN_H_PADDING, vertical = MTS_DROPDOWN_V_PADDING),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(currentShape.labelResId()),
+                    color = colors.onSurface,
+                    fontSize = 14.sp
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary,
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(colors.surface)
+            ) {
+                VignetteShape.entries.forEach { shape ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(shape.labelResId()),
+                                color = if (shape == currentShape) accentColor else colors.onSurface,
+                                fontSize = 14.sp
+                            )
+                        },
+                        onClick = { onShapeSelected(shape); expanded = false }
+                    )
+                }
+            }
+        }
     }
 }
 

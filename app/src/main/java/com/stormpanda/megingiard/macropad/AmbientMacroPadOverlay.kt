@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -35,11 +36,13 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.VignetteShape
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlin.math.sqrt
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -47,8 +50,8 @@ import kotlinx.coroutines.withContext
 
 private val AMO_SWIPE_EDGE_ZONE = 40.dp
 private val AMO_SWIPE_THRESHOLD = 25.dp
-// At vignetteSize = 1.0 the gradient radius equals half the diagonal, reaching all four corners.
-private const val AMO_VIGNETTE_RADIUS_FACTOR = 1.4142f // sqrt(2)
+// Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
+private const val VIGNETTE_MIN_STOP_GAP = 0.001f
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ambient MacroPad Overlay — renders MacroPad buttons over the screen mirror
@@ -63,9 +66,11 @@ internal fun AmbientMacroPadOverlay() {
     val blurRadius by SettingsManager.macropadAmbientBlur.collectAsState()
     val dimAlpha by SettingsManager.macropadAmbientDim.collectAsState()
     val vignetteEnabled by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
-    val vignetteSize by SettingsManager.macropadAmbientVignetteSize.collectAsState()
+    val vignetteVisibleArea by SettingsManager.macropadAmbientVignetteVisibleArea.collectAsState()
+    val vignetteTransition by SettingsManager.macropadAmbientVignetteTransition.collectAsState()
     val vignetteOpacity by SettingsManager.macropadAmbientVignetteOpacity.collectAsState()
     val vignetteColorInt by SettingsManager.macropadAmbientVignetteColor.collectAsState()
+    val vignetteShape by SettingsManager.macropadAmbientVignetteShape.collectAsState()
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val ambientFrame by ScreenCaptureManager.ambientFrame.collectAsState()
 
@@ -172,24 +177,18 @@ internal fun AmbientMacroPadOverlay() {
             )
         }
 
-        // Layer 3: Vignette overlay (radial gradient darkening the edges)
+        // Layer 3: Vignette overlay (shape-specific gradient darkening the edges)
         if (vignetteEnabled && effectiveVignetteOpacity > 0f) {
             val vColor = Color(vignetteColorInt)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .drawBehind {
-                        val radius = (size.minDimension / 2f) * vignetteSize * AMO_VIGNETTE_RADIUS_FACTOR
-                        drawRect(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    vColor.copy(alpha = effectiveVignetteOpacity),
-                                ),
-                                center = Offset(size.width / 2f, size.height / 2f),
-                                radius = radius,
-                            )
-                        )
+                        when (vignetteShape) {
+                            VignetteShape.RADIAL     -> drawRadialVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
+                            VignetteShape.LETTERBOX  -> drawLetterboxVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
+                            VignetteShape.PILLARBOX  -> drawPillarboxVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
+                        }
                     }
             )
         }
@@ -226,4 +225,95 @@ internal fun AmbientMacroPadOverlay() {
             onInteraction = { AppStateManager.triggerOverlay() },
         )
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vignette DrawScope helpers
+//
+// visibleArea: 0 = full effect, 1 = effect off-screen (nothing covered)
+// transition:  0 = soft (full gradient), 1 = hard (instant cut)
+// opacity:     alpha applied to the vignetteColor
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Radial vignette: transparent circle in the center, colored edges.
+ * At visibleArea = 1.0, inner radius equals the half-diagonal (corners just reached).
+ */
+private fun DrawScope.drawRadialVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+) {
+    if (visibleArea >= 1f) return
+    val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
+    val innerFrac = visibleArea                                        // transparent zone [0..halfDiag)
+    val outerFrac = minOf(1f, maxOf(innerFrac + VIGNETTE_MIN_STOP_GAP,
+        innerFrac + (1f - innerFrac) * (1f - transition)))            // gradient end fraction
+    val vColor = vignetteColor.copy(alpha = opacity)
+    val stops = buildList {
+        add(0f to Color.Transparent)
+        if (innerFrac > 0f) add(innerFrac to Color.Transparent)
+        add(outerFrac to vColor)
+        if (outerFrac < 1f) add(1f to vColor)
+    }.toTypedArray()
+    drawRect(
+        brush = Brush.radialGradient(
+            *stops,
+            center = Offset(size.width / 2f, size.height / 2f),
+            radius = halfDiag,
+        )
+    )
+}
+
+/**
+ * Letterbox vignette: dark bands at top and bottom, transparent center strip.
+ * visibleArea controls the height of the transparent center strip (1 = full height, 0 = none).
+ */
+private fun DrawScope.drawLetterboxVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+) {
+    val innerFrac = (1f - visibleArea) / 2f   // fraction of height that is dark band (each side)
+    if (innerFrac <= 0f) return
+    val transitionFrac = innerFrac * (1f - transition)
+    val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
+    val vColor = vignetteColor.copy(alpha = opacity)
+    val stops = buildList {
+        add(0f to vColor)
+        if (gradStart > 0f) add(gradStart to vColor)
+        add(innerFrac to Color.Transparent)
+        add((1f - innerFrac) to Color.Transparent)
+        if (gradStart > 0f) add((1f - gradStart) to vColor)
+        add(1f to vColor)
+    }.toTypedArray()
+    drawRect(brush = Brush.verticalGradient(*stops))
+}
+
+/**
+ * Pillarbox vignette: dark bands at left and right, transparent center strip.
+ * visibleArea controls the width of the transparent center strip (1 = full width, 0 = none).
+ */
+private fun DrawScope.drawPillarboxVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+) {
+    val innerFrac = (1f - visibleArea) / 2f   // fraction of width that is dark band (each side)
+    if (innerFrac <= 0f) return
+    val transitionFrac = innerFrac * (1f - transition)
+    val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
+    val vColor = vignetteColor.copy(alpha = opacity)
+    val stops = buildList {
+        add(0f to vColor)
+        if (gradStart > 0f) add(gradStart to vColor)
+        add(innerFrac to Color.Transparent)
+        add((1f - innerFrac) to Color.Transparent)
+        if (gradStart > 0f) add((1f - gradStart) to vColor)
+        add(1f to vColor)
+    }.toTypedArray()
+    drawRect(brush = Brush.horizontalGradient(*stops))
 }
