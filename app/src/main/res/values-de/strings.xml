@@ -168,8 +168,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_shape_circle">Kreis</string>
     <string name="settings_macropad_pad_size">Pad-Größe: %d%%</string>
     <string name="settings_macropad_edit_layout">Layout bearbeiten\u2026</string>
-    <string name="settings_macropad_new_layout">Neues Layout</string>
-
+    <string name="settings_macropad_new_layout">Neues Layout</string>    <string name="settings_macropad_fullscreen">Vollbild-MacroPad</string>
+    <string name="settings_macropad_fullscreen_desc">Kein Abstand unten — Pad füllt den gesamten Bildschirm</string>
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Taste: %s</string>
     <string name="macropad_display_gamepad_button">Gamepad: %s</string>

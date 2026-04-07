@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
@@ -58,9 +59,10 @@ import java.util.UUID
  */
 @Composable
 fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
-    val profiles    by MacroPadState.profiles.collectAsState()
-    val activeId    by MacroPadState.activeProfileId.collectAsState()
-    val colors      = LocalAppColors.current
+    val profiles      by MacroPadState.profiles.collectAsState()
+    val activeId      by MacroPadState.activeProfileId.collectAsState()
+    val mpFullscreen  by SettingsManager.mpFullscreen.collectAsState()
+    val colors        = LocalAppColors.current
 
     val activeProfile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
 
@@ -84,6 +86,17 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
             activeId    = activeId,
             accentColor = colors.accent,
             onSelect    = { MacroPadState.setActiveProfileId(it) },
+        )
+
+        HorizontalDivider(color = colors.divider)
+
+        // ── Fullscreen toggle ───────────────────────────────────────────────
+        RememberSettingRow(
+            label           = stringResource(R.string.settings_macropad_fullscreen),
+            description     = stringResource(R.string.settings_macropad_fullscreen_desc),
+            checked         = mpFullscreen,
+            onCheckedChange = { SettingsManager.setMpFullscreen(it) },
+            accentColor     = colors.accent,
         )
 
         HorizontalDivider(color = colors.divider)

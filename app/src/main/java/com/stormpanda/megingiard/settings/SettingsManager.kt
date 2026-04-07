@@ -90,6 +90,9 @@ object SettingsManager {
     private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
     private val KEY_KB_MOUSE_BTN_POS = stringPreferencesKey("kb_mouse_btn_pos")
 
+    // MacroPad settings
+    private val KEY_MP_FULLSCREEN = booleanPreferencesKey("mp_fullscreen")
+
     // Language
     private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
 
@@ -154,6 +157,10 @@ object SettingsManager {
     // Keyboard trackpoint mouse button position
     private val _kbMouseBtnPos = MutableStateFlow(KbMouseBtnPos.LEFT)
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = _kbMouseBtnPos.asStateFlow()
+
+    // false = bottom padding (default); true = fullscreen, no padding
+    private val _mpFullscreen = MutableStateFlow(false)
+    val mpFullscreen: StateFlow<Boolean> = _mpFullscreen.asStateFlow()
 
     // Touchpad input method: false = touch (default), true = mouse
     private val _touchpadUseMouse = MutableStateFlow(false)
@@ -226,6 +233,7 @@ object SettingsManager {
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
                 _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
                 _kbMouseBtnPos.value = KbMouseBtnPos.entries.firstOrNull { it.name == prefs[KEY_KB_MOUSE_BTN_POS] } ?: KbMouseBtnPos.LEFT
+                _mpFullscreen.value = prefs[KEY_MP_FULLSCREEN] ?: false
                 _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
@@ -415,6 +423,11 @@ object SettingsManager {
     fun setKbMouseBtnPos(value: KbMouseBtnPos) {
         _kbMouseBtnPos.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
+    }
+
+    fun setMpFullscreen(value: Boolean) {
+        _mpFullscreen.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MP_FULLSCREEN] = value } }
     }
 
     fun setTouchpadUseMouse(value: Boolean) {

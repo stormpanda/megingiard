@@ -208,6 +208,19 @@ In use mode, all button hit testing (including `TrackpointMove` buttons) uses an
 
 AABB hit detection is conservative for circular buttons (slightly over-accepts at corners) but this is acceptable for a game-pad-style UI.
 
+### Pad Sizing and Overlay Pill Awareness
+
+`MacroPadScreen` applies dynamic padding to its outer `Box` using the same rules as `KeyboardScreen`:
+
+| Setting              | `top` padding          | `bottom` padding                               |
+| -------------------- | ---------------------- | ---------------------------------------------- |
+| overlay at **top**   | `CAROUSEL_PILL_INSET`  | `4.dp` (fullscreen) / `MP_BOTTOM_PADDING` (default) |
+| overlay at **bottom**| `4.dp`                 | `CAROUSEL_PILL_INSET` (fullscreen) / `MP_BOTTOM_PADDING` (default) |
+
+`CAROUSEL_PILL_INSET` (13 dp) ensures the idle drag-pill is never covered by the 16:9 pad surface. `MP_BOTTOM_PADDING` (56 dp) leaves comfortable space below the pad in the default non-fullscreen mode.
+
+A **"Fullscreen MacroPad"** toggle (boolean, default `false`) is exposed in `MacroPadToolSettings` via `SettingsManager.mpFullscreen` / `SettingsManager.setMpFullscreen()`, with the DataStore key `mp_fullscreen`. When enabled, bottom padding is reduced to 4 dp (or `CAROUSEL_PILL_INSET` when the overlay is at the bottom), mirroring the keyboard's fullscreen behaviour.
+
 ### Layout Editor
 
 `MacroPadEditor` is opened as a full-screen `Dialog(usePlatformDefaultWidth = false)` from `MacroPadToolSettings` (shown inside `ToolSettingsPanel`). Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor.
