@@ -85,6 +85,27 @@ Each button supports one of the following actions:
 - The macro editor shows a **visual horizontal timeline** (Canvas, 0.3 dp/ms scale) colour-coded by step type (accent = Gamepad Button, orange = Joystick, blue = D-Pad), plus a scrollable step list for editing individual steps.
 - Steps are configured in **`MacroStepEditDialog`** which provides: step-type chips (Gamepad / Joystick / D-Pad), gamepad button dropdown, 3×3 direction grid for joystick/D-Pad, a magnitude slider (0–1, default 1) for joystick, and numeric fields for start/duration timing.
 
+### FR-P8: Macro Folders
+
+- The macro library MUST support **named folders** to group macros. Folders have one level of depth only — no sub-folders.
+- Every macro may belong to exactly **one folder** (identified by `folderId: String?`). Macros with `folderId = null` are implicitly assigned to the **"Nicht zugeordnet"** (Unassigned) virtual folder.
+- Folders are stored as `List<MacroFolder>` under the DataStore key `macropad_macro_folders`. The `Macro.folderId` field defaults to `null` — existing saved data is therefore **automatically backward-compatible** with no migration required.
+- The **Macro Library editor** (`MacroListEditor`) groups macros into folder sections:
+  - The **"Nicht zugeordnet"** section is always displayed **first**. It cannot be renamed or deleted.
+  - Named folders follow in user-defined order and can be reordered via **Move Up** / **Move Down** context menu actions on their section headers.
+  - Each section is **collapsible** (expand/collapse toggle on the header).
+  - Within a section, macros can be **reordered** by drag handle (reorder is scoped to the section).
+- Folder **CRUD** is available via context menus in the section header:
+  - **Rename** — In-place rename dialog.
+  - **Delete** — Confirmation dialog warns that all macros in the folder will be moved to "Nicht zugeordnet". After confirmation, all affected macros have their `folderId` set to `null`.
+- A **"Neuer Ordner"** button is provided in the macro library top bar to create a new folder.
+- Macros can be **moved to a different folder** via a context menu entry ("In Ordner verschieben…") on each macro row. A simple dialog presents a flat list of available folders (including "Nicht zugeordnet" at the top). Selecting an entry updates `Macro.folderId` and immediately persists.
+- Duplicating a macro preserves the original's `folderId` — the copy lands in the same folder.
+- The **`MacroPicker`** in `PadActionPicker` uses a two-step selection flow:
+  1. **Folder dropdown** — lists "Nicht zugeordnet" first, then all named folders in their stored order. Pre-selects the folder of the currently assigned macro (if any).
+  2. **Macro dropdown** — shows only macros belonging to the folder selected in step 1. Pre-selects the currently assigned macro (if any).
+  - If the selected folder has no macros, the macro dropdown shows a disabled placeholder ("Keine Makros in diesem Ordner").
+
 ---
 
 ## Technical Implementation
@@ -110,6 +131,72 @@ MacroPadEditor (Composable, opened from MacroPadToolSettings)
 ### Data Model
 
 `PadProfile` and all sub-types are `@Serializable` data classes (sealed class `PadAction` with `@SerialName` discriminators). The full list of profiles is serialised to a single JSON string stored in DataStore under the key `macropad_profiles`. The active profile ID is stored separately under `macropad_active_profile_id`.
+
+**Macro Folder data model** — new in `MacroData.kt`:
+
+```kotlin
+@Serializable
+data class MacroFolder(
+    val id: String,   // UUID
+    val name: String,
+)
+```
+
+The `Macro` data class gains one optional field (default `null` → fully backward-compatible):
+
+```kotlin
+@Serializable
+data class Macro(
+    val id: String,
+    val name: String,
+    val folderId: String? = null,   // null → "Nicht zugeordnet"
+    val steps: List<MacroStep> = emptyList(),
+)
+```
+
+`List<MacroFolder>` is persisted under the DataStore key `macropad_macro_folders`. On load `SettingsManager` calls `MacroState.loadFoldersFrom(folders)`. Because `Macro.folderId` defaults to `null`, no JSON migration is needed — existing saves automatically produce unassigned macros.
+
+**`MacroState` additions:**
+
+```kotlin
+// New flows
+val folders: StateFlow<List<MacroFolder>>
+
+// New CRUD
+fun addFolder(folder: MacroFolder)
+fun renameFolder(id: String, newName: String)
+fun deleteFolder(folderId: String)       // moves contained macros to folderId=null
+fun reorderFolders(newList: List<MacroFolder>)
+fun moveMacroToFolder(macroId: String, folderId: String?)
+
+// Init hook
+internal fun loadFoldersFrom(folders: List<MacroFolder>)
+```
+
+Every mutation calls `SettingsManager.saveMacroFolderData()` (new save function alongside the existing `saveMacroData()`).
+
+**`MacroListEditor` rendering model:**
+
+```
+MacroListEditor
+  └── MacroListView
+        ├── FolderSection("Nicht zugeordnet", collapsible, no rename/delete)
+        │     └── MacroRow... (drag-reorder scoped to section)
+        ├── FolderSection(folder1.name, collapsible, rename/delete context menu, drag handle)
+        │     └── MacroRow... (drag-reorder scoped to section)
+        └── ...
+        └── [Neuer Ordner] button in top bar
+```
+
+Context menu actions per macro row: Edit, Duplicate, **In Ordner verschieben…**, Delete.
+Context menu actions per named folder header: **Umbenennen**, **Löschen**.
+
+**`MacroPicker` in `PadActionPicker`** replaces the current single dropdown with two:
+
+1. `FolderDropdown` — items: `[("Nicht zugeordnet", null), (folder.name, folder.id), …]` in stored order. On change: updates `selectedFolderId`, resets `selectedMacroId` to first macro in new folder (or null if empty).
+2. `MacroDropdown` — items filtered by `selectedFolderId`; disabled with placeholder label `macro_picker_folder_empty` when filtered list is empty.
+
+Pre-selection on open: resolve `currentMacroId` → find its `folderId` → pre-select that folder → pre-select that macro.
 
 ```
 PadProfile
@@ -242,25 +329,25 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 
 ### Source Files
 
-| File                         | Responsibility                                                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                                           |
-| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay  |
-| `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`) |
-| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                     |
-| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                                            |
-| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                        |
-| `MacroData.kt`               | Macro data model: `Macro`, `MacroStep` sealed class, `JoystickStick` enum                                                                        |
-| `MacroState.kt`              | Singleton global macro library: CRUD methods, loaded by `SettingsManager`                                                                        |
-| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                                               |
-| `MacroListEditor.kt`         | Full-screen macro library editor (list view + inline navigation to timeline)                                                                     |
-| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                                            |
-| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                                           |
-| `PadActionPicker.kt`         | Action-type picker for button editing, including `MacroPicker` for Macro type                                                                    |
-| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                    |
-| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                      |
-| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                            |
-| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                  |
-| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                          |
-| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                      |
-| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                   |
+| File                         | Responsibility                                                                                                                                           |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                                                   |
+| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay          |
+| `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`)         |
+| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                             |
+| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                                                    |
+| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                                |
+| `MacroData.kt`               | Macro data model: `Macro` (incl. `folderId`), `MacroFolder`, `MacroStep` sealed class, `JoystickStick` enum                                              |
+| `MacroState.kt`              | Singleton global macro library + folder library: CRUD methods for macros and folders, loaded by `SettingsManager`                                        |
+| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                                                       |
+| `MacroListEditor.kt`         | Full-screen macro library editor: folder sections (collapsible, reorderable), macro reorder within section, context menus for folder CRUD and macro move |
+| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                                                    |
+| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                                                   |
+| `PadActionPicker.kt`         | Action-type picker; `MacroPicker` uses two-dropdown flow (folder → macro within folder)                                                                  |
+| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                            |
+| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                              |
+| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                                    |
+| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                          |
+| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                                  |
+| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                              |
+| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                           |

@@ -248,4 +248,18 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_timeline_tick">%1$d ms</string>
     <!-- Schritt-Timing: %1$d = Startzeit ms, %2$d = Dauer ms -->
     <string name="macropad_macro_step_timing">@%1$d ms  ⟶  %2$d ms</string>
+
+    <!-- MacroPad-Makro-Ordner -->
+    <string name="macropad_folder_unassigned">Nicht zugeordnet</string>
+    <string name="macropad_folder_new">Neuer Ordner</string>
+    <string name="macropad_folder_rename">Ordner umbenennen</string>
+    <string name="macropad_folder_delete">Ordner löschen</string>
+    <string name="macropad_folder_delete_confirm">Alle Makros in diesem Ordner werden dem Bereich &#8222;Nicht zugeordnet&#8220; zugeordnet.</string>
+    <string name="macropad_folder_name_hint">Ordnername</string>
+    <string name="macropad_folder_move_title">In Ordner verschieben</string>
+    <string name="macropad_folder_move_up">Nach oben</string>
+    <string name="macropad_folder_move_down">Nach unten</string>
+    <string name="macropad_move_to_folder">In Ordner verschieben…</string>
+    <string name="macropad_picker_folder_empty">Keine Makros in diesem Ordner</string>
+    <string name="cd_more_options">Weitere Optionen</string>
 </resources>
