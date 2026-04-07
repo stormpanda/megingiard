@@ -199,7 +199,7 @@ object SettingsManager {
     private val _macropadAmbientBlur = MutableStateFlow(0f)
     val macropadAmbientBlur: StateFlow<Float> = _macropadAmbientBlur.asStateFlow()
 
-    private val _macropadAmbientDim = MutableStateFlow(0.3f)
+    private val _macropadAmbientDim = MutableStateFlow(0f)
     val macropadAmbientDim: StateFlow<Float> = _macropadAmbientDim.asStateFlow()
 
     fun init(context: Context) {
@@ -249,7 +249,7 @@ object SettingsManager {
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                 _macropadAmbientEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
                 _macropadAmbientBlur.value = prefs[KEY_MACROPAD_AMBIENT_BLUR] ?: 0f
-                _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0.3f
+                _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0f
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]

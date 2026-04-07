@@ -247,7 +247,9 @@ class MirrorPresentation(
                 mode == AppMode.MACROPAD && ambientEnabled && capturing && blur > 0f
             }.collectLatest { needsCapture ->
                 if (needsCapture) {
-                    sv.visibility = View.INVISIBLE
+                    // Keep SurfaceView VISIBLE — PixelCopy requires the surface to be
+                    // rendering content. The blurred Bitmap is drawn by AmbientMacroPadOverlay
+                    // in the ComposeView layer (above the SurfaceView), visually covering it.
                     while (true) {
                         if (sv.width > 0 && sv.height > 0) {
                             try {

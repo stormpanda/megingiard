@@ -16,8 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,6 +39,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────────────────────────
+
+private val AMO_SWIPE_EDGE_ZONE = 40.dp
+private val AMO_SWIPE_THRESHOLD = 25.dp
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Ambient MacroPad Overlay — renders MacroPad buttons over the screen mirror
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -50,6 +61,10 @@ internal fun AmbientMacroPadOverlay() {
     val ambientFrame by ScreenCaptureManager.ambientFrame.collectAsState()
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val density = LocalDensity.current
+    val edgeZonePx = with(density) { AMO_SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { AMO_SWIPE_THRESHOLD.toPx() }
 
     // Effective blur/dim: overridden to 0 when peeking
     val effectiveBlur = if (isPeekActive) 0f else blurRadius
@@ -76,7 +91,52 @@ internal fun AmbientMacroPadOverlay() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Initial pass: detect swipe from the pill edge to trigger carousel overlay,
+            // without consuming events so MacroPad button presses still work.
+            .pointerInput(overlayAtBottom) {
+                awaitPointerEventScope {
+                    var swipeStartY = Float.NaN
+                    var swipeTriggered = false
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        when (event.type) {
+                            PointerEventType.Press -> {
+                                val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                val nearEdge = if (overlayAtBottom) {
+                                    y >= size.height - edgeZonePx
+                                } else {
+                                    y <= edgeZonePx
+                                }
+                                swipeStartY = if (nearEdge) y else Float.NaN
+                                swipeTriggered = false
+                            }
+                            PointerEventType.Move -> {
+                                if (!swipeStartY.isNaN() && !swipeTriggered) {
+                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                    val delta = if (overlayAtBottom) {
+                                        swipeStartY - y
+                                    } else {
+                                        y - swipeStartY
+                                    }
+                                    if (delta >= swipeThresholdPx) {
+                                        AppStateManager.triggerOverlay()
+                                        swipeTriggered = true
+                                    }
+                                }
+                            }
+                            PointerEventType.Release -> {
+                                swipeStartY = Float.NaN
+                                swipeTriggered = false
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+            }
+    ) {
         // Layer 1: Blurred mirror background (only when blur > 0 and frame available)
         if (effectiveBlur > 0f) {
             val frame = ambientFrame
