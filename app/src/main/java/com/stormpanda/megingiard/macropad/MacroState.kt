@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Global macro library — macros are independent of profiles and shared across all
- * [MacroPadProfile] instances. Any profile can reference any macro via [PadAction.Macro].
+ * [PadProfile] instances. Any profile can reference any macro via [PadAction.Macro].
  *
  * Follows the project-wide singleton-state pattern: private [MutableStateFlow] backing
  * fields, read-only [StateFlow] exposed to UI. Every mutation triggers

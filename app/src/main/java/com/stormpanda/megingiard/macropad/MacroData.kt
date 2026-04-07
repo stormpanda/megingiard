@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 // Joystick stick selector
 // ─────────────────────────────────────────────────────────────────────────────
 
+@Serializable
 enum class JoystickStick { LEFT, RIGHT }
 
 // ─────────────────────────────────────────────────────────────────────────────

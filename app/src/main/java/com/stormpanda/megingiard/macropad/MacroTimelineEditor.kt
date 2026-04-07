@@ -152,11 +152,12 @@ internal fun MacroTimelineEditor(
     var showAddStep      by remember { mutableStateOf(false) }
     var editingStepIndex by remember { mutableStateOf<Int?>(null) }
     var deleteStepIndex  by remember { mutableStateOf<Int?>(null) }
-    Box(modifier = Modifier.fillMaxSize()) {    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.appBackground),
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(colors.appBackground),
+        ) {
         // ── Top bar ──────────────────────────────────────────────────────────
         Row(
             modifier = Modifier

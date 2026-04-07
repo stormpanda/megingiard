@@ -86,12 +86,13 @@ private val MSD_DIR_LABELS: Map<Pair<Int, Int>, String> = mapOf(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Modal dialog for creating or editing a single [MacroStep].
+ * Full-screen editor for creating or editing a single [MacroStep].
  *
- * @param step       Existing step to edit, or `null` to create a new one.
+ * @param step        Existing step to edit, or `null` to create a new one.
  * @param accentColor Accent color from the calling screen.
- * @param onConfirm  Called with the completed [MacroStep] on confirmation.
- * @param onDismiss  Called on cancel or outside tap.
+ * @param onConfirm   Called with the completed [MacroStep] when the user confirms.
+ * @param onDismiss   Called when the user cancels or otherwise requests dismissal
+ *                    from this screen's UI.
  */
 @Composable
 internal fun MacroStepEditDialog(

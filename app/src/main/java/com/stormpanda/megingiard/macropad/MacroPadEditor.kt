@@ -654,7 +654,7 @@ private fun ButtonListItem(
         is PadAction.TrackpointMove,
         is PadAction.MouseLeftClick,
         is PadAction.MouseRightClick             -> !enableMouse
-        is PadAction.Macro                       -> false
+        is PadAction.Macro                       -> !enableGamepad
     }
 
     Row(

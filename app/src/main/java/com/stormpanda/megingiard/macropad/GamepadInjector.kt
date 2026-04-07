@@ -24,7 +24,7 @@ object GamepadInjector {
     /**
      * Sends an analog joystick axis event.
      * [axisCode]: [GamepadKeycodes.ABS_X]=0, [GamepadKeycodes.ABS_Y]=1,
-     *             [GamepadKeycodes.ABS_RX]=3, [GamepadKeycodes.ABS_RY]=4.
+     *             [GamepadKeycodes.ABS_Z]=2, [GamepadKeycodes.ABS_RZ]=5.
      * [value]: raw int16, range −32768…+32767.
      */
     fun joystick(axisCode: Int, value: Int) = ShellGamepadInjector.joystick(axisCode, value)

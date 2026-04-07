@@ -181,7 +181,7 @@ private fun DraggableButton(
         is PadAction.TrackpointMove,
         is PadAction.MouseLeftClick,
         is PadAction.MouseRightClick             -> !enableMouse
-        is PadAction.Macro                       -> false
+        is PadAction.Macro                       -> !enableGamepad
     }
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val chipWidthPx  = with(density) {
