@@ -63,8 +63,10 @@ Each button supports one of the following actions:
 
 - A trackpoint is a **regular `PadButton`** with a `TrackpointMove` action, not a separate profile-level toggle.
 - Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
-- In use mode, dragging a finger on a trackpoint button translates relative motion into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta.
-- In the editor, the `ButtonEditDialog` hides the label field and shape picker when action is `TrackpointMove`, and shows a three-option size picker (`Small` / `Medium` / `Large`) instead of the ButtonSize dropdown.
+- In use mode, dragging a finger on a trackpoint button translates relative motion into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta (`MP_TRACKPOINT_SENSITIVITY = 3f`).
+- **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
+- **AmbientPeek buttons** render a visibility icon: `Icons.Filled.Visibility` when peek is inactive, `Icons.Filled.VisibilityOff` when active.
+- In the editor, the `ButtonEditDialog` hides the label field and shape picker when action is `TrackpointMove`, `ScrollWheel`, or `AmbientPeek`.
 
 ### FR-P6: Multi-Touch Button Support
 
@@ -115,6 +117,7 @@ Each button supports one of the following actions:
 - When ambient is enabled and capturing is active, the `MirrorPresentation` renders `AmbientMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
 - **Blur** (0–25 dp radius, adjustable via slider, default 0) applies a `Modifier.blur()` to a periodically captured `Bitmap` of the `SurfaceView`. When blur = 0, the `SurfaceView` is visible directly (live hardware-accelerated, no PixelCopy overhead). Captures occur every 200 ms via `PixelCopy`.
 - **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
+  - **Slider persistence:** Both the blur and dim sliders use a **local state + persist-on-release** pattern. `onValueChange` only updates the local Compose state (immediate visual feedback). DataStore is written only in `onValueChangeFinished` (when the user lifts their finger), preventing per-frame writes during a drag gesture.
 - **Vignette** (optional, default off) darkens the screen edges using a shape-specific gradient layer. Configurable via five settings:
   - **Shape** (`RADIAL` / `LETTERBOX` / `PILLARBOX`): `RADIAL` = circular vignette centred on the screen; `LETTERBOX` = horizontal dark bars at top and bottom; `PILLARBOX` = vertical dark bars at left and right.
   - **Visible Area** (0–100%, default 70%): controls the size of the inner transparent zone. At 100% the transparent zone reaches all four corners (`innerRadius = halfDiag = √(w²+h²)/2`) — the vignette is effectively off-screen. At 0% the entire screen is covered. For `LETTERBOX` the visible area is the fraction of the screen height that remains transparent; for `PILLARBOX` the fraction of the screen width.
@@ -153,6 +156,7 @@ When Ambient Display is enabled and `ScreenCaptureService` is capturing:
 
 1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `AmbientMacroPadOverlay` in its `ComposeView`.
 2. If blur > 0, a periodic `PixelCopy` coroutine captures the `SurfaceView` every 200 ms into `ScreenCaptureManager.ambientFrame`. The captured `Bitmap` is drawn with `Modifier.blur()`. If blur = 0, the `SurfaceView` remains visible (live hardware path) and no PixelCopy runs.
+   - **Bitmap lifecycle:** When a new ambient frame is set via `ScreenCaptureManager.setAmbientFrame()`, the previous bitmap is **not immediately recycled**. Explicit `recycle()` while the hardware RenderThread is still reading the pixel data causes a "Canvas: trying to use a recycled bitmap" crash. The old bitmap's strong reference is dropped and GC handles reclamation.
 3. A dim overlay (`Color.Black.copy(alpha = ambientDim)`) is drawn on top.
 4. If vignette is enabled, a shape-specific gradient layer is drawn between the dim overlay and the MacroPad buttons using private `DrawScope` extension functions (`drawRadialVignette`, `drawLetterboxVignette`, `drawPillarboxVignette`):
    - **Radial**: `Brush.radialGradient(colorStops, center, radius = halfDiag)`. `innerFrac = visibleArea`; `gEnd = min(1f, max(innerFrac + (1-innerFrac)*(1-transition), innerFrac + VIGNETTE_MIN_STOP_GAP))`; colorStops = `[(0,T), (innerFrac,T)?, (gEnd,C), (1,C)?]`.
@@ -161,6 +165,7 @@ When Ambient Display is enabled and `ScreenCaptureService` is capturing:
      `VIGNETTE_MIN_STOP_GAP = 0.001f` ensures no two adjacent colour-stops share the same fractional position (which would crash `Brush`).
 5. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
 6. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered, and blur/dim/vignette are overridden to 0.
+   - **Peek state reset:** `MacroPadState.resetPeek()` is called in two places: in `AmbientMacroPadOverlay`'s `DisposableEffect.onDispose` (leaving ambient mode), and in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode entirely). This ensures peek state never leaks across mode switches, regardless of which screen was active when the mode changed.
 
 ### Data Model
 

@@ -105,6 +105,8 @@ Jetpack Compose requires a `LifecycleOwner` and `SavedStateRegistryOwner`. These
 
 This lets Compose run inside the detached `Presentation` window exactly as it would inside a normal `Activity`, with proper recomposition and coroutine cleanup.
 
+**ComposeView window context:** The `ComposeView` is created with a dedicated `TYPE_APPLICATION` window context on the secondary display (via `context.createWindowContext(display, TYPE_APPLICATION, null)`), separate from the Presentation's own `TYPE_PRIVATE_PRESENTATION` context. Without this, any Compose `Dialog()` composable would throw a "Window type mismatch" error, because `Dialog.show()` inherits the context's window type (2037) but can only create windows of type 2 (`TYPE_APPLICATION`).
+
 ### Aspect Ratio Preservation (Letterboxing / Pillarboxing)
 
 On `MirrorPresentation.onCreate()`, the secondary display's window metrics are read and the `SurfaceView` dimensions are computed to preserve the source aspect ratio without distortion:
@@ -232,13 +234,17 @@ Users can opt in to persisting specific mirror session states across restarts vi
 | Remember projection | `isTouchProjectionActive`     | `mirror_remember_projection` + `mirror_saved_projection`            |
 | Remember freeze     | `isFrozen`                    | `mirror_remember_frozen` + `mirror_saved_frozen`                    |
 
-**Save flow:** When the user presses Stop, `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()`. For each enabled "remember" flag, the current value is written to DataStore. Additionally, lock, touch-projection, and freeze states are saved immediately on any change (via `combine` in a `LaunchedEffect` in `MirrorScreen`) so that a mode-switch without pressing Stop also persists the current values.
+**Save flow:**
+- **Viewport (scale, offsetX, offsetY):** Changes are tracked via `snapshotFlow` in `MirrorScreen`. Scale/offset updates are forwarded to `ScreenCaptureManager` on every animation frame (via `.onEach {}`). DataStore writes are **debounced by 300 ms** (`MR_VIEWPORT_SAVE_DEBOUNCE_MS`) to avoid excessive writes during pan/zoom gestures — only the state after the gesture settles is persisted.
+- **Lock, touch-projection, freeze:** Tracked via `combine()` in a separate `LaunchedEffect`. **`distinctUntilChanged()`** prevents duplicate writes when the combined state hasn't actually changed. **`drop(1)`** skips the initial emission so the collector doesn't trigger an unnecessary write on first subscription. State is persisted immediately (no debounce) when any of the three values change.
+- **On Stop:** `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()` to ensure the final state is persisted before the flows reset.
 
 **Restore flow:** `ScreenCaptureService.onStartCommand()` launches a coroutine that:
 
 1. Calls `SettingsManager.restoreMirrorSessionState()` — applies saved values to `ScreenCaptureManager` (no UI involved).
 2. Calls `ScreenCaptureManager.setCapturing(true)` — signals the UI that capture is active. Because the values are already in `ScreenCaptureManager` at this point, `MirrorScreen`'s `LaunchedEffect(isCapturing)` reads the correct values with a simple in-memory read (no DataStore I/O).
-3. Calls `presentation.show()` — `MirrorPresentation`'s StateFlow collectors receive the restored values on their first emission.
+3. Calls `AppStateManager.setPromptInFlight(false)` — clears the prompt guard now that capture is confirmed active.
+4. Calls `presentation.show()` — `MirrorPresentation`'s StateFlow collectors receive the restored values on their first emission.
 
 This ordering guarantees correct behaviour both for direct Ambient Display start (where `MirrorScreen` is never in composition) and for quick mode switches (the coroutine runs in the service scope, which is not cancelled by UI navigation).
 
@@ -253,7 +259,7 @@ An optional setting ("Pinch-to-zoom while projecting", default off) allows the u
 - When enabled and Touch Projection is active, `pointerInput` Block 3 enters _multi-finger-only_ mode.
 - Events with **≥ 2 pressed pointers** are handled by Block 3 (zoom/pan applied, all changes consumed so Block 4 does not inject them).
 - Events with **1 pressed pointer** are **not consumed** by Block 3 and fall through to Block 4 for normal injection.
-- When a second finger lands while Block 4 has an active injection gesture, Block 4 gracefully sends a `UP` event to the target app before handing off to Block 3.
+- When a second finger lands while Block 4 has an active injection gesture, Block 4 gracefully sends a `UP` event to the target app — using the coordinates of the last successfully injected touch position (`lastInjectedNx`, `lastInjectedNy`) — before handing off to Block 3.
 - When fingers reduce from 2 → 1 → 0 after a pinch, Block 3 suppresses the lingering single-finger events to prevent a stray `DOWN` injection. After all fingers lift, snap-back logic runs as normal.
 - Two-finger touches are **never forwarded** to the primary display.
 
