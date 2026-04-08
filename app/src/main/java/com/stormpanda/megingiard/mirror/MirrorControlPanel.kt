@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import android.content.Intent
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -78,11 +79,15 @@ internal fun MirrorControlPanel(
                 // Stop
                 IconButton(
                     onClick = {
+                        // TEMP DEBUG
+                        Log.d("MG_CAPTURE", "[CtrlPanel] STOP clicked  locked=$isLocked frozen=$isFrozen proj=$isTouchProjectionActive  thread=${Thread.currentThread().name}")
                         SettingsManager.saveMirrorSessionState()
                         context.stopService(Intent(context, ScreenCaptureService::class.java))
                         ScreenCaptureManager.setCapturing(false)
                         ScreenCaptureManager.resetMirrorSessionState()
                         AppStateManager.setUserDeclinedCapture(true)
+                        // TEMP DEBUG
+                        Log.d("MG_CAPTURE", "[CtrlPanel] STOP done  isCapturing=${ScreenCaptureManager.isCapturing.value}  promptInFlight=${AppStateManager.promptInFlight.value}  userDeclined=${AppStateManager.userDeclinedCapture.value}")
                     },
                     modifier = Modifier
                         .size(CONTROL_BUTTON_SIZE)

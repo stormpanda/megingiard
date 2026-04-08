@@ -38,6 +38,8 @@ class ScreenCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // TEMP DEBUG
+        Log.d(TAG, "[SCS] onStartCommand action=${intent?.action}  isCapturing=${ScreenCaptureManager.isCapturing.value}  promptInFlight=${AppStateManager.promptInFlight.value}  userDeclined=${AppStateManager.userDeclinedCapture.value}")
         if (intent?.action == "STOP") {
             stopSelf()
             return START_NOT_STICKY
@@ -108,19 +110,25 @@ class ScreenCaptureService : Service() {
                 }
             }
 
-            // Restore saved viewport/lock/freeze into ScreenCaptureManager BEFORE
-            // presentation.show() so MirrorPresentation's StateFlow collectors receive
-            // the correct values on their very first emission instead of the defaults.
-            // setCapturing(true) is called afterwards so MirrorScreen's LaunchedEffect
-            // reads already-restored values — no DataStore I/O needed in the UI layer.
-            // setPromptInFlight(false) is called here (not in CaptureRequestActivity)
-            // so there is no window where !isCapturing && !promptInFlight is true,
-            // which would cause MainActivity to re-trigger the capture prompt.
+            // Set capturing=true and clear promptInFlight BEFORE the DataStore read so there
+            // is no suspension window where isCapturing=false AND promptInFlight=false are
+            // simultaneously true.  That window was enough for MainActivity's LaunchedEffect
+            // to refire the capture prompt — especially when Lock was active, because
+            // restoreMirrorSessionState() calls setLocked(true) which emits from isLocked and
+            // can nudge Compose into re-evaluating reactive effects mid-suspension.
             scope.launch {
-                SettingsManager.restoreMirrorSessionState()
+                // TEMP DEBUG
+                Log.d(TAG, "[SCS] coroutine start  thread=${Thread.currentThread().name}")
+                Log.d(TAG, "[SCS] -> setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
+                Log.d(TAG, "[SCS] -> setPromptInFlight(false)")
                 AppStateManager.setPromptInFlight(false)
+                Log.d(TAG, "[SCS] -> restoreMirrorSessionState() start")
+                SettingsManager.restoreMirrorSessionState()
+                Log.d(TAG, "[SCS] -> restoreMirrorSessionState() done  locked=${ScreenCaptureManager.isLocked.value}")
+                Log.d(TAG, "[SCS] -> presentation.show()")
                 presentation.show()
+                Log.d(TAG, "[SCS] coroutine done")
             }
         }
         return START_NOT_STICKY
@@ -142,7 +150,14 @@ class ScreenCaptureService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // TEMP DEBUG
+        Log.d(TAG, "[SCS] onDestroy  isCapturing=${ScreenCaptureManager.isCapturing.value}  promptInFlight=${AppStateManager.promptInFlight.value}")
         scope.cancel()
+        // Safety net: if the service is killed unexpectedly (system, crash) after
+        // setCapturing(true) was called but before the user could press Stop, ensure
+        // the UI state is cleaned up so the app doesn't get stuck.
+        if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
+        AppStateManager.setPromptInFlight(false)
         virtualDisplay?.release()
         mediaProjection?.stop()
         mirrorPresentation?.dismiss()

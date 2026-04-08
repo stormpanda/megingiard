@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.LocaleList
 import android.provider.Settings
+import android.util.Log
 import android.view.Display
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -103,6 +104,11 @@ class MainActivity : ComponentActivity() {
             val lifecycleOwner = LocalLifecycleOwner.current
             LaunchedEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
+                    // TEMP DEBUG
+                    Log.d("MG_CAPTURE", "[MA] lifecycle event=$event  isCapturing=${ScreenCaptureManager.isCapturing.value}  " +
+                        "promptInFlight=${AppStateManager.promptInFlight.value}  " +
+                        "userDeclined=${AppStateManager.userDeclinedCapture.value}  " +
+                        "thread=${Thread.currentThread().name}")
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
                             hasNotificationAccess = isNotificationListenerEnabled(this@MainActivity)
@@ -111,6 +117,7 @@ class MainActivity : ComponentActivity() {
                             // Only clear the decline flag here — not in the LaunchedEffect,
                             // so a decline within a session is respected until the next resume.
                             if (SettingsManager.autoStartCapture.value) {
+                                Log.d("MG_CAPTURE", "[MA] ON_RESUME: autoStartCapture=true -> setUserDeclinedCapture(false)")
                                 AppStateManager.setUserDeclinedCapture(false)
                             }
                         }
@@ -152,7 +159,13 @@ class MainActivity : ComponentActivity() {
             // With autoStartCapture=true the prompt fires once per app session (on resume);
             // declining within a session is respected — the dialog will not re-appear until the next resume.
             LaunchedEffect(hasNotificationAccess, isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
+                // TEMP DEBUG
                 val shouldTrigger = !isCapturing && !userDeclinedCapture
+                Log.d("MG_CAPTURE", "[MA] captureLaunchedEffect fired: " +
+                    "notif=$hasNotificationAccess isCapturing=$isCapturing promptInFlight=$promptInFlight " +
+                    "validScreen=$isOnValidScreenLocal declined=$userDeclinedCapture " +
+                    "shouldTrigger=$shouldTrigger  WILL_LAUNCH=${hasNotificationAccess && !promptInFlight && isOnValidScreenLocal && shouldTrigger}  " +
+                    "thread=${Thread.currentThread().name}")
                 if (hasNotificationAccess && !promptInFlight && isOnValidScreenLocal && shouldTrigger) {
                     AppStateManager.setPromptInFlight(true)
                     val options = ActivityOptions.makeBasic()
