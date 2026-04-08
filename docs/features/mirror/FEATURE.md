@@ -233,6 +233,7 @@ Users can opt in to persisting specific mirror session states across restarts vi
 **Save flow:** When the user presses Stop, `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()`. For each enabled "remember" flag, the current value is written to DataStore. Additionally, lock, touch-projection, and freeze states are saved immediately on any change (via `combine` in a `LaunchedEffect` in `MirrorScreen`) so that a mode-switch without pressing Stop also persists the current values.
 
 **Restore flow:** `ScreenCaptureService.onStartCommand()` launches a coroutine that:
+
 1. Calls `SettingsManager.restoreMirrorSessionState()` — applies saved values to `ScreenCaptureManager` (no UI involved).
 2. Calls `ScreenCaptureManager.setCapturing(true)` — signals the UI that capture is active. Because the values are already in `ScreenCaptureManager` at this point, `MirrorScreen`'s `LaunchedEffect(isCapturing)` reads the correct values with a simple in-memory read (no DataStore I/O).
 3. Calls `presentation.show()` — `MirrorPresentation`'s StateFlow collectors receive the restored values on their first emission.

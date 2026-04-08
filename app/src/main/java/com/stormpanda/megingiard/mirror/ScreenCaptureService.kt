@@ -113,9 +113,13 @@ class ScreenCaptureService : Service() {
             // the correct values on their very first emission instead of the defaults.
             // setCapturing(true) is called afterwards so MirrorScreen's LaunchedEffect
             // reads already-restored values — no DataStore I/O needed in the UI layer.
+            // setPromptInFlight(false) is called here (not in CaptureRequestActivity)
+            // so there is no window where !isCapturing && !promptInFlight is true,
+            // which would cause MainActivity to re-trigger the capture prompt.
             scope.launch {
                 SettingsManager.restoreMirrorSessionState()
                 ScreenCaptureManager.setCapturing(true)
+                AppStateManager.setPromptInFlight(false)
                 presentation.show()
             }
         }

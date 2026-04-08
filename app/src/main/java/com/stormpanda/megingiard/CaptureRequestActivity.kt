@@ -17,14 +17,15 @@ class CaptureRequestActivity : ComponentActivity() {
                     putExtra("DATA", result.data)
                 }
                 startForegroundService(serviceIntent)
-                // setCapturing(true) is called by ScreenCaptureService after
-                // restoreMirrorSessionState() completes, so the viewport/lock/freeze
-                // values are in ScreenCaptureManager before any UI reacts to isCapturing.
+                // setCapturing(true) and setPromptInFlight(false) are called by
+                // ScreenCaptureService after restoreMirrorSessionState() completes,
+                // so promptInFlight stays true during the gap — preventing MainActivity
+                // from re-triggering the capture prompt before isCapturing becomes true.
                 AppStateManager.setUserDeclinedCapture(false)
             } else {
                 AppStateManager.setUserDeclinedCapture(true)
+                AppStateManager.setPromptInFlight(false)
             }
-            AppStateManager.setPromptInFlight(false)
             finish()
         }
 
