@@ -80,12 +80,13 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // Stop all injectors when leaving MACROPAD mode
+    // Stop all injectors and reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
         onDispose {
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()
+            MacroPadState.resetPeek()
         }
     }
 

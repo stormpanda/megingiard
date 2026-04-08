@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchAction
@@ -50,6 +51,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -60,6 +63,7 @@ private const val MR_TOUCH_INDICATOR_ALPHA = 0.5f
 private const val ZOOM_MIN = 1f
 private const val ZOOM_MAX = 5f
 private const val SNAP_BACK_THRESHOLD = 1.15f
+private const val MR_VIEWPORT_SAVE_DEBOUNCE_MS = 300L
 
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
@@ -152,12 +156,15 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val currentMode by AppStateManager.currentMode.collectAsState()
     LaunchedEffect(rememberViewport, currentMode) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
-            .collectLatest { snapshot ->
+            .onEach { snapshot ->
                 ScreenCaptureManager.setScale(snapshot.first)
                 ScreenCaptureManager.setOffsetX(snapshot.second)
                 ScreenCaptureManager.setOffsetY(snapshot.third)
-                // Nur im Mirror Mode und wenn "Ausschnitt merken" aktiv ist, speichern
-                if (currentMode == com.stormpanda.megingiard.AppMode.MIRROR && rememberViewport) {
+            }
+            .debounce(MR_VIEWPORT_SAVE_DEBOUNCE_MS)
+            .collectLatest {
+                // Save only in Mirror mode and when "Remember viewport" is enabled
+                if (currentMode == AppMode.MIRROR && rememberViewport) {
                     SettingsManager.saveMirrorSessionState()
                 }
             }
@@ -172,7 +179,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             ScreenCaptureManager.isFrozen
         ) { _, _, _ -> Unit }
             .collect {
-                if (currentMode == com.stormpanda.megingiard.AppMode.MIRROR && (rememberLock || rememberProjection || rememberFrozen)) {
+                if (currentMode == AppMode.MIRROR && (rememberLock || rememberProjection || rememberFrozen)) {
                     SettingsManager.saveMirrorSessionState()
                 }
             }

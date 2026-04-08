@@ -262,7 +262,7 @@ private fun DrawScope.drawRadialVignette(
     }.toTypedArray()
     drawRect(
         brush = Brush.radialGradient(
-            *stops,
+            colorStops = stops,
             center = Offset(size.width / 2f, size.height / 2f),
             radius = halfDiag,
         )
@@ -298,7 +298,7 @@ private fun DrawScope.drawLetterboxVignette(
         if (gradStart > 0f) add((1f - gradStart) to vColor)
         add(1f to vColor)
     }.toTypedArray()
-    drawRect(brush = Brush.verticalGradient(*stops))
+    drawRect(brush = Brush.verticalGradient(colorStops = stops))
 }
 
 /**
@@ -330,5 +330,5 @@ private fun DrawScope.drawPillarboxVignette(
         if (gradStart > 0f) add((1f - gradStart) to vColor)
         add(1f to vColor)
     }.toTypedArray()
-    drawRect(brush = Brush.horizontalGradient(*stops))
+    drawRect(brush = Brush.horizontalGradient(colorStops = stops))
 }

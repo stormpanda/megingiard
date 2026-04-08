@@ -108,16 +108,14 @@ class ScreenCaptureService : Service() {
                 }
             }
 
-            // Set capturing=true and clear promptInFlight BEFORE the DataStore read so there
-            // is no suspension window where isCapturing=false AND promptInFlight=false are
-            // simultaneously true.  That window was enough for MainActivity's LaunchedEffect
-            // to refire the capture prompt — especially when Lock was active, because
-            // restoreMirrorSessionState() calls setLocked(true) which emits from isLocked and
-            // can nudge Compose into re-evaluating reactive effects mid-suspension.
+            // Restore viewport/lock/freeze FIRST so MirrorScreen's LaunchedEffect(isCapturing)
+            // observes the correct values the moment isCapturing becomes true.
+            // promptInFlight remains true throughout the restore, so there is no window where
+            // isCapturing=false && promptInFlight=false could re-trigger the capture prompt.
             scope.launch {
+                SettingsManager.restoreMirrorSessionState()
                 ScreenCaptureManager.setCapturing(true)
                 AppStateManager.setPromptInFlight(false)
-                SettingsManager.restoreMirrorSessionState()
                 presentation.show()
             }
         }

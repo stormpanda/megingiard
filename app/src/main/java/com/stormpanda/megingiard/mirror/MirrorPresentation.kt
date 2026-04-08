@@ -1,4 +1,3 @@
-
 package com.stormpanda.megingiard.mirror
 
 import android.app.Presentation
