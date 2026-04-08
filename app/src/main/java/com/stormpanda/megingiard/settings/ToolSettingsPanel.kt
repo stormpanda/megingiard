@@ -110,10 +110,13 @@ fun ToolSettingsPanel(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - PANEL_SCREEN_MARGIN * 2)
+                // alpha must precede background so the compositing layer it creates
+                // also encompasses the background draw — otherwise background is painted
+                // at full opacity and only the content becomes faint.
+                .alpha(cardAlpha)
                 .background(colors.surface, RoundedCornerShape(PANEL_CORNER))
                 // Prevent clicks on the card itself from propagating to the scrim
                 .clickable(enabled = true, onClick = {})
-                .alpha(cardAlpha)
         ) {
             // Title row
             Row(
