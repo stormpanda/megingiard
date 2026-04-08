@@ -180,7 +180,12 @@ internal fun PadSurface(
                                         // Only act on the pointer that just went down;
                                         // other pointers in this batch event are still held from before.
                                         if (!change.previousPressed) {
-                                        val hitButton = profile.buttons.firstOrNull { btn ->
+                                        val hitList = if (isPeekActive) {
+                                            profile.buttons.filter { it.action is PadAction.AmbientPeek }
+                                        } else {
+                                            profile.buttons
+                                        }
+                                        val hitButton = hitList.firstOrNull { btn ->
                                             val isTrackpoint = btn.action is PadAction.TrackpointMove
                                             val chipWidthPx = with(density) {
                                                 if (isTrackpoint) (MP_BUTTON_UNIT_DP * (btn.action as PadAction.TrackpointMove).size.multiplier).toPx()

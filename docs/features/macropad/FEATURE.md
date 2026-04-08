@@ -115,17 +115,16 @@ Each button supports one of the following actions:
 - Enabled via a **toggle** in MacroPad tool settings (default: off).
 - When Ambient Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
 - When ambient is enabled and capturing is active, the `MirrorPresentation` renders `AmbientMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
-- **Blur** (0–25 dp radius, adjustable via slider, default 0) applies a `Modifier.blur()` to a periodically captured `Bitmap` of the `SurfaceView`. When blur = 0, the `SurfaceView` is visible directly (live hardware-accelerated, no PixelCopy overhead). Captures occur every 200 ms via `PixelCopy`.
 - **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
-  - **Slider persistence:** Both the blur and dim sliders use a **local state + persist-on-release** pattern. `onValueChange` only updates the local Compose state (immediate visual feedback). DataStore is written only in `onValueChangeFinished` (when the user lifts their finger), preventing per-frame writes during a drag gesture.
+  - **Slider persistence:** The dim slider and all three vignette numeric sliders (Visible Area, Transition, Opacity) use a **live-update + persist-on-release** pattern. `onValueChange` calls an in-memory-only setter (e.g. `updateMacropadAmbientDimLive`) for immediate visual feedback without triggering DataStore I/O. DataStore is written only in `onValueChangeFinished` (when the user lifts their finger), preventing per-frame writes during a drag gesture.
 - **Vignette** (optional, default off) darkens the screen edges using a shape-specific gradient layer. Configurable via five settings:
   - **Shape** (`RADIAL` / `LETTERBOX` / `PILLARBOX`): `RADIAL` = circular vignette centred on the screen; `LETTERBOX` = horizontal dark bars at top and bottom; `PILLARBOX` = vertical dark bars at left and right.
   - **Visible Area** (0–100%, default 70%): controls the size of the inner transparent zone. At 100% the transparent zone reaches all four corners (`innerRadius = halfDiag = √(w²+h²)/2`) — the vignette is effectively off-screen. At 0% the entire screen is covered. For `LETTERBOX` the visible area is the fraction of the screen height that remains transparent; for `PILLARBOX` the fraction of the screen width.
   - **Transition** (0 = Soft → 100 = Hard, default 50%): at 0% (Soft) the gradient sweeps the entire dark band from the screen edge to the visible-area boundary; at 100% (Hard) there is an instant cut with no gradient.
   - **Opacity** (0–100%, default 60%): alpha of the vignette colour.
   - **Color** (any ARGB colour, selected via `ColorWheelPicker`, default black `0xFF000000`).
-    Like blur/dim, the vignette is hidden when Peek is active.
-- A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, blur and dim are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
+    Like dim, the vignette is hidden when Peek is active.
+- A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, dim and vignette are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
 
 ---
@@ -155,8 +154,7 @@ MacroPadEditor (Composable, opened from MacroPadToolSettings)
 When Ambient Display is enabled and `ScreenCaptureService` is capturing:
 
 1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `AmbientMacroPadOverlay` in its `ComposeView`.
-2. If blur > 0, a periodic `PixelCopy` coroutine captures the `SurfaceView` every 200 ms into `ScreenCaptureManager.ambientFrame`. The captured `Bitmap` is drawn with `Modifier.blur()`. If blur = 0, the `SurfaceView` remains visible (live hardware path) and no PixelCopy runs.
-   - **Bitmap lifecycle:** When a new ambient frame is set via `ScreenCaptureManager.setAmbientFrame()`, the previous bitmap is **not immediately recycled**. Explicit `recycle()` while the hardware RenderThread is still reading the pixel data causes a "Canvas: trying to use a recycled bitmap" crash. The old bitmap's strong reference is dropped and GC handles reclamation.
+2. The `SurfaceView` receives the `VirtualDisplay` output directly (live hardware path — no PixelCopy overhead).
 3. A dim overlay (`Color.Black.copy(alpha = ambientDim)`) is drawn on top.
 4. If vignette is enabled, a shape-specific gradient layer is drawn between the dim overlay and the MacroPad buttons using private `DrawScope` extension functions (`drawRadialVignette`, `drawLetterboxVignette`, `drawPillarboxVignette`):
    - **Radial**: `Brush.radialGradient(colorStops, center, radius = halfDiag)`. `innerFrac = visibleArea`; `gEnd = min(1f, max(innerFrac + (1-innerFrac)*(1-transition), innerFrac + VIGNETTE_MIN_STOP_GAP))`; colorStops = `[(0,T), (innerFrac,T)?, (gEnd,C), (1,C)?]`.
@@ -164,7 +162,7 @@ When Ambient Display is enabled and `ScreenCaptureService` is capturing:
    - **Pillarbox**: same as Letterbox but uses `Brush.horizontalGradient` and `visibleArea` maps to the width fraction instead of height.
      `VIGNETTE_MIN_STOP_GAP = 0.001f` ensures no two adjacent colour-stops share the same fractional position (which would crash `Brush`).
 5. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
-6. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered, and blur/dim/vignette are overridden to 0.
+6. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered (the Press hit-test list is also filtered to `AmbientPeek` buttons so hidden buttons cannot be triggered), and dim/vignette are overridden to 0.
    - **Peek state reset:** `MacroPadState.resetPeek()` is called in two places: in `AmbientMacroPadOverlay`'s `DisposableEffect.onDispose` (leaving ambient mode), and in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode entirely). This ensures peek state never leaks across mode switches, regardless of which screen was active when the mode changed.
 
 ### Data Model

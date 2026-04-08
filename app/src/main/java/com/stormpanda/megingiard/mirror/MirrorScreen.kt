@@ -154,6 +154,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val rememberLock by SettingsManager.rememberLock.collectAsState()
     val rememberProjection by SettingsManager.rememberProjection.collectAsState()
     val currentMode by AppStateManager.currentMode.collectAsState()
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     LaunchedEffect(rememberViewport, currentMode) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
             .onEach { snapshot ->
@@ -187,7 +188,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             .collectLatest {
                 if (currentMode == AppMode.MIRROR &&
                     ScreenCaptureManager.isCapturing.value &&
-                    (rememberLock || rememberProjection)) {
+                    (SettingsManager.rememberLock.value || SettingsManager.rememberProjection.value)) {
                     SettingsManager.saveMirrorSessionState()
                 }
             }

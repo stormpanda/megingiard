@@ -182,7 +182,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- MacroPad-Ambient-Display-Einstellungen -->
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
-    <string name="settings_macropad_ambient_hint">Erfordert aktive Bildschirmspiegelung</string>
+    <string name="settings_macropad_ambient_hint">Startet Bildschirmspiegelung automatisch (einmalige Berechtigung erforderlich)</string>
     <string name="settings_macropad_ambient_preview">Vorschau für Darstellung</string>
     <string name="settings_macropad_ambient_preview_hint">Transparentes Fenster während Darstellung angepasst wird</string>
     <string name="settings_macropad_blur">Unschärfe</string>

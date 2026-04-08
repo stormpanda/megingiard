@@ -513,6 +513,21 @@ object SettingsManager {
         _macropadAmbientDim.value = value
     }
 
+    /** Updates vignette visible area in memory only — no DataStore write. Safe to call on every drag frame. */
+    fun updateMacropadAmbientVignetteVisibleAreaLive(value: Float) {
+        _macropadAmbientVignetteVisibleArea.value = value
+    }
+
+    /** Updates vignette transition in memory only — no DataStore write. Safe to call on every drag frame. */
+    fun updateMacropadAmbientVignetteTransitionLive(value: Float) {
+        _macropadAmbientVignetteTransition.value = value
+    }
+
+    /** Updates vignette opacity in memory only — no DataStore write. Safe to call on every drag frame. */
+    fun updateMacropadAmbientVignetteOpacityLive(value: Float) {
+        _macropadAmbientVignetteOpacity.value = value
+    }
+
     fun setMacropadAmbientVignetteEnabled(value: Boolean) {
         _macropadAmbientVignetteEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] = value } }

@@ -232,12 +232,11 @@ Users can opt in to persisting specific mirror session states across restarts vi
 | Remember viewport   | `scale`, `offsetX`, `offsetY` | `mirror_remember_viewport` + `mirror_saved_scale/offset_x/offset_y` |
 | Remember lock       | `isLocked`                    | `mirror_remember_lock` + `mirror_saved_locked`                      |
 | Remember projection | `isTouchProjectionActive`     | `mirror_remember_projection` + `mirror_saved_projection`            |
-| Remember freeze     | `isFrozen`                    | `mirror_remember_frozen` + `mirror_saved_frozen`                    |
 
 **Save flow:**
 
 - **Viewport (scale, offsetX, offsetY):** Changes are tracked via `snapshotFlow` in `MirrorScreen`. Scale/offset updates are forwarded to `ScreenCaptureManager` on every animation frame (via `.onEach {}`). DataStore writes are **debounced by 300 ms** (`MR_VIEWPORT_SAVE_DEBOUNCE_MS`) to avoid excessive writes during pan/zoom gestures — only the state after the gesture settles is persisted.
-- **Lock, touch-projection, freeze:** Tracked via `combine()` in a separate `LaunchedEffect`. **`distinctUntilChanged()`** prevents duplicate writes when the combined state hasn't actually changed. **`drop(1)`** skips the initial emission so the collector doesn't trigger an unnecessary write on first subscription. State is persisted immediately (no debounce) when any of the three values change.
+- **Lock and touch-projection:** Tracked via `combine()` in a separate `LaunchedEffect`. **`distinctUntilChanged()`** prevents duplicate writes when the combined state hasn't actually changed. **`drop(1)`** skips the initial emission so the collector doesn't trigger an unnecessary write on first subscription. State is persisted immediately (no debounce) when either value changes.
 - **On Stop:** `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()` to ensure the final state is persisted before the flows reset.
 
 **Restore flow:** `ScreenCaptureService.onStartCommand()` launches a coroutine that:

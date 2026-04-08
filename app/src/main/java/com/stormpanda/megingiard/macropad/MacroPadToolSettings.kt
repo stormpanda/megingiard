@@ -484,8 +484,8 @@ private fun VignetteSettingsSubSection(
             valueRange = 0f..MTS_VIGNETTE_VISIBLE_AREA_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteVisibleArea(it) }; onSliderDragging?.invoke(true) },
-            onValueChangeFinished = { onSliderDragging?.invoke(false) }
+            onValueChange = { SettingsManager.updateMacropadAmbientVignetteVisibleAreaLive(it); onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientVignetteVisibleArea(SettingsManager.macropadAmbientVignetteVisibleArea.value) }; onSliderDragging?.invoke(false) }
         )
 
         SliderSettingRow(
@@ -500,8 +500,8 @@ private fun VignetteSettingsSubSection(
                 }
             },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteTransition(it) }; onSliderDragging?.invoke(true) },
-            onValueChangeFinished = { onSliderDragging?.invoke(false) }
+            onValueChange = { SettingsManager.updateMacropadAmbientVignetteTransitionLive(it); onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientVignetteTransition(SettingsManager.macropadAmbientVignetteTransition.value) }; onSliderDragging?.invoke(false) }
         )
 
         SliderSettingRow(
@@ -510,8 +510,8 @@ private fun VignetteSettingsSubSection(
             valueRange = 0f..MTS_VIGNETTE_OPACITY_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteOpacity(it) }; onSliderDragging?.invoke(true) },
-            onValueChangeFinished = { onSliderDragging?.invoke(false) }
+            onValueChange = { SettingsManager.updateMacropadAmbientVignetteOpacityLive(it); onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientVignetteOpacity(SettingsManager.macropadAmbientVignetteOpacity.value) }; onSliderDragging?.invoke(false) }
         )
 
         VignetteColorRow(
