@@ -84,13 +84,17 @@ fun ToolSettingsPanel(
         tspPickerShown = true
     }
 
+    val macropadAmbientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+    val macropadAmbientPreview by SettingsManager.macropadAmbientPreview.collectAsState()
     var isSliderDragging by remember { mutableStateOf(false) }
+    val isTranslucent = isSliderDragging ||
+        (currentMode == AppMode.MACROPAD && macropadAmbientEnabled && macropadAmbientPreview)
     val scrimAlpha by animateFloatAsState(
-        targetValue = if (isSliderDragging) 0f else 0.5f,
+        targetValue = if (isTranslucent) 0f else 0.5f,
         label = "scrim",
     )
     val cardAlpha by animateFloatAsState(
-        targetValue = if (isSliderDragging) 0.20f else 1f,
+        targetValue = if (isTranslucent) 0.20f else 1f,
         label = "card",
     )
 

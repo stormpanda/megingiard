@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
+import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.SliderSettingRow
 import com.stormpanda.megingiard.settings.VignetteShape
@@ -362,9 +363,7 @@ private fun AmbientSettingsSection(
     val colors = LocalAppColors.current
     val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
     val ambientDim     by SettingsManager.macropadAmbientDim.collectAsState()
-
-    // Local slider state so DataStore is only written on drag-end, not every frame
-    var localDim  by remember(ambientDim)  { mutableStateOf(ambientDim) }
+    val ambientPreview by SettingsManager.macropadAmbientPreview.collectAsState()
 
     SettingsLabel(stringResource(R.string.settings_macropad_ambient), accentColor)
 
@@ -395,16 +394,24 @@ private fun AmbientSettingsSection(
         )
     }
 
-    // Sliders – only shown when ambient is enabled
+    // Sub-settings – only shown when ambient is enabled
     if (ambientEnabled) {
+        RememberSettingRow(
+            label = stringResource(R.string.settings_macropad_ambient_preview),
+            description = stringResource(R.string.settings_macropad_ambient_preview_hint),
+            checked = ambientPreview,
+            accentColor = accentColor,
+            onCheckedChange = { scope.launch { SettingsManager.setMacropadAmbientPreview(it) } }
+        )
+
         SliderSettingRow(
             label = stringResource(R.string.settings_macropad_dim),
-            value = localDim,
+            value = ambientDim,
             valueRange = 0f..MTS_DIM_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { localDim = it; onSliderDragging?.invoke(true) },
-            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientDim(localDim) }; onSliderDragging?.invoke(false) }
+            onValueChange = { SettingsManager.updateMacropadAmbientDimLive(it); onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientDim(SettingsManager.macropadAmbientDim.value) }; onSliderDragging?.invoke(false) }
         )
 
         Spacer(Modifier.height(4.dp))

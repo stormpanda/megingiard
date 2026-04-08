@@ -177,10 +177,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_pad_size">Pad-Größe: %d%%</string>
     <string name="settings_macropad_edit_layout">Layout bearbeiten\u2026</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
+    <string name="settings_macropad_edit">Bearbeiten</string>
+    <string name="settings_macropad_new">Neu</string>
 
     <!-- MacroPad-Ambient-Display-Einstellungen -->
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
     <string name="settings_macropad_ambient_hint">Erfordert aktive Bildschirmspiegelung</string>
+    <string name="settings_macropad_ambient_preview">Vorschau für Darstellung</string>
+    <string name="settings_macropad_ambient_preview_hint">Transparentes Fenster während Darstellung angepasst wird</string>
     <string name="settings_macropad_blur">Unschärfe</string>
     <string name="settings_macropad_dim">Abdunkelung</string>
     <string name="settings_macropad_vignette">Vignette</string>

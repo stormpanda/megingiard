@@ -175,6 +175,8 @@ Open Settings to create a layout.</string>
     <!-- MacroPad ambient display settings -->
     <string name="settings_macropad_ambient">Ambient Display</string>
     <string name="settings_macropad_ambient_hint">Requires active Screen Mirror</string>
+    <string name="settings_macropad_ambient_preview">Preview for display</string>
+    <string name="settings_macropad_ambient_preview_hint">Transparent window while display is being adjusted</string>
     <string name="settings_macropad_dim">Dimming</string>
     <string name="settings_macropad_vignette">Vignette</string>
     <string name="settings_macropad_vignette_visible_area">Visible Area</string>
