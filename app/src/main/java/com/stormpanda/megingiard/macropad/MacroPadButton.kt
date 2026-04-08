@@ -55,6 +55,7 @@ private val MP_BTN_NORMAL_ALPHA     = 0.25f
 private const val MP_BTN_DISABLED_ALPHA = 0.38f
 
 private val  MP_BTN_SQUARE_RADIUS   = 4.dp
+private val  MP_BTN_ICON_UNIT        = 48.dp  // icon size per grid unit (≈ 80 % of MP_BUTTON_UNIT_DP)
 
 private const val MP_PRESS_ANIM_MS   = 80
 private const val MP_RELEASE_ANIM_MS = 160
@@ -143,7 +144,7 @@ internal fun PadButton(
                     imageVector = iconVector,
                     contentDescription = null,
                     tint = colors.onSurface,
-                    modifier = Modifier.size((24 * btn.buttonSize.cols).dp),
+                    modifier = Modifier.size(MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
                 )
             } else {
                 Text(
