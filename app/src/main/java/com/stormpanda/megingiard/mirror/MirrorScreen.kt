@@ -48,10 +48,11 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -177,8 +178,10 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             ScreenCaptureManager.isLocked,
             ScreenCaptureManager.isTouchProjectionActive,
             ScreenCaptureManager.isFrozen
-        ) { _, _, _ -> Unit }
-            .collect {
+        ) { locked, projection, frozen -> Triple(locked, projection, frozen) }
+            .distinctUntilChanged()
+            .drop(1)
+            .collectLatest {
                 if (currentMode == AppMode.MIRROR && (rememberLock || rememberProjection || rememberFrozen)) {
                     SettingsManager.saveMirrorSessionState()
                 }

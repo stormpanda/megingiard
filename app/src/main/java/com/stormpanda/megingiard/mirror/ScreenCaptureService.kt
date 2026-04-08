@@ -59,6 +59,7 @@ class ScreenCaptureService : Service() {
 
             if (secondaryDisplay == null) {
                 Log.e(TAG, "No secondary display found!")
+                AppStateManager.setPromptInFlight(false)
                 stopSelf()
                 return START_NOT_STICKY
             }

@@ -281,6 +281,10 @@ private fun AmbientSettingsSection(
     val ambientBlur    by SettingsManager.macropadAmbientBlur.collectAsState()
     val ambientDim     by SettingsManager.macropadAmbientDim.collectAsState()
 
+    // Local slider states so DataStore is only written on drag-end, not every frame
+    var localBlur by remember(ambientBlur) { mutableStateOf(ambientBlur) }
+    var localDim  by remember(ambientDim)  { mutableStateOf(ambientDim) }
+
     SettingsLabel(stringResource(R.string.settings_macropad_ambient), accentColor)
 
     // Toggle
@@ -314,20 +318,22 @@ private fun AmbientSettingsSection(
     if (ambientEnabled) {
         SliderSettingRow(
             label = stringResource(R.string.settings_macropad_blur),
-            value = ambientBlur,
+            value = localBlur,
             valueRange = 0f..MTS_BLUR_MAX,
             formatLabel = { "${(it / MTS_BLUR_MAX * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientBlur(it) } }
+            onValueChange = { localBlur = it },
+            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientBlur(localBlur) } }
         )
 
         SliderSettingRow(
             label = stringResource(R.string.settings_macropad_dim),
-            value = ambientDim,
+            value = localDim,
             valueRange = 0f..MTS_DIM_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientDim(it) } }
+            onValueChange = { localDim = it },
+            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientDim(localDim) } }
         )
 
         Spacer(Modifier.height(4.dp))

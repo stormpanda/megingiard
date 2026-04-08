@@ -250,7 +250,8 @@ internal fun SliderSettingRow(
     valueRange: ClosedFloatingPointRange<Float>,
     formatLabel: (Float) -> String,
     accentColor: Color,
-    onValueChange: (Float) -> Unit
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -273,6 +274,7 @@ internal fun SliderSettingRow(
         Slider(
             value = value,
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             colors = SliderDefaults.colors(
                 thumbColor = accentColor,
