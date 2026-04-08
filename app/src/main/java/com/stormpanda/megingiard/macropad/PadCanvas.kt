@@ -276,13 +276,11 @@ private fun DraggableButton(
                 Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(14.dp))
             }
         } else {
-            val iconVector = remember(btn.iconName) { btn.iconName?.let { MaterialIconRegistry.resolve(it) } }
-            if (iconVector != null) {
-                Icon(
-                    imageVector = iconVector,
-                    contentDescription = null,
+            if (btn.iconName != null) {
+                MaterialSymbol(
+                    name = btn.iconName,
+                    size = MP_BUTTON_UNIT_DP * 0.8f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                     tint = colors.onSurface,
-                    modifier = Modifier.size(MP_BUTTON_UNIT_DP * 0.8f * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
                 )
             } else {
                 Text(btn.label, color = colors.onSurface, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

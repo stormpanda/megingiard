@@ -753,13 +753,11 @@ private fun ButtonListItem(
             if (isTrackpoint) {
                 Text("●", color = colors.onSurface, fontSize = 10.sp)
             } else {
-                val iconVector = remember(btn.iconName) { btn.iconName?.let { MaterialIconRegistry.resolve(it) } }
-                if (iconVector != null) {
-                    Icon(
-                        imageVector = iconVector,
-                        contentDescription = null,
+                if (btn.iconName != null) {
+                    MaterialSymbol(
+                        name = btn.iconName,
+                        size = 18.dp,
                         tint = colors.onSurface,
-                        modifier = Modifier.size(18.dp),
                     )
                 } else {
                     Text(btn.label.take(2), color = colors.onSurface, fontSize = 10.sp)

@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AddReaction
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -201,7 +200,6 @@ internal fun ButtonEditDialog(
                             modifier = Modifier.weight(1f),
                         )
                         // Icon selector button
-                        val resolvedIcon = remember(iconName) { iconName?.let { MaterialIconRegistry.resolve(it) } }
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -218,11 +216,10 @@ internal fun ButtonEditDialog(
                                 )
                                 .clickable { showIconPicker = true },
                         ) {
-                            Icon(
-                                imageVector = resolvedIcon ?: Icons.Rounded.AddReaction,
-                                contentDescription = stringResource(R.string.cd_icon_picker_button),
+                            MaterialSymbol(
+                                name = iconName ?: "AddReaction",
+                                size = 28.dp,
                                 tint = if (iconName != null) accentColor else colors.onSurfaceSecondary,
-                                modifier = Modifier.size(28.dp),
                             )
                         }
                     }

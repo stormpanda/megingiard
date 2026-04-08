@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -162,7 +161,6 @@ internal fun IconPickerDialog(
             ) {
                 items(results, key = { it }) { name ->
                     val isSelected = name == selectedIcon
-                    val imageVector = remember(name) { MaterialIconRegistry.resolve(name) }
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -183,14 +181,11 @@ internal fun IconPickerDialog(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            if (imageVector != null) {
-                                Icon(
-                                    imageVector = imageVector,
-                                    contentDescription = null,
-                                    tint = if (isSelected) accentColor else colors.onSurface,
-                                    modifier = Modifier.size(IP_ICON_SIZE),
-                                )
-                            }
+                            MaterialSymbol(
+                                name = name,
+                                size = IP_ICON_SIZE,
+                                tint = if (isSelected) accentColor else colors.onSurface,
+                            )
                             Text(
                                 text = name,
                                 color = if (isSelected) accentColor else colors.onSurfaceSecondary,

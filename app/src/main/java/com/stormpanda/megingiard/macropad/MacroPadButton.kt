@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -138,13 +137,11 @@ internal fun PadButton(
         } else if (btn.action is PadAction.AmbientPeek) {
             AmbientPeekFace(accentColor = accentColor)
         } else {
-            val iconVector = remember(btn.iconName) { btn.iconName?.let { MaterialIconRegistry.resolve(it) } }
-            if (iconVector != null) {
-                Icon(
-                    imageVector = iconVector,
-                    contentDescription = null,
+            if (btn.iconName != null) {
+                MaterialSymbol(
+                    name = btn.iconName,
+                    size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                     tint = colors.onSurface,
-                    modifier = Modifier.size(MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
                 )
             } else {
                 Text(
