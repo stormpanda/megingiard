@@ -84,17 +84,18 @@ fun ToolSettingsPanel(
         tspPickerShown = true
     }
 
-    val macropadAmbientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
     val macropadAmbientPreview by SettingsManager.macropadAmbientPreview.collectAsState()
     var isSliderDragging by remember { mutableStateOf(false) }
-    val isTranslucent = isSliderDragging ||
-        (currentMode == AppMode.MACROPAD && macropadAmbientEnabled && macropadAmbientPreview)
+    // For MacroPad mode, transparency during slider drag requires the preview checkbox.
+    // For all other modes, slider drag always makes the panel translucent.
+    val isTranslucent = isSliderDragging &&
+        (currentMode != AppMode.MACROPAD || macropadAmbientPreview)
     val scrimAlpha by animateFloatAsState(
         targetValue = if (isTranslucent) 0f else 0.5f,
         label = "scrim",
     )
     val cardAlpha by animateFloatAsState(
-        targetValue = if (isTranslucent) 0.20f else 1f,
+        targetValue = if (isTranslucent) 0.30f else 1f,
         label = "card",
     )
 
