@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.settings
 
 import android.graphics.Color as AndroidColor
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +21,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -37,8 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,7 +47,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private const val CWP_TAG = "CWP_DEBUG"
 private val TITLE_FONT_SIZE = 18.sp
 private val SUBTITLE_FONT_SIZE = 12.sp
 private val PICKER_CORNER = 16.dp
@@ -65,23 +60,6 @@ fun ColorWheelPicker(
 ) {
     val initHsv = FloatArray(3)
     AndroidColor.colorToHSV(initialColor.toArgb(), initHsv)
-
-    // ── DEBUG: log context and window state before Dialog() is created ────────
-    val dbgContext = LocalContext.current
-    val dbgView = LocalView.current
-    SideEffect {
-        Log.d(CWP_TAG, "=== ColorWheelPicker composing ===")
-        Log.d(CWP_TAG, "  LocalContext class  : ${dbgContext.javaClass.name}")
-        Log.d(CWP_TAG, "  LocalContext display : ${runCatching { dbgContext.display?.displayId }.getOrNull()}")
-        Log.d(CWP_TAG, "  composeView class   : ${dbgView.javaClass.name}")
-        Log.d(CWP_TAG, "  composeView.context : ${dbgView.context.javaClass.name}")
-        Log.d(CWP_TAG, "  windowToken         : ${dbgView.windowToken}")
-        Log.d(CWP_TAG, "  rootView.windowToken: ${dbgView.rootView.windowToken}")
-        Log.d(CWP_TAG, "  appWindowToken      : ${dbgView.applicationWindowToken}")
-        Log.d(CWP_TAG, "  isAttachedToWindow  : ${dbgView.isAttachedToWindow}")
-        Log.d(CWP_TAG, "  rootView class      : ${dbgView.rootView.javaClass.name}")
-    }
-    // ─────────────────────────────────────────────────────────────────────────
 
     val colors = LocalAppColors.current
 

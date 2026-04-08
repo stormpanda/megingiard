@@ -53,7 +53,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val TAG = "MirrorPresentation"
-private const val MP_DEBUG_TAG = "MP_DEBUG"
 private const val MP_AMBIENT_CAPTURE_INTERVAL_MS = 200L
 
 class MirrorPresentation(
@@ -89,11 +88,6 @@ class MirrorPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(MP_DEBUG_TAG, "=== MirrorPresentation.onCreate ===")
-        Log.d(MP_DEBUG_TAG, "  outer context class : ${context.javaClass.name}")
-        Log.d(MP_DEBUG_TAG, "  this.context class  : ${this.context.javaClass.name}")
-        Log.d(MP_DEBUG_TAG, "  outer context display: ${runCatching { context.display?.displayId }.getOrNull()}")
-        Log.d(MP_DEBUG_TAG, "  this display id     : ${display.displayId}")
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             onBackCallback
@@ -160,7 +154,6 @@ class MirrorPresentation(
         }
 
         val composeView = ComposeView(context).apply {
-            Log.d(MP_DEBUG_TAG, "ComposeView created with context class: ${context.javaClass.name}")
             setContent {
                 val themeMode by SettingsManager.themeMode.collectAsState()
                 val userAccent by SettingsManager.accentColor.collectAsState()
@@ -179,7 +172,15 @@ class MirrorPresentation(
                     }
                     val config = Configuration(context.resources.configuration)
                     config.setLocale(locale)
-                    context.createConfigurationContext(config)
+                    // CRITICAL: use applicationContext, NOT the Presentation's window context.
+                    // The Presentation window context has type TYPE_PRIVATE_PRESENTATION (2037).
+                    // When Compose's Dialog() tries to show a sub-window of type TYPE_APPLICATION
+                    // (2), WindowManagerImpl.assertWindowContextTypeMatches() throws
+                    // IllegalArgumentException because 2037 ≠ 2.
+                    // The application context is not a window context and has no type constraint,
+                    // so Dialog windows can be created without restriction. stringResource() and
+                    // all other resource lookups work normally with a configuration context.
+                    context.applicationContext.createConfigurationContext(config)
                 }
 
                 CompositionLocalProvider(
