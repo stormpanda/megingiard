@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.settings
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,17 +58,6 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
         val newOrder = toolOrder.toMutableList()
         newOrder.add(to.index - offset, newOrder.removeAt(from.index - offset))
         SettingsManager.setToolOrder(newOrder)
-    }
-
-    if (showColorPicker) {
-        ColorWheelPicker(
-            initialColor = accentColor,
-            onColorSelected = { color ->
-                SettingsManager.setAccentColor(color)
-                showColorPicker = false
-            },
-            onDismiss = { showColorPicker = false }
-        )
     }
 
     Box(
@@ -195,6 +185,18 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+        // Hosted color picker — rendered in-tree so it works in Presentation context too
+        if (showColorPicker) {
+            Log.d("GS_DEBUG", "GlobalSettingsScreen: showColorPicker=true → ColorWheelPicker about to compose")
+            ColorWheelPicker(
+                initialColor = accentColor,
+                onColorSelected = { color ->
+                    SettingsManager.setAccentColor(color)
+                    showColorPicker = false
+                },
+                onDismiss = { showColorPicker = false }
+            )
         }
     }
 }

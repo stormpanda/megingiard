@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -82,7 +83,10 @@ private fun VignetteShape.labelResId(): Int = when (this) {
  * @param onOpenEditor  Called when the user taps "Edit Layout…" to open the full-screen editor.
  */
 @Composable
-fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
+fun MacroPadToolSettings(
+    onOpenEditor: () -> Unit,
+    onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
+) {
     val profiles    by MacroPadState.profiles.collectAsState()
     val activeId    by MacroPadState.activeProfileId.collectAsState()
     val colors      = LocalAppColors.current
@@ -119,7 +123,10 @@ fun MacroPadToolSettings(onOpenEditor: () -> Unit) {
         HorizontalDivider(color = colors.divider)
 
         // ── Ambient Display settings ────────────────────────────────────────
-        AmbientSettingsSection(accentColor = colors.accent)
+        AmbientSettingsSection(
+            accentColor = colors.accent,
+            onRequestColorPicker = onRequestColorPicker,
+        )
     }
 }
 
@@ -265,7 +272,10 @@ private const val MTS_VIGNETTE_TRANSITION_MAX = 1f
 private val MTS_VIGNETTE_SWATCH_SIZE = 24.dp
 
 @Composable
-private fun AmbientSettingsSection(accentColor: Color) {
+private fun AmbientSettingsSection(
+    accentColor: Color,
+    onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
+) {
     val scope = rememberCoroutineScope()
     val colors = LocalAppColors.current
     val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
@@ -325,7 +335,10 @@ private fun AmbientSettingsSection(accentColor: Color) {
         HorizontalDivider(color = colors.divider)
         Spacer(Modifier.height(4.dp))
 
-        VignetteSettingsSubSection(accentColor = accentColor)
+        VignetteSettingsSubSection(
+            accentColor = accentColor,
+            onRequestColorPicker = onRequestColorPicker,
+        )
     }
 }
 
@@ -334,7 +347,10 @@ private fun AmbientSettingsSection(accentColor: Color) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun VignetteSettingsSubSection(accentColor: Color) {
+private fun VignetteSettingsSubSection(
+    accentColor: Color,
+    onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
+) {
     val scope = rememberCoroutineScope()
     val colors = LocalAppColors.current
     val vignetteEnabled   by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
@@ -414,7 +430,8 @@ private fun VignetteSettingsSubSection(accentColor: Color) {
             vignetteColorInt = vignetteColor,
             accentColor = accentColor,
             colors = colors,
-            onColorSelected = { scope.launch { SettingsManager.setMacropadAmbientVignetteColor(it.toArgb()) } }
+            onColorSelected = { scope.launch { SettingsManager.setMacropadAmbientVignetteColor(it.toArgb()) } },
+            onRequestColorPicker = onRequestColorPicker,
         )
     }
 }
@@ -487,10 +504,13 @@ private fun VignetteColorRow(
     accentColor: Color,
     colors: AppColors,
     onColorSelected: (Color) -> Unit,
+    onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
 ) {
     var showPicker by remember { mutableStateOf(false) }
+    Log.d("MTS_DEBUG", "VignetteColorRow: showPicker=$showPicker")
 
     if (showPicker) {
+        Log.d("MTS_DEBUG", "VignetteColorRow: showPicker=true → ColorWheelPicker about to compose")
         ColorWheelPicker(
             initialColor = Color(vignetteColorInt),
             onColorSelected = { color ->
@@ -504,7 +524,13 @@ private fun VignetteColorRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showPicker = true }
+            .clickable {
+                if (onRequestColorPicker != null) {
+                    onRequestColorPicker(Color(vignetteColorInt), onColorSelected)
+                } else {
+                    showPicker = true
+                }
+            }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

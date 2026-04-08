@@ -73,6 +73,17 @@ fun ToolSettingsPanel(
     val colors = LocalAppColors.current
     val accentColor = colors.accent
 
+    // Hosted color picker for MacroPad settings (rendered in the fullscreen outer Box
+    // so the overlay covers the entire panel — works in both Activity and Presentation)
+    var tspPickerShown by remember { mutableStateOf(false) }
+    var tspPickerColor by remember { mutableStateOf(Color.White) }
+    var tspPickerCallback: ((Color) -> Unit)? by remember { mutableStateOf<((Color) -> Unit)?>(null) }
+    val onRequestColorPicker: (Color, (Color) -> Unit) -> Unit = { color, callback ->
+        tspPickerColor = color
+        tspPickerCallback = callback
+        tspPickerShown = true
+    }
+
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
 
@@ -167,7 +178,10 @@ fun ToolSettingsPanel(
                         kbFullscreen = kbFullscreen,
                         onKbFullscreenChanged = { SettingsManager.setKbFullscreen(it) },
                     )
-                    AppMode.MACROPAD -> MacroPadToolSettings(onOpenEditor = { showMacroPadEditor = true })
+                    AppMode.MACROPAD -> MacroPadToolSettings(
+                        onOpenEditor = { showMacroPadEditor = true },
+                        onRequestColorPicker = onRequestColorPicker,
+                    )
                 }
             }
 
@@ -205,6 +219,17 @@ fun ToolSettingsPanel(
                     modifier = Modifier.size(16.dp)
                 )
             }
+        }
+        // Hosted color picker overlay — last item in the fullscreen Box
+        if (tspPickerShown) {
+            ColorWheelPicker(
+                initialColor = tspPickerColor,
+                onColorSelected = { color ->
+                    tspPickerCallback?.invoke(color)
+                    tspPickerShown = false
+                },
+                onDismiss = { tspPickerShown = false }
+            )
         }
     }
 
