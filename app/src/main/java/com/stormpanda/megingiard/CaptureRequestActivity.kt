@@ -6,7 +6,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import android.media.projection.MediaProjectionManager
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 
 class CaptureRequestActivity : ComponentActivity() {
@@ -18,7 +17,9 @@ class CaptureRequestActivity : ComponentActivity() {
                     putExtra("DATA", result.data)
                 }
                 startForegroundService(serviceIntent)
-                ScreenCaptureManager.setCapturing(true)
+                // setCapturing(true) is called by ScreenCaptureService after
+                // restoreMirrorSessionState() completes, so the viewport/lock/freeze
+                // values are in ScreenCaptureManager before any UI reacts to isCapturing.
                 AppStateManager.setUserDeclinedCapture(false)
             } else {
                 AppStateManager.setUserDeclinedCapture(true)

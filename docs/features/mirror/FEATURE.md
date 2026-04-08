@@ -232,7 +232,12 @@ Users can opt in to persisting specific mirror session states across restarts vi
 
 **Save flow:** When the user presses Stop, `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()`. For each enabled "remember" flag, the current value is written to DataStore. Additionally, lock, touch-projection, and freeze states are saved immediately on any change (via `combine` in a `LaunchedEffect` in `MirrorScreen`) so that a mode-switch without pressing Stop also persists the current values.
 
-**Restore flow:** When `CaptureRequestActivity` receives a successful consent result and starts the service, `SettingsManager.restoreMirrorSessionState()` is called immediately after `setCapturing(true)`. For each enabled "remember" flag, the saved value is read from DataStore and applied to `ScreenCaptureManager`.
+**Restore flow:** `ScreenCaptureService.onStartCommand()` launches a coroutine that:
+1. Calls `SettingsManager.restoreMirrorSessionState()` — applies saved values to `ScreenCaptureManager` (no UI involved).
+2. Calls `ScreenCaptureManager.setCapturing(true)` — signals the UI that capture is active. Because the values are already in `ScreenCaptureManager` at this point, `MirrorScreen`'s `LaunchedEffect(isCapturing)` reads the correct values with a simple in-memory read (no DataStore I/O).
+3. Calls `presentation.show()` — `MirrorPresentation`'s StateFlow collectors receive the restored values on their first emission.
+
+This ordering guarantees correct behaviour both for direct Ambient Display start (where `MirrorScreen` is never in composition) and for quick mode switches (the coroutine runs in the service scope, which is not cancelled by UI navigation).
 
 **Viewport sync:** `MirrorScreen` contains a `LaunchedEffect(isCapturing)` that, when capturing starts, reads the current `ScreenCaptureManager` scale/offset values and calls `Animatable.snapTo()` to align the animation state with the restored values. This bridges the gap between the manager (source of truth after restore) and the Compose `Animatable` instances (source of truth during gestures).
 

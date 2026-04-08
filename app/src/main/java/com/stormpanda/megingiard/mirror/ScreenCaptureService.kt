@@ -108,7 +108,16 @@ class ScreenCaptureService : Service() {
                 }
             }
 
-            presentation.show()
+            // Restore saved viewport/lock/freeze into ScreenCaptureManager BEFORE
+            // presentation.show() so MirrorPresentation's StateFlow collectors receive
+            // the correct values on their very first emission instead of the defaults.
+            // setCapturing(true) is called afterwards so MirrorScreen's LaunchedEffect
+            // reads already-restored values — no DataStore I/O needed in the UI layer.
+            scope.launch {
+                SettingsManager.restoreMirrorSessionState()
+                ScreenCaptureManager.setCapturing(true)
+                presentation.show()
+            }
         }
         return START_NOT_STICKY
     }

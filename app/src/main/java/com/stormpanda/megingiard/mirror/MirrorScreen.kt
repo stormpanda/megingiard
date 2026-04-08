@@ -76,9 +76,11 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    val animScale = remember { Animatable(ZOOM_MIN) }
-    val animOffsetX = remember { Animatable(0f) }
-    val animOffsetY = remember { Animatable(0f) }
+    // Initialise from the current ScreenCaptureManager values so the first snapshotFlow
+    // emission is already correct and does not overwrite the restored viewport with defaults.
+    val animScale = remember { Animatable(ScreenCaptureManager.scale.value) }
+    val animOffsetX = remember { Animatable(ScreenCaptureManager.offsetX.value) }
+    val animOffsetY = remember { Animatable(ScreenCaptureManager.offsetY.value) }
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -126,14 +128,12 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // When capturing starts, restore persisted session state from DataStore (viewport,
-    // lock, touch projection) and then sync Animatable values.  The suspend call to
-    // restoreMirrorSessionState() ensures ScreenCaptureManager has the saved values
-    // BEFORE we read them into the Animatables — and before the snapshotFlow below
-    // can overwrite them with stale defaults.
+    // When capturing starts (or MirrorScreen re-enters composition while already capturing),
+    // sync the Animatable values from ScreenCaptureManager.  Session state was already
+    // restored by ScreenCaptureService before setCapturing(true) was called, so no DataStore
+    // I/O is needed here — just a synchronous read from the in-memory StateFlow values.
     LaunchedEffect(isCapturing) {
         if (isCapturing) {
-            SettingsManager.restoreMirrorSessionState()
             val s = ScreenCaptureManager.scale.value
             val ox = ScreenCaptureManager.offsetX.value
             val oy = ScreenCaptureManager.offsetY.value
