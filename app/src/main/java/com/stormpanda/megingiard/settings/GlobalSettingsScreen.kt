@@ -59,17 +59,6 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
         SettingsManager.setToolOrder(newOrder)
     }
 
-    if (showColorPicker) {
-        ColorWheelPicker(
-            initialColor = accentColor,
-            onColorSelected = { color ->
-                SettingsManager.setAccentColor(color)
-                showColorPicker = false
-            },
-            onDismiss = { showColorPicker = false }
-        )
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -195,6 +184,17 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+        // Hosted color picker — rendered in-tree so it works in Presentation context too
+        if (showColorPicker) {
+            ColorWheelPicker(
+                initialColor = accentColor,
+                onColorSelected = { color ->
+                    SettingsManager.setAccentColor(color)
+                    showColorPicker = false
+                },
+                onDismiss = { showColorPicker = false }
+            )
         }
     }
 }

@@ -80,12 +80,13 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // Stop all injectors when leaving MACROPAD mode
+    // Stop all injectors and reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
         onDispose {
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()
+            MacroPadState.resetPeek()
         }
     }
 
@@ -117,7 +118,12 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun PadSurface(profile: PadProfile, accentColor: Color) {
+internal fun PadSurface(
+    profile: PadProfile,
+    accentColor: Color,
+    isPeekActive: Boolean = false,
+    transparentBackground: Boolean = false,
+) {
     val density      = LocalDensity.current
     val context      = LocalContext.current
     val colors       = LocalAppColors.current
@@ -143,8 +149,11 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(MP_CORNER_RADIUS))
-                .background(colors.surface)
-                .border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
+                .background(if (transparentBackground) Color.Transparent else colors.surface)
+                .then(
+                    if (transparentBackground) Modifier
+                    else Modifier.border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
+                )
                 .onSizeChanged { canvasSize = it }
                 .pointerInput(profile, canvasSize) {
                     awaitPointerEventScope {
@@ -171,7 +180,12 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                         // Only act on the pointer that just went down;
                                         // other pointers in this batch event are still held from before.
                                         if (!change.previousPressed) {
-                                        val hitButton = profile.buttons.firstOrNull { btn ->
+                                        val hitList = if (isPeekActive) {
+                                            profile.buttons.filter { it.action is PadAction.AmbientPeek }
+                                        } else {
+                                            profile.buttons
+                                        }
+                                        val hitButton = hitList.firstOrNull { btn ->
                                             val isTrackpoint = btn.action is PadAction.TrackpointMove
                                             val chipWidthPx = with(density) {
                                                 if (isTrackpoint) (MP_BUTTON_UNIT_DP * (btn.action as PadAction.TrackpointMove).size.multiplier).toPx()
@@ -199,6 +213,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                                                     is PadAction.MouseLeftClick,
                                                     is PadAction.MouseRightClick -> if (!profile.enableMouse) R.string.macropad_device_disabled_mouse else null
                                                     is PadAction.Macro           -> if (!profile.enableGamepad) R.string.macropad_device_disabled_gamepad else null
+                                                    is PadAction.AmbientPeek     -> null
                                                 }
                                                 if (disabledMsgRes != null) {
                                                     Toast.makeText(context, disabledMsgRes, Toast.LENGTH_SHORT).show()
@@ -295,8 +310,13 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                     }
                 }
         ) {
-            // Render buttons
-            profile.buttons.forEach { btn ->
+            // Render buttons (filtered by peek state)
+            val visibleButtons = if (isPeekActive) {
+                profile.buttons.filter { it.action is PadAction.AmbientPeek }
+            } else {
+                profile.buttons
+            }
+            visibleButtons.forEach { btn ->
                 val isDeviceDisabled = when (btn.action) {
                     is PadAction.KeyboardKey                 -> !profile.enableKeyboard
                     is PadAction.GamepadButton               -> !profile.enableGamepad
@@ -306,6 +326,7 @@ private fun PadSurface(profile: PadProfile, accentColor: Color) {
                     is PadAction.MouseLeftClick,
                     is PadAction.MouseRightClick             -> !profile.enableMouse
                     is PadAction.Macro                       -> !profile.enableGamepad
+                    is PadAction.AmbientPeek                 -> false
                 }
                 val isPressed = btn.id in pressedIds
                 PadButton(

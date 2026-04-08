@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -30,13 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -73,6 +73,32 @@ fun ToolSettingsPanel(
     val colors = LocalAppColors.current
     val accentColor = colors.accent
 
+    // Hosted color picker for MacroPad settings (rendered in the fullscreen outer Box
+    // so the overlay covers the entire panel — works in both Activity and Presentation)
+    var tspPickerShown by remember { mutableStateOf(false) }
+    var tspPickerColor by remember { mutableStateOf(Color.White) }
+    var tspPickerCallback: ((Color) -> Unit)? by remember { mutableStateOf<((Color) -> Unit)?>(null) }
+    val onRequestColorPicker: (Color, (Color) -> Unit) -> Unit = { color, callback ->
+        tspPickerColor = color
+        tspPickerCallback = callback
+        tspPickerShown = true
+    }
+
+    val macropadAmbientPreview by SettingsManager.macropadAmbientPreview.collectAsState()
+    var isSliderDragging by remember { mutableStateOf(false) }
+    // For MacroPad mode, transparency during slider drag requires the preview checkbox.
+    // For all other modes, slider drag always makes the panel translucent.
+    val isTranslucent = isSliderDragging &&
+        (currentMode != AppMode.MACROPAD || macropadAmbientPreview)
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (isTranslucent) 0f else 0.5f,
+        label = "scrim",
+    )
+    val cardAlpha by animateFloatAsState(
+        targetValue = if (isTranslucent) 0.30f else 1f,
+        label = "card",
+    )
+
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
 
@@ -81,14 +107,18 @@ fun ToolSettingsPanel(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismiss),
+            .background(Color.Black.copy(alpha = scrimAlpha))
+            .clickable(enabled = !isSliderDragging, onClick = onDismiss),
         contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - PANEL_SCREEN_MARGIN * 2)
+                // alpha must precede background so the compositing layer it creates
+                // also encompasses the background draw — otherwise background is painted
+                // at full opacity and only the content becomes faint.
+                .alpha(cardAlpha)
                 .background(colors.surface, RoundedCornerShape(PANEL_CORNER))
                 // Prevent clicks on the card itself from propagating to the scrim
                 .clickable(enabled = true, onClick = {})
@@ -167,7 +197,11 @@ fun ToolSettingsPanel(
                         kbFullscreen = kbFullscreen,
                         onKbFullscreenChanged = { SettingsManager.setKbFullscreen(it) },
                     )
-                    AppMode.MACROPAD -> MacroPadToolSettings(onOpenEditor = { showMacroPadEditor = true })
+                    AppMode.MACROPAD -> MacroPadToolSettings(
+                        onOpenEditor = { showMacroPadEditor = true },
+                        onSliderDragging = { isSliderDragging = it },
+                        onRequestColorPicker = onRequestColorPicker,
+                    )
                 }
             }
 
@@ -206,17 +240,23 @@ fun ToolSettingsPanel(
                 )
             }
         }
-    }
-
-    if (showMacroPadEditor) {
-        Dialog(
-            onDismissRequest = { showMacroPadEditor = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false,
-            ),
-        ) {
-            MacroPadEditor(onDone = { showMacroPadEditor = false })
+        // Hosted color picker overlay — rendered in-tree so it works in Presentation too
+        if (tspPickerShown) {
+            ColorWheelPicker(
+                initialColor = tspPickerColor,
+                onColorSelected = { color ->
+                    tspPickerCallback?.invoke(color)
+                    tspPickerShown = false
+                },
+                onDismiss = { tspPickerShown = false }
+            )
+        }
+        // MacroPad editor overlay — rendered in-tree (no Dialog) so it works in Presentation too
+        if (showMacroPadEditor) {
+            BackHandler { showMacroPadEditor = false }
+            Box(modifier = Modifier.fillMaxSize()) {
+                MacroPadEditor(onDone = { showMacroPadEditor = false })
+            }
         }
     }
 }

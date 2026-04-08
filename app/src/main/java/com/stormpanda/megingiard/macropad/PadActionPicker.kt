@@ -39,7 +39,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 // Action category enum
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO }
+internal enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, AMBIENT_PEEK }
 
 internal fun ActionCategory.labelResId(): Int = when (this) {
     ActionCategory.KEYBOARD_KEY   -> R.string.macropad_action_keyboard_key
@@ -48,6 +48,7 @@ internal fun ActionCategory.labelResId(): Int = when (this) {
     ActionCategory.SCROLL_WHEEL   -> R.string.macropad_action_scroll_wheel
     ActionCategory.TRACKPOINT     -> R.string.macropad_action_trackpoint
     ActionCategory.MACRO          -> R.string.macropad_action_macro
+    ActionCategory.AMBIENT_PEEK   -> R.string.macropad_action_ambient_peek
 }
 
 internal fun ActionCategory.defaultAction(): PadAction = when (this) {
@@ -57,6 +58,7 @@ internal fun ActionCategory.defaultAction(): PadAction = when (this) {
     ActionCategory.SCROLL_WHEEL   -> PadAction.ScrollWheel
     ActionCategory.TRACKPOINT     -> PadAction.TrackpointMove()
     ActionCategory.MACRO          -> PadAction.Macro(MacroState.macros.value.firstOrNull()?.id ?: "")
+    ActionCategory.AMBIENT_PEEK   -> PadAction.AmbientPeek
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,6 +72,7 @@ internal fun PadAction.categoryResId(): Int = when (this) {
     is PadAction.ScrollWheel     -> R.string.macropad_action_scroll_wheel
     is PadAction.TrackpointMove  -> R.string.macropad_action_trackpoint
     is PadAction.Macro           -> R.string.macropad_action_macro
+    is PadAction.AmbientPeek     -> R.string.macropad_action_ambient_peek
     is PadAction.MouseLeftClick  -> R.string.macropad_action_mouse_button
     is PadAction.MouseRightClick -> R.string.macropad_action_mouse_button
 }
@@ -87,6 +90,7 @@ internal fun PadAction.displayLabel(): String {
             val macroName = MacroState.macros.value.firstOrNull { it.id == macroId }?.name ?: macroId
             context.getString(R.string.macropad_display_macro, macroName)
         }
+        is PadAction.AmbientPeek     -> context.getString(R.string.macropad_action_ambient_peek)
         is PadAction.MouseLeftClick  -> context.getString(R.string.macropad_display_mouse_button, "Left")
         is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_button, "Right")
     }
@@ -153,6 +157,7 @@ internal fun ActionPicker(
                     ActionCategory.SCROLL_WHEEL,
                     ActionCategory.TRACKPOINT     -> enableMouse
                     ActionCategory.MACRO          -> MacroState.macros.value.isNotEmpty()
+                    ActionCategory.AMBIENT_PEEK   -> true
                 }
                 if (catEnabled) {
                     DropdownMenuItem(
@@ -173,6 +178,7 @@ internal fun ActionPicker(
             is PadAction.Macro          -> MacroPicker(current, accentColor, onChange)
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
+            is PadAction.AmbientPeek,
             is PadAction.MouseLeftClick,
             is PadAction.MouseRightClick -> { /* no further config needed */ }
         }

@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchAction
@@ -48,6 +49,11 @@ import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -58,6 +64,7 @@ private const val MR_TOUCH_INDICATOR_ALPHA = 0.5f
 private const val ZOOM_MIN = 1f
 private const val ZOOM_MAX = 5f
 private const val SNAP_BACK_THRESHOLD = 1.15f
+private const val MR_VIEWPORT_SAVE_DEBOUNCE_MS = 300L
 
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
@@ -74,9 +81,11 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    val animScale = remember { Animatable(ZOOM_MIN) }
-    val animOffsetX = remember { Animatable(0f) }
-    val animOffsetY = remember { Animatable(0f) }
+    // Initialise from the current ScreenCaptureManager values so the first snapshotFlow
+    // emission is already correct and does not overwrite the restored viewport with defaults.
+    val animScale = remember { Animatable(ScreenCaptureManager.scale.value) }
+    val animOffsetX = remember { Animatable(ScreenCaptureManager.offsetX.value) }
+    val animOffsetY = remember { Animatable(ScreenCaptureManager.offsetY.value) }
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -124,14 +133,12 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // When capturing starts, restore persisted session state from DataStore (viewport,
-    // lock, touch projection) and then sync Animatable values.  The suspend call to
-    // restoreMirrorSessionState() ensures ScreenCaptureManager has the saved values
-    // BEFORE we read them into the Animatables — and before the snapshotFlow below
-    // can overwrite them with stale defaults.
+    // When capturing starts (or MirrorScreen re-enters composition while already capturing),
+    // sync the Animatable values from ScreenCaptureManager.  Session state was already
+    // restored by ScreenCaptureService before setCapturing(true) was called, so no DataStore
+    // I/O is needed here — just a synchronous read from the in-memory StateFlow values.
     LaunchedEffect(isCapturing) {
         if (isCapturing) {
-            SettingsManager.restoreMirrorSessionState()
             val s = ScreenCaptureManager.scale.value
             val ox = ScreenCaptureManager.offsetX.value
             val oy = ScreenCaptureManager.offsetY.value
@@ -143,12 +150,47 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
 
     // Sync animated transform values to ScreenCaptureManager so MirrorPresentation's
     // SurfaceView can apply the same transform.
-    LaunchedEffect(Unit) {
+    val rememberViewport by SettingsManager.rememberViewport.collectAsState()
+    val rememberLock by SettingsManager.rememberLock.collectAsState()
+    val rememberProjection by SettingsManager.rememberProjection.collectAsState()
+    val currentMode by AppStateManager.currentMode.collectAsState()
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    LaunchedEffect(rememberViewport, currentMode) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
-            .collectLatest { snapshot ->
+            .onEach { snapshot ->
                 ScreenCaptureManager.setScale(snapshot.first)
                 ScreenCaptureManager.setOffsetX(snapshot.second)
                 ScreenCaptureManager.setOffsetY(snapshot.third)
+            }
+            .debounce(MR_VIEWPORT_SAVE_DEBOUNCE_MS)
+            .collectLatest {
+                // Save only in Mirror mode and when "Remember viewport" is enabled
+                if (currentMode == AppMode.MIRROR && rememberViewport) {
+                    SettingsManager.saveMirrorSessionState()
+                }
+            }
+    }
+
+    // Save lock and touch-projection state immediately on change, so a mode-switch
+    // without explicit Stop doesn't lose the current values.
+    // Keys: currentMode only — rememberLock/rememberProjection are intentionally excluded
+    // so a checkbox toggle does not restart the coroutine and re-drop the first emission.
+    // isCapturing.value is checked directly on the StateFlow (not via collectAsState) to
+    // guard against resetMirrorSessionState() firing after setCapturing(false) in the
+    // Stop handler, which would otherwise overwrite the correct save with false/false.
+    LaunchedEffect(currentMode) {
+        combine(
+            ScreenCaptureManager.isLocked,
+            ScreenCaptureManager.isTouchProjectionActive,
+        ) { locked, projection -> Pair(locked, projection) }
+            .distinctUntilChanged()
+            .drop(1)
+            .collectLatest {
+                if (currentMode == AppMode.MIRROR &&
+                    ScreenCaptureManager.isCapturing.value &&
+                    (SettingsManager.rememberLock.value || SettingsManager.rememberProjection.value)) {
+                    SettingsManager.saveMirrorSessionState()
+                }
             }
     }
 

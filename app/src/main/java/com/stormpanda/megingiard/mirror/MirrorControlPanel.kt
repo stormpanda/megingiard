@@ -79,10 +79,10 @@ internal fun MirrorControlPanel(
                 IconButton(
                     onClick = {
                         SettingsManager.saveMirrorSessionState()
+                        AppStateManager.setUserDeclinedCapture(true)
                         context.stopService(Intent(context, ScreenCaptureService::class.java))
                         ScreenCaptureManager.setCapturing(false)
                         ScreenCaptureManager.resetMirrorSessionState()
-                        AppStateManager.setUserDeclinedCapture(true)
                     },
                     modifier = Modifier
                         .size(CONTROL_BUTTON_SIZE)

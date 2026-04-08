@@ -15,6 +15,8 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -236,6 +238,48 @@ internal fun InputMethodRow(
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = accentColor
+            )
+        )
+    }
+}
+
+@Composable
+internal fun SliderSettingRow(
+    label: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    formatLabel: (Float) -> String,
+    accentColor: Color,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
+) {
+    val colors = LocalAppColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                color = colors.onSurface,
+                fontSize = 14.sp,
+            )
+            Text(
+                text = formatLabel(value),
+                color = colors.onSurfaceSecondary,
+                fontSize = 12.sp,
+            )
+        }
+        Slider(
+            modifier = Modifier.weight(2f),
+            value = value,
+            onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
+            valueRange = valueRange,
+            colors = SliderDefaults.colors(
+                thumbColor = accentColor,
+                activeTrackColor = accentColor,
+                inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f)
             )
         )
     }

@@ -46,6 +46,7 @@ Each button supports one of the following actions:
 | `TrackpointMove`  | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
 | `MouseLeftClick`  | BTN_LEFT (legacy alias)   | `mouseinjector_arm64`   |
 | `MouseRightClick` | BTN_RIGHT (legacy alias)  | `mouseinjector_arm64`   |
+| `AmbientPeek`     | App-level peek toggle     | _(none)_                |
 
 - `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package.
 - `GamepadButton` and all mouse actions use dedicated injectors (`GamepadInjector`, `MouseInjector`) backed by their own native binary processes.
@@ -62,8 +63,10 @@ Each button supports one of the following actions:
 
 - A trackpoint is a **regular `PadButton`** with a `TrackpointMove` action, not a separate profile-level toggle.
 - Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
-- In use mode, dragging a finger on a trackpoint button translates relative motion into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta.
-- In the editor, the `ButtonEditDialog` hides the label field and shape picker when action is `TrackpointMove`, and shows a three-option size picker (`Small` / `Medium` / `Large`) instead of the ButtonSize dropdown.
+- In use mode, dragging a finger on a trackpoint button translates relative motion into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta (`MP_TRACKPOINT_SENSITIVITY = 3f`).
+- **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
+- **AmbientPeek buttons** render a visibility icon: `Icons.Filled.Visibility` when peek is inactive, `Icons.Filled.VisibilityOff` when active.
+- In the editor, the `ButtonEditDialog` hides the label field and shape picker when action is `TrackpointMove`, `ScrollWheel`, or `AmbientPeek`.
 
 ### FR-P6: Multi-Touch Button Support
 
@@ -106,6 +109,24 @@ Each button supports one of the following actions:
   2. **Macro dropdown** — shows only macros belonging to the folder selected in step 1. Pre-selects the currently assigned macro (if any).
   - If the selected folder has no macros, the macro dropdown shows a disabled placeholder ("Keine Makros in diesem Ordner").
 
+### FR-P9: Ambient Display
+
+- An optional **Ambient Display** mode renders the Screen Mirror output behind the MacroPad buttons on the secondary display.
+- Enabled via a **toggle** in MacroPad tool settings (default: off).
+- When Ambient Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
+- When ambient is enabled and capturing is active, the `MirrorPresentation` renders `AmbientMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
+- **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
+  - **Slider persistence:** The dim slider and all three vignette numeric sliders (Visible Area, Transition, Opacity) use a **live-update + persist-on-release** pattern. `onValueChange` calls an in-memory-only setter (e.g. `updateMacropadAmbientDimLive`) for immediate visual feedback without triggering DataStore I/O. DataStore is written only in `onValueChangeFinished` (when the user lifts their finger), preventing per-frame writes during a drag gesture.
+- **Vignette** (optional, default off) darkens the screen edges using a shape-specific gradient layer. Configurable via five settings:
+  - **Shape** (`RADIAL` / `LETTERBOX` / `PILLARBOX`): `RADIAL` = circular vignette centred on the screen; `LETTERBOX` = horizontal dark bars at top and bottom; `PILLARBOX` = vertical dark bars at left and right.
+  - **Visible Area** (0–100%, default 70%): controls the size of the inner transparent zone. At 100% the transparent zone reaches all four corners (`innerRadius = halfDiag = √(w²+h²)/2`) — the vignette is effectively off-screen. At 0% the entire screen is covered. For `LETTERBOX` the visible area is the fraction of the screen height that remains transparent; for `PILLARBOX` the fraction of the screen width.
+  - **Transition** (0 = Soft → 100 = Hard, default 50%): at 0% (Soft) the gradient sweeps the entire dark band from the screen edge to the visible-area boundary; at 100% (Hard) there is an instant cut with no gradient.
+  - **Opacity** (0–100%, default 60%): alpha of the vignette colour.
+  - **Color** (any ARGB colour, selected via `ColorWheelPicker`, default black `0xFF000000`).
+    Like dim, the vignette is hidden when Peek is active.
+- A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, dim and vignette are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
+- When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
+
 ---
 
 ## Technical Implementation
@@ -127,6 +148,22 @@ MacroPadState (object singleton)
 MacroPadEditor (Composable, opened from MacroPadToolSettings)
       └── CRUD on profiles via MacroPadState
 ```
+
+#### Ambient Display Rendering Pipeline
+
+When Ambient Display is enabled and `ScreenCaptureService` is capturing:
+
+1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `AmbientMacroPadOverlay` in its `ComposeView`.
+2. The `SurfaceView` receives the `VirtualDisplay` output directly (live hardware path — no PixelCopy overhead).
+3. A dim overlay (`Color.Black.copy(alpha = ambientDim)`) is drawn on top.
+4. If vignette is enabled, a shape-specific gradient layer is drawn between the dim overlay and the MacroPad buttons using private `DrawScope` extension functions (`drawRadialVignette`, `drawLetterboxVignette`, `drawPillarboxVignette`):
+   - **Radial**: `Brush.radialGradient(colorStops, center, radius = halfDiag)`. `innerFrac = visibleArea`; `gEnd = min(1f, max(innerFrac + (1-innerFrac)*(1-transition), innerFrac + VIGNETTE_MIN_STOP_GAP))`; colorStops = `[(0,T), (innerFrac,T)?, (gEnd,C), (1,C)?]`.
+   - **Letterbox**: `Brush.verticalGradient(colorStops)`. `innerFrac = (1-visibleArea)/2`; `safeGStart = max(0, min(innerFrac-eps, innerFrac*(1-transition)*(innerFrac/innerFrac)))`; colorStops = `[(0,C), (safeGStart,C)?, (innerFrac,T), (1-innerFrac,T), (1-safeGStart,C)?, (1,C)]`. Returns early when `innerFrac ≤ 0`.
+   - **Pillarbox**: same as Letterbox but uses `Brush.horizontalGradient` and `visibleArea` maps to the width fraction instead of height.
+     `VIGNETTE_MIN_STOP_GAP = 0.001f` ensures no two adjacent colour-stops share the same fractional position (which would crash `Brush`).
+5. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
+6. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered (the Press hit-test list is also filtered to `AmbientPeek` buttons so hidden buttons cannot be triggered), and dim/vignette are overridden to 0.
+   - **Peek state reset:** `MacroPadState.resetPeek()` is called in two places: in `AmbientMacroPadOverlay`'s `DisposableEffect.onDispose` (leaving ambient mode), and in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode entirely). This ensures peek state never leaks across mode switches, regardless of which screen was active when the mode changed.
 
 ### Data Model
 

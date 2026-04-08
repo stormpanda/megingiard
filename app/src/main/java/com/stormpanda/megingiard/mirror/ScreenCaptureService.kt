@@ -20,6 +20,7 @@ import android.view.WindowManager
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -58,6 +59,7 @@ class ScreenCaptureService : Service() {
 
             if (secondaryDisplay == null) {
                 Log.e(TAG, "No secondary display found!")
+                AppStateManager.setPromptInFlight(false)
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -88,7 +90,11 @@ class ScreenCaptureService : Service() {
             presentation.onSurfaceReady = { surface ->
                 currentSurface = surface
                 virtualDisplay?.release()
-                if (AppStateManager.currentMode.value == AppMode.MIRROR) {
+                val mode = AppStateManager.currentMode.value
+                val ambientEnabled = SettingsManager.macropadAmbientEnabled.value
+                val shouldCreateVd = mode == AppMode.MIRROR ||
+                    (mode == AppMode.MACROPAD && ambientEnabled)
+                if (shouldCreateVd) {
                     try {
                         val isFrozen = ScreenCaptureManager.isFrozen.value
                         virtualDisplay = mediaProjection?.createVirtualDisplay(
@@ -103,7 +109,16 @@ class ScreenCaptureService : Service() {
                 }
             }
 
-            presentation.show()
+            // Restore viewport/lock/freeze FIRST so MirrorScreen's LaunchedEffect(isCapturing)
+            // observes the correct values the moment isCapturing becomes true.
+            // promptInFlight remains true throughout the restore, so there is no window where
+            // isCapturing=false && promptInFlight=false could re-trigger the capture prompt.
+            scope.launch {
+                SettingsManager.restoreMirrorSessionState()
+                ScreenCaptureManager.setCapturing(true)
+                AppStateManager.setPromptInFlight(false)
+                presentation.show()
+            }
         }
         return START_NOT_STICKY
     }
@@ -125,6 +140,11 @@ class ScreenCaptureService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         scope.cancel()
+        // Safety net: if the service is killed unexpectedly (system, crash) after
+        // setCapturing(true) was called but before the user could press Stop, ensure
+        // the UI state is cleaned up so the app doesn't get stuck.
+        if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
+        AppStateManager.setPromptInFlight(false)
         virtualDisplay?.release()
         mediaProjection?.stop()
         mirrorPresentation?.dismiss()

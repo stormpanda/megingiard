@@ -85,4 +85,6 @@ object ScreenCaptureManager {
         _isFrozen.value = false
         setFrozenBitmap(null)
     }
+
+
 }

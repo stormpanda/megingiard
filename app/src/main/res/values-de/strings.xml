@@ -95,6 +95,8 @@
     <string name="settings_remember_lock_desc">Gesperrten Zustand beim Neustart der Spiegelung wiederherstellen</string>
     <string name="settings_remember_projection">Touch-Projektion merken</string>
     <string name="settings_remember_projection_desc">Touch-Projektion-Status beim Neustart der Spiegelung wiederherstellen</string>
+    <string name="settings_remember_freeze">Standbild merken</string>
+    <string name="settings_remember_freeze_desc">Standbild-Zustand beim Neustart der Spiegelung wiederherstellen</string>
 
     <!-- General session -->
     <string name="settings_remember_last_tool">Letztes Werkzeug merken</string>
@@ -164,6 +166,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_mouse_button">Maustaste</string>
     <string name="macropad_action_scroll_wheel">Scrollrad</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative Maus)</string>
+    <string name="macropad_action_ambient_peek">Vorschau-Taste</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
     <string name="settings_macropad_profile">Aktives Profil</string>
@@ -174,6 +177,27 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_pad_size">Pad-Größe: %d%%</string>
     <string name="settings_macropad_edit_layout">Layout bearbeiten\u2026</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
+    <string name="settings_macropad_edit">Bearbeiten</string>
+    <string name="settings_macropad_new">Neu</string>
+
+    <!-- MacroPad-Ambient-Display-Einstellungen -->
+    <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
+    <string name="settings_macropad_ambient_hint">Startet Bildschirmspiegelung automatisch (einmalige Berechtigung erforderlich)</string>
+    <string name="settings_macropad_ambient_preview">Vorschau für Darstellung</string>
+    <string name="settings_macropad_ambient_preview_hint">Transparentes Fenster während Darstellung angepasst wird</string>
+    <string name="settings_macropad_blur">Unschärfe</string>
+    <string name="settings_macropad_dim">Abdunkelung</string>
+    <string name="settings_macropad_vignette">Vignette</string>
+    <string name="settings_macropad_vignette_visible_area">Sichtbarer Bereich</string>
+    <string name="settings_macropad_vignette_transition">Übergang</string>
+    <string name="settings_macropad_vignette_transition_soft">Weich</string>
+    <string name="settings_macropad_vignette_transition_hard">Hart</string>
+    <string name="settings_macropad_vignette_opacity">Stärke</string>
+    <string name="settings_macropad_vignette_color">Farbe</string>
+    <string name="settings_macropad_vignette_shape">Form</string>
+    <string name="settings_macropad_vignette_shape_radial">Radial</string>
+    <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
+    <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Taste: %s</string>

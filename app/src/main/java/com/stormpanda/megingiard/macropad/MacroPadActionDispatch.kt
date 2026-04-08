@@ -26,6 +26,7 @@ internal fun injectActionDown(action: PadAction) {
             val macro = MacroState.macros.value.firstOrNull { it.id == action.macroId }
             if (macro != null) MacroExecutor.execute(macro)
         }
+        is PadAction.AmbientPeek     -> MacroPadState.togglePeek()
         is PadAction.MouseLeftClick  -> MouseInjector.leftDown()
         is PadAction.MouseRightClick -> MouseInjector.rightDown()
     }
@@ -45,6 +46,7 @@ internal fun injectActionUp(action: PadAction) {
         is PadAction.ScrollWheel     -> { /* handled via drag events */ }
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
         is PadAction.Macro           -> { /* fire-and-forget on down; up is no-op */ }
+        is PadAction.AmbientPeek     -> { /* toggle on down; up is no-op */ }
         is PadAction.MouseLeftClick  -> MouseInjector.leftUp()
         is PadAction.MouseRightClick -> MouseInjector.rightUp()
     }

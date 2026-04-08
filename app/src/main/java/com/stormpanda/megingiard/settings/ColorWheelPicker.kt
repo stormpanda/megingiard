@@ -3,11 +3,15 @@ package com.stormpanda.megingiard.settings
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -35,10 +39,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.PI
@@ -62,7 +67,6 @@ fun ColorWheelPicker(
     AndroidColor.colorToHSV(initialColor.toArgb(), initHsv)
 
     val colors = LocalAppColors.current
-
     var hue by remember { mutableFloatStateOf(initHsv[0]) }
     var sat by remember { mutableFloatStateOf(initHsv[1]) }
     var bri by remember { mutableFloatStateOf(initHsv[2]) }
@@ -81,12 +85,23 @@ fun ColorWheelPicker(
         )
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    // Full-screen scrim + centred card rendered in-tree (no Dialog window).
+    // Works in Activity context and inside a Presentation window.
+    BackHandler(onBack = onDismiss)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.85f)
+                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - 64.dp)
                 .background(colors.pickerBackground, RoundedCornerShape(PICKER_CORNER))
                 .verticalScroll(rememberScrollState())
+                .clickable(enabled = true, onClick = {})
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)

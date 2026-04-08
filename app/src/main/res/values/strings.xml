@@ -158,6 +158,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mouse_button">Mouse Button</string>
     <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
+    <string name="macropad_action_ambient_peek">Ambient Peek</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
     <string name="settings_macropad_profile">Active Profile</string>
@@ -168,6 +169,26 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_pad_size">Pad size: %d%%</string>
     <string name="settings_macropad_edit_layout">Edit Layout…</string>
     <string name="settings_macropad_new_layout">New Layout</string>
+    <string name="settings_macropad_edit">Edit</string>
+    <string name="settings_macropad_new">New</string>
+
+    <!-- MacroPad ambient display settings -->
+    <string name="settings_macropad_ambient">Ambient Display</string>
+    <string name="settings_macropad_ambient_hint">Starts Screen Mirror automatically (permission required on first use)</string>
+    <string name="settings_macropad_ambient_preview">Preview for display</string>
+    <string name="settings_macropad_ambient_preview_hint">Transparent window while display is being adjusted</string>
+    <string name="settings_macropad_dim">Dimming</string>
+    <string name="settings_macropad_vignette">Vignette</string>
+    <string name="settings_macropad_vignette_visible_area">Visible Area</string>
+    <string name="settings_macropad_vignette_transition">Transition</string>
+    <string name="settings_macropad_vignette_transition_soft">Soft</string>
+    <string name="settings_macropad_vignette_transition_hard">Hard</string>
+    <string name="settings_macropad_vignette_opacity">Opacity</string>
+    <string name="settings_macropad_vignette_color">Color</string>
+    <string name="settings_macropad_vignette_shape">Shape</string>
+    <string name="settings_macropad_vignette_shape_radial">Radial</string>
+    <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
+    <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>

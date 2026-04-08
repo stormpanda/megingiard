@@ -49,6 +49,9 @@ private const val DEFAULT_OVERLAY_TIMEOUT_MS = 3_000L
 /** Per-app language preference. [SYSTEM] follows the device locale. */
 enum class AppLanguage { SYSTEM, EN, DE }
 
+/** Shape of the vignette overlay in Ambient Display mode. */
+enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX }
+
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = SETTINGS_DATASTORE_NAME
 )
@@ -99,6 +102,17 @@ object SettingsManager {
     private val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
     private val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
     private val KEY_TOUCHPAD_TWO_FINGER_TAP = booleanPreferencesKey("touchpad_two_finger_tap")
+
+    // MacroPad ambient display settings
+    private val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
+    private val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED = booleanPreferencesKey("macropad_ambient_vignette_enabled")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA = floatPreferencesKey("macropad_ambient_vignette_visible_area")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION = floatPreferencesKey("macropad_ambient_vignette_transition")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY = floatPreferencesKey("macropad_ambient_vignette_opacity")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR = intPreferencesKey("macropad_ambient_vignette_color")
+    private val KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE = stringPreferencesKey("macropad_ambient_vignette_shape")
+    private val KEY_MACROPAD_AMBIENT_PREVIEW = booleanPreferencesKey("macropad_ambient_preview")
 
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
@@ -187,6 +201,34 @@ object SettingsManager {
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
+    // MacroPad ambient display
+    private val _macropadAmbientEnabled = MutableStateFlow(false)
+    val macropadAmbientEnabled: StateFlow<Boolean> = _macropadAmbientEnabled.asStateFlow()
+
+    private val _macropadAmbientDim = MutableStateFlow(0f)
+    val macropadAmbientDim: StateFlow<Float> = _macropadAmbientDim.asStateFlow()
+
+    private val _macropadAmbientVignetteEnabled = MutableStateFlow(false)
+    val macropadAmbientVignetteEnabled: StateFlow<Boolean> = _macropadAmbientVignetteEnabled.asStateFlow()
+
+    private val _macropadAmbientVignetteVisibleArea = MutableStateFlow(0.7f)
+    val macropadAmbientVignetteVisibleArea: StateFlow<Float> = _macropadAmbientVignetteVisibleArea.asStateFlow()
+
+    private val _macropadAmbientVignetteTransition = MutableStateFlow(0.5f)
+    val macropadAmbientVignetteTransition: StateFlow<Float> = _macropadAmbientVignetteTransition.asStateFlow()
+
+    private val _macropadAmbientVignetteOpacity = MutableStateFlow(0.6f)
+    val macropadAmbientVignetteOpacity: StateFlow<Float> = _macropadAmbientVignetteOpacity.asStateFlow()
+
+    private val _macropadAmbientVignetteColor = MutableStateFlow(0xFF000000.toInt())
+    val macropadAmbientVignetteColor: StateFlow<Int> = _macropadAmbientVignetteColor.asStateFlow()
+
+    private val _macropadAmbientVignetteShape = MutableStateFlow(VignetteShape.RADIAL)
+    val macropadAmbientVignetteShape: StateFlow<VignetteShape> = _macropadAmbientVignetteShape.asStateFlow()
+
+    private val _macropadAmbientPreview = MutableStateFlow(false)
+    val macropadAmbientPreview: StateFlow<Boolean> = _macropadAmbientPreview.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -232,6 +274,15 @@ object SettingsManager {
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
+                _macropadAmbientEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
+                _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0f
+                _macropadAmbientVignetteEnabled.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] ?: false
+                _macropadAmbientVignetteVisibleArea.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA] ?: 0.7f
+                _macropadAmbientVignetteTransition.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION] ?: 0.5f
+                _macropadAmbientVignetteOpacity.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY] ?: 0.6f
+                _macropadAmbientVignetteColor.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR] ?: 0xFF000000.toInt()
+                _macropadAmbientVignetteShape.value = VignetteShape.entries.firstOrNull { it.name == prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE] } ?: VignetteShape.RADIAL
+                _macropadAmbientPreview.value = prefs[KEY_MACROPAD_AMBIENT_PREVIEW] ?: false
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -445,6 +496,71 @@ object SettingsManager {
     fun setTouchpadTwoFingerTap(value: Boolean) {
         _touchpadTwoFingerTap.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
+    }
+
+    fun setMacropadAmbientEnabled(value: Boolean) {
+        _macropadAmbientEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_ENABLED] = value } }
+    }
+
+    fun setMacropadAmbientDim(value: Float) {
+        _macropadAmbientDim.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_DIM] = value } }
+    }
+
+    /** Updates the ambient dim level in memory only — no DataStore write. Safe to call on every drag frame. */
+    fun updateMacropadAmbientDimLive(value: Float) {
+        _macropadAmbientDim.value = value
+    }
+
+    /** Updates vignette visible area in memory only — no DataStore write. Safe to call on every drag frame. */
+    fun updateMacropadAmbientVignetteVisibleAreaLive(value: Float) {
+        _macropadAmbientVignetteVisibleArea.value = value
+    }
+
+    /** Updates vignette transition in memory only — no DataStore write. Safe to call on every drag frame. */
+    fun updateMacropadAmbientVignetteTransitionLive(value: Float) {
+        _macropadAmbientVignetteTransition.value = value
+    }
+
+    /** Updates vignette opacity in memory only — no DataStore write. Safe to call on every drag frame. */
+    fun updateMacropadAmbientVignetteOpacityLive(value: Float) {
+        _macropadAmbientVignetteOpacity.value = value
+    }
+
+    fun setMacropadAmbientVignetteEnabled(value: Boolean) {
+        _macropadAmbientVignetteEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] = value } }
+    }
+
+    fun setMacropadAmbientVignetteVisibleArea(value: Float) {
+        _macropadAmbientVignetteVisibleArea.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA] = value } }
+    }
+
+    fun setMacropadAmbientVignetteTransition(value: Float) {
+        _macropadAmbientVignetteTransition.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION] = value } }
+    }
+
+    fun setMacropadAmbientVignetteOpacity(value: Float) {
+        _macropadAmbientVignetteOpacity.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY] = value } }
+    }
+
+    fun setMacropadAmbientVignetteColor(value: Int) {
+        _macropadAmbientVignetteColor.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR] = value } }
+    }
+
+    fun setMacropadAmbientVignetteShape(value: VignetteShape) {
+        _macropadAmbientVignetteShape.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE] = value.name } }
+    }
+
+    fun setMacropadAmbientPreview(value: Boolean) {
+        _macropadAmbientPreview.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_PREVIEW] = value } }
     }
 
     /**
