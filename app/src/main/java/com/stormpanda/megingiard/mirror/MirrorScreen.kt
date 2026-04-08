@@ -172,7 +172,12 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
 
     // Save lock and touch-projection state immediately on change, so a mode-switch
     // without explicit Stop doesn't lose the current values.
-    LaunchedEffect(rememberLock, rememberProjection, currentMode) {
+    // Keys: currentMode only — rememberLock/rememberProjection are intentionally excluded
+    // so a checkbox toggle does not restart the coroutine and re-drop the first emission.
+    // isCapturing.value is checked directly on the StateFlow (not via collectAsState) to
+    // guard against resetMirrorSessionState() firing after setCapturing(false) in the
+    // Stop handler, which would otherwise overwrite the correct save with false/false.
+    LaunchedEffect(currentMode) {
         combine(
             ScreenCaptureManager.isLocked,
             ScreenCaptureManager.isTouchProjectionActive,
@@ -180,7 +185,9 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             .distinctUntilChanged()
             .drop(1)
             .collectLatest {
-                if (currentMode == AppMode.MIRROR && (rememberLock || rememberProjection)) {
+                if (currentMode == AppMode.MIRROR &&
+                    ScreenCaptureManager.isCapturing.value &&
+                    (rememberLock || rememberProjection)) {
                     SettingsManager.saveMirrorSessionState()
                 }
             }
