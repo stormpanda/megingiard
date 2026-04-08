@@ -53,6 +53,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val TAG = "MirrorPresentation"
+private const val MP_DEBUG_TAG = "MP_DEBUG"
 private const val MP_AMBIENT_CAPTURE_INTERVAL_MS = 200L
 
 class MirrorPresentation(
@@ -66,8 +67,20 @@ class MirrorPresentation(
     private var surfaceView: SurfaceView? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
+    // OnBackPressedDispatcher provided to the Compose tree. Needs to be a class
+    // property so onBackCallback can delegate to it (see below).
+    private val backDispatcher = OnBackPressedDispatcher(null)
+
+    // System back events arrive here via the Presentation's OnBackInvokedDispatcher.
+    // We forward them to backDispatcher first so that BackHandlers registered by
+    // Compose (Dialog dismiss, ToolSettingsPanel, etc.) fire correctly. Only if no
+    // Compose callback is enabled do we fall back to switching mode.
     private val onBackCallback = OnBackInvokedCallback {
-        AppStateManager.setMode(AppMode.MEDIA)
+        if (backDispatcher.hasEnabledCallbacks()) {
+            backDispatcher.onBackPressed()
+        } else {
+            AppStateManager.setMode(AppMode.MEDIA)
+        }
     }
 
     override fun cancel() {
@@ -76,6 +89,11 @@ class MirrorPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(MP_DEBUG_TAG, "=== MirrorPresentation.onCreate ===")
+        Log.d(MP_DEBUG_TAG, "  outer context class : ${context.javaClass.name}")
+        Log.d(MP_DEBUG_TAG, "  this.context class  : ${this.context.javaClass.name}")
+        Log.d(MP_DEBUG_TAG, "  outer context display: ${runCatching { context.display?.displayId }.getOrNull()}")
+        Log.d(MP_DEBUG_TAG, "  this display id     : ${display.displayId}")
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             onBackCallback
@@ -131,17 +149,18 @@ class MirrorPresentation(
 
         container.addView(sv)
 
-        // BackHandler (used in ToolSettingsPanel) requires LocalOnBackPressedDispatcherOwner.
-        // This is normally provided by ComponentActivity.setContent, but MirrorPresentation is
-        // not an Activity. We create a minimal dispatcher so BackHandler works correctly inside
-        // the Presentation's ComposeView without crashing.
-        val backDispatcher = OnBackPressedDispatcher(null)
+        // BackHandler (used in ToolSettingsPanel and Compose Dialog) requires
+        // LocalOnBackPressedDispatcherOwner. backDispatcher is a class property so that
+        // onBackCallback (the system back receiver) can delegate into it, making all
+        // BackHandlers inside this ComposeView fire correctly before falling back to
+        // the Presentation-level mode switch.
         val backDispatcherOwner = object : OnBackPressedDispatcherOwner {
             override val lifecycle: Lifecycle get() = lifecycleOwner.lifecycle
             override val onBackPressedDispatcher: OnBackPressedDispatcher get() = backDispatcher
         }
 
         val composeView = ComposeView(context).apply {
+            Log.d(MP_DEBUG_TAG, "ComposeView created with context class: ${context.javaClass.name}")
             setContent {
                 val themeMode by SettingsManager.themeMode.collectAsState()
                 val userAccent by SettingsManager.accentColor.collectAsState()

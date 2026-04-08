@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,6 +57,7 @@ import java.util.UUID
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
+private const val MTS_TAG = "MTS_DEBUG"
 private const val MTS_DROPDOWN_BG_ALPHA = 0.08f
 private val MTS_DROPDOWN_H_PADDING = 12.dp
 private val MTS_DROPDOWN_V_PADDING = 6.dp
@@ -491,6 +493,7 @@ private fun VignetteColorRow(
     var showPicker by remember { mutableStateOf(false) }
 
     if (showPicker) {
+        Log.d(MTS_TAG, "VignetteColorRow: showPicker=true → ColorWheelPicker about to compose")
         ColorWheelPicker(
             initialColor = Color(vignetteColorInt),
             onColorSelected = { color ->
