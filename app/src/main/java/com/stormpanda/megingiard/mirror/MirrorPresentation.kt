@@ -153,7 +153,22 @@ class MirrorPresentation(
             override val onBackPressedDispatcher: OnBackPressedDispatcher get() = backDispatcher
         }
 
-        val composeView = ComposeView(context).apply {
+        // Compose's Dialog() composable creates android.app.Dialog using
+        // LocalView.current.context — i.e. the ComposeView's own context.
+        // If that context is the Presentation's ContextThemeWrapper (window type
+        // TYPE_PRIVATE_PRESENTATION = 2037), Dialog.show() throws:
+        //   "Window type mismatch: context type 2037 vs LayoutParams type 2 (TYPE_APPLICATION)"
+        // Fix: create a TYPE_APPLICATION window context on the same secondary display.
+        // This context is used for the ComposeView so that LocalView.current.context
+        // (which Compose Dialog reads) carries no window-type restriction, and Dialog
+        // sub-windows appear on the correct secondary display.
+        val composeViewContext = context.createWindowContext(
+            display,
+            WindowManager.LayoutParams.TYPE_APPLICATION,
+            null
+        )
+
+        val composeView = ComposeView(composeViewContext).apply {
             setContent {
                 val themeMode by SettingsManager.themeMode.collectAsState()
                 val userAccent by SettingsManager.accentColor.collectAsState()
@@ -172,15 +187,7 @@ class MirrorPresentation(
                     }
                     val config = Configuration(context.resources.configuration)
                     config.setLocale(locale)
-                    // CRITICAL: use applicationContext, NOT the Presentation's window context.
-                    // The Presentation window context has type TYPE_PRIVATE_PRESENTATION (2037).
-                    // When Compose's Dialog() tries to show a sub-window of type TYPE_APPLICATION
-                    // (2), WindowManagerImpl.assertWindowContextTypeMatches() throws
-                    // IllegalArgumentException because 2037 ≠ 2.
-                    // The application context is not a window context and has no type constraint,
-                    // so Dialog windows can be created without restriction. stringResource() and
-                    // all other resource lookups work normally with a configuration context.
-                    context.applicationContext.createConfigurationContext(config)
+                    composeViewContext.createConfigurationContext(config)
                 }
 
                 CompositionLocalProvider(
