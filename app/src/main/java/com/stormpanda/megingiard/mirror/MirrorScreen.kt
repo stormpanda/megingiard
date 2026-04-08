@@ -143,12 +143,18 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
 
     // Sync animated transform values to ScreenCaptureManager so MirrorPresentation's
     // SurfaceView can apply the same transform.
-    LaunchedEffect(Unit) {
+    val rememberViewport by SettingsManager.rememberViewport.collectAsState()
+    val currentMode by AppStateManager.currentMode.collectAsState()
+    LaunchedEffect(rememberViewport, currentMode) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
             .collectLatest { snapshot ->
                 ScreenCaptureManager.setScale(snapshot.first)
                 ScreenCaptureManager.setOffsetX(snapshot.second)
                 ScreenCaptureManager.setOffsetY(snapshot.third)
+                // Nur im Mirror Mode und wenn "Ausschnitt merken" aktiv ist, speichern
+                if (currentMode == com.stormpanda.megingiard.AppMode.MIRROR && rememberViewport) {
+                    SettingsManager.saveMirrorSessionState()
+                }
             }
     }
 
