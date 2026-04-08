@@ -35,8 +35,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -220,7 +218,7 @@ fun ToolSettingsPanel(
                 )
             }
         }
-        // Hosted color picker overlay — last item in the fullscreen Box
+        // Hosted color picker overlay — rendered in-tree so it works in Presentation too
         if (tspPickerShown) {
             ColorWheelPicker(
                 initialColor = tspPickerColor,
@@ -231,17 +229,12 @@ fun ToolSettingsPanel(
                 onDismiss = { tspPickerShown = false }
             )
         }
-    }
-
-    if (showMacroPadEditor) {
-        Dialog(
-            onDismissRequest = { showMacroPadEditor = false },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false,
-            ),
-        ) {
-            MacroPadEditor(onDone = { showMacroPadEditor = false })
+        // MacroPad editor overlay — rendered in-tree (no Dialog) so it works in Presentation too
+        if (showMacroPadEditor) {
+            BackHandler { showMacroPadEditor = false }
+            Box(modifier = Modifier.fillMaxSize()) {
+                MacroPadEditor(onDone = { showMacroPadEditor = false })
+            }
         }
     }
 }

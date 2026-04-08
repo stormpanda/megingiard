@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -507,10 +506,8 @@ private fun VignetteColorRow(
     onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    Log.d("MTS_DEBUG", "VignetteColorRow: showPicker=$showPicker")
 
     if (showPicker) {
-        Log.d("MTS_DEBUG", "VignetteColorRow: showPicker=true → ColorWheelPicker about to compose")
         ColorWheelPicker(
             initialColor = Color(vignetteColorInt),
             onColorSelected = { color ->

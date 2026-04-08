@@ -1,3 +1,4 @@
+
 package com.stormpanda.megingiard.mirror
 
 import android.app.Presentation
@@ -6,9 +7,9 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.Display
 import android.view.Gravity
 import android.view.PixelCopy
@@ -167,10 +168,6 @@ class MirrorPresentation(
             WindowManager.LayoutParams.TYPE_APPLICATION,
             null
         )
-        Log.d("MP_DEBUG", "display id: ${display.displayId}")
-        Log.d("MP_DEBUG", "context class: ${context::class.java.name}")
-        Log.d("MP_DEBUG", "composeViewContext class: ${composeViewContext::class.java.name}")
-
         val composeView = ComposeView(composeViewContext).apply {
             setContent {
                 val themeMode by SettingsManager.themeMode.collectAsState()

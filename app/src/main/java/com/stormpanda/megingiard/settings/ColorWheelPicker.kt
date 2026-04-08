@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.settings
 
 import android.graphics.Color as AndroidColor
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,7 +41,6 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,9 +67,6 @@ fun ColorWheelPicker(
     AndroidColor.colorToHSV(initialColor.toArgb(), initHsv)
 
     val colors = LocalAppColors.current
-    val cwpLocalView = LocalView.current
-    Log.d("CWP_DEBUG", "ColorWheelPicker composing: view.context=${cwpLocalView.context::class.java.name}")
-
     var hue by remember { mutableFloatStateOf(initHsv[0]) }
     var sat by remember { mutableFloatStateOf(initHsv[1]) }
     var bri by remember { mutableFloatStateOf(initHsv[2]) }
