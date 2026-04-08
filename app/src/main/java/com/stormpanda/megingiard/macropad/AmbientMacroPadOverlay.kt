@@ -248,8 +248,11 @@ private fun DrawScope.drawRadialVignette(
     if (visibleArea >= 1f) return
     val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
     val innerFrac = visibleArea                                        // transparent zone [0..halfDiag)
+    // Quadratic Ease-Out für weicheren Übergang
+    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
+    val easedTransition = easeOutQuad(1f - transition)
     val outerFrac = minOf(1f, maxOf(innerFrac + VIGNETTE_MIN_STOP_GAP,
-        innerFrac + (1f - innerFrac) * (1f - transition)))            // gradient end fraction
+        innerFrac + (1f - innerFrac) * easedTransition))            // gradient end fraction
     val vColor = vignetteColor.copy(alpha = opacity)
     val stops = buildList {
         add(0f to Color.Transparent)
@@ -281,7 +284,10 @@ private fun DrawScope.drawLetterboxVignette(
     // When visibleArea=0 both gradient stops land at 0.5f (same position) → Brush crash.
     // Full-coverage case: just fill solid.
     if (innerFrac >= 0.5f) { drawRect(color = vignetteColor.copy(alpha = opacity)); return }
-    val transitionFrac = innerFrac * (1f - transition)
+    // Quadratic Ease-Out für weicheren Übergang
+    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
+    val easedTransition = easeOutQuad(1f - transition)
+    val transitionFrac = innerFrac * easedTransition
     val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
     val vColor = vignetteColor.copy(alpha = opacity)
     val stops = buildList {
@@ -310,7 +316,10 @@ private fun DrawScope.drawPillarboxVignette(
     // When visibleArea=0 both gradient stops land at 0.5f (same position) → Brush crash.
     // Full-coverage case: just fill solid.
     if (innerFrac >= 0.5f) { drawRect(color = vignetteColor.copy(alpha = opacity)); return }
-    val transitionFrac = innerFrac * (1f - transition)
+    // Quadratic Ease-Out für weicheren Übergang
+    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
+    val easedTransition = easeOutQuad(1f - transition)
+    val transitionFrac = innerFrac * easedTransition
     val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
     val vColor = vignetteColor.copy(alpha = opacity)
     val stops = buildList {
