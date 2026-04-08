@@ -135,6 +135,18 @@ class MainActivity : ComponentActivity() {
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
 
+            val currentMode by AppStateManager.currentMode.collectAsState()
+            val macropadAmbientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+
+            // Auto-start capture when entering MacroPad mode with Ambient Display enabled,
+            // mirroring the autoStartCapture behaviour for Mirror mode.
+            // Declining within a session is respected until the next mode entry.
+            LaunchedEffect(currentMode, macropadAmbientEnabled) {
+                if (currentMode == AppMode.MACROPAD && macropadAmbientEnabled && !isCapturing) {
+                    AppStateManager.setUserDeclinedCapture(false)
+                }
+            }
+
             // Once notification access is granted and we're not yet capturing, launch proxy on main screen.
             // With autoStartCapture=false (default) the user must tap "Start mirroring" manually.
             // With autoStartCapture=true the prompt fires once per app session (on resume);

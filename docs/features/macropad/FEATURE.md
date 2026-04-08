@@ -110,7 +110,8 @@ Each button supports one of the following actions:
 ### FR-P9: Ambient Display
 
 - An optional **Ambient Display** mode renders the Screen Mirror output behind the MacroPad buttons on the secondary display.
-- Enabled via a **toggle** in MacroPad tool settings (default: off). Only functional when the `ScreenCaptureService` is actively capturing.
+- Enabled via a **toggle** in MacroPad tool settings (default: off).
+- When Ambient Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
 - When ambient is enabled and capturing is active, the `MirrorPresentation` renders `AmbientMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
 - **Blur** (0–25 dp radius, adjustable via slider, default 0) applies a `Modifier.blur()` to a periodically captured `Bitmap` of the `SurfaceView`. When blur = 0, the `SurfaceView` is visible directly (live hardware-accelerated, no PixelCopy overhead). Captures occur every 200 ms via `PixelCopy`.
 - **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
