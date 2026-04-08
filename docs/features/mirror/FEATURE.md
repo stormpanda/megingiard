@@ -166,8 +166,10 @@ CarouselOverlay is rendered as a sibling of the gesture `Box` (not nested inside
 Mode switching is driven by a combined `StateFlow` in `MirrorPresentation`:
 
 ```kotlin
-combine(currentMode, isActivityResumed, isOnValidScreen) { mode, resumed, valid ->
-    mode == AppMode.MIRROR && resumed && valid
+combine(currentMode, isOnValidScreen, macropadAmbientEnabled, isCapturing) { mode, isValid, ambientEnabled, capturing ->
+    // Gated on capturing, not isActivityResumed — using isActivityResumed caused a
+    // feedback loop where show() pushed MainActivity to background on every resume.
+    capturing && isValid && (mode == AppMode.MIRROR || (mode == AppMode.MACROPAD && ambientEnabled))
 }.collect { shouldShow -> if (shouldShow) show() else hide() }
 ```
 

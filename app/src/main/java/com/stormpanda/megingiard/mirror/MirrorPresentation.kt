@@ -233,14 +233,18 @@ class MirrorPresentation(
         scope.launch {
             combine(
                 AppStateManager.currentMode,
-                AppStateManager.isActivityResumed,
                 AppStateManager.isOnValidScreen,
                 SettingsManager.macropadAmbientEnabled,
                 ScreenCaptureManager.isCapturing
-            ) { mode, isResumed, isValid, ambientEnabled, capturing ->
-                isResumed && isValid && (
+            ) { mode, isValid, ambientEnabled, capturing ->
+                // Show based on capturing state, not on whether MainActivity is in the
+                // foreground. Using isActivityResumed here caused a feedback loop: each
+                // time the user opened the app while mirroring, show() covered the screen,
+                // pushing MainActivity to background (ON_PAUSE ~70 ms). ON_STOP then set
+                // isResumed=false → hide(), and the cycle repeated indefinitely.
+                capturing && isValid && (
                     mode == AppMode.MIRROR ||
-                    (mode == AppMode.MACROPAD && ambientEnabled && capturing)
+                    (mode == AppMode.MACROPAD && ambientEnabled)
                 )
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()

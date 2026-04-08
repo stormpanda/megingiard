@@ -38,8 +38,6 @@ class ScreenCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // TEMP DEBUG
-        Log.d(TAG, "[SCS] onStartCommand action=${intent?.action}  isCapturing=${ScreenCaptureManager.isCapturing.value}  promptInFlight=${AppStateManager.promptInFlight.value}  userDeclined=${AppStateManager.userDeclinedCapture.value}")
         if (intent?.action == "STOP") {
             stopSelf()
             return START_NOT_STICKY
@@ -117,18 +115,10 @@ class ScreenCaptureService : Service() {
             // restoreMirrorSessionState() calls setLocked(true) which emits from isLocked and
             // can nudge Compose into re-evaluating reactive effects mid-suspension.
             scope.launch {
-                // TEMP DEBUG
-                Log.d(TAG, "[SCS] coroutine start  thread=${Thread.currentThread().name}")
-                Log.d(TAG, "[SCS] -> setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
-                Log.d(TAG, "[SCS] -> setPromptInFlight(false)")
                 AppStateManager.setPromptInFlight(false)
-                Log.d(TAG, "[SCS] -> restoreMirrorSessionState() start")
                 SettingsManager.restoreMirrorSessionState()
-                Log.d(TAG, "[SCS] -> restoreMirrorSessionState() done  locked=${ScreenCaptureManager.isLocked.value}")
-                Log.d(TAG, "[SCS] -> presentation.show()")
                 presentation.show()
-                Log.d(TAG, "[SCS] coroutine done")
             }
         }
         return START_NOT_STICKY
@@ -150,8 +140,6 @@ class ScreenCaptureService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // TEMP DEBUG
-        Log.d(TAG, "[SCS] onDestroy  isCapturing=${ScreenCaptureManager.isCapturing.value}  promptInFlight=${AppStateManager.promptInFlight.value}")
         scope.cancel()
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure

@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard
 
-import android.util.Log
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,25 +107,9 @@ object AppStateManager {
     }
 
     fun setMode(mode: AppMode) { _currentMode.value = mode }
-    fun setActivityResumed(resumed: Boolean) {
-        // TEMP DEBUG
-        Log.d("MG_CAPTURE", "[AppState] setActivityResumed=$resumed  thread=${Thread.currentThread().name}")
-        _isActivityResumed.value = resumed
-    }
+    fun setActivityResumed(resumed: Boolean) { _isActivityResumed.value = resumed }
     fun setOnValidScreen(valid: Boolean) { _isOnValidScreen.value = valid }
-    fun setUserDeclinedCapture(declined: Boolean) {
-        // TEMP DEBUG
-        val old = _userDeclinedCapture.value
-        Log.d("MG_CAPTURE", "[AppState] setUserDeclinedCapture $old -> $declined  thread=${Thread.currentThread().name}\n" +
-            Thread.currentThread().stackTrace.drop(2).take(6).joinToString("\n") { "    at $it" })
-        _userDeclinedCapture.value = declined
-    }
-    fun setPromptInFlight(inFlight: Boolean) {
-        // TEMP DEBUG
-        val old = _promptInFlight.value
-        Log.d("MG_CAPTURE", "[AppState] setPromptInFlight $old -> $inFlight  thread=${Thread.currentThread().name}\n" +
-            Thread.currentThread().stackTrace.drop(2).take(6).joinToString("\n") { "    at $it" })
-        _promptInFlight.value = inFlight
-    }
+    fun setUserDeclinedCapture(declined: Boolean) { _userDeclinedCapture.value = declined }
+    fun setPromptInFlight(inFlight: Boolean) { _promptInFlight.value = inFlight }
     fun setTouching(touching: Boolean) { _isTouching.value = touching }
 }

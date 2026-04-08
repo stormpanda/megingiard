@@ -1,12 +1,9 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
-import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
-private const val TAG_DBG = "MG_CAPTURE"
 
 object ScreenCaptureManager {
     private val _isCapturing = MutableStateFlow(false)
@@ -39,13 +36,7 @@ object ScreenCaptureManager {
     private val _isTouchProjectionActive = MutableStateFlow(false)
     val isTouchProjectionActive: StateFlow<Boolean> = _isTouchProjectionActive.asStateFlow()
 
-    fun setCapturing(capturing: Boolean) {
-        // TEMP DEBUG
-        val old = _isCapturing.value
-        Log.d(TAG_DBG, "[SCM] setCapturing $old -> $capturing  thread=${Thread.currentThread().name}\n" +
-            Thread.currentThread().stackTrace.drop(2).take(6).joinToString("\n") { "    at $it" })
-        _isCapturing.value = capturing
-    }
+    fun setCapturing(capturing: Boolean) { _isCapturing.value = capturing }
     fun setScale(scale: Float) { _scale.value = scale }
     fun setOffsetX(x: Float) { _offsetX.value = x }
     fun setOffsetY(y: Float) { _offsetY.value = y }
@@ -60,12 +51,7 @@ object ScreenCaptureManager {
     }
     fun toggleFrozen() { _isFrozen.value = !_isFrozen.value }
 
-    fun setLocked(locked: Boolean) {
-        // TEMP DEBUG
-        val old = _isLocked.value
-        Log.d(TAG_DBG, "[SCM] setLocked $old -> $locked  thread=${Thread.currentThread().name}")
-        _isLocked.value = locked
-    }
+    fun setLocked(locked: Boolean) { _isLocked.value = locked }
 
     /**
      * Activates or deactivates touch projection.
@@ -94,9 +80,6 @@ object ScreenCaptureManager {
 
     /** Resets all transient mirror session state (lock, projection, freeze). */
     fun resetMirrorSessionState() {
-        // TEMP DEBUG
-        Log.d(TAG_DBG, "[SCM] resetMirrorSessionState called  locked=${_isLocked.value} proj=${_isTouchProjectionActive.value} frozen=${_isFrozen.value}  thread=${Thread.currentThread().name}\n" +
-            Thread.currentThread().stackTrace.drop(2).take(6).joinToString("\n") { "    at $it" })
         _isTouchProjectionActive.value = false
         _isLocked.value = false
         _isFrozen.value = false
