@@ -58,6 +58,7 @@ fun ToolSettingsPanel(
     val rememberViewport by SettingsManager.rememberViewport.collectAsState()
     val rememberLock by SettingsManager.rememberLock.collectAsState()
     val rememberProjection by SettingsManager.rememberProjection.collectAsState()
+    val rememberFrozen by SettingsManager.rememberFrozen.collectAsState()
     val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
     val kbLayout by SettingsManager.kbLayout.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
@@ -143,6 +144,8 @@ fun ToolSettingsPanel(
                         onRememberViewportChanged = { SettingsManager.setRememberViewport(it) },
                         rememberLock = rememberLock,
                         onRememberLockChanged = { SettingsManager.setRememberLock(it) },
+                        rememberFrozen = rememberFrozen,
+                        onRememberFrozenChanged = { SettingsManager.setRememberFrozen(it) },
                         rememberProjection = rememberProjection,
                         onRememberProjectionChanged = { SettingsManager.setRememberProjection(it) },
                         pinchWhileProjecting = pinchWhileProjecting,

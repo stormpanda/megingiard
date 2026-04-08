@@ -95,6 +95,8 @@
     <string name="settings_remember_lock_desc">Gesperrten Zustand beim Neustart der Spiegelung wiederherstellen</string>
     <string name="settings_remember_projection">Touch-Projektion merken</string>
     <string name="settings_remember_projection_desc">Touch-Projektion-Status beim Neustart der Spiegelung wiederherstellen</string>
+    <string name="settings_remember_freeze">Standbild merken</string>
+    <string name="settings_remember_freeze_desc">Standbild-Zustand beim Neustart der Spiegelung wiederherstellen</string>
 
     <!-- General session -->
     <string name="settings_remember_last_tool">Letztes Werkzeug merken</string>

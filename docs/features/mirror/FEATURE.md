@@ -228,8 +228,9 @@ Users can opt in to persisting specific mirror session states across restarts vi
 | Remember viewport   | `scale`, `offsetX`, `offsetY` | `mirror_remember_viewport` + `mirror_saved_scale/offset_x/offset_y` |
 | Remember lock       | `isLocked`                    | `mirror_remember_lock` + `mirror_saved_locked`                      |
 | Remember projection | `isTouchProjectionActive`     | `mirror_remember_projection` + `mirror_saved_projection`            |
+| Remember freeze     | `isFrozen`                    | `mirror_remember_frozen` + `mirror_saved_frozen`                    |
 
-**Save flow:** When the user presses Stop, `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()`. For each enabled "remember" flag, the current value is written to DataStore.
+**Save flow:** When the user presses Stop, `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()`. For each enabled "remember" flag, the current value is written to DataStore. Additionally, lock, touch-projection, and freeze states are saved immediately on any change (via `combine` in a `LaunchedEffect` in `MirrorScreen`) so that a mode-switch without pressing Stop also persists the current values.
 
 **Restore flow:** When `CaptureRequestActivity` receives a successful consent result and starts the service, `SettingsManager.restoreMirrorSessionState()` is called immediately after `setCapturing(true)`. For each enabled "remember" flag, the saved value is read from DataStore and applied to `ScreenCaptureManager`.
 

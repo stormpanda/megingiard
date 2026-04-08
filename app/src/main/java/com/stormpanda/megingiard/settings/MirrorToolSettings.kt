@@ -27,6 +27,8 @@ internal fun MirrorToolSettings(
     onRememberViewportChanged: (Boolean) -> Unit,
     rememberLock: Boolean,
     onRememberLockChanged: (Boolean) -> Unit,
+    rememberFrozen: Boolean,
+    onRememberFrozenChanged: (Boolean) -> Unit,
     rememberProjection: Boolean,
     onRememberProjectionChanged: (Boolean) -> Unit,
     pinchWhileProjecting: Boolean,
@@ -79,6 +81,15 @@ internal fun MirrorToolSettings(
             checked = rememberLock,
             accentColor = accentColor,
             onCheckedChange = onRememberLockChanged
+        )
+
+        // Remember freeze
+        RememberSettingRow(
+            label = stringResource(R.string.settings_remember_freeze),
+            description = stringResource(R.string.settings_remember_freeze_desc),
+            checked = rememberFrozen,
+            accentColor = accentColor,
+            onCheckedChange = onRememberFrozenChanged
         )
 
         // Remember touch projection

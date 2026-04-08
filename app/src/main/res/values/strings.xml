@@ -94,6 +94,8 @@
     <string name="settings_remember_lock_desc">Restore view lock state when mirroring restarts</string>
     <string name="settings_remember_projection">Remember touch projection</string>
     <string name="settings_remember_projection_desc">Restore touch projection state when mirroring restarts</string>
+    <string name="settings_remember_freeze">Remember freeze</string>
+    <string name="settings_remember_freeze_desc">Restore freeze state when mirroring restarts</string>
 
     <!-- General session -->
     <string name="settings_remember_last_tool">Remember last used tool</string>

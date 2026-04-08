@@ -47,7 +47,9 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -144,6 +146,9 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     // Sync animated transform values to ScreenCaptureManager so MirrorPresentation's
     // SurfaceView can apply the same transform.
     val rememberViewport by SettingsManager.rememberViewport.collectAsState()
+    val rememberLock by SettingsManager.rememberLock.collectAsState()
+    val rememberProjection by SettingsManager.rememberProjection.collectAsState()
+    val rememberFrozen by SettingsManager.rememberFrozen.collectAsState()
     val currentMode by AppStateManager.currentMode.collectAsState()
     LaunchedEffect(rememberViewport, currentMode) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
@@ -153,6 +158,21 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
                 ScreenCaptureManager.setOffsetY(snapshot.third)
                 // Nur im Mirror Mode und wenn "Ausschnitt merken" aktiv ist, speichern
                 if (currentMode == com.stormpanda.megingiard.AppMode.MIRROR && rememberViewport) {
+                    SettingsManager.saveMirrorSessionState()
+                }
+            }
+    }
+
+    // Save lock, touch-projection, and freeze state immediately on change, so a mode-switch
+    // without explicit Stop doesn't lose the current values — symmetric with the viewport fix.
+    LaunchedEffect(rememberLock, rememberProjection, rememberFrozen, currentMode) {
+        combine(
+            ScreenCaptureManager.isLocked,
+            ScreenCaptureManager.isTouchProjectionActive,
+            ScreenCaptureManager.isFrozen
+        ) { _, _, _ -> Unit }
+            .collect {
+                if (currentMode == com.stormpanda.megingiard.AppMode.MIRROR && (rememberLock || rememberProjection || rememberFrozen)) {
                     SettingsManager.saveMirrorSessionState()
                 }
             }
