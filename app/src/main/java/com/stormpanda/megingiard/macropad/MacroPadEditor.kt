@@ -22,15 +22,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.GridOff
-import androidx.compose.material.icons.outlined.Grid4x4
-import androidx.compose.material.icons.outlined.TripOrigin
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.GridOff
+import androidx.compose.material.icons.rounded.Grid4x4
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -309,7 +309,7 @@ private fun EditorTopBar(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
             }
 
             DropdownMenu(
@@ -343,10 +343,10 @@ private fun EditorTopBar(
         // Rename & delete buttons (only when a profile exists)
         if (activeProfile != null) {
             IconButton(onClick = { showRenameDialog = true }) {
-                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.macropad_editor_rename), tint = colors.onSurfaceSecondary)
+                Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.macropad_editor_rename), tint = colors.onSurfaceSecondary)
             }
             IconButton(onClick = { showDeleteConfirm = true }) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_profile), tint = colors.onSurfaceSecondary)
+                Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_profile), tint = colors.onSurfaceSecondary)
             }
         }
 
@@ -456,9 +456,9 @@ private fun EditorBody(
                 PadCanvas(profile = profile, accentColor = accentColor, gridMode = gridMode)
 
                 val gridIcon = when (gridMode) {
-                    GridMode.OFF         -> Icons.Outlined.GridOff
-                    GridMode.RECTANGULAR -> Icons.Outlined.Grid4x4
-                    GridMode.RADIAL      -> Icons.Outlined.TripOrigin
+                    GridMode.OFF         -> Icons.Rounded.GridOff
+                    GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
+                    GridMode.RADIAL      -> Icons.Rounded.TripOrigin
                 }
                 val gridCd = when (gridMode) {
                     GridMode.OFF         -> stringResource(R.string.macropad_editor_grid_off)
@@ -647,7 +647,7 @@ private fun EditorToolbar(
         // Add Button
         EditorActionChip(
             label       = stringResource(R.string.macropad_editor_add_button),
-            icon        = Icons.Filled.Add,
+            icon        = Icons.Rounded.Add,
             accentColor = accentColor,
             onClick     = onAddButton,
             modifier    = Modifier.weight(1f),
@@ -655,7 +655,7 @@ private fun EditorToolbar(
         // Manage Macros
         EditorActionChip(
             label       = stringResource(R.string.macropad_editor_manage_macros),
-            icon        = Icons.Filled.Edit,
+            icon        = Icons.Rounded.Edit,
             accentColor = accentColor,
             onClick     = onManageMacros,
             modifier    = Modifier.weight(1f),
@@ -663,7 +663,7 @@ private fun EditorToolbar(
         // Add Macro Button
         EditorActionChip(
             label       = stringResource(R.string.macropad_editor_add_macro_button),
-            icon        = Icons.Filled.PlayArrow,
+            icon        = Icons.Rounded.PlayArrow,
             accentColor = accentColor,
             enabled     = hasMacros,
             onClick     = onAddMacroButton,
@@ -753,7 +753,17 @@ private fun ButtonListItem(
             if (isTrackpoint) {
                 Text("●", color = colors.onSurface, fontSize = 10.sp)
             } else {
-                Text(btn.label.take(2), color = colors.onSurface, fontSize = 10.sp)
+                val iconVector = remember(btn.iconName) { btn.iconName?.let { MaterialIconRegistry.resolve(it) } }
+                if (iconVector != null) {
+                    Icon(
+                        imageVector = iconVector,
+                        contentDescription = null,
+                        tint = colors.onSurface,
+                        modifier = Modifier.size(18.dp),
+                    )
+                } else {
+                    Text(btn.label.take(2), color = colors.onSurface, fontSize = 10.sp)
+                }
             }
         }
 
@@ -775,10 +785,10 @@ private fun ButtonListItem(
         }
 
         IconButton(onClick = { showDelete = true }) {
-            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = colors.onSurfaceSecondary)
+            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = colors.onSurfaceSecondary)
         }
         Icon(
-            imageVector        = Icons.Filled.DragHandle,
+            imageVector        = Icons.Rounded.DragHandle,
             contentDescription = stringResource(R.string.cd_drag_reorder),
             tint               = colors.onSurfaceSecondary,
             modifier           = Modifier

@@ -18,15 +18,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CreateNewFolder
-import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -255,7 +255,7 @@ private fun MacroListView(
             )
             IconButton(onClick = { showNewFolder = true }) {
                 Icon(
-                    Icons.Filled.CreateNewFolder,
+                    Icons.Rounded.CreateNewFolder,
                     contentDescription = stringResource(R.string.macropad_folder_new),
                     tint               = accentColor,
                 )
@@ -466,14 +466,14 @@ private fun FolderSectionHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector        = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+            imageVector        = if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
             contentDescription = null,
             tint               = colors.onSurfaceSecondary,
             modifier           = Modifier.size(20.dp),
         )
         Spacer(Modifier.width(6.dp))
         Icon(
-            imageVector        = if (isExpanded) Icons.Filled.FolderOpen else Icons.Filled.Folder,
+            imageVector        = if (isExpanded) Icons.Rounded.FolderOpen else Icons.Rounded.Folder,
             contentDescription = null,
             tint               = if (isNamedFolder) accentColor.copy(alpha = 0.7f) else colors.onSurfaceSecondary,
             modifier           = Modifier.size(16.dp),
@@ -489,7 +489,7 @@ private fun FolderSectionHeader(
         if (isNamedFolder) {
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
+                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
                 }
                 DropdownMenu(
                     expanded         = menuExpanded,
@@ -564,7 +564,7 @@ private fun MacroRow(
 
         Box {
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
+                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
             }
             DropdownMenu(
                 expanded         = menuExpanded,
@@ -591,7 +591,7 @@ private fun MacroRow(
         }
 
         Icon(
-            imageVector        = Icons.Filled.DragHandle,
+            imageVector        = Icons.Rounded.DragHandle,
             contentDescription = stringResource(R.string.cd_drag_reorder),
             tint               = colors.onSurfaceSecondary,
             modifier           = Modifier
@@ -620,7 +620,7 @@ private fun NewMacroChip(accentColor: Color, onClick: () -> Unit) {
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Filled.Add, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
+            Icon(Icons.Rounded.Add, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text(stringResource(R.string.macropad_macro_list_new), color = accentColor, fontSize = 13.sp)
         }
@@ -668,7 +668,7 @@ private fun FolderPickerDialog(
                         )
                         if (fId == selectedFolderId) {
                             Icon(
-                                Icons.Filled.Check,
+                                Icons.Rounded.Check,
                                 contentDescription = null,
                                 tint     = accentColor,
                                 modifier = Modifier.size(18.dp),

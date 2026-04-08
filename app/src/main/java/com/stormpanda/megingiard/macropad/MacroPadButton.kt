@@ -16,15 +16,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -136,13 +137,23 @@ internal fun PadButton(
         } else if (btn.action is PadAction.AmbientPeek) {
             AmbientPeekFace(accentColor = accentColor)
         } else {
-            Text(
-                text     = btn.label,
-                color    = colors.onSurface,
-                fontSize = (11 * btn.buttonSize.cols).sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            val iconVector = remember(btn.iconName) { btn.iconName?.let { MaterialIconRegistry.resolve(it) } }
+            if (iconVector != null) {
+                Icon(
+                    imageVector = iconVector,
+                    contentDescription = null,
+                    tint = colors.onSurface,
+                    modifier = Modifier.size((24 * btn.buttonSize.cols).dp),
+                )
+            } else {
+                Text(
+                    text     = btn.label,
+                    color    = colors.onSurface,
+                    fontSize = (11 * btn.buttonSize.cols).sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -159,12 +170,12 @@ internal fun ScrollWheelFace(accentColor: Color) {
         modifier = Modifier.fillMaxSize(),
     ) {
         // Up chevrons
-        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
-        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         Spacer(Modifier.height(4.dp))
         // Down chevrons
-        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -176,7 +187,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
 internal fun AmbientPeekFace(accentColor: Color) {
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     Icon(
-        imageVector = if (isPeekActive) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+        imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
         contentDescription = null,
         tint = accentColor,
         modifier = Modifier.size(24.dp),

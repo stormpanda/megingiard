@@ -65,7 +65,7 @@ Each button supports one of the following actions:
 - Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
 - In use mode, dragging a finger on a trackpoint button translates relative motion into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta (`MP_TRACKPOINT_SENSITIVITY = 3f`).
 - **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
-- **AmbientPeek buttons** render a visibility icon: `Icons.Filled.Visibility` when peek is inactive, `Icons.Filled.VisibilityOff` when active.
+- **AmbientPeek buttons** render a visibility icon: `Icons.Rounded.Visibility` when peek is inactive, `Icons.Rounded.VisibilityOff` when active.
 - In the editor, the `ButtonEditDialog` hides the label field and shape picker when action is `TrackpointMove`, `ScrollWheel`, or `AmbientPeek`.
 
 ### FR-P6: Multi-Touch Button Support
@@ -126,6 +126,19 @@ Each button supports one of the following actions:
     Like dim, the vignette is hidden when Peek is active.
 - A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, dim and vignette are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
+
+### FR-P10: Optional Button Icons
+
+- Any button MAY be assigned an optional **icon** drawn from the `Icons.Rounded` Material Icons set.
+- When `iconName` is set:
+  - In **use mode** (`MacroPadButton`): the icon is rendered centred inside the button face instead of the label text. Icon size scales with the button column count: `(24 × cols).dp`.
+  - In the **editor canvas** (`PadCanvas`, `DraggableButton`): the icon is shown at 18 dp inside the button.
+  - In the **button list** (`MacroPadEditor`, `ButtonListItem`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
+- When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
+- When the action type is `ScrollWheel`, `TrackpointMove`, or `AmbientPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
+- Icon selection opens `IconPickerDialog`, a full-screen overlay with a search field and a `LazyVerticalGrid` of all 2 083 `Icons.Rounded` icons. The dialog is accessible from `PadButtonEditDialog` via an icon-selector button next to the label field.
+- Icons are resolved at runtime via reflection (`MaterialIconRegistry`). Because `isMinifyEnabled = false`, no keep-rules are required for Proguard/R8.
+- The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 
 ---
 
@@ -245,6 +258,7 @@ PadProfile
   └── buttons: List<PadButton>
         ├── id: String          (UUID)
         ├── label: String       (empty for TrackpointMove / ScrollWheel)
+        ├── iconName: String?   (optional `Icons.Rounded` name; shown instead of label in use mode + editor canvas; null = label)
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
         ├── buttonShape: ButtonShape (SQUARE | CIRCLE)
@@ -388,3 +402,6 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 | `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                                  |
 | `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                              |
 | `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                           |
+| `MaterialIconRegistry.kt`    | Reflection-based `Icons.Rounded` resolver: `resolve(name): ImageVector?`, `searchIcons(query): List<String>`, backed by an in-memory name list           |
+| `IconPickerDialog.kt`        | Full-screen icon picker: search field + `LazyVerticalGrid` (5 columns) of all `Icons.Rounded` icons; called from `PadButtonEditDialog`                   |
+| `RoundedIconNames.kt`        | Auto-generated list of 2 083 sorted `Icons.Rounded` icon name strings (regenerated via `scripts/generate_icon_names.py`)                                 |

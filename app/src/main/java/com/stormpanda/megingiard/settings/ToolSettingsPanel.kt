@@ -16,9 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -138,7 +138,7 @@ fun ToolSettingsPanel(
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
-                        imageVector = Icons.Filled.Close,
+                        imageVector = Icons.Rounded.Close,
                         contentDescription = stringResource(R.string.settings_close),
                         tint = colors.onSurface
                     )
@@ -219,7 +219,7 @@ fun ToolSettingsPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Settings,
+                    imageVector = Icons.Rounded.Settings,
                     contentDescription = null,
                     tint = colors.onSurfaceSecondary,
                     modifier = Modifier.size(18.dp)
@@ -233,7 +233,7 @@ fun ToolSettingsPanel(
                         .padding(start = 12.dp)
                 )
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                     contentDescription = null,
                     tint = colors.onSurfaceSecondary,
                     modifier = Modifier.size(16.dp)

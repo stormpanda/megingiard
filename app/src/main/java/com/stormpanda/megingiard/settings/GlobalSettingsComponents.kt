@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
@@ -119,7 +119,7 @@ internal fun ToolOrderRow(
                 .padding(start = 4.dp)
         )
         Icon(
-            imageVector = Icons.Filled.DragHandle,
+            imageVector = Icons.Rounded.DragHandle,
             contentDescription = stringResource(R.string.cd_drag_reorder),
             tint = colors.onSurfaceSecondary,
             modifier = Modifier
@@ -271,7 +271,7 @@ internal fun ThemePickerRow(
         }
         Box {
             Icon(
-                imageVector = Icons.Filled.ArrowDropDown,
+                imageVector = Icons.Rounded.ArrowDropDown,
                 contentDescription = null,
                 tint = colors.onSurfaceSecondary,
                 modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)
@@ -330,7 +330,7 @@ internal fun AccentColorRow(
         )
         Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
             contentDescription = null,
             tint = colors.onSurfaceSecondary,
             modifier = Modifier.size(GS_ACCENT_ARROW_SIZE)
@@ -374,7 +374,7 @@ internal fun LanguagePickerRow(
         }
         Box {
             Icon(
-                imageVector = Icons.Filled.ArrowDropDown,
+                imageVector = Icons.Rounded.ArrowDropDown,
                 contentDescription = null,
                 tint = colors.onSurfaceSecondary,
                 modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)

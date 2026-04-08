@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Forward10
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay10
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.rounded.Forward10
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -139,10 +139,10 @@ fun MediaScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { MediaState.controller?.transportControls?.skipToPrevious() }) {
-                Icon(Icons.Default.SkipPrevious, stringResource(R.string.cd_skip_previous), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.cd_skip_previous), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(max(0L, progress - SEEK_STEP_MS)) }) {
-                Icon(Icons.Default.Replay10, stringResource(R.string.cd_replay_10), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Rounded.Replay10, stringResource(R.string.cd_replay_10), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = {
                 if (isPlaying) {
@@ -152,17 +152,17 @@ fun MediaScreen(modifier: Modifier = Modifier) {
                 }
             }) {
                 Icon(
-                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     stringResource(R.string.cd_play_pause),
                     tint = colors.onSurface,
                     modifier = Modifier.size(PLAY_PAUSE_ICON_SIZE)
                 )
             }
             IconButton(onClick = { MediaState.controller?.transportControls?.seekTo(min(maxProgress, progress + SEEK_STEP_MS)) }) {
-                Icon(Icons.Default.Forward10, stringResource(R.string.cd_forward_10), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Rounded.Forward10, stringResource(R.string.cd_forward_10), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
             IconButton(onClick = { MediaState.controller?.transportControls?.skipToNext() }) {
-                Icon(Icons.Default.SkipNext, stringResource(R.string.cd_skip_next), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
+                Icon(Icons.Rounded.SkipNext, stringResource(R.string.cd_skip_next), tint = colors.onSurface, modifier = Modifier.size(TRANSPORT_ICON_SIZE))
             }
         }
 

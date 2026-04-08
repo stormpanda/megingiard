@@ -16,7 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -282,7 +282,7 @@ internal fun MacroStepEditDialog(
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f),
                             )
-                            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+                            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
                         }
                         DropdownMenu(
                             expanded         = expanded,

@@ -7,17 +7,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.rounded.AddReaction
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -67,25 +70,30 @@ internal fun ButtonEditDialog(
         is PadAction.Macro -> MacroState.macros.value.firstOrNull { it.id == ia.macroId }?.name ?: ""
         else               -> ""
     }
-    var label         by remember { mutableStateOf(initLabel) }
-    var buttonShape   by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
-    var buttonSize    by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
-    var showSizeMenu  by remember { mutableStateOf(false) }
-    var action        by remember { mutableStateOf(initAction) }
-    val colors        = LocalAppColors.current
+    var label            by remember { mutableStateOf(initLabel) }
+    var iconName          by remember { mutableStateOf(button?.iconName) }
+    var showIconPicker    by remember { mutableStateOf(false) }
+    var buttonShape       by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
+    var buttonSize        by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
+    var showSizeMenu      by remember { mutableStateOf(false) }
+    var action            by remember { mutableStateOf(initAction) }
+    val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
         action = newAction
         if (newAction is PadAction.ScrollWheel) {
             buttonSize = ButtonSize.SIZE_1X2
             label = ""
+            iconName = null
         }
         if (newAction is PadAction.TrackpointMove) {
             label = ""
+            iconName = null
             buttonShape = ButtonShape.CIRCLE
         }
         if (newAction is PadAction.AmbientPeek) {
             label = ""
+            iconName = null
             buttonShape = ButtonShape.CIRCLE
             buttonSize = ButtonSize.SIZE_1X1
         }
@@ -135,12 +143,14 @@ internal fun ButtonEditDialog(
                     if (isConfirmEnabled) {
                         val result = button?.copy(
                             label       = label,
+                            iconName    = iconName,
                             buttonShape = buttonShape,
                             buttonSize  = buttonSize,
                             action      = action,
                         ) ?: PadButton(
                             id          = UUID.randomUUID().toString(),
                             label       = label,
+                            iconName    = iconName,
                             posX        = 0.5f,
                             posY        = 0.5f,
                             buttonShape = buttonShape,
@@ -170,19 +180,52 @@ internal fun ButtonEditDialog(
         ) {
                 // Label input and shape — hidden for ScrollWheel and TrackpointMove
                 if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AmbientPeek) {
-                    OutlinedTextField(
-                        value         = label,
-                        onValueChange = { label = it },
-                        label         = { Text(stringResource(R.string.macropad_editor_button_label), color = colors.onSurfaceSecondary) },
-                        singleLine    = true,
-                        colors        = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = accentColor,
-                            unfocusedBorderColor = colors.accentBorder,
-                            focusedTextColor     = colors.onSurface,
-                            unfocusedTextColor   = colors.onSurface,
-                            cursorColor          = accentColor,
-                        ),
-                    )
+                    // ── Label + Icon selector row ──────────────────────────────────────────
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        OutlinedTextField(
+                            value         = label,
+                            onValueChange = { label = it },
+                            label         = { Text(stringResource(R.string.macropad_editor_button_label), color = colors.onSurfaceSecondary) },
+                            singleLine    = true,
+                            colors        = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor   = accentColor,
+                                unfocusedBorderColor = colors.accentBorder,
+                                focusedTextColor     = colors.onSurface,
+                                unfocusedTextColor   = colors.onSurface,
+                                cursorColor          = accentColor,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                        // Icon selector button
+                        val resolvedIcon = remember(iconName) { iconName?.let { MaterialIconRegistry.resolve(it) } }
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (iconName != null) accentColor.copy(alpha = 0.2f)
+                                    else colors.surface
+                                )
+                                .border(
+                                    width = if (iconName != null) 2.dp else 1.dp,
+                                    color = if (iconName != null) accentColor else colors.accentBorder,
+                                    shape = RoundedCornerShape(8.dp),
+                                )
+                                .clickable { showIconPicker = true },
+                        ) {
+                            Icon(
+                                imageVector = resolvedIcon ?: Icons.Rounded.AddReaction,
+                                contentDescription = stringResource(R.string.cd_icon_picker_button),
+                                tint = if (iconName != null) accentColor else colors.onSurfaceSecondary,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                    }
 
                     SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -271,7 +314,7 @@ internal fun ButtonEditDialog(
                         ) {
                             Text(buttonSize.displayLabel(), color = colors.onSurface, fontSize = 14.sp)
                             Icon(
-                                imageVector = Icons.Filled.ArrowDropDown,
+                                imageVector = Icons.Rounded.ArrowDropDown,
                                 contentDescription = null,
                                 tint = colors.onSurfaceSecondary,
                             )
@@ -302,6 +345,17 @@ internal fun ButtonEditDialog(
                     onChange       = ::onActionChanged,
                 )
             }
+        }
+
+        // ── Icon picker overlay ──────────────────────────────────────────────
+        if (showIconPicker) {
+            IconPickerDialog(
+                selectedIcon = iconName,
+                accentColor  = accentColor,
+                onSelect     = { name -> iconName = name; showIconPicker = false },
+                onDismiss    = { showIconPicker = false },
+                modifier     = Modifier.fillMaxSize(),
+            )
         }
     }
 // ─────────────────────────────────────────────────────────────────────────────

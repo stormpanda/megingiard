@@ -152,6 +152,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_cancel">Cancel</string>
     <string name="macropad_editor_confirm">Delete</string>
 
+    <!-- MacroPad icon picker -->
+    <string name="macropad_icon_picker_title">Select Icon</string>
+    <string name="macropad_icon_picker_search">Search icons…</string>
+    <string name="macropad_icon_picker_no_results">No icons found</string>
+    <string name="macropad_icon_picker_clear">Clear Icon</string>
+    <string name="cd_icon_picker_button">Select icon for button</string>
+
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Keyboard Key</string>
     <string name="macropad_action_gamepad_button">Gamepad Button</string>
