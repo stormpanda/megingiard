@@ -94,8 +94,6 @@
     <string name="settings_remember_lock_desc">Restore view lock state when mirroring restarts</string>
     <string name="settings_remember_projection">Remember touch projection</string>
     <string name="settings_remember_projection_desc">Restore touch projection state when mirroring restarts</string>
-    <string name="settings_remember_freeze">Remember freeze</string>
-    <string name="settings_remember_freeze_desc">Restore freeze state when mirroring restarts</string>
 
     <!-- General session -->
     <string name="settings_remember_last_tool">Remember last used tool</string>
@@ -171,11 +169,12 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_pad_size">Pad size: %d%%</string>
     <string name="settings_macropad_edit_layout">Edit Layout…</string>
     <string name="settings_macropad_new_layout">New Layout</string>
+    <string name="settings_macropad_edit">Edit</string>
+    <string name="settings_macropad_new">New</string>
 
     <!-- MacroPad ambient display settings -->
     <string name="settings_macropad_ambient">Ambient Display</string>
     <string name="settings_macropad_ambient_hint">Requires active Screen Mirror</string>
-    <string name="settings_macropad_blur">Blur</string>
     <string name="settings_macropad_dim">Dimming</string>
     <string name="settings_macropad_vignette">Vignette</string>
     <string name="settings_macropad_vignette_visible_area">Visible Area</string>

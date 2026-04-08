@@ -254,24 +254,24 @@ internal fun SliderSettingRow(
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 color = colors.onSurface,
                 fontSize = 14.sp,
-                modifier = Modifier.weight(1f)
             )
             Text(
                 text = formatLabel(value),
                 color = colors.onSurfaceSecondary,
-                fontSize = 14.sp
+                fontSize = 12.sp,
             )
         }
         Slider(
+            modifier = Modifier.weight(2f),
             value = value,
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,

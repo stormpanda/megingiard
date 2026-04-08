@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,17 +12,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -34,7 +30,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.VignetteShape
 import com.stormpanda.megingiard.ui.CarouselOverlay
@@ -63,7 +58,6 @@ internal fun AmbientMacroPadOverlay() {
     val profile by MacroPadState.activeProfile.collectAsState()
     val colors = LocalAppColors.current
 
-    val blurRadius by SettingsManager.macropadAmbientBlur.collectAsState()
     val dimAlpha by SettingsManager.macropadAmbientDim.collectAsState()
     val vignetteEnabled by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
     val vignetteVisibleArea by SettingsManager.macropadAmbientVignetteVisibleArea.collectAsState()
@@ -72,7 +66,6 @@ internal fun AmbientMacroPadOverlay() {
     val vignetteColorInt by SettingsManager.macropadAmbientVignetteColor.collectAsState()
     val vignetteShape by SettingsManager.macropadAmbientVignetteShape.collectAsState()
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
-    val ambientFrame by ScreenCaptureManager.ambientFrame.collectAsState()
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -80,8 +73,7 @@ internal fun AmbientMacroPadOverlay() {
     val edgeZonePx = with(density) { AMO_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AMO_SWIPE_THRESHOLD.toPx() }
 
-    // Effective blur/dim/vignette: overridden to 0 when peeking
-    val effectiveBlur = if (isPeekActive) 0f else blurRadius
+    // Effective dim/vignette: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
     val effectiveVignetteOpacity = if (isPeekActive) 0f else vignetteOpacity
 
@@ -152,23 +144,7 @@ internal fun AmbientMacroPadOverlay() {
                 }
             }
     ) {
-        // Layer 1: Blurred mirror background (only when blur > 0 and frame available)
-        if (effectiveBlur > 0f) {
-            val frame = ambientFrame
-            if (frame != null && !frame.isRecycled) {
-                Image(
-                    bitmap = frame.asImageBitmap(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .blur(effectiveBlur.dp),
-                )
-            }
-        }
-        // When blur == 0, SurfaceView is visible beneath this ComposeView (live stream)
-
-        // Layer 2: Dim overlay
+        // Layer 1: Dim overlay
         if (effectiveDim > 0f) {
             Box(
                 modifier = Modifier

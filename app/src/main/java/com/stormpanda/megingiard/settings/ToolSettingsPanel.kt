@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.settings
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -58,7 +60,6 @@ fun ToolSettingsPanel(
     val rememberViewport by SettingsManager.rememberViewport.collectAsState()
     val rememberLock by SettingsManager.rememberLock.collectAsState()
     val rememberProjection by SettingsManager.rememberProjection.collectAsState()
-    val rememberFrozen by SettingsManager.rememberFrozen.collectAsState()
     val pinchWhileProjecting by SettingsManager.pinchWhileProjecting.collectAsState()
     val kbLayout by SettingsManager.kbLayout.collectAsState()
     val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
@@ -83,6 +84,16 @@ fun ToolSettingsPanel(
         tspPickerShown = true
     }
 
+    var isSliderDragging by remember { mutableStateOf(false) }
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (isSliderDragging) 0f else 0.5f,
+        label = "scrim",
+    )
+    val cardAlpha by animateFloatAsState(
+        targetValue = if (isSliderDragging) 0.20f else 1f,
+        label = "card",
+    )
+
     // Dismiss on system back
     BackHandler(onBack = onDismiss)
 
@@ -91,8 +102,8 @@ fun ToolSettingsPanel(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismiss),
+            .background(Color.Black.copy(alpha = scrimAlpha))
+            .clickable(enabled = !isSliderDragging, onClick = onDismiss),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -102,6 +113,7 @@ fun ToolSettingsPanel(
                 .background(colors.surface, RoundedCornerShape(PANEL_CORNER))
                 // Prevent clicks on the card itself from propagating to the scrim
                 .clickable(enabled = true, onClick = {})
+                .alpha(cardAlpha)
         ) {
             // Title row
             Row(
@@ -144,8 +156,6 @@ fun ToolSettingsPanel(
                         onRememberViewportChanged = { SettingsManager.setRememberViewport(it) },
                         rememberLock = rememberLock,
                         onRememberLockChanged = { SettingsManager.setRememberLock(it) },
-                        rememberFrozen = rememberFrozen,
-                        onRememberFrozenChanged = { SettingsManager.setRememberFrozen(it) },
                         rememberProjection = rememberProjection,
                         onRememberProjectionChanged = { SettingsManager.setRememberProjection(it) },
                         pinchWhileProjecting = pinchWhileProjecting,
@@ -181,6 +191,7 @@ fun ToolSettingsPanel(
                     )
                     AppMode.MACROPAD -> MacroPadToolSettings(
                         onOpenEditor = { showMacroPadEditor = true },
+                        onSliderDragging = { isSliderDragging = it },
                         onRequestColorPicker = onRequestColorPicker,
                     )
                 }

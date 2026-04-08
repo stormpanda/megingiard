@@ -74,7 +74,6 @@ object SettingsManager {
     private val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
     private val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
     private val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_projection")
-    private val KEY_REMEMBER_FROZEN = booleanPreferencesKey("mirror_remember_frozen")
     // Mirror session state persistence — saved values
     private val KEY_SAVED_SCALE = floatPreferencesKey("mirror_saved_scale")
     private val KEY_SAVED_OFFSET_X = floatPreferencesKey("mirror_saved_offset_x")
@@ -106,7 +105,6 @@ object SettingsManager {
 
     // MacroPad ambient display settings
     private val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
-    private val KEY_MACROPAD_AMBIENT_BLUR = floatPreferencesKey("macropad_ambient_blur")
     private val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
     private val KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED = booleanPreferencesKey("macropad_ambient_vignette_enabled")
     private val KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA = floatPreferencesKey("macropad_ambient_vignette_visible_area")
@@ -117,7 +115,6 @@ object SettingsManager {
 
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
-    private val KEY_SAVED_FROZEN = booleanPreferencesKey("mirror_saved_frozen")
 
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
@@ -195,9 +192,6 @@ object SettingsManager {
     private val _rememberProjection = MutableStateFlow(false)
     val rememberProjection: StateFlow<Boolean> = _rememberProjection.asStateFlow()
 
-    private val _rememberFrozen = MutableStateFlow(false)
-    val rememberFrozen: StateFlow<Boolean> = _rememberFrozen.asStateFlow()
-
     // General session — remember last used tool across restarts
     private val _rememberLastTool = MutableStateFlow(false)
     val rememberLastTool: StateFlow<Boolean> = _rememberLastTool.asStateFlow()
@@ -209,9 +203,6 @@ object SettingsManager {
     // MacroPad ambient display
     private val _macropadAmbientEnabled = MutableStateFlow(false)
     val macropadAmbientEnabled: StateFlow<Boolean> = _macropadAmbientEnabled.asStateFlow()
-
-    private val _macropadAmbientBlur = MutableStateFlow(0f)
-    val macropadAmbientBlur: StateFlow<Float> = _macropadAmbientBlur.asStateFlow()
 
     private val _macropadAmbientDim = MutableStateFlow(0f)
     val macropadAmbientDim: StateFlow<Float> = _macropadAmbientDim.asStateFlow()
@@ -269,7 +260,6 @@ object SettingsManager {
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
                 _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
-                _rememberFrozen.value = prefs[KEY_REMEMBER_FROZEN] ?: false
                 _rememberLastTool.value = prefs[KEY_REMEMBER_LAST_TOOL] ?: false
                 _kbLayout.value = KbLayout.entries.firstOrNull { it.name == prefs[KEY_KB_LAYOUT] } ?: KbLayout.QWERTZ
                 _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
@@ -281,7 +271,6 @@ object SettingsManager {
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                 _macropadAmbientEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
-                _macropadAmbientBlur.value = prefs[KEY_MACROPAD_AMBIENT_BLUR] ?: 0f
                 _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0f
                 _macropadAmbientVignetteEnabled.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] ?: false
                 _macropadAmbientVignetteVisibleArea.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA] ?: 0.7f
@@ -452,13 +441,6 @@ object SettingsManager {
         }
     }
 
-    fun setRememberFrozen(value: Boolean) {
-        _rememberFrozen.value = value
-        scope.launch {
-            dataStore.edit { prefs -> prefs[KEY_REMEMBER_FROZEN] = value }
-        }
-    }
-
     fun setRememberLastTool(value: Boolean) {
         _rememberLastTool.value = value
         scope.launch {
@@ -514,11 +496,6 @@ object SettingsManager {
     fun setMacropadAmbientEnabled(value: Boolean) {
         _macropadAmbientEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_ENABLED] = value } }
-    }
-
-    fun setMacropadAmbientBlur(value: Float) {
-        _macropadAmbientBlur.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_BLUR] = value } }
     }
 
     fun setMacropadAmbientDim(value: Float) {
@@ -611,11 +588,9 @@ object SettingsManager {
         val offsetY = ScreenCaptureManager.offsetY.value
         val locked = ScreenCaptureManager.isLocked.value
         val projection = ScreenCaptureManager.isTouchProjectionActive.value
-        val frozen = ScreenCaptureManager.isFrozen.value
         val rememberViewport = _rememberViewport.value
         val rememberLock = _rememberLock.value
         val rememberProjection = _rememberProjection.value
-        val rememberFrozen = _rememberFrozen.value
         scope.launch {
             dataStore.edit { prefs ->
                 if (rememberViewport) {
@@ -628,9 +603,6 @@ object SettingsManager {
                 }
                 if (rememberProjection) {
                     prefs[KEY_SAVED_PROJECTION] = projection
-                }
-                if (rememberFrozen) {
-                    prefs[KEY_SAVED_FROZEN] = frozen
                 }
             }
         }
@@ -661,9 +633,6 @@ object SettingsManager {
         }
         if (prefs[KEY_REMEMBER_PROJECTION] ?: false) {
             prefs[KEY_SAVED_PROJECTION]?.let { ScreenCaptureManager.setTouchProjectionActive(it) }
-        }
-        if (prefs[KEY_REMEMBER_FROZEN] ?: false) {
-            prefs[KEY_SAVED_FROZEN]?.let { ScreenCaptureManager.setFrozen(it) }
         }
     }
 }

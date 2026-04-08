@@ -153,7 +153,6 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     val rememberViewport by SettingsManager.rememberViewport.collectAsState()
     val rememberLock by SettingsManager.rememberLock.collectAsState()
     val rememberProjection by SettingsManager.rememberProjection.collectAsState()
-    val rememberFrozen by SettingsManager.rememberFrozen.collectAsState()
     val currentMode by AppStateManager.currentMode.collectAsState()
     LaunchedEffect(rememberViewport, currentMode) {
         snapshotFlow { Triple(animScale.value, animOffsetX.value, animOffsetY.value) }
@@ -171,18 +170,17 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             }
     }
 
-    // Save lock, touch-projection, and freeze state immediately on change, so a mode-switch
-    // without explicit Stop doesn't lose the current values — symmetric with the viewport fix.
-    LaunchedEffect(rememberLock, rememberProjection, rememberFrozen, currentMode) {
+    // Save lock and touch-projection state immediately on change, so a mode-switch
+    // without explicit Stop doesn't lose the current values.
+    LaunchedEffect(rememberLock, rememberProjection, currentMode) {
         combine(
             ScreenCaptureManager.isLocked,
             ScreenCaptureManager.isTouchProjectionActive,
-            ScreenCaptureManager.isFrozen
-        ) { locked, projection, frozen -> Triple(locked, projection, frozen) }
+        ) { locked, projection -> Pair(locked, projection) }
             .distinctUntilChanged()
             .drop(1)
             .collectLatest {
-                if (currentMode == AppMode.MIRROR && (rememberLock || rememberProjection || rememberFrozen)) {
+                if (currentMode == AppMode.MIRROR && (rememberLock || rememberProjection)) {
                     SettingsManager.saveMirrorSessionState()
                 }
             }

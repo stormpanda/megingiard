@@ -86,22 +86,5 @@ object ScreenCaptureManager {
         setFrozenBitmap(null)
     }
 
-    // ── Ambient Display (MacroPad background mirror) ─────────────────────
 
-    private val _ambientFrame = MutableStateFlow<Bitmap?>(null)
-    val ambientFrame: StateFlow<Bitmap?> = _ambientFrame.asStateFlow()
-
-    fun setAmbientFrame(bitmap: Bitmap?) {
-        // Do NOT recycle the previous bitmap here. It may still be referenced by a
-        // Compose display list that the hardware RenderThread is currently rendering.
-        // Recycling it on the main thread while the RenderThread reads its pixel data
-        // causes a "Canvas: trying to use a recycled bitmap" crash.
-        // The old bitmap loses its only strong reference here and will be collected by GC.
-        _ambientFrame.value = bitmap
-    }
-
-    fun clearAmbientFrame() {
-        // Same reasoning as setAmbientFrame: no immediate recycle.
-        _ambientFrame.value = null
-    }
 }

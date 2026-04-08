@@ -84,6 +84,7 @@ private fun VignetteShape.labelResId(): Int = when (this) {
 @Composable
 fun MacroPadToolSettings(
     onOpenEditor: () -> Unit,
+    onSliderDragging: ((Boolean) -> Unit)? = null,
     onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
 ) {
     val profiles    by MacroPadState.profiles.collectAsState()
@@ -105,25 +106,22 @@ fun MacroPadToolSettings(
             return@Column
         }
 
-        // ── Active profile picker ──────────────────────────────────────────
+        // ── Profile picker + layout actions ───────────────────────────────
         SettingsLabel(stringResource(R.string.settings_macropad_profile), colors.accent)
-        ProfileDropdown(
+        ProfileSectionRow(
             profiles    = profiles,
             activeId    = activeId,
             accentColor = colors.accent,
             onSelect    = { MacroPadState.setActiveProfileId(it) },
+            onOpenEditor = onOpenEditor,
         )
-
-        HorizontalDivider(color = colors.divider)
-
-        // ── Layout action buttons ───────────────────────────────────────────
-        LayoutActionButtons(accentColor = colors.accent, onOpenEditor = onOpenEditor)
 
         HorizontalDivider(color = colors.divider)
 
         // ── Ambient Display settings ────────────────────────────────────────
         AmbientSettingsSection(
             accentColor = colors.accent,
+            onSliderDragging = onSliderDragging,
             onRequestColorPicker = onRequestColorPicker,
         )
     }
@@ -139,12 +137,13 @@ private fun ProfileDropdown(
     activeId:    String?,
     accentColor: Color,
     onSelect:    (String) -> Unit,
+    modifier:    Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val active = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
     val colors = LocalAppColors.current
 
-    Box {
+    Box(modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -259,10 +258,93 @@ private fun LayoutActionButtons(accentColor: Color, onOpenEditor: () -> Unit) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Profile section row (dropdown + compact Edit / New buttons)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ProfileSectionRow(
+    profiles:    List<PadProfile>,
+    activeId:    String?,
+    accentColor: Color,
+    onSelect:    (String) -> Unit,
+    onOpenEditor: () -> Unit,
+) {
+    val defaultName = stringResource(R.string.macropad_editor_new_profile_name)
+    Row(
+        modifier              = Modifier.fillMaxWidth(),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        ProfileDropdown(
+            profiles    = profiles,
+            activeId    = activeId,
+            accentColor = accentColor,
+            onSelect    = onSelect,
+            modifier    = Modifier.weight(1f),
+        )
+        // Compact Edit button
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable(onClick = onOpenEditor)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Edit,
+                contentDescription = null,
+                tint               = accentColor,
+                modifier           = Modifier.size(16.dp),
+            )
+            Text(
+                text       = stringResource(R.string.settings_macropad_edit),
+                color      = accentColor,
+                fontSize   = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier   = Modifier.padding(start = 4.dp),
+            )
+        }
+        // Compact New button
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable {
+                    val newProfile = PadProfile(
+                        id   = UUID.randomUUID().toString(),
+                        name = defaultName,
+                    )
+                    MacroPadState.addProfile(newProfile)
+                    MacroPadState.setActiveProfileId(newProfile.id)
+                    onOpenEditor()
+                }
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Add,
+                contentDescription = null,
+                tint               = accentColor,
+                modifier           = Modifier.size(16.dp),
+            )
+            Text(
+                text       = stringResource(R.string.settings_macropad_new),
+                color      = accentColor,
+                fontSize   = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier   = Modifier.padding(start = 4.dp),
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Ambient Display settings
 // ─────────────────────────────────────────────────────────────────────────────
 
-private const val MTS_BLUR_MAX = 25f
 private const val MTS_BLUR_PERCENT_DIVISOR = 100f
 private const val MTS_DIM_MAX = 0.9f
 private const val MTS_VIGNETTE_VISIBLE_AREA_MAX = 1f
@@ -273,16 +355,15 @@ private val MTS_VIGNETTE_SWATCH_SIZE = 24.dp
 @Composable
 private fun AmbientSettingsSection(
     accentColor: Color,
+    onSliderDragging: ((Boolean) -> Unit)? = null,
     onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val colors = LocalAppColors.current
     val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
-    val ambientBlur    by SettingsManager.macropadAmbientBlur.collectAsState()
     val ambientDim     by SettingsManager.macropadAmbientDim.collectAsState()
 
-    // Local slider states so DataStore is only written on drag-end, not every frame
-    var localBlur by remember(ambientBlur) { mutableStateOf(ambientBlur) }
+    // Local slider state so DataStore is only written on drag-end, not every frame
     var localDim  by remember(ambientDim)  { mutableStateOf(ambientDim) }
 
     SettingsLabel(stringResource(R.string.settings_macropad_ambient), accentColor)
@@ -317,23 +398,13 @@ private fun AmbientSettingsSection(
     // Sliders – only shown when ambient is enabled
     if (ambientEnabled) {
         SliderSettingRow(
-            label = stringResource(R.string.settings_macropad_blur),
-            value = localBlur,
-            valueRange = 0f..MTS_BLUR_MAX,
-            formatLabel = { "${(it / MTS_BLUR_MAX * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
-            accentColor = accentColor,
-            onValueChange = { localBlur = it },
-            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientBlur(localBlur) } }
-        )
-
-        SliderSettingRow(
             label = stringResource(R.string.settings_macropad_dim),
             value = localDim,
             valueRange = 0f..MTS_DIM_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { localDim = it },
-            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientDim(localDim) } }
+            onValueChange = { localDim = it; onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { scope.launch { SettingsManager.setMacropadAmbientDim(localDim) }; onSliderDragging?.invoke(false) }
         )
 
         Spacer(Modifier.height(4.dp))
@@ -342,6 +413,7 @@ private fun AmbientSettingsSection(
 
         VignetteSettingsSubSection(
             accentColor = accentColor,
+            onSliderDragging = onSliderDragging,
             onRequestColorPicker = onRequestColorPicker,
         )
     }
@@ -354,6 +426,7 @@ private fun AmbientSettingsSection(
 @Composable
 private fun VignetteSettingsSubSection(
     accentColor: Color,
+    onSliderDragging: ((Boolean) -> Unit)? = null,
     onRequestColorPicker: ((Color, (Color) -> Unit) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
@@ -404,7 +477,8 @@ private fun VignetteSettingsSubSection(
             valueRange = 0f..MTS_VIGNETTE_VISIBLE_AREA_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteVisibleArea(it) } }
+            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteVisibleArea(it) }; onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { onSliderDragging?.invoke(false) }
         )
 
         SliderSettingRow(
@@ -419,7 +493,8 @@ private fun VignetteSettingsSubSection(
                 }
             },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteTransition(it) } }
+            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteTransition(it) }; onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { onSliderDragging?.invoke(false) }
         )
 
         SliderSettingRow(
@@ -428,7 +503,8 @@ private fun VignetteSettingsSubSection(
             valueRange = 0f..MTS_VIGNETTE_OPACITY_MAX,
             formatLabel = { "${(it * MTS_BLUR_PERCENT_DIVISOR).toInt()}%" },
             accentColor = accentColor,
-            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteOpacity(it) } }
+            onValueChange = { scope.launch { SettingsManager.setMacropadAmbientVignetteOpacity(it) }; onSliderDragging?.invoke(true) },
+            onValueChangeFinished = { onSliderDragging?.invoke(false) }
         )
 
         VignetteColorRow(

@@ -47,13 +47,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val TAG = "MirrorPresentation"
-private const val MP_AMBIENT_CAPTURE_INTERVAL_MS = 200L
 
 class MirrorPresentation(
     context: Context, 
@@ -286,52 +283,6 @@ class MirrorPresentation(
                 } else if (!frozen) {
                     sv.visibility = View.VISIBLE
                     ScreenCaptureManager.setFrozenBitmap(null)
-                }
-            }
-        }
-        // Periodic PixelCopy for ambient display blur background
-        scope.launch {
-            combine(
-                AppStateManager.currentMode,
-                SettingsManager.macropadAmbientEnabled,
-                ScreenCaptureManager.isCapturing,
-                SettingsManager.macropadAmbientBlur
-            ) { mode, ambientEnabled, capturing, blur ->
-                mode == AppMode.MACROPAD && ambientEnabled && capturing && blur > 0f
-            }.collectLatest { needsCapture ->
-                if (needsCapture) {
-                    // Keep SurfaceView VISIBLE — PixelCopy requires the surface to be
-                    // rendering content. The blurred Bitmap is drawn by AmbientMacroPadOverlay
-                    // in the ComposeView layer (above the SurfaceView), visually covering it.
-                    while (true) {
-                        if (sv.width > 0 && sv.height > 0) {
-                            try {
-                                val bitmap = Bitmap.createBitmap(
-                                    sv.width, sv.height, Bitmap.Config.ARGB_8888
-                                )
-                                PixelCopy.request(
-                                    sv, bitmap,
-                                    { result ->
-                                        if (result == PixelCopy.SUCCESS) {
-                                            ScreenCaptureManager.setAmbientFrame(bitmap)
-                                        } else {
-                                            bitmap.recycle()
-                                        }
-                                    },
-                                    Handler(Looper.getMainLooper())
-                                )
-                            } catch (_: Exception) { /* ignore transient errors */ }
-                        }
-                        delay(MP_AMBIENT_CAPTURE_INTERVAL_MS)
-                    }
-                } else {
-                    // Blur disabled or not in ambient mode — show SurfaceView, clear cached frame
-                    val mode = AppStateManager.currentMode.value
-                    val frozen = ScreenCaptureManager.isFrozen.value
-                    if (mode == AppMode.MACROPAD || mode == AppMode.MIRROR) {
-                        sv.visibility = if (frozen) View.INVISIBLE else View.VISIBLE
-                    }
-                    ScreenCaptureManager.clearAmbientFrame()
                 }
             }
         }
