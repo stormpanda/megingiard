@@ -6,11 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +52,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 
 private val IP_ICON_CELL_SIZE = 64.dp
 private val IP_ICON_SIZE = 28.dp
+private val IP_PREVIEW_SIZE = 48.dp
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
@@ -119,16 +117,6 @@ internal fun IconPickerDialog(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
             )
-            IconButton(
-                onClick = { pendingIcon = null },
-                enabled = pendingIcon != null,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Delete,
-                    contentDescription = stringResource(R.string.cd_icon_picker_delete),
-                    tint = if (pendingIcon != null) colors.onSurface else colors.onSurfaceSecondary,
-                )
-            }
             IconButton(onClick = { onSelect(pendingIcon) }) {
                 Icon(
                     imageVector = Icons.Rounded.Check,
@@ -138,12 +126,11 @@ internal fun IconPickerDialog(
             }
         }
 
-        // ── Search bar + name label + selected icon preview + filled toggle ──
+        // ── Search bar + filled toggle ──────────────────────────────────────────
         Row(
-            verticalAlignment = Alignment.Bottom,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             OutlinedTextField(
@@ -165,47 +152,6 @@ internal fun IconPickerDialog(
                 ),
                 modifier = Modifier.weight(1f),
             )
-            val currentIcon = pendingIcon
-            if (currentIcon != null) {
-                Column(
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .fillMaxHeight(),
-                ) {
-                    Text(
-                        text = currentIcon,
-                        color = colors.onSurface,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(R.string.macropad_icon_picker_currently_selected),
-                        color = colors.onSurfaceSecondary,
-                        fontSize = 11.sp,
-                    )
-                }
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .fillMaxHeight()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(IP_CELL_CORNER))
-                        .background(accentColor.copy(alpha = 0.2f))
-                        .border(2.dp, accentColor, RoundedCornerShape(IP_CELL_CORNER)),
-                ) {
-                    MaterialSymbol(
-                        name = currentIcon,
-                        size = IP_ICON_SIZE,
-                        tint = accentColor,
-                        filled = filled,
-                    )
-                }
-            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -225,6 +171,60 @@ internal fun IconPickerDialog(
                     color = colors.onSurface,
                     fontSize = 13.sp,
                 )
+            }
+        }
+
+        // ── Current selection row (only visible when an icon is pending) ────────
+        val currentIcon = pendingIcon
+        if (currentIcon != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(IP_PREVIEW_SIZE)
+                        .clip(RoundedCornerShape(IP_CELL_CORNER))
+                        .background(accentColor.copy(alpha = 0.2f))
+                        .border(2.dp, accentColor, RoundedCornerShape(IP_CELL_CORNER)),
+                ) {
+                    MaterialSymbol(
+                        name = currentIcon,
+                        size = IP_ICON_SIZE,
+                        tint = accentColor,
+                        filled = filled,
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
+                ) {
+                    Text(
+                        text = currentIcon,
+                        color = colors.onSurface,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = stringResource(R.string.macropad_icon_picker_currently_selected),
+                        color = colors.onSurfaceSecondary,
+                        fontSize = 11.sp,
+                    )
+                }
+                IconButton(onClick = { pendingIcon = null }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = stringResource(R.string.cd_icon_picker_delete),
+                        tint = colors.onSurfaceSecondary,
+                    )
+                }
             }
         }
 
