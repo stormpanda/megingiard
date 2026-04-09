@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
@@ -90,7 +90,7 @@ internal fun MirrorControlPanel(
                         .border(2.dp, colors.navPillBorder, RoundedCornerShape(50))
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Stop,
+                        imageVector = Icons.Rounded.Stop,
                         contentDescription = stringResource(R.string.cd_stop_mirroring),
                         tint = colors.buttonIconTint,
                         modifier = Modifier.size(CONTROL_ICON_SIZE)
@@ -125,7 +125,7 @@ internal fun MirrorControlPanel(
                         )
                 ) {
                     Icon(
-                        imageVector = if (isFrozen) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                        imageVector = if (isFrozen) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
                         contentDescription = stringResource(
                             if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze
                         ),
@@ -151,7 +151,7 @@ internal fun MirrorControlPanel(
                         )
                 ) {
                     Icon(
-                        imageVector = if (isLocked) Icons.Filled.Lock else Icons.Filled.LockOpen,
+                        imageVector = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                         contentDescription = stringResource(
                             if (isLocked) R.string.cd_unlock_view else R.string.cd_lock_view
                         ),
@@ -188,7 +188,7 @@ internal fun MirrorControlPanel(
                         )
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.TouchApp,
+                        imageVector = Icons.Rounded.TouchApp,
                         contentDescription = stringResource(
                             if (isTouchProjectionActive) R.string.cd_touch_projection_off
                             else R.string.cd_touch_projection_on

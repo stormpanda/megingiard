@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -298,10 +298,10 @@ internal fun ScrollWheelFace(accentColor: Color) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize(),
     ) {
-        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor,                   modifier = Modifier.size(18.dp))
-        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor,                   modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         Spacer(Modifier.height(4.dp))
-        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor,                   modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor,                   modifier = Modifier.size(18.dp))
     }
 }

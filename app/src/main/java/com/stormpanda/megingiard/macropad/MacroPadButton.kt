@@ -16,10 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +54,7 @@ private val MP_BTN_NORMAL_ALPHA     = 0.25f
 private const val MP_BTN_DISABLED_ALPHA = 0.38f
 
 private val  MP_BTN_SQUARE_RADIUS   = 4.dp
+private val  MP_BTN_ICON_UNIT        = 44.dp  // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
 
 private const val MP_PRESS_ANIM_MS   = 80
 private const val MP_RELEASE_ANIM_MS = 160
@@ -136,13 +137,22 @@ internal fun PadButton(
         } else if (btn.action is PadAction.AmbientPeek) {
             AmbientPeekFace(accentColor = accentColor)
         } else {
-            Text(
-                text     = btn.label,
-                color    = colors.onSurface,
-                fontSize = (11 * btn.buttonSize.cols).sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (btn.iconName != null) {
+                MaterialSymbol(
+                    name = btn.iconName,
+                    size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                    tint = colors.onSurface,
+                    filled = btn.iconFilled,
+                )
+            } else {
+                Text(
+                    text     = btn.label,
+                    color    = colors.onSurface,
+                    fontSize = (11 * btn.buttonSize.cols).sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -159,12 +169,12 @@ internal fun ScrollWheelFace(accentColor: Color) {
         modifier = Modifier.fillMaxSize(),
     ) {
         // Up chevrons
-        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
-        Icon(Icons.Filled.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         Spacer(Modifier.height(4.dp))
         // Down chevrons
-        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -176,7 +186,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
 internal fun AmbientPeekFace(accentColor: Color) {
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     Icon(
-        imageVector = if (isPeekActive) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+        imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
         contentDescription = null,
         tint = accentColor,
         modifier = Modifier.size(24.dp),

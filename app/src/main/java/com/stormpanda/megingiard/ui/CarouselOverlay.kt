@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -311,7 +311,7 @@ private fun TopModeHandle(
                         .size(CO_SETTINGS_BUTTON_SIZE)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Settings,
+                        imageVector = Icons.Rounded.Settings,
                         contentDescription = stringResource(R.string.cd_open_settings),
                         tint = colors.onControlOverlay,
                         modifier = Modifier.size(CO_SETTINGS_ICON_SIZE)

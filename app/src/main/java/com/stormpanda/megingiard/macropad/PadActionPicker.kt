@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -141,7 +141,7 @@ internal fun ActionPicker(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(categoryLabel, color = colors.onSurface, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
         }
 
         DropdownMenu(
@@ -205,7 +205,7 @@ internal fun KeyboardKeyPicker(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(current.label, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
         }
 
         DropdownMenu(
@@ -243,7 +243,7 @@ internal fun MouseButtonPicker(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(current.button.displayLabel(), color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
         }
 
         DropdownMenu(
@@ -281,7 +281,7 @@ internal fun GamepadButtonPicker(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(current.label, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
         }
 
         DropdownMenu(
@@ -368,7 +368,7 @@ internal fun MacroPicker(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(selectedFolderLabel, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
             }
             DropdownMenu(
                 expanded         = folderExpanded,
@@ -409,7 +409,7 @@ internal fun MacroPicker(
                     modifier = Modifier.weight(1f),
                 )
                 if (macrosInFolder.isNotEmpty()) {
-                    Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = accentColor)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
                 }
             }
             DropdownMenu(

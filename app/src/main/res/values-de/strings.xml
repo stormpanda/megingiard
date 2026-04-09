@@ -155,6 +155,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_cancel">Abbrechen</string>
     <string name="macropad_editor_confirm">Löschen</string>
 
+    <!-- MacroPad icon picker -->
+    <string name="macropad_icon_picker_title">Icon auswählen</string>
+    <string name="macropad_icon_picker_search">Icons suchen\u2026</string>
+    <string name="macropad_icon_picker_no_results">Keine Icons gefunden</string>
+    <string name="macropad_icon_picker_currently_selected">Aktuell gewählt</string>
+    <string name="cd_icon_picker_button">Icon für Button auswählen</string>
+    <string name="cd_icon_picker_confirm">Icon-Auswahl übernehmen</string>
+    <string name="cd_icon_picker_delete">Icon entfernen</string>
+
     <!-- MacroPad editor grid -->
     <string name="macropad_editor_grid_off">Raster aus</string>
     <string name="macropad_editor_grid_rectangular">Rechteckiges Raster</string>

@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
@@ -123,7 +123,7 @@ internal fun LayoutDropdownRow(
                     fontSize = 14.sp
                 )
                 Icon(
-                    imageVector = Icons.Filled.ArrowDropDown,
+                    imageVector = Icons.Rounded.ArrowDropDown,
                     contentDescription = null,
                     tint = colors.onSurfaceSecondary,
                 )
@@ -188,7 +188,7 @@ internal fun MouseBtnPosDropdownRow(
                     fontSize = 14.sp
                 )
                 Icon(
-                    imageVector = Icons.Filled.ArrowDropDown,
+                    imageVector = Icons.Rounded.ArrowDropDown,
                     contentDescription = null,
                     tint = colors.onSurfaceSecondary,
                 )

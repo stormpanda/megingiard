@@ -130,7 +130,12 @@ sealed class PadAction {
 
 /**
  * @param id        Stable unique identifier (UUID string).
- * @param label     Text shown on the button face.
+ * @param label     Text shown on the button face (and always in the editor list). Used even when an icon is set.
+ * @param iconName  Optional Material Rounded icon ligature name in snake_case
+ *                  (e.g. `"home"`, `"sports_esports"`).
+ *                  When set, the icon is displayed on the button face instead of [label].
+ *                  The [label] remains visible in the editor list. Null means no icon — show label.
+ * @param iconFilled Whether the icon is rendered filled (`true`, default) or outline (`false`).
  * @param posX      Horizontal centre position, normalised [0.0, 1.0] relative to pad width.
  * @param posY      Vertical centre position, normalised [0.0, 1.0] relative to pad height.
  * @param buttonSize Grid multiplier (cols × rows). Non-square sizes always render as rounded rectangle.
@@ -141,6 +146,8 @@ sealed class PadAction {
 data class PadButton(
     val id: String,
     val label: String,
+    val iconName: String? = null,
+    val iconFilled: Boolean = true,
     val posX: Float,
     val posY: Float,
     val buttonSize: ButtonSize = ButtonSize.SIZE_1X1,

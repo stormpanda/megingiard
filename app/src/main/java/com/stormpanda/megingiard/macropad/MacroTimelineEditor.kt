@@ -21,9 +21,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -257,7 +257,7 @@ internal fun MacroTimelineEditor(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Icon(
-                        Icons.Filled.Add,
+                        Icons.Rounded.Add,
                         contentDescription = null,
                         tint     = accentColor,
                         modifier = Modifier.size(18.dp),
@@ -479,14 +479,14 @@ private fun StepListItem(
 
         IconButton(onClick = onEdit) {
             Icon(
-                Icons.Filled.Edit,
+                Icons.Rounded.Edit,
                 contentDescription = stringResource(R.string.macropad_editor_rename),
                 tint               = colors.onSurfaceSecondary,
             )
         }
         IconButton(onClick = onDelete) {
             Icon(
-                Icons.Filled.Delete,
+                Icons.Rounded.Delete,
                 contentDescription = stringResource(R.string.macropad_editor_delete_button),
                 tint               = colors.onSurfaceSecondary,
             )

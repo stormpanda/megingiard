@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -162,7 +162,7 @@ private fun ProfileDropdown(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
         }
 
         DropdownMenu(
@@ -209,7 +209,7 @@ private fun LayoutActionButtons(accentColor: Color, onOpenEditor: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector        = Icons.Filled.Edit,
+                imageVector        = Icons.Rounded.Edit,
                 contentDescription = null,
                 tint               = accentColor,
                 modifier           = Modifier.size(18.dp),
@@ -242,7 +242,7 @@ private fun LayoutActionButtons(accentColor: Color, onOpenEditor: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector        = Icons.Filled.Add,
+                imageVector        = Icons.Rounded.Add,
                 contentDescription = null,
                 tint               = accentColor,
                 modifier           = Modifier.size(18.dp),
@@ -294,7 +294,7 @@ private fun ProfileSectionRow(
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector        = Icons.Filled.Edit,
+                imageVector        = Icons.Rounded.Edit,
                 contentDescription = null,
                 tint               = accentColor,
                 modifier           = Modifier.size(16.dp),
@@ -326,7 +326,7 @@ private fun ProfileSectionRow(
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector        = Icons.Filled.Add,
+                imageVector        = Icons.Rounded.Add,
                 contentDescription = null,
                 tint               = accentColor,
                 modifier           = Modifier.size(16.dp),
@@ -559,7 +559,7 @@ private fun VignetteShapeRow(
                     fontSize = 14.sp
                 )
                 Icon(
-                    imageVector = Icons.Filled.ArrowDropDown,
+                    imageVector = Icons.Rounded.ArrowDropDown,
                     contentDescription = null,
                     tint = colors.onSurfaceSecondary,
                 )

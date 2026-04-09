@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -134,7 +134,7 @@ fun MainAppScreen() {
                                     modifier = Modifier.padding(16.dp).height(72.dp)
                                 ) {
                                     Icon(
-                                        Icons.Filled.PlayArrow,
+                                        Icons.Rounded.PlayArrow,
                                         contentDescription = stringResource(R.string.mirror_start_button),
                                         modifier = Modifier.padding(end = 8.dp).size(36.dp),
                                         tint = colors.buttonIconTint
