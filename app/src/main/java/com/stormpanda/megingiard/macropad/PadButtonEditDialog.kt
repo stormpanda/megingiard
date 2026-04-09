@@ -76,6 +76,7 @@ internal fun ButtonEditDialog(
     var buttonSize        by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
     var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
+    var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: iconsFilledState.value) }
     val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -143,6 +144,7 @@ internal fun ButtonEditDialog(
                         val result = button?.copy(
                             label       = label,
                             iconName    = iconName,
+                            iconFilled  = iconFilled,
                             buttonShape = buttonShape,
                             buttonSize  = buttonSize,
                             action      = action,
@@ -150,6 +152,7 @@ internal fun ButtonEditDialog(
                             id          = UUID.randomUUID().toString(),
                             label       = label,
                             iconName    = iconName,
+                            iconFilled  = iconFilled,
                             posX        = 0.5f,
                             posY        = 0.5f,
                             buttonShape = buttonShape,
@@ -177,7 +180,7 @@ internal fun ButtonEditDialog(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-                val iconsFilled = iconsFilledState.value
+                val iconsFilled = iconFilled
 
                 // Label input and shape — hidden for ScrollWheel and TrackpointMove
                 if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AmbientPeek) {
@@ -388,11 +391,13 @@ internal fun ButtonEditDialog(
         // ── Icon picker overlay ──────────────────────────────────────────────
         if (showIconPicker) {
             IconPickerDialog(
-                selectedIcon = iconName,
-                accentColor  = accentColor,
-                onSelect     = { name -> iconName = name; showIconPicker = false },
-                onDismiss    = { showIconPicker = false },
-                modifier     = Modifier.fillMaxSize(),
+                selectedIcon   = iconName,
+                accentColor    = accentColor,
+                filled         = iconFilled,
+                onFilledChange = { iconFilled = it; iconsFilledState.value = it },
+                onSelect       = { name -> iconName = name; showIconPicker = false },
+                onDismiss      = { showIconPicker = false },
+                modifier       = Modifier.fillMaxSize(),
             )
         }
     }

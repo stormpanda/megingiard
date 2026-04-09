@@ -48,6 +48,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 
 private val IP_ICON_CELL_SIZE = 64.dp
 private val IP_ICON_SIZE = 28.dp
+private val IP_PREVIEW_SIZE = 44.dp
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
@@ -60,26 +61,29 @@ internal val iconsFilledState = mutableStateOf(true)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Full-screen icon picker that lets the user choose a [Icons.Rounded] icon by name.
+ * Full-screen icon picker that lets the user choose a Material Symbol icon by name.
  *
  * @param selectedIcon  The currently selected icon name, or `null` if none is set.
  * @param accentColor   Accent colour used for selection border and focus highlight.
+ * @param filled        Whether icons are shown filled (`true`) or outline (`false`).
+ * @param onFilledChange Called when the user toggles the filled/outline checkbox.
  * @param onSelect      Called with the chosen icon name when the user taps an icon,
  *                       or `null` when the user taps "Clear Icon".
  * @param onDismiss     Called when the user taps Cancel without making a selection.
  */
 @Composable
 internal fun IconPickerDialog(
-    selectedIcon: String?,
-    accentColor:  Color,
-    onSelect:     (String?) -> Unit,
-    onDismiss:    () -> Unit,
-    modifier:     Modifier = Modifier,
+    selectedIcon:   String?,
+    accentColor:    Color,
+    filled:         Boolean,
+    onFilledChange: (Boolean) -> Unit,
+    onSelect:       (String?) -> Unit,
+    onDismiss:      () -> Unit,
+    modifier:       Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     var query by remember { mutableStateOf("") }
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
-    val iconsFilled = iconsFilledState.value
 
     Column(
         modifier = modifier
@@ -120,7 +124,7 @@ internal fun IconPickerDialog(
             }
         }
 
-        // ── Search bar + filled toggle ──────────────────────────────────────────
+        // ── Search bar + selected icon preview + filled toggle ───────────────────────
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -146,15 +150,33 @@ internal fun IconPickerDialog(
                 ),
                 modifier = Modifier.weight(1f),
             )
+            if (selectedIcon != null) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .size(IP_PREVIEW_SIZE)
+                        .clip(RoundedCornerShape(IP_CELL_CORNER))
+                        .background(accentColor.copy(alpha = 0.2f))
+                        .border(2.dp, accentColor, RoundedCornerShape(IP_CELL_CORNER)),
+                ) {
+                    MaterialSymbol(
+                        name = selectedIcon,
+                        size = IP_ICON_SIZE,
+                        tint = accentColor,
+                        filled = filled,
+                    )
+                }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clickable { iconsFilledState.value = !iconsFilled }
+                    .clickable { onFilledChange(!filled) }
                     .padding(start = 4.dp),
             ) {
                 Checkbox(
-                    checked = iconsFilled,
-                    onCheckedChange = { iconsFilledState.value = it },
+                    checked = filled,
+                    onCheckedChange = onFilledChange,
                     colors = CheckboxDefaults.colors(
                         checkedColor = accentColor,
                         uncheckedColor = colors.onSurfaceSecondary,
@@ -216,7 +238,7 @@ internal fun IconPickerDialog(
                                 name = name,
                                 size = IP_ICON_SIZE,
                                 tint = if (isSelected) accentColor else colors.onSurface,
-                                filled = iconsFilled,
+                                filled = filled,
                             )
                             Text(
                                 text = name,

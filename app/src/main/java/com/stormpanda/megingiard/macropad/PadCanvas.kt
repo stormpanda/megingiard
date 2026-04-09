@@ -281,7 +281,7 @@ private fun DraggableButton(
                     name = btn.iconName,
                     size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                     tint = colors.onSurface,
-                    filled = iconsFilledState.value,
+                    filled = btn.iconFilled,
                 )
             } else {
                 Text(btn.label, color = colors.onSurface, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
