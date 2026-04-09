@@ -71,8 +71,8 @@ internal val iconsFilledState = mutableStateOf(true)
  * @param accentColor   Accent colour used for selection border and focus highlight.
  * @param filled        Whether icons are shown filled (`true`) or outline (`false`).
  * @param onFilledChange Called when the user toggles the filled/outline checkbox.
- * @param onSelect      Called with the chosen icon name when the user taps an icon,
- *                       or `null` when the user taps "Clear Icon".
+ * @param onSelect      Called with the pending icon name when the user taps confirm (✓),
+ *                       or `null` if the selection was cleared via the delete (🗑) button.
  * @param onDismiss     Called when the user taps Cancel without making a selection.
  */
 @Composable

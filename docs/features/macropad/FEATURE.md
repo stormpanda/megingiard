@@ -137,7 +137,12 @@ Each button supports one of the following actions:
   - In the **button list** (`MacroPadEditor`, `ButtonListItem`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
 - When the action type is `ScrollWheel`, `TrackpointMove`, or `AmbientPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
-- Icon selection opens `IconPickerDialog`, a full-screen overlay with a search field and a `LazyVerticalGrid` of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
+- Icon selection opens `IconPickerDialog`, a full-screen overlay with three zones:
+  1. **Header** — Cancel (text button) | title | ✓ confirm (icon button).
+  2. **Search row** — `OutlinedTextField` + Filled checkbox.
+  3. **Selection row** (only visible when an icon is pending) — preview box (48 dp) + icon name + "Currently selected" subtext + 🗑 delete button.
+  Tapping a grid icon sets a local `pendingIcon` state (does **not** close the dialog). The user confirms with ✓ or clears via 🗑. Cancel discards any pending change.
+  The icon grid is a `LazyVerticalGrid` (5 columns) of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
 
@@ -453,5 +458,5 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 | `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                            |
 | `MaterialIconRegistry.kt`    | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed)      |
 | `MaterialSymbols.kt`         | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures        |
-| `IconPickerDialog.kt`        | Full-screen icon picker: search field + `LazyVerticalGrid` (5 columns) of all available icons; called from `PadButtonEditDialog`                          |
+| `IconPickerDialog.kt`        | Full-screen icon picker (3-zone layout: header with ✓, search + filled toggle, selection row with preview/name/🗑); `LazyVerticalGrid` (5 columns), `pendingIcon` local state; called from `PadButtonEditDialog` |
 | `RoundedIconNames.kt`        | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`) |
