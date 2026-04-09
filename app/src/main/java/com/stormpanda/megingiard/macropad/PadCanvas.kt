@@ -279,7 +279,7 @@ private fun DraggableButton(
             if (btn.iconName != null) {
                 MaterialSymbol(
                     name = btn.iconName,
-                    size = MP_BUTTON_UNIT_DP * 0.8f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                    size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                     tint = colors.onSurface,
                 )
             } else {

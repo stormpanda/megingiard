@@ -54,7 +54,7 @@ private val MP_BTN_NORMAL_ALPHA     = 0.25f
 private const val MP_BTN_DISABLED_ALPHA = 0.38f
 
 private val  MP_BTN_SQUARE_RADIUS   = 4.dp
-private val  MP_BTN_ICON_UNIT        = 48.dp  // icon size per grid unit (≈ 80 % of MP_BUTTON_UNIT_DP)
+private val  MP_BTN_ICON_UNIT        = 44.dp  // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
 
 private const val MP_PRESS_ANIM_MS   = 80
 private const val MP_RELEASE_ANIM_MS = 160
