@@ -758,6 +758,7 @@ private fun ButtonListItem(
                         name = btn.iconName,
                         size = 18.dp,
                         tint = colors.onSurface,
+                        filled = iconsFilledState.value,
                     )
                 } else {
                     Text(btn.label.take(2), color = colors.onSurface, fontSize = 10.sp)

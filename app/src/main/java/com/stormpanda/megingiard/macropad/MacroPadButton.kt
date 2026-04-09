@@ -142,6 +142,7 @@ internal fun PadButton(
                     name = btn.iconName,
                     size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                     tint = colors.onSurface,
+                    filled = iconsFilledState.value,
                 )
             } else {
                 Text(

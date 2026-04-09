@@ -120,50 +120,52 @@ internal fun IconPickerDialog(
             }
         }
 
-        // ── Search bar ─────────────────────────────────────────────────────────
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            label = {
-                Text(
-                    stringResource(R.string.macropad_icon_picker_search),
-                    color = colors.onSurfaceSecondary,
-                )
-            },
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor   = accentColor,
-                unfocusedBorderColor = colors.accentBorder,
-                focusedTextColor     = colors.onSurface,
-                unfocusedTextColor   = colors.onSurface,
-                cursorColor          = accentColor,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        )
-
-        // ── Filled / outline toggle ────────────────────────────────────────────
+        // ── Search bar + filled toggle ──────────────────────────────────────────
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { iconsFilledState.value = !iconsFilled }
-                .padding(horizontal = 12.dp, vertical = 2.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            Checkbox(
-                checked = iconsFilled,
-                onCheckedChange = { iconsFilledState.value = it },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = accentColor,
-                    uncheckedColor = colors.onSurfaceSecondary,
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = {
+                    Text(
+                        stringResource(R.string.macropad_icon_picker_search),
+                        color = colors.onSurfaceSecondary,
+                    )
+                },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor   = accentColor,
+                    unfocusedBorderColor = colors.accentBorder,
+                    focusedTextColor     = colors.onSurface,
+                    unfocusedTextColor   = colors.onSurface,
+                    cursorColor          = accentColor,
                 ),
+                modifier = Modifier.weight(1f),
             )
-            Text(
-                text = stringResource(R.string.macropad_icon_picker_filled),
-                color = colors.onSurface,
-                fontSize = 14.sp,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clickable { iconsFilledState.value = !iconsFilled }
+                    .padding(start = 4.dp),
+            ) {
+                Checkbox(
+                    checked = iconsFilled,
+                    onCheckedChange = { iconsFilledState.value = it },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = accentColor,
+                        uncheckedColor = colors.onSurfaceSecondary,
+                    ),
+                )
+                Text(
+                    text = stringResource(R.string.macropad_icon_picker_filled),
+                    color = colors.onSurface,
+                    fontSize = 13.sp,
+                )
+            }
         }
 
         // ── Icon grid ──────────────────────────────────────────────────────────
