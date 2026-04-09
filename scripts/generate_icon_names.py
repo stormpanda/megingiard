@@ -49,36 +49,35 @@ def extract_names_from_font(ttf_path: str) -> list[str]:
     icon glyph when rendered.  Reading the GSUB table therefore gives the complete,
     authoritative icon name list.
     """
-    font = TTFont(ttf_path)
+    with TTFont(ttf_path) as font:
+        # Build reverse cmap: glyph name → Unicode character
+        cmap = font.getBestCmap()        # code_point → glyph_name
+        rev_cmap = {v: chr(k) for k, v in cmap.items()}
 
-    # Build reverse cmap: glyph name → Unicode character
-    cmap = font.getBestCmap()        # code_point → glyph_name
-    rev_cmap = {v: chr(k) for k, v in cmap.items()}
+        snake_names: set[str] = set()
 
-    snake_names: set[str] = set()
+        gsub = font.get("GSUB")
+        if gsub is None:
+            sys.exit("ERROR: Font has no GSUB table — cannot extract ligature names.")
 
-    gsub = font.get("GSUB")
-    if gsub is None:
-        sys.exit("ERROR: Font has no GSUB table — cannot extract ligature names.")
-
-    for lookup in gsub.table.LookupList.Lookup:
-        for subtable in lookup.SubTable:
-            # Type 7 = Extension: unwrap to get the real subtable
-            lig_subtable = getattr(subtable, 'ExtSubTable', subtable)
-            ligs = getattr(lig_subtable, 'ligatures', None)
-            if ligs is None:
-                continue
-            for first_glyph, lig_set in ligs.items():
-                first_char = rev_cmap.get(first_glyph, "")
-                if not first_char:
+        for lookup in gsub.table.LookupList.Lookup:
+            for subtable in lookup.SubTable:
+                # Type 7 = Extension: unwrap to get the real subtable
+                lig_subtable = getattr(subtable, 'ExtSubTable', subtable)
+                ligs = getattr(lig_subtable, 'ligatures', None)
+                if ligs is None:
                     continue
-                for lig in lig_set:
-                    rest = "".join(rev_cmap.get(g, "") for g in lig.Component)
-                    name = first_char + rest
-                    if _LIGATURE_RE.match(name):
-                        snake_names.add(name)
+                for first_glyph, lig_set in ligs.items():
+                    first_char = rev_cmap.get(first_glyph, "")
+                    if not first_char:
+                        continue
+                    for lig in lig_set:
+                        rest = "".join(rev_cmap.get(g, "") for g in lig.Component)
+                        name = first_char + rest
+                        if _LIGATURE_RE.match(name):
+                            snake_names.add(name)
 
-    return sorted(snake_names)
+        return sorted(snake_names)
 
 
 def write_kotlin(names: list[str], output_path: str, font_filename: str) -> None:
@@ -97,8 +96,8 @@ def write_kotlin(names: list[str], output_path: str, font_filename: str) -> None
     lines.append(")")
     output_path = os.path.normpath(output_path)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "w") as f:
-        f.write("\n".join(lines))
+    with open(output_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines) + "\n")
 
 
 def main() -> None:

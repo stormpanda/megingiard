@@ -131,7 +131,8 @@ sealed class PadAction {
 /**
  * @param id        Stable unique identifier (UUID string).
  * @param label     Text shown on the button face (and always in the editor list). Used even when an icon is set.
- * @param iconName  Optional Material Rounded icon name (e.g. `"Home"`, `"SportsEsports"`).
+ * @param iconName  Optional Material Rounded icon ligature name in snake_case
+ *                  (e.g. `"home"`, `"sports_esports"`).
  *                  When set, the icon is displayed on the button face instead of [label].
  *                  The [label] remains visible in the editor list. Null means no icon — show label.
  * @param iconFilled Whether the icon is rendered filled (`true`, default) or outline (`false`).

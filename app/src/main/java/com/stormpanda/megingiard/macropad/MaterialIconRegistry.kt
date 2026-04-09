@@ -12,7 +12,7 @@ internal object MaterialIconRegistry {
      */
     fun searchIcons(query: String): List<String> {
         if (query.isBlank()) return ALL_ROUNDED_ICON_NAMES
-        val lower = query.lowercase()
-        return ALL_ROUNDED_ICON_NAMES.filter { it.lowercase().contains(lower) }
+        val lower = query.trim().lowercase()
+        return ALL_ROUNDED_ICON_NAMES.filter { it.contains(lower) }
     }
 }
