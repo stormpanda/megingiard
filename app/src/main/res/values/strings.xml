@@ -158,7 +158,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_icon_picker_no_results">No icons found</string>
     <string name="macropad_icon_picker_clear">Clear Icon</string>
     <string name="macropad_icon_picker_filled">Filled</string>
+    <string name="macropad_icon_picker_currently_selected">Currently selected</string>
     <string name="cd_icon_picker_button">Select icon for button</string>
+    <string name="cd_icon_picker_confirm">Apply icon selection</string>
+    <string name="cd_icon_picker_delete">Remove icon</string>
 
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Keyboard Key</string>

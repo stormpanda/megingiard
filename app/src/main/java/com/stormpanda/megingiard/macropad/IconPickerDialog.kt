@@ -6,9 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,8 +20,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -48,7 +55,6 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 
 private val IP_ICON_CELL_SIZE = 64.dp
 private val IP_ICON_SIZE = 28.dp
-private val IP_PREVIEW_SIZE = 44.dp
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
@@ -83,6 +89,7 @@ internal fun IconPickerDialog(
 ) {
     val colors = LocalAppColors.current
     var query by remember { mutableStateOf("") }
+    var pendingIcon by remember { mutableStateOf(selectedIcon) }
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
 
     Column(
@@ -112,23 +119,31 @@ internal fun IconPickerDialog(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
             )
-            if (selectedIcon != null) {
-                TextButton(onClick = { onSelect(null) }) {
-                    Text(
-                        stringResource(R.string.macropad_icon_picker_clear),
-                        color = accentColor,
-                    )
-                }
-            } else {
-                Spacer(Modifier.size(64.dp))
+            IconButton(
+                onClick = { pendingIcon = null },
+                enabled = pendingIcon != null,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = stringResource(R.string.cd_icon_picker_delete),
+                    tint = if (pendingIcon != null) colors.onSurface else colors.onSurfaceSecondary,
+                )
+            }
+            IconButton(onClick = { onSelect(pendingIcon) }) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = stringResource(R.string.cd_icon_picker_confirm),
+                    tint = accentColor,
+                )
             }
         }
 
-        // ── Search bar + selected icon preview + filled toggle ───────────────────────
+        // ── Search bar + name label + selected icon preview + filled toggle ──
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Bottom,
             modifier = Modifier
                 .fillMaxWidth()
+                .height(IntrinsicSize.Min)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             OutlinedTextField(
@@ -150,18 +165,41 @@ internal fun IconPickerDialog(
                 ),
                 modifier = Modifier.weight(1f),
             )
-            if (selectedIcon != null) {
+            val currentIcon = pendingIcon
+            if (currentIcon != null) {
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .fillMaxHeight(),
+                ) {
+                    Text(
+                        text = currentIcon,
+                        color = colors.onSurface,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = stringResource(R.string.macropad_icon_picker_currently_selected),
+                        color = colors.onSurfaceSecondary,
+                        fontSize = 11.sp,
+                    )
+                }
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .padding(start = 8.dp)
-                        .size(IP_PREVIEW_SIZE)
+                        .fillMaxHeight()
+                        .aspectRatio(1f)
                         .clip(RoundedCornerShape(IP_CELL_CORNER))
                         .background(accentColor.copy(alpha = 0.2f))
                         .border(2.dp, accentColor, RoundedCornerShape(IP_CELL_CORNER)),
                 ) {
                     MaterialSymbol(
-                        name = selectedIcon,
+                        name = currentIcon,
                         size = IP_ICON_SIZE,
                         tint = accentColor,
                         filled = filled,
@@ -213,7 +251,7 @@ internal fun IconPickerDialog(
                 modifier = Modifier.weight(1f),
             ) {
                 items(results, key = { it }) { name ->
-                    val isSelected = name == selectedIcon
+                    val isSelected = name == pendingIcon
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -228,7 +266,7 @@ internal fun IconPickerDialog(
                                 color = if (isSelected) accentColor else colors.accentBorder,
                                 shape = RoundedCornerShape(IP_CELL_CORNER),
                             )
-                            .clickable { onSelect(name) },
+                            .clickable { pendingIcon = name },
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
