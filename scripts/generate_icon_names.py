@@ -1,65 +1,93 @@
 """
 generate_icon_names.py
-Generates RoundedIconNames.kt — the sorted list of all Icons.Rounded names
-from the material-icons-extended library bundled in the Gradle cache.
+Generates RoundedIconNames.kt — the sorted list of all Material Symbols Rounded
+icon names extracted directly from the bundled variable font via its GSUB ligature
+table. This guarantees the list is always in sync with the font file.
+
+Requires:  pip install fonttools
 
 Usage:
     python3 scripts/generate_icon_names.py
 
-Re-run whenever the Compose BOM / material-icons-extended version is updated.
+Re-run whenever the font file is updated.
 The output file is version-controlled so the app never needs to do this at runtime.
 """
 
 import os
-import zipfile
-import glob
+import re
 import sys
 
-GRADLE_CACHE = os.path.expanduser(
-    "~/.gradle/caches/modules-2/files-2.1"
-    "/androidx.compose.material/material-icons-extended-android"
+try:
+    from fontTools.ttLib import TTFont
+except ImportError:
+    sys.exit(
+        "ERROR: fonttools is not installed.\n"
+        "Run: pip install fonttools"
+    )
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FONT_FILE = os.path.join(
+    SCRIPT_DIR,
+    "../app/src/main/res/font/material_symbols_rounded.ttf",
 )
 OUTPUT_FILE = os.path.join(
-    os.path.dirname(__file__),
+    SCRIPT_DIR,
     "../app/src/main/java/com/stormpanda/megingiard/macropad/RoundedIconNames.kt",
 )
 
-
-def find_aar() -> str:
-    pattern = os.path.join(GRADLE_CACHE, "**", "material-icons-extended-release.aar")
-    matches = glob.glob(pattern, recursive=True)
-    if not matches:
-        sys.exit(
-            "ERROR: material-icons-extended AAR not found in Gradle cache.\n"
-            "Run a Gradle sync first so the dependency is downloaded."
-        )
-    # Pick the newest version by path depth / name
-    return sorted(matches)[-1]
+# Valid Material Symbols ligature: lowercase letters, digits, underscores; ≥ 2 chars
+_LIGATURE_RE = re.compile(r"^[a-z][a-z0-9_]+$")
 
 
-def extract_rounded_names(aar_path: str) -> list[str]:
-    names = []
-    with zipfile.ZipFile(aar_path) as aar:
-        with aar.open("classes.jar") as raw:
-            import io
-            jar_bytes = io.BytesIO(raw.read())
-    with zipfile.ZipFile(jar_bytes) as jar:
-        for entry in jar.namelist():
-            if (
-                entry.startswith("androidx/compose/material/icons/rounded/")
-                and entry.endswith("Kt.class")
-            ):
-                names.append(entry.split("/")[-1].replace("Kt.class", ""))
-    return sorted(names)
+def extract_names_from_font(ttf_path: str) -> list[str]:
+    """
+    Parses the OpenType GSUB table of the Material Symbols font and returns all
+    icon names as snake_case strings (e.g. "arrow_back", "home").
+
+    Material Symbols encodes every icon as a GSUB type-4 ligature (often wrapped
+    in a type-7 Extension lookup): the string "home" is substituted to a single
+    icon glyph when rendered.  Reading the GSUB table therefore gives the complete,
+    authoritative icon name list.
+    """
+    font = TTFont(ttf_path)
+
+    # Build reverse cmap: glyph name → Unicode character
+    cmap = font.getBestCmap()        # code_point → glyph_name
+    rev_cmap = {v: chr(k) for k, v in cmap.items()}
+
+    snake_names: set[str] = set()
+
+    gsub = font.get("GSUB")
+    if gsub is None:
+        sys.exit("ERROR: Font has no GSUB table — cannot extract ligature names.")
+
+    for lookup in gsub.table.LookupList.Lookup:
+        for subtable in lookup.SubTable:
+            # Type 7 = Extension: unwrap to get the real subtable
+            lig_subtable = getattr(subtable, 'ExtSubTable', subtable)
+            ligs = getattr(lig_subtable, 'ligatures', None)
+            if ligs is None:
+                continue
+            for first_glyph, lig_set in ligs.items():
+                first_char = rev_cmap.get(first_glyph, "")
+                if not first_char:
+                    continue
+                for lig in lig_set:
+                    rest = "".join(rev_cmap.get(g, "") for g in lig.Component)
+                    name = first_char + rest
+                    if _LIGATURE_RE.match(name):
+                        snake_names.add(name)
+
+    return sorted(snake_names)
 
 
-def write_kotlin(names: list[str], output_path: str, version: str) -> None:
+def write_kotlin(names: list[str], output_path: str, font_filename: str) -> None:
     lines = [
         "package com.stormpanda.megingiard.macropad",
         "",
         "// AUTO-GENERATED — do not edit manually.",
         "// Regenerate by running: python3 scripts/generate_icon_names.py",
-        f"// Source: material-icons-extended {version}, Icons.Rounded set",
+        f"// Source: {font_filename} — GSUB ligature table",
         "",
         "internal val ALL_ROUNDED_ICON_NAMES: List<String> = listOf(",
     ]
@@ -74,18 +102,14 @@ def write_kotlin(names: list[str], output_path: str, version: str) -> None:
 
 
 def main() -> None:
-    aar = find_aar()
-    # Extract version from path: …/1.6.8/hash/…
-    parts = aar.replace("\\", "/").split("/")
-    version = "unknown"
-    for i, part in enumerate(parts):
-        if part == "material-icons-extended-android" and i + 1 < len(parts):
-            version = parts[i + 1]
-            break
+    font_path = os.path.normpath(FONT_FILE)
+    if not os.path.isfile(font_path):
+        sys.exit(f"ERROR: Font not found at {font_path}")
 
-    names = extract_rounded_names(aar)
-    write_kotlin(names, OUTPUT_FILE, version)
-    print(f"Generated {len(names)} Rounded icons → {os.path.normpath(OUTPUT_FILE)}")
+    snake_names = extract_names_from_font(font_path)
+
+    write_kotlin(snake_names, OUTPUT_FILE, os.path.basename(font_path))
+    print(f"Generated {len(snake_names)} icons → {os.path.normpath(OUTPUT_FILE)}")
 
 
 if __name__ == "__main__":

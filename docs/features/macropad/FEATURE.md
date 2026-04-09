@@ -129,16 +129,17 @@ Each button supports one of the following actions:
 
 ### FR-P10: Optional Button Icons
 
-- Any button MAY be assigned an optional **icon** drawn from the `Icons.Rounded` Material Icons set.
+- Any button MAY be assigned an optional **icon** from the bundled **Material Symbols Rounded** icon font.
+- Icons are stored as **snake_case ligature strings** (e.g. `"arrow_back"`, `"sports_esports"`, `"password_2"`) — the exact string the font's GSUB table maps to a glyph.
 - When `iconName` is set:
-  - In **use mode** (`MacroPadButton`): the icon is rendered centred inside the button face instead of the label text. Icon size scales with the button column count: `(24 × cols).dp`.
-  - In the **editor canvas** (`PadCanvas`, `DraggableButton`): the icon is shown at 18 dp inside the button.
+  - In **use mode** (`MacroPadButton`): the icon is rendered centred inside the button face instead of the label text. Icon size = `43 dp × min(cols, rows)`.
+  - In the **editor canvas** (`PadCanvas`, `DraggableButton`): the icon is shown at `60 dp × 0.72 × min(cols, rows)` (≈ 43 dp for 1×1).
   - In the **button list** (`MacroPadEditor`, `ButtonListItem`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
 - When the action type is `ScrollWheel`, `TrackpointMove`, or `AmbientPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
-- Icon selection opens `IconPickerDialog`, a full-screen overlay with a search field and a `LazyVerticalGrid` of all 2 083 `Icons.Rounded` icons. The dialog is accessible from `PadButtonEditDialog` via an icon-selector button next to the label field.
-- Icons are resolved at runtime via reflection (`MaterialIconRegistry`). Because `isMinifyEnabled = false`, no keep-rules are required for Proguard/R8.
+- Icon selection opens `IconPickerDialog`, a full-screen overlay with a search field and a `LazyVerticalGrid` of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
+- No runtime reflection or Proguard keep-rules are required.
 
 ---
 
@@ -258,7 +259,7 @@ PadProfile
   └── buttons: List<PadButton>
         ├── id: String          (UUID)
         ├── label: String       (empty for TrackpointMove / ScrollWheel)
-        ├── iconName: String?   (optional `Icons.Rounded` name; shown instead of label in use mode + editor canvas; null = label)
+        ├── iconName: String?   (optional Material Symbols snake_case ligature name, e.g. "arrow_back"; shown instead of label in use mode + editor canvas; null = label)
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
         ├── buttonShape: ButtonShape (SQUARE | CIRCLE)
@@ -272,6 +273,53 @@ PadProfile
 ```
 
 Legacy fields `hasTrackpoint`, `trackpointPosX/Y`, `trackpointSize`, `padShape`, and `padSizePercent` are kept as `@Suppress("unused")` in `PadProfile` for JSON deserialization compatibility. Profiles loaded with `hasTrackpoint=true` are migrated to a `TrackpointMove` button in `MacroPadState.loadFrom()`.
+
+### Icon Rendering — Material Symbols Font
+
+Icons are rendered using the **Material Symbols Rounded** variable font bundled at
+`app/src/main/res/font/material_symbols_rounded.ttf`.
+
+**How it works:**
+The font uses OpenType GSUB ligature substitution (type 4, wrapped in type-7 Extension
+lookups). When a `Text()` composable renders the string `"arrow_back"`, the HarfBuzz
+shaper matches it against the GSUB ligature table and replaces the character sequence
+with the single icon glyph — exactly like rendering an emoji by name.
+
+**`MaterialSymbols.kt`** provides:
+- `MaterialSymbolsFamily` — a `FontFamily` pointing at the bundled TTF with font
+  variation axes locked to: `FILL=1` (filled style), `wght=400`, `GRAD=0`, `opsz=24`.
+- `MaterialSymbol(name, size, tint, modifier)` — a `@Composable` that renders
+  `name` (snake_case) directly as `Text()` with `MaterialSymbolsFamily`. No string
+  conversion is performed; the exact stored value is passed to the font.
+
+**Icon name format:** Snake_case (e.g. `"arrow_back"`, `"sports_esports"`,
+`"password_2"`, `"android_wifi_4_bar_plus"`). This is the native format of the
+Material Symbols ligature table — no PascalCase conversion is applied anywhere.
+
+**`MaterialIconRegistry`** is kept for its `searchIcons(query)` function only
+(powers the search field in `IconPickerDialog`). The old reflection-based `resolve()`
+method has been removed.
+
+### Icon Name List Generation
+
+The searchable icon list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is
+auto-generated from the bundled font file — **do not edit it manually**.
+
+To regenerate after updating the font:
+
+```bash
+# One-time setup (Python 3.10+):
+pip install fonttools
+
+# From the repo root:
+python3 scripts/generate_icon_names.py
+```
+
+The script (`scripts/generate_icon_names.py`) reads every GSUB ligature entry from
+`app/src/main/res/font/material_symbols_rounded.ttf`, filters entries matching
+`[a-z][a-z0-9_]+`, and writes the sorted snake_case list to `RoundedIconNames.kt`.
+The generated file is version-controlled; the script only needs to be re-run when
+the font file is updated.
 
 ### Native Binaries
 
@@ -402,6 +450,7 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 | `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                                  |
 | `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                              |
 | `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                           |
-| `MaterialIconRegistry.kt`    | Reflection-based `Icons.Rounded` resolver: `resolve(name): ImageVector?`, `searchIcons(query): List<String>`, backed by an in-memory name list           |
-| `IconPickerDialog.kt`        | Full-screen icon picker: search field + `LazyVerticalGrid` (5 columns) of all `Icons.Rounded` icons; called from `PadButtonEditDialog`                   |
-| `RoundedIconNames.kt`        | Auto-generated list of 2 083 sorted `Icons.Rounded` icon name strings (regenerated via `scripts/generate_icon_names.py`)                                 |
+| `MaterialIconRegistry.kt`    | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed)     |
+| `MaterialSymbols.kt`         | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures        |
+| `IconPickerDialog.kt`        | Full-screen icon picker: search field + `LazyVerticalGrid` (5 columns) of all available icons; called from `PadButtonEditDialog`                          |
+| `RoundedIconNames.kt`        | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`) |

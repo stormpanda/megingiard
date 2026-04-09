@@ -217,7 +217,7 @@ internal fun ButtonEditDialog(
                                 .clickable { showIconPicker = true },
                         ) {
                             MaterialSymbol(
-                                name = iconName ?: "AddReaction",
+                                name = iconName ?: "add_reaction",
                                 size = 28.dp,
                                 tint = if (iconName != null) accentColor else colors.onSurfaceSecondary,
                             )

@@ -48,7 +48,7 @@ internal fun MaterialSymbol(
 ) {
     val fontSize = with(LocalDensity.current) { size.toSp() }
     Text(
-        text = name.toSymbolLigature(),
+        text = name,
         fontFamily = MaterialSymbolsFamily,
         fontSize = fontSize,
         color = tint,
@@ -59,10 +59,4 @@ internal fun MaterialSymbol(
     )
 }
 
-/** Converts PascalCase icon name to a Material Symbols ligature string: "ArrowBack" → "arrow_back". */
-internal fun String.toSymbolLigature(): String = buildString {
-    for (c in this@toSymbolLigature) {
-        if (c.isUpperCase() && isNotEmpty()) append('_')
-        append(c.lowercaseChar())
-    }
-}
+
