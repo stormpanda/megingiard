@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -50,6 +52,9 @@ private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
 
+/** Process-level singleton: last chosen fill style — persists across dialog re-opens within the session. */
+internal val iconsFilledState = mutableStateOf(true)
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon Picker Dialog
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,6 +79,7 @@ internal fun IconPickerDialog(
     val colors = LocalAppColors.current
     var query by remember { mutableStateOf("") }
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
+    val iconsFilled = iconsFilledState.value
 
     Column(
         modifier = modifier
@@ -137,6 +143,29 @@ internal fun IconPickerDialog(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         )
 
+        // ── Filled / outline toggle ────────────────────────────────────────────
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { iconsFilledState.value = !iconsFilled }
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+        ) {
+            Checkbox(
+                checked = iconsFilled,
+                onCheckedChange = { iconsFilledState.value = it },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = accentColor,
+                    uncheckedColor = colors.onSurfaceSecondary,
+                ),
+            )
+            Text(
+                text = stringResource(R.string.macropad_icon_picker_filled),
+                color = colors.onSurface,
+                fontSize = 14.sp,
+            )
+        }
+
         // ── Icon grid ──────────────────────────────────────────────────────────
         if (results.isEmpty()) {
             Box(
@@ -185,6 +214,7 @@ internal fun IconPickerDialog(
                                 name = name,
                                 size = IP_ICON_SIZE,
                                 tint = if (isSelected) accentColor else colors.onSurface,
+                                filled = iconsFilled,
                             )
                             Text(
                                 text = name,

@@ -782,6 +782,15 @@ private fun ButtonListItem(
             }
         }
 
+        if (!isTrackpoint && btn.action !is PadAction.ScrollWheel) {
+            Text(
+                text = "${btn.buttonSize.cols}×${btn.buttonSize.rows}",
+                color = colors.onSurfaceSecondary,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(end = 4.dp),
+            )
+        }
+
         IconButton(onClick = { showDelete = true }) {
             Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = colors.onSurfaceSecondary)
         }

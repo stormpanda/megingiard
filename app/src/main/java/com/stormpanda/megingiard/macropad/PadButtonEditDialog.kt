@@ -177,11 +177,13 @@ internal fun ButtonEditDialog(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+                val iconsFilled = iconsFilledState.value
+
                 // Label input and shape — hidden for ScrollWheel and TrackpointMove
                 if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AmbientPeek) {
                     // ── Label + Icon selector row ──────────────────────────────────────────
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -220,56 +222,85 @@ internal fun ButtonEditDialog(
                                 name = iconName ?: "add_reaction",
                                 size = 28.dp,
                                 tint = if (iconName != null) accentColor else colors.onSurfaceSecondary,
+                                filled = iconsFilled,
                             )
                         }
                     }
 
-                    SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ButtonShape.entries.forEach { shape ->
-                            val selected = shape == buttonShape
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
-                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
-                                    .border(
-                                        width = if (selected) 2.dp else 1.dp,
-                                        color = if (selected) accentColor else colors.accentBorder,
-                                        shape = if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp),
+                    // ── Shape + Size side by side ──────────────────────────────────────────────
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ButtonShape.entries.forEach { shape ->
+                                    val selected = shape == buttonShape
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
+                                            .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
+                                            .border(
+                                                width = if (selected) 2.dp else 1.dp,
+                                                color = if (selected) accentColor else colors.accentBorder,
+                                                shape = if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp),
+                                            )
+                                            .clickable { buttonShape = shape },
+                                    ) {
+                                        Text(
+                                            text  = if (shape == ButtonShape.CIRCLE)
+                                                stringResource(R.string.macropad_editor_shape_circle)
+                                            else
+                                                stringResource(R.string.macropad_editor_shape_square),
+                                            color = if (selected) accentColor else colors.onSurfaceSecondary,
+                                            fontSize = 10.sp,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
+                            Box {
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(colors.surface)
+                                        .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
+                                        .clickable { showSizeMenu = true }
+                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(buttonSize.displayLabel(), color = colors.onSurface, fontSize = 14.sp)
+                                    Icon(
+                                        imageVector = Icons.Rounded.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = colors.onSurfaceSecondary,
                                     )
-                                    .clickable { buttonShape = shape },
-                            ) {
-                                Text(
-                                    text  = if (shape == ButtonShape.CIRCLE)
-                                        stringResource(R.string.macropad_editor_shape_circle)
-                                    else
-                                        stringResource(R.string.macropad_editor_shape_square),
-                                    color = if (selected) accentColor else colors.onSurfaceSecondary,
-                                    fontSize = 10.sp,
-                                    textAlign = TextAlign.Center,
-                                )
+                                }
+                                DropdownMenu(
+                                    expanded         = showSizeMenu,
+                                    onDismissRequest = { showSizeMenu = false },
+                                    modifier         = Modifier.background(colors.surface),
+                                ) {
+                                    ButtonSize.entries.forEach { size ->
+                                        DropdownMenuItem(
+                                            text    = { Text(size.displayLabel(), color = colors.onSurface) },
+                                            onClick = { buttonSize = size; showSizeMenu = false },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
-                }
-
-                // Size section — TrackpointSize picker for trackpoint, locked label for ScrollWheel, dropdown otherwise
-                SectionLabel(
-                    text = if (action is PadAction.TrackpointMove)
-                        stringResource(R.string.macropad_editor_trackpoint_size)
-                    else
-                        stringResource(R.string.macropad_editor_button_size),
-                    accentColor = accentColor,
-                )
-                if (action is PadAction.ScrollWheel) {
-                    Text(
-                        text     = ButtonSize.SIZE_1X2.displayLabel(),
-                        color    = colors.onSurfaceSecondary,
-                        fontSize = 14.sp,
-                    )
                 } else if (action is PadAction.TrackpointMove) {
+                    // ── Trackpoint size picker ──────────────────────────────────────────────
+                    SectionLabel(stringResource(R.string.macropad_editor_trackpoint_size), accentColor)
                     val tpAction = action as PadAction.TrackpointMove
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TrackpointSize.entries.forEach { sz ->
@@ -297,7 +328,17 @@ internal fun ButtonEditDialog(
                             }
                         }
                     }
+                } else if (action is PadAction.ScrollWheel) {
+                    // ── ScrollWheel: size locked to 1×2 ────────────────────────────────────
+                    SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
+                    Text(
+                        text     = ButtonSize.SIZE_1X2.displayLabel(),
+                        color    = colors.onSurfaceSecondary,
+                        fontSize = 14.sp,
+                    )
                 } else {
+                    // ── AmbientPeek: size dropdown ──────────────────────────────────────────
+                    SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
                     Box {
                         Row(
                             modifier = Modifier
