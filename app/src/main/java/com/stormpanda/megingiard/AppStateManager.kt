@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-enum class AppMode { MIRROR, MEDIA, TOUCHPAD, KEYBOARD, MACROPAD }
+enum class AppMode { MIRROR, TOUCHPAD, KEYBOARD, MACROPAD }
 
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the

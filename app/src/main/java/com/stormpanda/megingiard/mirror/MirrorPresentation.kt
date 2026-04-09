@@ -75,12 +75,12 @@ class MirrorPresentation(
         if (backDispatcher.hasEnabledCallbacks()) {
             backDispatcher.onBackPressed()
         } else {
-            AppStateManager.setMode(AppMode.MEDIA)
+            AppStateManager.setMode(AppMode.TOUCHPAD)
         }
     }
 
     override fun cancel() {
-        AppStateManager.setMode(AppMode.MEDIA)
+        AppStateManager.setMode(AppMode.TOUCHPAD)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -4,7 +4,7 @@ Welcome to **Megingiard**, a bespoke companion application specifically designed
 
 ## The Goal
 
-Users should be able to mirror applications running on the primary screen (such as cameras or games) to the secondary screen with hardware acceleration and "zero-copy/zero-lag". On this secondary screen ("Mirror Screen"), Megingiard offers interactive controls for seamless **Pan**, **Zoom**, a **Freeze Frame** function, and quick transitions to **Media Controls**.
+Users should be able to mirror applications running on the primary screen (such as cameras or games) to the secondary screen with hardware acceleration and "zero-copy/zero-lag". On this secondary screen ("Mirror Screen"), Megingiard offers interactive controls for seamless **Pan**, **Zoom**, and a **Freeze Frame** function.
 
 ## Documentation
 
@@ -17,7 +17,7 @@ Given its hardware-specific approach, this project is extensively documented:
 ## Core Features
 
 1. **Latency-Free Mirroring:** Utilizes Android's `MediaProjection` coupled with native `VirtualDisplay` to `SurfaceView` rendering (bypassing all software composition).
-2. **Carousel Navigation:** Lightning-fast switching between the Mirror view and Media view via a UI overlay, tied to clean Window lifecycle caches (`hide()` instead of destructive `dismiss()`).
+2. **Carousel Navigation:** Lightning-fast switching between all tools via a UI overlay, tied to clean Window lifecycle caches (`hide()` instead of destructive `dismiss()`).
 3. **Gallery-Style Pan & Zoom:** Natural and smart multi-touch gestures with exact physical boundary constraints (_Hard Edges_ to prevent vanishing windows) and auto-centering (Pinch-Out Snap-Back).
 4. **Resource-Efficient Freeze Frame:** Physically decouples the video producer from the renderer to freeze frames in the hardware buffer with zero CPU overhead while retaining full zoom capabilities.
 5. **Virtual Keyboard:** Full QWERTZ/QWERTY/AZERTY keyboard with multi-state modifier keys, an integrated trackpoint, and sub-millisecond key injection via a native binary directly into `/dev/uinput`.

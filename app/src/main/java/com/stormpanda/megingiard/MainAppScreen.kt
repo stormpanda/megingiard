@@ -34,7 +34,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
-import com.stormpanda.megingiard.media.MediaScreen
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
@@ -152,7 +151,6 @@ fun MainAppScreen() {
                         }
                     }
                 }
-                AppMode.MEDIA -> MediaScreen()
                 AppMode.TOUCHPAD -> TouchpadScreen()
                 AppMode.KEYBOARD -> KeyboardScreen()
                 AppMode.MACROPAD -> {

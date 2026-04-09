@@ -18,26 +18,20 @@ The app offers a set of tools, each of which occupies the entire secondary scree
 - **Freeze Frame:** Freeze the current frame as an interactively zoomable and pannable reference screenshot.
 - **Controls Overlay:** A tap reveals semi-transparent controls (Freeze, Stop, carousel navigation) that auto-hide after a short period of inactivity.
 
-### 2.2 Media Control → [docs/features/media/FEATURE.md](docs/features/media/FEATURE.md)
-
-- **System-wide control** via the Android `MediaSession` API (Spotify, YouTube, podcasts, and more).
-- Transport controls: Play/Pause, Skip (forward/back), ±10-second jumps.
-- Interactive **progress bar** with deferred scrubbing (seek is applied on release only).
-
-### 2.3 Virtual Touchpad → [docs/features/touchpad/FEATURE.md](docs/features/touchpad/FEATURE.md)
+### 2.2 Virtual Touchpad → [docs/features/touchpad/FEATURE.md](docs/features/touchpad/FEATURE.md)
 
 - The secondary screen becomes a **touch control surface** for the primary screen.
 - Touch input is injected in real-time via a native binary directly into the kernel input stream (< 1 ms latency).
 - 16:9 touch surface with a visual touch indicator and hint text.
 
-### 2.4 Virtuelle Tastatur → [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md)
+### 2.3 Virtuelle Tastatur → [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md)
 
 - Vollständige virtuelle Tastatur (**QWERTZ / QWERTY / AZERTY**) mit Buchstabenreihen, Zahlenreihe, F1–F12, Pfeiltasten und allen Standard-Modifikatoren.
 - **Modifier-Keys** mit intelligentem Drei-Zustands-Verhalten: kurzes Tippen aktiviert den Sticky-Modus (einmalige Verwendung), langes Drücken hält den Modifier bis zum Loslassen.
 - **Trackpoint:** Analoger Zeiger-Cursor, der Mausbewegungen auf dem primären Display simuliert – steuerbar direkt über die Tastatur.
 - **Key Repeat:** Konfigurierbare Wiederholungsrate für gehaltene Tasten; bei deaktiviertem Repeat wird Key-Up sofort gesendet, um das Kernel-Repeat zu unterdrücken.
 - Eingaben werden in Echtzeit via nativem Binary direkt in `/dev/uinput` injiziert (< 1 ms Latenz).
-### 2.5 MacroPad → [docs/features/macropad/FEATURE.md](docs/features/macropad/FEATURE.md)
+### 2.4 MacroPad → [docs/features/macropad/FEATURE.md](docs/features/macropad/FEATURE.md)
 
 - Frei konfigurierbares Button-Pad mit mehreren benannten Profilen und freier Positionierung.
 - Unterstützte Aktionstypen: Tastatur-Taste, Gamepad-Button (via virtuellem uinput-Gamepad), Maus-Links-/Rechtsklick, Scroll-Wheel und Trackpoint (relative Mausbewegung).
@@ -49,6 +43,6 @@ The app offers a set of tools, each of which occupies the entire secondary scree
 - **Layout & Design:**
   - The app runs in borderless Immersive Fullscreen mode (no status bar or navigation buttons).
   - All surfaces are optimised for **4:3** and **16:9** aspect ratios in landscape orientation.
-  - **Aesthetic:** The design (especially Media Control) is intentionally dark and minimalist ("Dark Mode") to avoid distracting the user with bright colours while gaming on the primary screen.
+  - **Aesthetic:** The design is intentionally dark and minimalist ("Dark Mode") to avoid distracting the user with bright colours while gaming on the primary screen.
   - **Controls Overlay:** Controls are revealed exclusively on a tap and fade out after a few seconds (auto-hide).
 - **App Lifecycle:** Megingiard follows Android conventions: the app is closed via the standard Android multi-tasking view (Recent Apps); there are no dedicated close buttons in the UI.

@@ -88,7 +88,6 @@ private val CO_HANDLE_CONTENT_V_PADDING = 8.dp
 
 private fun AppMode.nameResId(): Int = when (this) {
     AppMode.MIRROR -> R.string.tool_name_mirror
-    AppMode.MEDIA -> R.string.tool_name_media
     AppMode.TOUCHPAD -> R.string.tool_name_touchpad
     AppMode.KEYBOARD -> R.string.tool_name_keyboard
     AppMode.MACROPAD -> R.string.tool_name_macropad

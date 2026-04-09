@@ -29,7 +29,6 @@
 | `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                   |
 | `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                   |
 | `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation    |
-| `docs/features/media/FEATURE.md`    | Media Control — functional requirements & technical implementation    |
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
 | `docs/features/keyboard/FEATURE.md` | Virtual Keyboard — functional requirements & technical implementation |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                |
@@ -48,9 +47,6 @@ com.stormpanda.megingiard
 ├── CaptureRequestActivity.kt # MediaProjection consent dialog (transparent Activity)
 ├── MainActivity.kt # Entry point, permission checks, display detection
 ├── MainAppScreen.kt # Top-level Composable (Crossfade + carousel overlay)
-├── media/
-│ ├── MegingiardNotificationListener.kt # NotificationListenerService + MediaState
-│ └── MediaScreen.kt # Media dashboard Composable
 ├── mirror/
 │ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
 │ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
@@ -114,7 +110,7 @@ com.stormpanda.megingiard
 
 ### 4.1 Singleton State Holders
 
-State is managed by **`object` singletons** (`AppStateManager`, `ScreenCaptureManager`, `MediaState`) that expose **read-only `StateFlow`** and keep all `MutableStateFlow` backing fields **`private`**.
+State is managed by **`object` singletons** (`AppStateManager`, `ScreenCaptureManager`) that expose **read-only `StateFlow`** and keep all `MutableStateFlow` backing fields **`private`**.
 
 \`\`\`kotlin
 // ✅ Correct pattern
@@ -139,9 +135,6 @@ val bar = MutableStateFlow(0) // WRONG
 | Owning singleton                | `private` backing field      |
 | Same module (Service, Listener) | `internal` update functions  |
 | Composable / UI                 | Read-only `StateFlow` only   |
-
-`MediaState.activeController` is `internal`; UI accesses it via the read-only
-extension property `MediaState.controller`.
 
 ### 4.3 Bitmap Lifecycle
 
@@ -246,18 +239,18 @@ manager.setScale(animScale.value)
 
 ```kotlin
 // ✅ Correct – polling imperative state
-LaunchedEffect(isPlaying) {
-    if (isPlaying) {
+LaunchedEffect(isActive) {
+    if (isActive) {
         while (true) {
-            val state = MediaState.controller?.playbackState
+            val state = someManager.currentState
             // use state …
-            delay(PROGRESS_POLL_INTERVAL_MS)
+            delay(POLL_INTERVAL_MS)
         }
     }
 }
 ```
 
-The coroutine is automatically cancelled when the key (`isPlaying`) changes to `false`.
+The coroutine is automatically cancelled when the key (`isActive`) changes to `false`.
 
 ### 6.2 String Resources
 
@@ -266,7 +259,7 @@ The coroutine is automatically cancelled when the key (`isPlaying`) changes to `
 - Services / non-Compose code: `getString(R.string.key)` or `context.getString(...)`.
 - Format args: `stringResource(R.string.key, arg1, arg2)` — not string concatenation.
 - Internal defaults in singletons that are immediately overwritten by
-  service callbacks (e.g. `"No Media"`) may remain as literals.
+  callbacks may remain as literals.
 
 ### 6.3 Accessibility
 
@@ -480,8 +473,7 @@ setOnDismissListener {
 - All dependency versions live in `gradle/libs.versions.toml`.
   Never hardcode version strings in `build.gradle.kts`.
 - `isMinifyEnabled = false` for now (release builds).
-  When enabling R8, add keep rules for `ScreenCaptureService` and
-  `MegingiardNotificationListener` (referenced by the system via manifest).
+  When enabling R8, add keep rules for `ScreenCaptureService` (referenced by the system via manifest).
 
 ---
 
@@ -572,7 +564,7 @@ Before marking a task as done, verify:
 - [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
 - [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR` (not `mode != AppMode.MEDIA`)
+- [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR`
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)

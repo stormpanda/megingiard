@@ -169,13 +169,6 @@ fun ToolSettingsPanel(
                         pinchWhileProjecting = pinchWhileProjecting,
                         onPinchWhileProjectingChanged = { SettingsManager.setPinchWhileProjecting(it) }
                     )
-                    AppMode.MEDIA -> {
-                        Text(
-                            text = stringResource(R.string.settings_no_tool_settings),
-                            color = colors.onSurfaceSecondary,
-                            fontSize = 14.sp
-                        )
-                    }
                     AppMode.TOUCHPAD -> TouchpadToolSettings(
                         touchpadUseMouse = touchpadUseMouse,
                         onTouchpadUseMouseChanged = { SettingsManager.setTouchpadUseMouse(it) },

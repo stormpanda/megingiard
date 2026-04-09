@@ -13,23 +13,12 @@
     <string name="cd_touch_projection_on">Touch Projection on</string>
     <string name="cd_touch_projection_off">Touch Projection off</string>
     <string name="cd_frozen_image">Frozen Stream Image</string>
-    <string name="media_no_media">No Media</string>
-    <string name="media_unknown_title">Unknown Title</string>
-    <string name="media_scrubbing_to">Scrubbing to: %s</string>
-    <string name="notification_listener_required">Notification Access required for Media Control</string>
-    <string name="grant_permission">Grant Permission</string>
     <string name="notification_mirroring_active">Mirroring active</string>
-    <string name="cd_skip_previous">Previous track</string>
-    <string name="cd_replay_10">Rewind 10 seconds</string>
-    <string name="cd_play_pause">Play / Pause</string>
-    <string name="cd_forward_10">Forward 10 seconds</string>
-    <string name="cd_skip_next">Next track</string>
     <string name="touchpad_hint">Touch here to control the top screen</string>
     <string name="touchpad_hint_mouse">Slide to move cursor · Tap to click</string>
 
     <!-- Tool display names -->
     <string name="tool_name_mirror">Mirror</string>
-    <string name="tool_name_media">Media</string>
     <string name="tool_name_touchpad">Touchpad</string>
     <string name="tool_name_keyboard">Keyboard</string>
     <string name="tool_name_macropad">MacroPad</string>
@@ -218,9 +207,6 @@ Open Settings to create a layout.</string>
     <string name="exit_dialog_message">Do you want to close the app?</string>
     <string name="exit_dialog_confirm">Close</string>
     <string name="exit_dialog_cancel">Cancel</string>
-
-    <!-- Media empty state -->
-    <string name="media_no_media_hint">Start media playback on the top screen to control it here.</string>
 
     <!-- MacroPad macro action -->
     <string name="macropad_action_macro">Macro</string>

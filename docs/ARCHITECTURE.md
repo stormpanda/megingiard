@@ -3,7 +3,6 @@
 This document provides a high-level overview of the system architecture and key design decisions. Per-feature technical implementation details live in each feature's **`FEATURE.md`** file:
 
 - **[Screen Mirror](features/mirror/FEATURE.md#technical-implementation)** — capture pipeline, `Presentation` window, pan/zoom, freeze
-- **[Media Control](features/media/FEATURE.md#technical-implementation)** — `MediaSession` integration, scrubbing, progress polling
 - **[Virtual Touchpad](features/touchpad/FEATURE.md#technical-implementation)** — native binary, event injection, coordinate transformation
 - **[Virtual Keyboard](features/keyboard/FEATURE.md#technical-implementation)** — native binary, modifier state machine, key injection, layout system
 - **[App Theming](features/theming/FEATURE.md#technical-implementation)** — token-based `AppColors`, dark/light palettes, `LocalAppColors` CompositionLocal
@@ -17,7 +16,7 @@ Megingiard runs on the AYN Thor, an Android gaming handheld with two physical di
 ```
 Primary Display (DEFAULT_DISPLAY)
   └─ MainActivity → MainAppScreen (Jetpack Compose)
-       ├─ Crossfade: MIRROR / MEDIA / TOUCHPAD / KEYBOARD mode placeholder
+       ├─ Crossfade: MIRROR / TOUCHPAD / KEYBOARD mode placeholder
        └─ CarouselOverlay: pill-based dot navigation + settings
 
 Secondary Display (non-default displayId)
@@ -26,7 +25,7 @@ Secondary Display (non-default displayId)
        └─ ComposeView → MirrorScreen: gesture controls + CarouselOverlay
 ```
 
-In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the primary display shows a minimal placeholder in `MainAppScreen`. In non-mirror modes (MEDIA, TOUCHPAD, KEYBOARD), `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
+In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the primary display shows a minimal placeholder in `MainAppScreen`. In non-mirror modes (TOUCHPAD, KEYBOARD, MACROPAD), `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
 
 ---
 
