@@ -3,6 +3,7 @@ package com.stormpanda.megingiard
 import android.app.ActivityOptions
 import android.app.LocaleManager
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.LocaleList
 import android.view.Display
@@ -34,6 +35,22 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    // The manifest declares configChanges that prevent activity recreation when the app
+    // is moved between displays. Without this override, Compose never recomposes and
+    // context.display retains the old display ID — the wrong-screen overlay would stay
+    // visible even after moving to the correct display.
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val displayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        val isValid = displayId != Display.DEFAULT_DISPLAY
+        AppStateManager.setOnValidScreen(isValid)
+        // Mirror the ON_RESUME auto-start behaviour: if the app just moved onto the
+        // valid screen, let the capture prompt fire (if the user enabled auto-start).
+        if (isValid && SettingsManager.autoStartCapture.value) {
+            AppStateManager.setUserDeclinedCapture(false)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
