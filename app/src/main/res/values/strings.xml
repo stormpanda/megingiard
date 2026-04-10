@@ -1,7 +1,8 @@
 <resources>
     <string name="app_name">Megingiard</string>
     <string name="mirror_waiting_permission">Waiting for screen permission\u2026</string>
-    <string name="mirror_wrong_screen">Mirroring is only supported when Megingiard is running on the bottom screen.</string>
+    <string name="wrong_screen_message">Megingiard needs to run on the bottom screen.\nPlease move the app to continue.</string>
+    <string name="cd_wrong_screen_arrow">Arrow pointing to bottom screen</string>
     <string name="mirror_start_button">Start mirroring</string>
     <string name="cd_previous_tool">Previous tool</string>
     <string name="cd_next_tool">Next tool</string>

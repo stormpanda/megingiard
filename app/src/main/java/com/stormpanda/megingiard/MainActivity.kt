@@ -78,7 +78,11 @@ class MainActivity : ComponentActivity() {
                             // Auto-start: treat each app resume as a fresh opportunity.
                             // Only clear the decline flag here — not in the LaunchedEffect,
                             // so a decline within a session is respected until the next resume.
-                            if (SettingsManager.autoStartCapture.value) {
+                            // Guard: only on the secondary (valid) screen — prevents a
+                            // capture prompt from firing if the app is on the primary display.
+                            if (SettingsManager.autoStartCapture.value
+                                && AppStateManager.isOnValidScreen.value
+                            ) {
                                 AppStateManager.setUserDeclinedCapture(false)
                             }
                         }
@@ -109,8 +113,11 @@ class MainActivity : ComponentActivity() {
             // Auto-start capture when entering MacroPad mode with Ambient Display enabled,
             // mirroring the autoStartCapture behaviour for Mirror mode.
             // Declining within a session is respected until the next mode entry.
-            LaunchedEffect(currentMode, macropadAmbientEnabled) {
-                if (currentMode == AppMode.MACROPAD && macropadAmbientEnabled && !isCapturing) {
+            // Guard: skip when on the primary display — no capture should start there.
+            LaunchedEffect(currentMode, macropadAmbientEnabled, isOnValidScreenLocal) {
+                if (currentMode == AppMode.MACROPAD && macropadAmbientEnabled
+                    && isOnValidScreenLocal && !isCapturing
+                ) {
                     AppStateManager.setUserDeclinedCapture(false)
                 }
             }

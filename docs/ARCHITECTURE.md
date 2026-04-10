@@ -14,18 +14,30 @@ This document provides a high-level overview of the system architecture and key 
 Megingiard runs on the AYN Thor, an Android gaming handheld with two physical displays. The app lives on the **secondary (bottom) display** and provides tools that assist the user while the primary (top) display runs games or other applications.
 
 ```
-Primary Display (DEFAULT_DISPLAY)
-  └─ MainActivity → MainAppScreen (Jetpack Compose)
-       ├─ Crossfade: MIRROR / TOUCHPAD / KEYBOARD mode placeholder
-       └─ CarouselOverlay: pill-based dot navigation + settings
+Primary Display (DEFAULT_DISPLAY) — top screen, game display
+  └─ [running games / other apps — captured by MediaProjection]
 
-Secondary Display (non-default displayId)
-  └─ MirrorPresentation (android.app.Presentation — only in MIRROR mode)
-       ├─ SurfaceView: hardware VirtualDisplay output
+Secondary Display (non-default displayId) — bottom screen, Megingiard UI
+  ├─ MainActivity → MainAppScreen (Jetpack Compose)
+  │    ├─ Crossfade: MIRROR / TOUCHPAD / KEYBOARD / MACROPAD mode content
+  │    └─ CarouselOverlay: pill-based dot navigation + settings
+  └─ MirrorPresentation (android.app.Presentation — in MIRROR and MACROPAD+ambient modes)
+       ├─ SurfaceView: hardware VirtualDisplay output (mirrors primary display)
        └─ ComposeView → MirrorScreen: gesture controls + CarouselOverlay
 ```
 
-In MIRROR mode, `MirrorPresentation` is shown on the secondary display while the primary display shows a minimal placeholder in `MainAppScreen`. In non-mirror modes (TOUCHPAD, KEYBOARD, MACROPAD), `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
+`MainActivity` and `MainAppScreen` run on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). In MIRROR mode, `MirrorPresentation` is layered on top of `MainAppScreen` on the same secondary display, rendering mirrored content from the primary display. In non-mirror modes (TOUCHPAD, KEYBOARD, MACROPAD), `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
+
+### Wrong-Screen Overlay
+
+When `MainActivity` detects that it is running on the **primary display** (`displayId == Display.DEFAULT_DISPLAY`) — either because the app was launched there or moved there at runtime — a global full-screen blocking overlay is shown in `MainAppScreen` on top of all mode content and the `CarouselOverlay`. The overlay:
+
+- Displays a plain-language message instructing the user to move the app to the bottom screen.
+- Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
+- Consumes all pointer events, preventing interaction with any underlying tool screen or the carousel.
+- Covers **all modes** (Mirror, Touchpad, Keyboard, MacroPad) — not just Mirror mode.
+
+Display detection is performed synchronously in `MainActivity`'s Compose tree via `LocalContext.current.display?.displayId` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (`autoStartCapture` on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
 
 ---
 

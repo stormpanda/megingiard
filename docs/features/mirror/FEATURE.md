@@ -49,7 +49,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - A **Stop** button MUST be available in the controls overlay.
 - Stopping MUST release the `MediaProjection` and cease all capture activity.
-- After stopping, the primary display shows a "Start Mirroring" button to re-initiate capture with a new consent flow.
+- After stopping, Megingiard (on the secondary display) shows a "Start Mirroring" button to re-initiate capture with a new consent flow.
 
 ### FR-M6: View Lock
 

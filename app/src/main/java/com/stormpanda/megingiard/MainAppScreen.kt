@@ -3,14 +3,23 @@ package com.stormpanda.megingiard
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -31,9 +40,11 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
@@ -41,9 +52,14 @@ import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlin.math.roundToInt
 
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
+private val MAS_ARROW_SIZE = 56.dp
+private const val MAS_ARROW_BOUNCE_PX = 24f
+private const val MAS_ARROW_BOUNCE_MS = 800
+private val MAS_WRONG_SCREEN_TEXT_SIZE = 18.sp
 
 @Composable
 fun MainAppScreen() {
@@ -116,38 +132,28 @@ fun MainAppScreen() {
         Crossfade(targetState = currentMode, label = "Mode Switch") { mode ->
             when (mode) {
                 AppMode.MIRROR -> {
-                    val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
                     Box(
                         modifier = Modifier.fillMaxSize().background(colors.appBackground),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isValidScreen) {
-                            if (!isCapturing && userDeclinedCapture) {
-                                OutlinedButton(
-                                    onClick = { AppStateManager.setUserDeclinedCapture(false) },
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = colors.buttonBody,
-                                        contentColor = colors.buttonIconTint
-                                    ),
-                                    border = BorderStroke(2.dp, colors.navPillBorder),
-                                    modifier = Modifier.padding(16.dp).height(72.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.PlayArrow,
-                                        contentDescription = stringResource(R.string.mirror_start_button),
-                                        modifier = Modifier.padding(end = 8.dp).size(36.dp),
-                                        tint = colors.buttonIconTint
-                                    )
-                                    Text(stringResource(R.string.mirror_start_button), color = colors.buttonIconTint)
-                                }
+                        if (!isCapturing && userDeclinedCapture) {
+                            OutlinedButton(
+                                onClick = { AppStateManager.setUserDeclinedCapture(false) },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = colors.buttonBody,
+                                    contentColor = colors.buttonIconTint
+                                ),
+                                border = BorderStroke(2.dp, colors.navPillBorder),
+                                modifier = Modifier.padding(16.dp).height(72.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.PlayArrow,
+                                    contentDescription = stringResource(R.string.mirror_start_button),
+                                    modifier = Modifier.padding(end = 8.dp).size(36.dp),
+                                    tint = colors.buttonIconTint
+                                )
+                                Text(stringResource(R.string.mirror_start_button), color = colors.buttonIconTint)
                             }
-                        } else {
-                            Text(
-                                text = stringResource(R.string.mirror_wrong_screen),
-                                color = colors.onSurface,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(32.dp)
-                            )
                         }
                     }
                 }
@@ -167,6 +173,57 @@ fun MainAppScreen() {
         }
 
         CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
+
+        // ── Global wrong-screen overlay ─────────────────────────────────────
+        // Blocks all interaction and renders on top of everything when the app
+        // is running on the primary display instead of the secondary screen.
+        val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
+        if (!isValidScreen) {
+            val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
+            val bounceOffset by bounceTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = MAS_ARROW_BOUNCE_PX,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = MAS_ARROW_BOUNCE_MS),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "arrow-y"
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colors.appBackground)
+                    .pointerInput(Unit) {
+                        // Consume all touch events so nothing underneath is reachable.
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                event.changes.forEach { it.consume() }
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.wrong_screen_message),
+                        color = colors.onSurface,
+                        fontSize = MAS_WRONG_SCREEN_TEXT_SIZE,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Icon(
+                        Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.cd_wrong_screen_arrow),
+                        tint = colors.onSurface,
+                        modifier = Modifier
+                            .size(MAS_ARROW_SIZE)
+                            .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) }
+                    )
+                }
+            }
+        }
     }
 
     if (showExitDialog) {

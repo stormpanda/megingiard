@@ -2,7 +2,8 @@
 <resources>
     <string name="app_name">Megingiard</string>
     <string name="mirror_waiting_permission">Warte auf Bildschirmberechtigung\u2026</string>
-    <string name="mirror_wrong_screen">Spiegelung wird nur unterstützt, wenn Megingiard auf dem unteren Bildschirm läuft.</string>
+    <string name="wrong_screen_message">Megingiard muss auf dem unteren Bildschirm laufen.\nBitte verschiebe die App, um fortzufahren.</string>
+    <string name="cd_wrong_screen_arrow">Pfeil zeigt zum unteren Bildschirm</string>
     <string name="mirror_start_button">Spiegelung starten</string>
     <string name="cd_previous_tool">Vorheriges Werkzeug</string>
     <string name="cd_next_tool">Nächstes Werkzeug</string>
