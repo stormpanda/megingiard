@@ -196,11 +196,6 @@ bitmap.recycle() // manager never got it, local cleanup required
 - **Never use `android.util.Log` directly.** All log calls must go through `AppLog` (`com.stormpanda.megingiard.AppLog`).
 - The active log level is controlled at runtime via **Global Settings → Log Level** (persisted in DataStore). Default is `Level.WARN`.
 - Use `AppLog.d()` for lifecycle / state-change events, `AppLog.w()` / `AppLog.e()` for genuine warnings and errors.
-- **Two call styles are available.** Use the plain-string form for literal messages or already-computed values. Use the lambda form (`AppLog.d(TAG) { "value=$x" }`) whenever the message involves string interpolation or any non-trivial construction — the `inline` implementation guarantees the lambda body is never evaluated when the level is suppressed, achieving true zero overhead:
-  ```kotlin
-  AppLog.d(TAG, "plain literal")           // string always constructed — fine for literals
-  AppLog.d(TAG) { "computed value=$x" }    // zero overhead — body skipped if DEBUG suppressed
-  ```
 - High-volume per-frame or per-event calls (e.g., every MOVE event) must **not** be logged at any level.
 
 #### Coverage Requirements

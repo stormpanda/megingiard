@@ -49,7 +49,6 @@ object AppStateManager {
     private val _pillFingerXFraction = MutableStateFlow(0f)
     val pillFingerXFraction: StateFlow<Float> = _pillFingerXFraction.asStateFlow()
 
-    fun setPillExpanded(expanded: Boolean) { _pillExpanded.value = expanded }
     fun setPillFingerXFraction(fraction: Float) { _pillFingerXFraction.value = fraction }
 
     // Whether a finger is currently down on the screen. While true the auto-hide
