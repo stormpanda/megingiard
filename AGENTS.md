@@ -191,6 +191,8 @@ bitmap.recycle() // manager never got it, local cleanup required
 
 ### 5.4 Logging
 
+> **Logging mandate: be generous.** The goal is that a single logcat capture at DEBUG level is sufficient to diagnose any bug — without needing a second run. When in doubt, log it.
+
 - **Never use `android.util.Log` directly.** All log calls must go through `AppLog` (`com.stormpanda.megingiard.AppLog`).
 - The active log level is controlled at runtime via **Global Settings → Log Level** (persisted in DataStore). Default is `Level.WARN`.
 - Use `AppLog.d()` for lifecycle / state-change events, `AppLog.w()` / `AppLog.e()` for genuine warnings and errors.
@@ -200,17 +202,18 @@ bitmap.recycle() // manager never got it, local cleanup required
 
 Every file must declare `private const val TAG = "ClassName"` at file scope (or a short alias ≤ 23 chars for Android's tag limit). Every feature implementation must include `AppLog` calls at the following call sites:
 
-| Event type | Level | Mandatory coverage |
-|---|---|---|
-| Unrecoverable failure | ERROR | Hardware init, VirtualDisplay, binary deploy |
-| Recoverable / fallback | WARN | Out-of-range params, unexpected signals |
-| Major lifecycle milestone | INFO | Service start/stop, capture start/stop, mode change, `setOnValidScreen`, `setCapturing`, consent result, injector lifecycle (start confirmed) |
-| State mutation / CRUD | DEBUG | Every setter in state singletons, every profile/macro/folder add/update/delete/rename/reorder |
-| Screen lifecycle | DEBUG | `LaunchedEffect` injector start/stop blocks, `DisposableEffect.onDispose` for all screens |
-| Modifier state machine | DEBUG | All `KeyboardState` transitions (INACTIVE↔STICKY↔HELD) |
-| Action dispatch | DEBUG | Every `injectActionDown` / `injectActionUp` (except continuous-fire: ScrollWheel, TrackpointMove) |
+| Event type                | Level | Mandatory coverage                                                                                                                            |
+| ------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unrecoverable failure     | ERROR | Hardware init, VirtualDisplay, binary deploy                                                                                                  |
+| Recoverable / fallback    | WARN  | Out-of-range params, unexpected signals                                                                                                       |
+| Major lifecycle milestone | INFO  | Service start/stop, capture start/stop, mode change, `setOnValidScreen`, `setCapturing`, consent result, injector lifecycle (start confirmed) |
+| State mutation / CRUD     | DEBUG | Every setter in state singletons, every profile/macro/folder add/update/delete/rename/reorder                                                 |
+| Screen lifecycle          | DEBUG | `LaunchedEffect` injector start/stop blocks, `DisposableEffect.onDispose` for all screens                                                     |
+| Modifier state machine    | DEBUG | All `KeyboardState` transitions (INACTIVE↔STICKY↔HELD)                                                                                        |
+| Action dispatch           | DEBUG | Every `injectActionDown` / `injectActionUp` (except continuous-fire: ScrollWheel, TrackpointMove)                                             |
 
 **What NOT to log (even at VERBOSE):**
+
 - Per-MOVE-event touch/mouse/trackpoint coordinates (continuous fire)
 - Per-animation-frame values
 - Key repeat interval ticks
