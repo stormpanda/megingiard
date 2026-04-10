@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -97,6 +98,9 @@ object SettingsManager {
 
     // Language
     private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
+
+    // Logging
+    private val KEY_LOG_LEVEL = stringPreferencesKey("log_level")
 
     // Touchpad settings
     private val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
@@ -201,6 +205,10 @@ object SettingsManager {
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
+    // Logging
+    private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
+    val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
+
     // MacroPad ambient display
     private val _macropadAmbientEnabled = MutableStateFlow(false)
     val macropadAmbientEnabled: StateFlow<Boolean> = _macropadAmbientEnabled.asStateFlow()
@@ -274,6 +282,8 @@ object SettingsManager {
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
+                _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
+                AppLog.level = _logLevel.value
                 _macropadAmbientEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
                 _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0f
                 _macropadAmbientVignetteEnabled.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] ?: false
@@ -456,6 +466,12 @@ object SettingsManager {
     fun setAppLanguage(value: AppLanguage) {
         _appLanguage.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_APP_LANGUAGE] = value.name } }
+    }
+
+    fun setLogLevel(value: AppLog.Level) {
+        _logLevel.value = value
+        AppLog.level = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_LOG_LEVEL] = value.name } }
     }
 
     fun setKbLayout(value: KbLayout) {

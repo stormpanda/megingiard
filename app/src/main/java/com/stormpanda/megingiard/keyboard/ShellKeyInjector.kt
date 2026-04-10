@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.keyboard
 
 import android.content.Context
-import android.util.Log
+import com.stormpanda.megingiard.AppLog
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
@@ -50,7 +50,7 @@ object ShellKeyInjector {
     fun start(context: Context) {
         if (running && process?.isAlive == true) return
         val binary = deployBinary(context) ?: run {
-            Log.e(TAG, "Binary deployment failed — key injection unavailable")
+            AppLog.e(TAG, "Binary deployment failed — key injection unavailable")
             return
         }
         try {
@@ -69,7 +69,7 @@ object ShellKeyInjector {
             val ready = try {
                 readyFuture.get(READY_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             } catch (e: Exception) {
-                Log.e(TAG, "Timed out or failed waiting for key injector ready signal: $e")
+                AppLog.e(TAG, "Timed out or failed waiting for key injector ready signal: $e")
                 readyFuture.cancel(true)
                 p.destroy()
                 return
@@ -77,7 +77,7 @@ object ShellKeyInjector {
                 executor.shutdownNow()
             }
             if (ready != "R") {
-                Log.e(TAG, "Unexpected ready signal: $ready")
+                AppLog.e(TAG, "Unexpected ready signal: $ready")
                 p.destroy()
                 return
             }
@@ -88,7 +88,7 @@ object ShellKeyInjector {
                 it.start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start key injector: $e")
+            AppLog.e(TAG, "Failed to start key injector: $e")
         }
     }
 
@@ -115,7 +115,7 @@ object ShellKeyInjector {
         if (!running) return
         // Native protocol only accepts keycodes 1–254; silently drop anything outside that range.
         if (linuxKeycode !in 1..254) {
-            Log.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for action=$action")
+            AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for action=$action")
             return
         }
         queue.offer(KeyCommand(action, linuxKeycode))
@@ -146,7 +146,7 @@ object ShellKeyInjector {
             w.write("$prefix ${cmd.linuxKeycode}\n")
             w.flush()
         } catch (e: Exception) {
-            Log.e(TAG, "Write to key injector failed: $e")
+            AppLog.e(TAG, "Write to key injector failed: $e")
             running = false
         }
     }
@@ -164,7 +164,7 @@ object ShellKeyInjector {
             dest.setExecutable(true, false)
             dest
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to deploy binary: $e")
+            AppLog.e(TAG, "Failed to deploy binary: $e")
             null
         }
     }

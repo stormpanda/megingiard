@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
-import android.util.Log
+import com.stormpanda.megingiard.AppLog
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
@@ -49,7 +49,7 @@ object ShellGamepadInjector {
     fun start(context: Context) {
         if (running && process?.isAlive == true) return
         val binary = deployBinary(context) ?: run {
-            Log.e(TAG, "Binary deployment failed — gamepad injection unavailable")
+            AppLog.e(TAG, "Binary deployment failed — gamepad injection unavailable")
             return
         }
         try {
@@ -60,7 +60,7 @@ object ShellGamepadInjector {
             writer  = BufferedWriter(OutputStreamWriter(p.outputStream))
             val ready = p.inputStream.bufferedReader().readLine()
             if (ready != "R") {
-                Log.e(TAG, "Unexpected ready signal: $ready")
+                AppLog.e(TAG, "Unexpected ready signal: $ready")
                 p.destroy()
                 return
             }
@@ -71,7 +71,7 @@ object ShellGamepadInjector {
                 it.start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start gamepad injector: $e")
+            AppLog.e(TAG, "Failed to start gamepad injector: $e")
         }
     }
 
@@ -153,7 +153,7 @@ object ShellGamepadInjector {
             w.write(line)
             w.flush()
         } catch (e: Exception) {
-            Log.e(TAG, "Write to gamepad injector failed: $e")
+            AppLog.e(TAG, "Write to gamepad injector failed: $e")
             running = false
         }
     }
@@ -171,7 +171,7 @@ object ShellGamepadInjector {
             dest.setExecutable(true, false)
             dest
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to deploy binary: $e")
+            AppLog.e(TAG, "Failed to deploy binary: $e")
             null
         }
     }

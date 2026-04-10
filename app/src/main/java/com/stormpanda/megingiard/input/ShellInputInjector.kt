@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.input
 
 import android.content.Context
-import android.util.Log
+import com.stormpanda.megingiard.AppLog
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
@@ -58,7 +58,7 @@ object ShellInputInjector {
     fun start(context: Context) {
         if (running && process?.isAlive == true) return
         val binary = deployBinary(context) ?: run {
-            Log.e(TAG, "Binary deployment failed — touch injection unavailable")
+            AppLog.e(TAG, "Binary deployment failed — touch injection unavailable")
             return
         }
         try {
@@ -70,7 +70,7 @@ object ShellInputInjector {
             // Wait for "R\n" readiness signal (at most 500 ms)
             val ready = p.inputStream.bufferedReader().readLine()
             if (ready != "R") {
-                Log.e(TAG, "Unexpected ready signal: $ready")
+                AppLog.e(TAG, "Unexpected ready signal: $ready")
                 p.destroy()
                 return
             }
@@ -81,7 +81,7 @@ object ShellInputInjector {
                 it.start()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start touch injector: $e")
+            AppLog.e(TAG, "Failed to start touch injector: $e")
         }
     }
 
@@ -151,7 +151,7 @@ object ShellInputInjector {
             w.write("$actionChar ${cmd.x} ${cmd.y}\n")
             w.flush()
         } catch (e: Exception) {
-            Log.e(TAG, "Write to touch injector failed: $e")
+            AppLog.e(TAG, "Write to touch injector failed: $e")
             running = false
         }
     }
@@ -169,7 +169,7 @@ object ShellInputInjector {
             dest.setExecutable(true, false)
             dest
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to deploy binary: $e")
+            AppLog.e(TAG, "Failed to deploy binary: $e")
             null
         }
     }

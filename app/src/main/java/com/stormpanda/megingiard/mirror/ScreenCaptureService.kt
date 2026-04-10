@@ -13,10 +13,10 @@ import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.IBinder
-import android.util.Log
 import android.view.Display
 import android.view.Surface
 import android.view.WindowManager
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -58,7 +58,7 @@ class ScreenCaptureService : Service() {
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
             if (secondaryDisplay == null) {
-                Log.e(TAG, "No secondary display found!")
+                AppLog.e(TAG, "No secondary display found!")
                 AppStateManager.setPromptInFlight(false)
                 stopSelf()
                 return START_NOT_STICKY
@@ -104,7 +104,7 @@ class ScreenCaptureService : Service() {
                             if (isFrozen) null else surface, null, null
                         )
                     } catch (e: Exception) {
-                        Log.e(TAG, "Exception creating VirtualDisplay", e)
+                        AppLog.e(TAG, "Exception creating VirtualDisplay", e)
                     }
                 }
             }

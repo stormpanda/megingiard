@@ -221,6 +221,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_de">Deutsch</string>
+    <string name="settings_log_level">Log-Level</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Megingiard beenden</string>

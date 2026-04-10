@@ -6,7 +6,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
+import com.stormpanda.megingiard.AppLog
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
@@ -271,14 +271,14 @@ class MirrorPresentation(
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
                                     sv.visibility = View.INVISIBLE
                                 } else {
-                                    Log.e(TAG, "PixelCopy failed with result code: $result")
+                                    AppLog.e(TAG, "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
                                 }
                             },
                             Handler(Looper.getMainLooper())
                         )
                     } catch (e: Exception) {
-                        Log.e(TAG, "PixelCopy exception", e)
+                        AppLog.e(TAG, "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
                     sv.visibility = View.VISIBLE
