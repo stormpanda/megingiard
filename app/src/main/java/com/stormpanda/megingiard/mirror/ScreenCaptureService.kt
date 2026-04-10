@@ -52,6 +52,13 @@ class ScreenCaptureService : Service() {
         startForegroundNotification()
 
         if (resultCode == Activity.RESULT_OK && data != null) {
+            // Guard against double-starts (e.g. CaptureRequestActivity recreated by a
+            // config change and delivering the result a second time).
+            if (ScreenCaptureManager.isCapturing.value) {
+                AppLog.w(TAG, "onStartCommand: already capturing — ignoring duplicate start")
+                return START_NOT_STICKY
+            }
+
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
