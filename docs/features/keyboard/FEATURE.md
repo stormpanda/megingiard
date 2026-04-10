@@ -97,6 +97,8 @@ The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks wait
 
 The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). It remains alive for the entire Keyboard session and is terminated when `ShellKeyInjector.stop()` is called, which happens in `KeyboardScreen` via:
 
+> **Important — bus type must be `BUS_VIRTUAL`:** The AYN Thor firmware (`PkDeviceHelper`) continuously scans for physical keyboard devices. It matches any uinput device with keyboard capabilities and `BUS_USB` bus type, and when found, triggers its "show physical keyboard" handler — which takes window focus away from Megingiard (app appears to minimise). The uinput setup therefore uses `BUS_VIRTUAL` so the firmware ignores the virtual keyboard entirely. Key injection is unaffected; bus type is purely ID metadata.
+
 ```kotlin
 DisposableEffect(Unit) {
     onDispose { KeyInjector.stop() }

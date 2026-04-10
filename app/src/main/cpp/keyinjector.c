@@ -37,9 +37,12 @@ int main(void) {
     }
 
     // Create the virtual device
+    // BUS_VIRTUAL prevents the AYN Thor firmware (PkDeviceHelper) from treating
+    // this uinput device as a physical keyboard, which would trigger its
+    // "show pk devices" handler and cause the app to lose focus.
     struct uinput_setup usetup;
     memset(&usetup, 0, sizeof(usetup));
-    usetup.id.bustype = BUS_USB;
+    usetup.id.bustype = BUS_VIRTUAL;
     usetup.id.vendor  = 0x1234;
     usetup.id.product = 0x5678;
     strncpy(usetup.name, "Megingiard Virtual Keyboard", UINPUT_MAX_NAME_SIZE - 1);

@@ -16,6 +16,11 @@ case "$HOST_ARCH" in
   *) echo "Unsupported host arch: $HOST_ARCH" >&2; exit 1 ;;
 esac
 HOST_TAG="${HOST_TAG_OS}-${HOST_TAG_ARCH}"
+# Homebrew installs the NDK as darwin-x86_64 even on Apple Silicon; fall back if
+# the arm64 prebuilt directory does not exist.
+if [ ! -d "$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG" ] && [ "$HOST_TAG_ARCH" = "arm64" ]; then
+  HOST_TAG="${HOST_TAG_OS}-x86_64"
+fi
 
 CLANG="$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/aarch64-linux-android33-clang"
 SYSROOT="$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/sysroot"
