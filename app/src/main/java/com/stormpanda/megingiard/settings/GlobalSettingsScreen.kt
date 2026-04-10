@@ -46,6 +46,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val rememberLastTool by SettingsManager.rememberLastTool.collectAsState()
     val themeMode by SettingsManager.themeMode.collectAsState()
     val appLanguage by SettingsManager.appLanguage.collectAsState()
+    val logLevel by SettingsManager.logLevel.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
@@ -157,6 +158,13 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                         accentColor = effectiveAccent,
                         colors = colors,
                         onChanged = { SettingsManager.setAppLanguage(it) }
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    LogLevelPickerRow(
+                        logLevel = logLevel,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onChanged = { SettingsManager.setLogLevel(it) }
                     )
                     HorizontalDivider(color = colors.divider)
                 }

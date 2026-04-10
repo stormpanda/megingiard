@@ -202,6 +202,7 @@ Open Settings to create a layout.</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_de">Deutsch</string>
+    <string name="settings_log_level">Log Level</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Exit Megingiard</string>

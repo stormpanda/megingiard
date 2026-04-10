@@ -6,6 +6,9 @@ import androidx.lifecycle.LifecycleRegistry
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import com.stormpanda.megingiard.AppLog
+
+private const val TAG = "MPresentationLifecycle"
 
 class MirrorPresentationLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -19,9 +22,11 @@ class MirrorPresentationLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        AppLog.d(TAG, "lifecycle set up: ON_CREATE → ON_RESUME")
     }
 
     fun destroy() {
+        AppLog.d(TAG, "lifecycle destroyed: ON_PAUSE → ON_DESTROY")
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)

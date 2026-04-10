@@ -6,7 +6,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
+import com.stormpanda.megingiard.AppLog
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
@@ -73,18 +73,22 @@ class MirrorPresentation(
     // Compose callback is enabled do we fall back to switching mode.
     private val onBackCallback = OnBackInvokedCallback {
         if (backDispatcher.hasEnabledCallbacks()) {
+            AppLog.d(TAG, "back pressed: delegating to Compose")
             backDispatcher.onBackPressed()
         } else {
+            AppLog.d(TAG, "back pressed: no Compose handler → switching to TOUCHPAD")
             AppStateManager.setMode(AppMode.TOUCHPAD)
         }
     }
 
     override fun cancel() {
+        AppLog.d(TAG, "cancel → TOUCHPAD")
         AppStateManager.setMode(AppMode.TOUCHPAD)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x${srcHeight}")
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             onBackCallback
@@ -96,6 +100,7 @@ class MirrorPresentation(
         }
 
         setOnDismissListener {
+            AppLog.i(TAG, "dismissed → scope cancelled, lifecycle destroyed")
             scope.cancel()
             lifecycleOwner.destroy()
         }
@@ -271,14 +276,14 @@ class MirrorPresentation(
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
                                     sv.visibility = View.INVISIBLE
                                 } else {
-                                    Log.e(TAG, "PixelCopy failed with result code: $result")
+                                    AppLog.e(TAG, "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
                                 }
                             },
                             Handler(Looper.getMainLooper())
                         )
                     } catch (e: Exception) {
-                        Log.e(TAG, "PixelCopy exception", e)
+                        AppLog.e(TAG, "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
                     sv.visibility = View.VISIBLE

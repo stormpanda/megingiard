@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -47,6 +48,8 @@ private val AMO_SWIPE_EDGE_ZONE = 40.dp
 private val AMO_SWIPE_THRESHOLD = 25.dp
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
+
+private const val TAG = "AmbientMacroPadOverlay"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ambient MacroPad Overlay — renders MacroPad buttons over the screen mirror
@@ -82,6 +85,7 @@ internal fun AmbientMacroPadOverlay() {
         AppStateManager.overlayVisible.first { !it }
         withContext(Dispatchers.IO) {
             val ap = MacroPadState.activeProfile.value
+            AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
             if (ap?.enableKeyboard != false) KeyInjector.start(context)
             if (ap?.enableGamepad != false) GamepadInjector.start(context)
             if (ap?.enableMouse != false) MouseInjector.start(context)
@@ -91,6 +95,7 @@ internal fun AmbientMacroPadOverlay() {
     // Stop all injectors and reset peek state when leaving
     DisposableEffect(Unit) {
         onDispose {
+            AppLog.d(TAG, "AmbientMacroPadOverlay disposed → all injectors stopped")
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()

@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
@@ -338,10 +339,72 @@ internal fun AccentColorRow(
     }
 }
 
+internal fun AppLog.Level.displayName(): String = name
+
 internal fun AppLanguage.displayNameResId(): Int = when (this) {
     AppLanguage.SYSTEM -> R.string.settings_language_system
     AppLanguage.EN     -> R.string.settings_language_en
     AppLanguage.DE     -> R.string.settings_language_de
+}
+
+@Composable
+internal fun LogLevelPickerRow(
+    logLevel: AppLog.Level,
+    accentColor: Color,
+    colors: AppColors,
+    onChanged: (AppLog.Level) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .clickable { expanded = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_log_level),
+                color = colors.onSurface,
+                fontSize = 14.sp,
+            )
+            Text(
+                text = logLevel.displayName(),
+                color = accentColor,
+                fontSize = 12.sp,
+            )
+        }
+        Box {
+            Icon(
+                imageVector = Icons.Rounded.ArrowDropDown,
+                contentDescription = null,
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(colors.surface)
+            ) {
+                AppLog.Level.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = option.displayName(),
+                                color = if (option == logLevel) accentColor else colors.onSurface,
+                                fontSize = 14.sp,
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            if (option != logLevel) onChanged(option)
+                        }
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

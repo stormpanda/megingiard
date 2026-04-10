@@ -13,10 +13,10 @@ import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.IBinder
-import android.util.Log
 import android.view.Display
 import android.view.Surface
 import android.view.WindowManager
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -39,6 +39,7 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") {
+            AppLog.i(TAG, "onStartCommand STOP → stopping self")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -46,6 +47,7 @@ class ScreenCaptureService : Service() {
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
             ?: Activity.RESULT_CANCELED
         val data: Intent? = intent?.getParcelableExtra("DATA", Intent::class.java)
+        AppLog.i(TAG, "onStartCommand resultCode=$resultCode")
 
         startForegroundNotification()
 
@@ -58,11 +60,12 @@ class ScreenCaptureService : Service() {
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
             if (secondaryDisplay == null) {
-                Log.e(TAG, "No secondary display found!")
+                AppLog.e(TAG, "No secondary display found!")
                 AppStateManager.setPromptInFlight(false)
                 stopSelf()
                 return START_NOT_STICKY
             }
+            AppLog.i(TAG, "secondary display found: id=${secondaryDisplay.displayId}")
 
             val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             val windowContext = createWindowContext(primaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
@@ -103,8 +106,9 @@ class ScreenCaptureService : Service() {
                             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                             if (isFrozen) null else surface, null, null
                         )
+                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
                     } catch (e: Exception) {
-                        Log.e(TAG, "Exception creating VirtualDisplay", e)
+                        AppLog.e(TAG, "Exception creating VirtualDisplay", e)
                     }
                 }
             }
@@ -115,6 +119,7 @@ class ScreenCaptureService : Service() {
             // isCapturing=false && promptInFlight=false could re-trigger the capture prompt.
             scope.launch {
                 SettingsManager.restoreMirrorSessionState()
+                AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
                 AppStateManager.setPromptInFlight(false)
                 presentation.show()
@@ -139,6 +144,7 @@ class ScreenCaptureService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure

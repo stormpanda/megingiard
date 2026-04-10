@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -58,6 +59,8 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 
 private val DEFAULT_ACCENT_COLOR: Int = AndroidColor.argb(255, 204, 0, 0)
 
+private const val TAG = "SettingsManager"
+
 object SettingsManager {
     private val KEY_ENABLED_TOOLS = stringPreferencesKey("enabled_tools")
     private val KEY_TOOL_ORDER = stringPreferencesKey("tool_order")
@@ -97,6 +100,9 @@ object SettingsManager {
 
     // Language
     private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
+
+    // Logging
+    private val KEY_LOG_LEVEL = stringPreferencesKey("log_level")
 
     // Touchpad settings
     private val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
@@ -201,6 +207,10 @@ object SettingsManager {
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
+    // Logging
+    private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
+    val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
+
     // MacroPad ambient display
     private val _macropadAmbientEnabled = MutableStateFlow(false)
     val macropadAmbientEnabled: StateFlow<Boolean> = _macropadAmbientEnabled.asStateFlow()
@@ -238,6 +248,7 @@ object SettingsManager {
             dataStore.data
                 .catch { emit(emptyPreferences()) }
                 .collect { prefs ->
+                AppLog.i(TAG, "settings loaded from DataStore")
                 val enabledStr = prefs[KEY_ENABLED_TOOLS]
                 if (enabledStr != null) {
                     val parsed = enabledStr.split(",")
@@ -274,6 +285,8 @@ object SettingsManager {
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
+                _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
+                AppLog.level = _logLevel.value
                 _macropadAmbientEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
                 _macropadAmbientDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0f
                 _macropadAmbientVignetteEnabled.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] ?: false
@@ -360,6 +373,7 @@ object SettingsManager {
 
     fun setEnabledTools(tools: Set<AppMode>) {
         require(tools.isNotEmpty()) { "At least one tool must remain enabled" }
+        AppLog.d(TAG, "setEnabledTools($tools)")
         _enabledTools.value = tools
         scope.launch {
             dataStore.edit { prefs ->
@@ -369,6 +383,7 @@ object SettingsManager {
     }
 
     fun setToolOrder(order: List<AppMode>) {
+        AppLog.d(TAG, "setToolOrder($order)")
         _toolOrder.value = order
         scope.launch {
             dataStore.edit { prefs ->
@@ -378,6 +393,7 @@ object SettingsManager {
     }
 
     fun setAutoStartCapture(value: Boolean) {
+        AppLog.d(TAG, "setAutoStartCapture($value)")
         _autoStartCapture.value = value
         scope.launch {
             dataStore.edit { prefs ->
@@ -387,6 +403,7 @@ object SettingsManager {
     }
 
     fun setOverlayTimeoutMs(value: Long) {
+        AppLog.d(TAG, "setOverlayTimeoutMs($value)")
         _overlayTimeoutMs.value = value
         scope.launch {
             dataStore.edit { prefs ->
@@ -396,6 +413,7 @@ object SettingsManager {
     }
 
     fun setAccentColor(color: Color) {
+        AppLog.d(TAG, "setAccentColor(${color.toArgb().toString(16)})")
         _accentColor.value = color
         scope.launch {
             dataStore.edit { prefs ->
@@ -405,11 +423,13 @@ object SettingsManager {
     }
 
     fun setThemeMode(value: ThemeMode) {
+        AppLog.d(TAG, "setThemeMode($value)")
         _themeMode.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_THEME_MODE] = value.name } }
     }
 
     fun setOverlayAtBottom(value: Boolean) {
+        AppLog.d(TAG, "setOverlayAtBottom($value)")
         _overlayAtBottom.value = value
         scope.launch {
             dataStore.edit { prefs ->
@@ -419,6 +439,7 @@ object SettingsManager {
     }
 
     fun setPinchWhileProjecting(value: Boolean) {
+        AppLog.d(TAG, "setPinchWhileProjecting($value)")
         _pinchWhileProjecting.value = value
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_PINCH_WHILE_PROJECTING] = value }
@@ -426,6 +447,7 @@ object SettingsManager {
     }
 
     fun setRememberViewport(value: Boolean) {
+        AppLog.d(TAG, "setRememberViewport($value)")
         _rememberViewport.value = value
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_VIEWPORT] = value }
@@ -433,6 +455,7 @@ object SettingsManager {
     }
 
     fun setRememberLock(value: Boolean) {
+        AppLog.d(TAG, "setRememberLock($value)")
         _rememberLock.value = value
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_LOCK] = value }
@@ -440,6 +463,7 @@ object SettingsManager {
     }
 
     fun setRememberProjection(value: Boolean) {
+        AppLog.d(TAG, "setRememberProjection($value)")
         _rememberProjection.value = value
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_PROJECTION] = value }
@@ -447,6 +471,7 @@ object SettingsManager {
     }
 
     fun setRememberLastTool(value: Boolean) {
+        AppLog.d(TAG, "setRememberLastTool($value)")
         _rememberLastTool.value = value
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_LAST_TOOL] = value }
@@ -454,56 +479,74 @@ object SettingsManager {
     }
 
     fun setAppLanguage(value: AppLanguage) {
+        AppLog.d(TAG, "setAppLanguage($value)")
         _appLanguage.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_APP_LANGUAGE] = value.name } }
     }
 
+    fun setLogLevel(value: AppLog.Level) {
+        AppLog.i(TAG, "setLogLevel($value)")
+        _logLevel.value = value
+        AppLog.level = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_LOG_LEVEL] = value.name } }
+    }
+
     fun setKbLayout(value: KbLayout) {
+        AppLog.d(TAG, "setKbLayout($value)")
         _kbLayout.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_LAYOUT] = value.name } }
     }
 
     fun setKbTrackpointEnabled(value: Boolean) {
+        AppLog.d(TAG, "setKbTrackpointEnabled($value)")
         _kbTrackpointEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_ENABLED] = value } }
     }
 
     fun setKbRepeatEnabled(value: Boolean) {
+        AppLog.d(TAG, "setKbRepeatEnabled($value)")
         _kbRepeatEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_REPEAT_ENABLED] = value } }
     }
 
     fun setKbFullscreen(value: Boolean) {
+        AppLog.d(TAG, "setKbFullscreen($value)")
         _kbFullscreen.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
     }
 
     fun setKbMouseBtnPos(value: KbMouseBtnPos) {
+        AppLog.d(TAG, "setKbMouseBtnPos($value)")
         _kbMouseBtnPos.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
     }
 
     fun setTouchpadUseMouse(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadUseMouse($value)")
         _touchpadUseMouse.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_USE_MOUSE] = value } }
     }
 
     fun setTouchpadTapToClick(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadTapToClick($value)")
         _touchpadTapToClick.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TAP_TO_CLICK] = value } }
     }
 
     fun setTouchpadTwoFingerTap(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadTwoFingerTap($value)")
         _touchpadTwoFingerTap.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
     }
 
     fun setMacropadAmbientEnabled(value: Boolean) {
+        AppLog.d(TAG, "setMacropadAmbientEnabled($value)")
         _macropadAmbientEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_ENABLED] = value } }
     }
 
     fun setMacropadAmbientDim(value: Float) {
+        AppLog.d(TAG, "setMacropadAmbientDim($value)")
         _macropadAmbientDim.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_DIM] = value } }
     }
@@ -529,36 +572,43 @@ object SettingsManager {
     }
 
     fun setMacropadAmbientVignetteEnabled(value: Boolean) {
+        AppLog.d(TAG, "setMacropadAmbientVignetteEnabled($value)")
         _macropadAmbientVignetteEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] = value } }
     }
 
     fun setMacropadAmbientVignetteVisibleArea(value: Float) {
+        AppLog.d(TAG, "setMacropadAmbientVignetteVisibleArea($value)")
         _macropadAmbientVignetteVisibleArea.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA] = value } }
     }
 
     fun setMacropadAmbientVignetteTransition(value: Float) {
+        AppLog.d(TAG, "setMacropadAmbientVignetteTransition($value)")
         _macropadAmbientVignetteTransition.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION] = value } }
     }
 
     fun setMacropadAmbientVignetteOpacity(value: Float) {
+        AppLog.d(TAG, "setMacropadAmbientVignetteOpacity($value)")
         _macropadAmbientVignetteOpacity.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY] = value } }
     }
 
     fun setMacropadAmbientVignetteColor(value: Int) {
+        AppLog.d(TAG, "setMacropadAmbientVignetteColor(${value.toString(16)})")
         _macropadAmbientVignetteColor.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR] = value } }
     }
 
     fun setMacropadAmbientVignetteShape(value: VignetteShape) {
+        AppLog.d(TAG, "setMacropadAmbientVignetteShape($value)")
         _macropadAmbientVignetteShape.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE] = value.name } }
     }
 
     fun setMacropadAmbientPreview(value: Boolean) {
+        AppLog.d(TAG, "setMacropadAmbientPreview($value)")
         _macropadAmbientPreview.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_PREVIEW] = value } }
     }
@@ -610,6 +660,7 @@ object SettingsManager {
 
     /** Persists the current mirror session state for aspects the user opted to remember. */
     fun saveMirrorSessionState() {
+        AppLog.d(TAG, "saveMirrorSessionState")
         // Capture ALL values synchronously on the calling thread (main) BEFORE
         // resetMirrorSessionState() zeroes them out — including the remember-flags,
         // so the async lambda never reads stale StateFlow state.
@@ -646,6 +697,7 @@ object SettingsManager {
      * to complete before syncing UI state (e.g. Animatable values).
      */
     suspend fun restoreMirrorSessionState() {
+        AppLog.i(TAG, "restoreMirrorSessionState")
         // Read the entire prefs snapshot once and derive both the remember-flags
         // and the saved values from it.  This avoids any race with the async init
         // block that populates the in-memory StateFlows (_rememberViewport etc.),

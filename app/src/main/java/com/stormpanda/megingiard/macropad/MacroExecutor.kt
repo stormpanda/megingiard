@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -9,6 +10,8 @@ import kotlinx.coroutines.launch
 // Scale factor for float axis values (-1..1) → int16 (-32768..32767).
 // Using 32768 so -1.0 maps exactly to -32768; positive side is clamped below.
 private const val MAC_ABS_FULL_DEFLECTION = 32768
+
+private const val TAG = "MacroExecutor"
 
 private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT }
 
@@ -44,6 +47,7 @@ object MacroExecutor {
 
     fun execute(macro: Macro) {
         if (macro.steps.isEmpty()) return
+        AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size}")
         scope.launch { executeSuspend(macro) }
     }
 
@@ -60,6 +64,7 @@ object MacroExecutor {
             currentTimeMs = event.timeMs
             dispatch(event)
         }
+        AppLog.d(TAG, "macro '${macro.name}' complete (${events.size} events)")
     }
 
     private fun buildEventList(macro: Macro): List<MacroEvent> {
