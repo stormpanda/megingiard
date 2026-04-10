@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+private const val TAG = "AppStateManager"
+
 enum class AppMode { MIRROR, TOUCHPAD, KEYBOARD, MACROPAD }
 
 object AppStateManager {
@@ -81,11 +83,13 @@ object AppStateManager {
     }
 
     fun triggerOverlay() {
+        AppLog.d(TAG, "triggerOverlay")
         _overlayVisible.value = true
         _overlayInteractionTime.value = System.currentTimeMillis()
     }
 
     fun hideOverlay() {
+        AppLog.d(TAG, "hideOverlay")
         _overlayVisible.value = false
         _pillExpanded.value = false
     }
@@ -94,22 +98,46 @@ object AppStateManager {
         val active = SettingsManager.activeTools.value
         if (active.size <= 1) return
         val currentIndex = active.indexOf(_currentMode.value)
+        val prev = _currentMode.value
         if (currentIndex == -1) { _currentMode.value = active.first(); return }
         _currentMode.value = active[(currentIndex + 1) % active.size]
+        AppLog.i(TAG, "nextMode: $prev → ${_currentMode.value}")
     }
 
     fun prevMode() {
         val active = SettingsManager.activeTools.value
         if (active.size <= 1) return
         val currentIndex = active.indexOf(_currentMode.value)
+        val prev = _currentMode.value
         if (currentIndex == -1) { _currentMode.value = active.first(); return }
         _currentMode.value = active[(currentIndex - 1 + active.size) % active.size]
+        AppLog.i(TAG, "prevMode: $prev → ${_currentMode.value}")
     }
 
-    fun setMode(mode: AppMode) { _currentMode.value = mode }
-    fun setActivityResumed(resumed: Boolean) { _isActivityResumed.value = resumed }
-    fun setOnValidScreen(valid: Boolean) { _isOnValidScreen.value = valid }
-    fun setUserDeclinedCapture(declined: Boolean) { _userDeclinedCapture.value = declined }
-    fun setPromptInFlight(inFlight: Boolean) { _promptInFlight.value = inFlight }
+    fun setMode(mode: AppMode) {
+        if (_currentMode.value != mode) AppLog.i(TAG, "setMode: ${_currentMode.value} → $mode")
+        _currentMode.value = mode
+    }
+    fun setActivityResumed(resumed: Boolean) {
+        AppLog.d(TAG, "setActivityResumed($resumed)")
+        _isActivityResumed.value = resumed
+    }
+    fun setOnValidScreen(valid: Boolean) {
+        AppLog.i(TAG, "setOnValidScreen($valid)")
+        _isOnValidScreen.value = valid
+    }
+    fun setUserDeclinedCapture(declined: Boolean) {
+        AppLog.d(TAG, "setUserDeclinedCapture($declined)")
+        _userDeclinedCapture.value = declined
+    }
+    fun setPromptInFlight(inFlight: Boolean) {
+        AppLog.d(TAG, "setPromptInFlight($inFlight)")
+        _promptInFlight.value = inFlight
+    }
     fun setTouching(touching: Boolean) { _isTouching.value = touching }
+
+    fun setPillExpanded(expanded: Boolean) {
+        AppLog.d(TAG, "setPillExpanded($expanded)")
+        _pillExpanded.value = expanded
+    }
 }

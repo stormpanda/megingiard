@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -63,6 +64,8 @@ private const val KB_REPEAT_INTERVAL_MS = 30L
 private const val KB_MODIFIER_HOLD_MS = 300L
 private val KB_IME_BOTTOM_PADDING = 56.dp
 private const val KB_TRACKPOINT_MOUSE_SENSITIVITY = 3f
+
+private const val TAG = "KeyboardScreen"
 
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
@@ -93,14 +96,17 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
         // Starting them during the mode-switch animation (while the overlay is still open)
         // causes the blocking binary startup to race against the Compose frame clock.
         AppStateManager.overlayVisible.first { !it }
+        AppLog.d(TAG, "overlay closed, starting KeyInjector + MouseInjector")
         withContext(Dispatchers.IO) {
             KeyInjector.start(context)
             MouseInjector.start(context)
         }
+        AppLog.d(TAG, "KeyInjector + MouseInjector started")
     }
 
     DisposableEffect(Unit) {
         onDispose {
+            AppLog.d(TAG, "KeyboardScreen disposed → KeyInjector + MouseInjector stopped, KeyboardState reset")
             KeyInjector.stop()
             MouseInjector.stop()
             KeyboardState.reset()

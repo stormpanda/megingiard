@@ -47,6 +47,7 @@ import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -65,6 +66,8 @@ private const val ZOOM_MIN = 1f
 private const val ZOOM_MAX = 5f
 private const val SNAP_BACK_THRESHOLD = 1.15f
 private const val MR_VIEWPORT_SAVE_DEBOUNCE_MS = 300L
+
+private const val TAG = "MirrorScreen"
 
 @Composable
 fun MirrorScreen(modifier: Modifier = Modifier) {
@@ -111,8 +114,10 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     // returning to MIRROR mode after a carousel switch the injector auto-restarts.
     LaunchedEffect(isTouchProjectionActive) {
         if (isTouchProjectionActive) {
+            AppLog.d(TAG, "TouchInjector starting (projection enabled)")
             TouchInjector.start(context)
         } else {
+            AppLog.d(TAG, "TouchInjector stopping (projection disabled)")
             TouchInjector.stop()
             touchIndicatorPos = null
         }
@@ -121,7 +126,10 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
     // Ensure the injector is stopped whenever MirrorScreen leaves the composition
     // (e.g. carousel switch away from MIRROR mode).
     DisposableEffect(Unit) {
-        onDispose { TouchInjector.stop() }
+        onDispose {
+            AppLog.d(TAG, "MirrorScreen disposed → TouchInjector stop")
+            TouchInjector.stop()
+        }
     }
 
     // Auto-hide timer for the control button row (independent of carousel overlay timer).
@@ -142,6 +150,7 @@ fun MirrorScreen(modifier: Modifier = Modifier) {
             val s = ScreenCaptureManager.scale.value
             val ox = ScreenCaptureManager.offsetX.value
             val oy = ScreenCaptureManager.offsetY.value
+            AppLog.d(TAG, "isCapturing=true → syncing viewport scale=$s offset=($ox,$oy)")
             if (s != animScale.value) animScale.snapTo(s)
             if (ox != animOffsetX.value) animOffsetX.snapTo(ox)
             if (oy != animOffsetY.value) animOffsetY.snapTo(oy)

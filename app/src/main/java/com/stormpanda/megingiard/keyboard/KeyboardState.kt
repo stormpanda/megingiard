@@ -1,8 +1,11 @@
 package com.stormpanda.megingiard.keyboard
 
+import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+private const val TAG = "KeyboardState"
 
 /**
  * Three-state lifecycle for a modifier key:
@@ -72,17 +75,20 @@ object KeyboardState {
 
         return when (flow.value) {
             ModifierState.HELD -> {
+                AppLog.d(TAG, "modifier '$id' HELD → INACTIVE (keycode=$keycode)")
                 flow.value = ModifierState.INACTIVE
                 if (keycode != 0) listOf(keycode) else emptyList()
             }
             ModifierState.STICKY -> {
                 // second tap on an already-sticky modifier cycles back to INACTIVE
+                AppLog.d(TAG, "modifier '$id' STICKY → INACTIVE (second tap)")
                 flow.value = ModifierState.INACTIVE
                 if (keycode != 0) listOf(keycode) else emptyList()
             }
             ModifierState.INACTIVE -> {
                 if (duration < MODIFIER_HOLD_THRESHOLD_MS) {
                     // quick tap → sticky
+                    AppLog.d(TAG, "modifier '$id' INACTIVE → STICKY (${duration}ms < ${MODIFIER_HOLD_THRESHOLD_MS}ms)")
                     flow.value = ModifierState.STICKY
                 }
                 // else: short hold case is handled by onModifierLongPress
@@ -99,6 +105,7 @@ object KeyboardState {
     fun onModifierLongPress(id: String, keycode: Int): Int? {
         val flow = getOrCreate(id)
         if (flow.value == ModifierState.INACTIVE) {
+            AppLog.d(TAG, "modifier '$id' INACTIVE → HELD (long-press)")
             flow.value = ModifierState.HELD
             return if (keycode != 0) keycode else null
         }
@@ -124,6 +131,7 @@ object KeyboardState {
                 }
             }
         }
+        if (keycodes.isNotEmpty()) AppLog.d(TAG, "releaseStickyModifiers: $keycodes")
         return keycodes
     }
 
@@ -145,6 +153,7 @@ object KeyboardState {
 
     /** Resets all modifier states to [ModifierState.INACTIVE]. Called on screen exit. */
     fun reset() {
+        AppLog.d(TAG, "reset modifier states")
         _modifiers.values.forEach { it.value = ModifierState.INACTIVE }
         touchDownTimes.clear()
     }

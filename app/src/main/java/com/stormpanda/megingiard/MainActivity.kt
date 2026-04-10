@@ -34,6 +34,8 @@ import java.util.Locale
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
+private const val TAG = "MainActivity"
+
 class MainActivity : ComponentActivity() {
 
     // The manifest declares configChanges that prevent activity recreation when the app
@@ -44,6 +46,7 @@ class MainActivity : ComponentActivity() {
         super.onConfigurationChanged(newConfig)
         val displayId = display?.displayId ?: Display.DEFAULT_DISPLAY
         val isValid = displayId != Display.DEFAULT_DISPLAY
+        AppLog.i(TAG, "onConfigurationChanged: displayId=$displayId isValid=$isValid")
         AppStateManager.setOnValidScreen(isValid)
         // Mirror the ON_RESUME auto-start behaviour: if the app just moved onto the
         // valid screen, let the capture prompt fire (if the user enabled auto-start).
@@ -54,6 +57,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLog.i(TAG, "onCreate")
         // FLAG_NOT_FOCUSABLE must only be active in KEYBOARD mode so that uinput key events
         // are delivered to the focused app (the game) rather than to Megingiard.
         // Keeping it active in other modes would break in-app text fields (e.g. MacroPad
@@ -61,8 +65,10 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             AppStateManager.currentMode.collect { mode ->
                 if (mode == AppMode.KEYBOARD) {
+                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (mode=KEYBOARD)")
                     window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
                 } else {
+                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (mode=$mode)")
                     window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
                 }
             }
@@ -70,6 +76,7 @@ class MainActivity : ComponentActivity() {
         SettingsManager.init(this)
         lifecycleScope.launch {
             SettingsManager.appLanguage.drop(1).collect { lang ->
+                AppLog.d(TAG, "appLanguage changed to $lang → applying locales")
                 val desired = when (lang) {
                     AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
                     AppLanguage.EN     -> LocaleList(Locale.ENGLISH)
@@ -91,6 +98,7 @@ class MainActivity : ComponentActivity() {
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
+                            AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value} autoStart=${SettingsManager.autoStartCapture.value}")
                             AppStateManager.setActivityResumed(true)
                             // Auto-start: treat each app resume as a fresh opportunity.
                             // Only clear the decline flag here — not in the LaunchedEffect,
@@ -104,6 +112,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         Lifecycle.Event.ON_STOP -> {
+                            AppLog.i(TAG, "ON_STOP")
                             AppStateManager.setActivityResumed(false)
                         }
                         else -> {}
@@ -145,6 +154,7 @@ class MainActivity : ComponentActivity() {
             // declining within a session is respected — the dialog will not re-appear until the next resume.
             LaunchedEffect(isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
                 if (!promptInFlight && isOnValidScreenLocal && !isCapturing && !userDeclinedCapture) {
+                    AppLog.i(TAG, "launching CaptureRequestActivity on display DEFAULT")
                     AppStateManager.setPromptInFlight(true)
                     val options = ActivityOptions.makeBasic()
                     options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)

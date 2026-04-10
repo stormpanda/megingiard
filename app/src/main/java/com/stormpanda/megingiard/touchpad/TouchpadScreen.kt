@@ -47,6 +47,7 @@ import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,6 +66,8 @@ private const val TP_TAP_TIMEOUT_MS          = 200L
 private const val TP_TAP_SLOP_PX             = 20f
 private const val TP_CLICK_DURATION_MS       = 40L
 
+private const val TAG = "TouchpadScreen"
+
 @Composable
 fun TouchpadScreen(modifier: Modifier = Modifier) {
     val context    = LocalContext.current
@@ -77,9 +80,11 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(useMouse) {
         withContext(Dispatchers.IO) {
             if (useMouse) {
+                AppLog.d(TAG, "starting MouseInjector (useMouse=true)")
                 TouchInjector.stop()
                 MouseInjector.start(context)
             } else {
+                AppLog.d(TAG, "starting TouchInjector (useMouse=false)")
                 MouseInjector.stop()
                 TouchInjector.start(context)
             }
@@ -89,6 +94,7 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
     // Stop both injectors when leaving TOUCHPAD mode.
     DisposableEffect(Unit) {
         onDispose {
+            AppLog.d(TAG, "TouchpadScreen disposed → injectors stopped")
             TouchInjector.stop()
             MouseInjector.stop()
         }

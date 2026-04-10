@@ -1,9 +1,12 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
+import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+private const val TAG = "ScreenCaptureManager"
 
 object ScreenCaptureManager {
     private val _isCapturing = MutableStateFlow(false)
@@ -36,7 +39,10 @@ object ScreenCaptureManager {
     private val _isTouchProjectionActive = MutableStateFlow(false)
     val isTouchProjectionActive: StateFlow<Boolean> = _isTouchProjectionActive.asStateFlow()
 
-    fun setCapturing(capturing: Boolean) { _isCapturing.value = capturing }
+    fun setCapturing(capturing: Boolean) {
+        AppLog.i(TAG, "setCapturing($capturing)")
+        _isCapturing.value = capturing
+    }
     fun setScale(scale: Float) { _scale.value = scale }
     fun setOffsetX(x: Float) { _offsetX.value = x }
     fun setOffsetY(y: Float) { _offsetY.value = y }
@@ -44,14 +50,25 @@ object ScreenCaptureManager {
         _surfaceWidth.value = width
         _surfaceHeight.value = height
     }
-    fun setFrozen(frozen: Boolean) { _isFrozen.value = frozen }
+    fun setFrozen(frozen: Boolean) {
+        AppLog.d(TAG, "setFrozen($frozen)")
+        _isFrozen.value = frozen
+    }
     fun setFrozenBitmap(bitmap: Bitmap?) {
+        AppLog.d(TAG, "setFrozenBitmap(${if (bitmap != null) "${bitmap.width}x${bitmap.height}" else "null"})")
         _frozenBitmap.value?.recycle()
         _frozenBitmap.value = bitmap
     }
-    fun toggleFrozen() { _isFrozen.value = !_isFrozen.value }
+    fun toggleFrozen() {
+        val next = !_isFrozen.value
+        AppLog.d(TAG, "toggleFrozen → $next")
+        _isFrozen.value = next
+    }
 
-    fun setLocked(locked: Boolean) { _isLocked.value = locked }
+    fun setLocked(locked: Boolean) {
+        AppLog.d(TAG, "setLocked($locked)")
+        _isLocked.value = locked
+    }
 
     /**
      * Activates or deactivates touch projection.
@@ -60,6 +77,7 @@ object ScreenCaptureManager {
      * the user can unlock independently.
      */
     fun setTouchProjectionActive(active: Boolean) {
+        AppLog.i(TAG, "setTouchProjectionActive($active)${if (active) " → auto-enabling lock" else ""}")
         _isTouchProjectionActive.value = active
         if (active) _isLocked.value = true
     }
@@ -70,6 +88,7 @@ object ScreenCaptureManager {
      */
     fun toggleLocked() {
         val newLocked = !_isLocked.value
+        AppLog.d(TAG, "toggleLocked → $newLocked${if (!newLocked && _isTouchProjectionActive.value) " (deactivating projection)" else ""}")
         _isLocked.value = newLocked
         if (!newLocked) _isTouchProjectionActive.value = false
     }
@@ -80,6 +99,7 @@ object ScreenCaptureManager {
 
     /** Resets all transient mirror session state (lock, projection, freeze). */
     fun resetMirrorSessionState() {
+        AppLog.i(TAG, "resetMirrorSessionState")
         _isTouchProjectionActive.value = false
         _isLocked.value = false
         _isFrozen.value = false

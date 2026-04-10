@@ -73,18 +73,22 @@ class MirrorPresentation(
     // Compose callback is enabled do we fall back to switching mode.
     private val onBackCallback = OnBackInvokedCallback {
         if (backDispatcher.hasEnabledCallbacks()) {
+            AppLog.d(TAG, "back pressed: delegating to Compose")
             backDispatcher.onBackPressed()
         } else {
+            AppLog.d(TAG, "back pressed: no Compose handler → switching to TOUCHPAD")
             AppStateManager.setMode(AppMode.TOUCHPAD)
         }
     }
 
     override fun cancel() {
+        AppLog.d(TAG, "cancel → TOUCHPAD")
         AppStateManager.setMode(AppMode.TOUCHPAD)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x${srcHeight}")
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             onBackCallback
@@ -96,6 +100,7 @@ class MirrorPresentation(
         }
 
         setOnDismissListener {
+            AppLog.i(TAG, "dismissed → scope cancelled, lifecycle destroyed")
             scope.cancel()
             lifecycleOwner.destroy()
         }

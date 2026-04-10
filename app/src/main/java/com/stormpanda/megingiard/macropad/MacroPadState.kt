@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+
+private const val TAG = "MacroPadState"
 
 /**
  * Runtime state holder for the MacroPad tool.
@@ -80,6 +83,7 @@ object MacroPadState {
         }
         _profiles.value = migrated
         _activeProfileId.value = activeProfileId
+        AppLog.d(TAG, "loadFrom: ${migrated.size} profiles, activeId=$activeProfileId, migrated=$needsSave")
         if (needsSave) SettingsManager.saveMacroPadData()
     }
 
@@ -88,12 +92,14 @@ object MacroPadState {
     // -------------------------------------------------------------------------
 
     fun addProfile(profile: PadProfile) {
+        AppLog.d(TAG, "addProfile id=${profile.id} name='${profile.name}'")
         _profiles.value = _profiles.value + profile
         if (_activeProfileId.value == null) _activeProfileId.value = profile.id
         SettingsManager.saveMacroPadData()
     }
 
     fun updateProfile(profile: PadProfile) {
+        AppLog.d(TAG, "updateProfile id=${profile.id}")
         _profiles.value = _profiles.value.map { if (it.id == profile.id) profile else it }
         SettingsManager.saveMacroPadData()
     }
@@ -104,10 +110,12 @@ object MacroPadState {
         if (_activeProfileId.value == profileId) {
             _activeProfileId.value = remaining.firstOrNull()?.id
         }
+        AppLog.d(TAG, "deleteProfile id=$profileId → activeId=${_activeProfileId.value}")
         SettingsManager.saveMacroPadData()
     }
 
     fun renameProfile(profileId: String, newName: String) {
+        AppLog.d(TAG, "renameProfile id=$profileId name='$newName'")
         _profiles.value = _profiles.value.map {
             if (it.id == profileId) it.copy(name = newName) else it
         }
@@ -115,6 +123,7 @@ object MacroPadState {
     }
 
     fun setActiveProfileId(id: String?) {
+        AppLog.i(TAG, "setActiveProfileId: $id")
         _activeProfileId.value = id
         SettingsManager.saveMacroPadData()
     }
@@ -126,6 +135,13 @@ object MacroPadState {
     private val _isPeekActive = MutableStateFlow(false)
     val isPeekActive: StateFlow<Boolean> = _isPeekActive.asStateFlow()
 
-    fun togglePeek() { _isPeekActive.value = !_isPeekActive.value }
-    fun resetPeek() { _isPeekActive.value = false }
+    fun togglePeek() {
+        val next = !_isPeekActive.value
+        AppLog.d(TAG, "togglePeek → $next")
+        _isPeekActive.value = next
+    }
+    fun resetPeek() {
+        AppLog.d(TAG, "resetPeek")
+        _isPeekActive.value = false
+    }
 }

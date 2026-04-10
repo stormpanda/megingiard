@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -59,6 +60,8 @@ private const val MP_TRACKPOINT_SENSITIVITY = 3f
 // Sensitivity of scroll wheel drag: px per scroll unit sent
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
 
+private const val TAG = "MacroPadScreen"
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,6 +77,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         AppStateManager.overlayVisible.first { !it }
         withContext(Dispatchers.IO) {
             val ap = MacroPadState.activeProfile.value
+            AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
             if (ap?.enableKeyboard != false) KeyInjector.start(context)
             if (ap?.enableGamepad != false) GamepadInjector.start(context)
             if (ap?.enableMouse != false) MouseInjector.start(context)
@@ -83,6 +87,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     // Stop all injectors and reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
         onDispose {
+            AppLog.d(TAG, "MacroPadScreen disposed → all injectors stopped")
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()

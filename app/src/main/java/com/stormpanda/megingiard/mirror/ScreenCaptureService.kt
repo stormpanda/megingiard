@@ -39,6 +39,7 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") {
+            AppLog.i(TAG, "onStartCommand STOP → stopping self")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -46,6 +47,7 @@ class ScreenCaptureService : Service() {
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
             ?: Activity.RESULT_CANCELED
         val data: Intent? = intent?.getParcelableExtra("DATA", Intent::class.java)
+        AppLog.i(TAG, "onStartCommand resultCode=$resultCode")
 
         startForegroundNotification()
 
@@ -63,6 +65,7 @@ class ScreenCaptureService : Service() {
                 stopSelf()
                 return START_NOT_STICKY
             }
+            AppLog.i(TAG, "secondary display found: id=${secondaryDisplay.displayId}")
 
             val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             val windowContext = createWindowContext(primaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
@@ -103,6 +106,7 @@ class ScreenCaptureService : Service() {
                             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                             if (isFrozen) null else surface, null, null
                         )
+                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
                     } catch (e: Exception) {
                         AppLog.e(TAG, "Exception creating VirtualDisplay", e)
                     }
@@ -115,6 +119,7 @@ class ScreenCaptureService : Service() {
             // isCapturing=false && promptInFlight=false could re-trigger the capture prompt.
             scope.launch {
                 SettingsManager.restoreMirrorSessionState()
+                AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
                 AppStateManager.setPromptInFlight(false)
                 presentation.show()
@@ -139,6 +144,7 @@ class ScreenCaptureService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
