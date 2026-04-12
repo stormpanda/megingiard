@@ -1,8 +1,5 @@
 package com.stormpanda.megingiard.settings
 
-import androidx.activity.compose.LocalActivityResultRegistryOwner
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,11 +27,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,20 +41,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.config.ConfigActionCoordinator
 import com.stormpanda.megingiard.config.ConfigExporter
-import com.stormpanda.megingiard.config.ConfigFileReader
-import com.stormpanda.megingiard.config.ConfigFileWriter
+import com.stormpanda.megingiard.config.ConfigImportCoordinator
 import com.stormpanda.megingiard.config.ConfigImporter
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
-import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.ThemeMode
 import java.time.LocalDate
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -75,12 +68,11 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val logLevel by SettingsManager.logLevel.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
-    // rememberLauncherForActivityResult requires an ActivityResultRegistryOwner,
-    // which is not available inside MirrorPresentation's ComposeView. Guard the
-    // entire config section so it is skipped when opened from the secondary display.
-    val hasActivityResultRegistry = LocalActivityResultRegistryOwner.current != null
 
     var showColorPicker by remember { mutableStateOf(false) }
+    // Export-result feedback (set by ConfigActionCoordinator after MainActivity writes the file)
+    val exportResult by ConfigActionCoordinator.exportResult.collectAsState()
+    var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
 
     val lazyListState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -222,12 +214,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     }
                 }
 
-                // Configuration section — only available when Settings is opened from
-                // the main Activity (not from MirrorPresentation which has no registry).
-                if (hasActivityResultRegistry) {
-                    item {
-                        ConfigSection(colors = colors, accentColor = effectiveAccent)
-                    }
+                // Configuration section
+                item {
+                    ConfigSection(
+                        colors = colors,
+                        accentColor = effectiveAccent,
+                    )
                 }
             }
         }
@@ -243,53 +235,64 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
             )
         }
 
+        // Export-result feedback dialogs (result delivered by MainActivity)
+        when (val result = exportResult) {
+            is ConfigActionCoordinator.ExportResult.Success -> {
+                AlertDialog(
+                    onDismissRequest = { ConfigActionCoordinator.clearExportResult() },
+                    containerColor = colors.surface,
+                    title = { Text(stringResource(R.string.config_success_title), color = colors.onSurface) },
+                    text = { Text(stringResource(R.string.config_export_success), color = colors.onSurfaceSecondary, fontSize = 13.sp) },
+                    confirmButton = {
+                        TextButton(onClick = { ConfigActionCoordinator.clearExportResult() }) {
+                            Text(stringResource(R.string.config_ok), color = effectiveAccent)
+                        }
+                    },
+                )
+            }
+            is ConfigActionCoordinator.ExportResult.Failure -> {
+                AlertDialog(
+                    onDismissRequest = { ConfigActionCoordinator.clearExportResult() },
+                    containerColor = colors.surface,
+                    title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
+                    text = { Text(result.message ?: "", color = colors.onSurfaceSecondary, fontSize = 13.sp) },
+                    confirmButton = {
+                        TextButton(onClick = { ConfigActionCoordinator.clearExportResult() }) {
+                            Text(stringResource(R.string.config_ok), color = effectiveAccent)
+                        }
+                    },
+                )
+            }
+            null -> {}
+        }
+
     }
 }
 
 /**
  * Configuration export / import section.
  *
- * Extracted into its own composable so that [rememberLauncherForActivityResult]
- * is only called when a valid [LocalActivityResultRegistryOwner] is present in
- * the composition tree. When [GlobalSettingsScreen] is rendered inside
- * [MirrorPresentation] the registry owner is absent and this composable is
- * simply not composed, avoiding a crash.
+ * Posts export/import requests to [ConfigActionCoordinator] — MainActivity holds
+ * the actual [ActivityResultLauncher]s and opens the system file picker on behalf
+ * of this composable. This means the section works correctly regardless of whether
+ * GlobalSettingsScreen is rendered inside MainActivity or inside MirrorPresentation.
  */
 @Composable
 private fun ConfigSection(colors: AppColors, accentColor: Color) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
 
     var showExportMetadataDialog by remember { mutableStateOf(false) }
-    var pendingExport by remember { mutableStateOf<MegingiardExport?>(null) }
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
-    var operationError by remember { mutableStateOf<String?>(null) }
-    var operationSuccess by remember { mutableStateOf<String?>(null) }
+    var importError by remember { mutableStateOf<String?>(null) }
+    var importSuccess by remember { mutableStateOf(false) }
 
-    val createDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE)
-    ) { uri ->
-        val export = pendingExport ?: return@rememberLauncherForActivityResult
-        pendingExport = null
-        if (uri != null) {
-            coroutineScope.launch(Dispatchers.IO) {
-                runCatching { ConfigFileWriter.writeToUri(context, uri, export) }
-                    .onSuccess { withContext(Dispatchers.Main) { operationSuccess = context.getString(R.string.config_export_success) } }
-                    .onFailure { withContext(Dispatchers.Main) { operationError = it.message } }
-            }
-        }
-    }
+    // Import preview: ConfigImportCoordinator carries the parsed file once MainActivity
+    // reads it. Only show the dialog while Settings is open (collect here).
+    val pendingImport by ConfigImportCoordinator.pendingParsedImport.collectAsState()
 
-    val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch(Dispatchers.IO) {
-                ConfigFileReader.readAndParse(context, uri)
-                    .onSuccess { export -> withContext(Dispatchers.Main) { showImportPreviewDialog = export } }
-                    .onFailure { withContext(Dispatchers.Main) { operationError = it.message } }
-            }
-        }
+    // Show import preview as soon as the coordinator has a parsed export ready.
+    LaunchedEffect(pendingImport) {
+        if (pendingImport != null) showImportPreviewDialog = pendingImport
     }
 
     SettingsCategoryHeader(
@@ -310,7 +313,7 @@ private fun ConfigSection(colors: AppColors, accentColor: Color) {
         description = stringResource(R.string.settings_config_import_desc),
         accentColor = accentColor,
         colors = colors,
-        onClick = { openDocumentLauncher.launch(arrayOf(MGRD_MIME_TYPE)) },
+        onClick = { ConfigActionCoordinator.requestImport() },
     )
 
     if (showExportMetadataDialog) {
@@ -320,10 +323,11 @@ private fun ConfigSection(colors: AppColors, accentColor: Color) {
             accentColor = accentColor,
             onConfirm = { metadata ->
                 showExportMetadataDialog = false
-                val export = ConfigExporter.buildFullExport(metadata)
-                pendingExport = export
-                createDocumentLauncher.launch(
-                    context.getString(R.string.config_export_default_filename, LocalDate.now())
+                ConfigActionCoordinator.requestExport(
+                    metadata = metadata,
+                    filename = context.getString(
+                        R.string.config_export_default_filename, LocalDate.now()
+                    ),
                 )
             },
             onDismiss = { showExportMetadataDialog = false },
@@ -338,34 +342,38 @@ private fun ConfigSection(colors: AppColors, accentColor: Color) {
             onConfirm = {
                 showImportPreviewDialog = null
                 ConfigImporter.applyImport(export)
-                operationSuccess = context.getString(R.string.config_import_success)
+                ConfigImportCoordinator.clear()
+                importSuccess = true
             },
-            onDismiss = { showImportPreviewDialog = null },
+            onDismiss = {
+                showImportPreviewDialog = null
+                ConfigImportCoordinator.clear()
+            },
         )
     }
 
-    operationError?.let { error ->
+    importError?.let { error ->
         AlertDialog(
-            onDismissRequest = { operationError = null },
+            onDismissRequest = { importError = null },
             containerColor = colors.surface,
             title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
             text = { Text(error, color = colors.onSurfaceSecondary, fontSize = 13.sp) },
             confirmButton = {
-                TextButton(onClick = { operationError = null }) {
+                TextButton(onClick = { importError = null }) {
                     Text(stringResource(R.string.config_ok), color = accentColor)
                 }
             },
         )
     }
 
-    operationSuccess?.let { msg ->
+    if (importSuccess) {
         AlertDialog(
-            onDismissRequest = { operationSuccess = null },
+            onDismissRequest = { importSuccess = false },
             containerColor = colors.surface,
             title = { Text(stringResource(R.string.config_success_title), color = colors.onSurface) },
-            text = { Text(msg, color = colors.onSurfaceSecondary, fontSize = 13.sp) },
+            text = { Text(stringResource(R.string.config_import_success), color = colors.onSurfaceSecondary, fontSize = 13.sp) },
             confirmButton = {
-                TextButton(onClick = { operationSuccess = null }) {
+                TextButton(onClick = { importSuccess = false }) {
                     Text(stringResource(R.string.config_ok), color = accentColor)
                 }
             },
