@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.settings
 
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -74,41 +75,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val logLevel by SettingsManager.logLevel.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    // rememberLauncherForActivityResult requires an ActivityResultRegistryOwner,
+    // which is not available inside MirrorPresentation's ComposeView. Guard the
+    // entire config section so it is skipped when opened from the secondary display.
+    val hasActivityResultRegistry = LocalActivityResultRegistryOwner.current != null
 
     var showColorPicker by remember { mutableStateOf(false) }
-    var showExportMetadataDialog by remember { mutableStateOf(false) }
-    var pendingExport by remember { mutableStateOf<MegingiardExport?>(null) }
-    var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
-    var operationError by remember { mutableStateOf<String?>(null) }
-    var operationSuccess by remember { mutableStateOf<String?>(null) }
-
-    val createDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE)
-    ) { uri ->
-        val export = pendingExport ?: return@rememberLauncherForActivityResult
-        pendingExport = null
-        if (uri != null) {
-            coroutineScope.launch(Dispatchers.IO) {
-                runCatching { ConfigFileWriter.writeToUri(context, uri, export) }
-                    .onSuccess { withContext(Dispatchers.Main) { operationSuccess = context.getString(R.string.config_export_success) } }
-                    .onFailure { withContext(Dispatchers.Main) { operationError = it.message } }
-            }
-        }
-    }
-
-    val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch(Dispatchers.IO) {
-                ConfigFileReader.readAndParse(context, uri)
-                    .onSuccess { export -> withContext(Dispatchers.Main) { showImportPreviewDialog = export } }
-                    .onFailure { withContext(Dispatchers.Main) { operationError = it.message } }
-            }
-        }
-    }
 
     val lazyListState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -250,28 +222,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     }
                 }
 
-                // Configuration section
-                item {
-                    SettingsCategoryHeader(
-                        text = stringResource(R.string.settings_section_config),
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                    )
-                    ConfigActionRow(
-                        label = stringResource(R.string.settings_config_export),
-                        description = stringResource(R.string.settings_config_export_desc),
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onClick = { showExportMetadataDialog = true },
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    ConfigActionRow(
-                        label = stringResource(R.string.settings_config_import),
-                        description = stringResource(R.string.settings_config_import_desc),
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onClick = { openDocumentLauncher.launch(arrayOf(MGRD_MIME_TYPE)) },
-                    )
+                // Configuration section — only available when Settings is opened from
+                // the main Activity (not from MirrorPresentation which has no registry).
+                if (hasActivityResultRegistry) {
+                    item {
+                        ConfigSection(colors = colors, accentColor = effectiveAccent)
+                    }
                 }
             }
         }
@@ -287,64 +243,133 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
             )
         }
 
-        if (showExportMetadataDialog) {
-            ExportMetadataDialog(
-                defaultMetadata = ConfigExporter.defaultMetadata(context),
-                colors = colors,
-                accentColor = effectiveAccent,
-                onConfirm = { metadata ->
-                    showExportMetadataDialog = false
-                    val export = ConfigExporter.buildFullExport(metadata)
-                    pendingExport = export
-                    createDocumentLauncher.launch(
-                        context.getString(R.string.config_export_default_filename, LocalDate.now())
-                    )
-                },
-                onDismiss = { showExportMetadataDialog = false },
-            )
-        }
+    }
+}
 
-        showImportPreviewDialog?.let { export ->
-            ImportPreviewDialog(
-                export = export,
-                colors = colors,
-                accentColor = effectiveAccent,
-                onConfirm = {
-                    showImportPreviewDialog = null
-                    ConfigImporter.applyImport(export)
-                    operationSuccess = context.getString(R.string.config_import_success)
-                },
-                onDismiss = { showImportPreviewDialog = null },
-            )
-        }
+/**
+ * Configuration export / import section.
+ *
+ * Extracted into its own composable so that [rememberLauncherForActivityResult]
+ * is only called when a valid [LocalActivityResultRegistryOwner] is present in
+ * the composition tree. When [GlobalSettingsScreen] is rendered inside
+ * [MirrorPresentation] the registry owner is absent and this composable is
+ * simply not composed, avoiding a crash.
+ */
+@Composable
+private fun ConfigSection(colors: AppColors, accentColor: Color) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
-        operationError?.let { error ->
-            AlertDialog(
-                onDismissRequest = { operationError = null },
-                containerColor = colors.surface,
-                title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
-                text = { Text(error, color = colors.onSurfaceSecondary, fontSize = 13.sp) },
-                confirmButton = {
-                    TextButton(onClick = { operationError = null }) {
-                        Text(stringResource(R.string.config_ok), color = effectiveAccent)
-                    }
-                },
-            )
-        }
+    var showExportMetadataDialog by remember { mutableStateOf(false) }
+    var pendingExport by remember { mutableStateOf<MegingiardExport?>(null) }
+    var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
+    var operationError by remember { mutableStateOf<String?>(null) }
+    var operationSuccess by remember { mutableStateOf<String?>(null) }
 
-        operationSuccess?.let { msg ->
-            AlertDialog(
-                onDismissRequest = { operationSuccess = null },
-                containerColor = colors.surface,
-                title = { Text(stringResource(R.string.config_success_title), color = colors.onSurface) },
-                text = { Text(msg, color = colors.onSurfaceSecondary, fontSize = 13.sp) },
-                confirmButton = {
-                    TextButton(onClick = { operationSuccess = null }) {
-                        Text(stringResource(R.string.config_ok), color = effectiveAccent)
-                    }
-                },
-            )
+    val createDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE)
+    ) { uri ->
+        val export = pendingExport ?: return@rememberLauncherForActivityResult
+        pendingExport = null
+        if (uri != null) {
+            coroutineScope.launch(Dispatchers.IO) {
+                runCatching { ConfigFileWriter.writeToUri(context, uri, export) }
+                    .onSuccess { withContext(Dispatchers.Main) { operationSuccess = context.getString(R.string.config_export_success) } }
+                    .onFailure { withContext(Dispatchers.Main) { operationError = it.message } }
+            }
         }
+    }
+
+    val openDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch(Dispatchers.IO) {
+                ConfigFileReader.readAndParse(context, uri)
+                    .onSuccess { export -> withContext(Dispatchers.Main) { showImportPreviewDialog = export } }
+                    .onFailure { withContext(Dispatchers.Main) { operationError = it.message } }
+            }
+        }
+    }
+
+    SettingsCategoryHeader(
+        text = stringResource(R.string.settings_section_config),
+        accentColor = accentColor,
+        colors = colors,
+    )
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_export),
+        description = stringResource(R.string.settings_config_export_desc),
+        accentColor = accentColor,
+        colors = colors,
+        onClick = { showExportMetadataDialog = true },
+    )
+    HorizontalDivider(color = colors.divider)
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_import),
+        description = stringResource(R.string.settings_config_import_desc),
+        accentColor = accentColor,
+        colors = colors,
+        onClick = { openDocumentLauncher.launch(arrayOf(MGRD_MIME_TYPE)) },
+    )
+
+    if (showExportMetadataDialog) {
+        ExportMetadataDialog(
+            defaultMetadata = ConfigExporter.defaultMetadata(context),
+            colors = colors,
+            accentColor = accentColor,
+            onConfirm = { metadata ->
+                showExportMetadataDialog = false
+                val export = ConfigExporter.buildFullExport(metadata)
+                pendingExport = export
+                createDocumentLauncher.launch(
+                    context.getString(R.string.config_export_default_filename, LocalDate.now())
+                )
+            },
+            onDismiss = { showExportMetadataDialog = false },
+        )
+    }
+
+    showImportPreviewDialog?.let { export ->
+        ImportPreviewDialog(
+            export = export,
+            colors = colors,
+            accentColor = accentColor,
+            onConfirm = {
+                showImportPreviewDialog = null
+                ConfigImporter.applyImport(export)
+                operationSuccess = context.getString(R.string.config_import_success)
+            },
+            onDismiss = { showImportPreviewDialog = null },
+        )
+    }
+
+    operationError?.let { error ->
+        AlertDialog(
+            onDismissRequest = { operationError = null },
+            containerColor = colors.surface,
+            title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
+            text = { Text(error, color = colors.onSurfaceSecondary, fontSize = 13.sp) },
+            confirmButton = {
+                TextButton(onClick = { operationError = null }) {
+                    Text(stringResource(R.string.config_ok), color = accentColor)
+                }
+            },
+        )
+    }
+
+    operationSuccess?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { operationSuccess = null },
+            containerColor = colors.surface,
+            title = { Text(stringResource(R.string.config_success_title), color = colors.onSurface) },
+            text = { Text(msg, color = colors.onSurfaceSecondary, fontSize = 13.sp) },
+            confirmButton = {
+                TextButton(onClick = { operationSuccess = null }) {
+                    Text(stringResource(R.string.config_ok), color = accentColor)
+                }
+            },
+        )
     }
 }
 
