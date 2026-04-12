@@ -24,6 +24,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -40,12 +42,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigActionCoordinator
 import com.stormpanda.megingiard.config.ConfigExporter
@@ -268,9 +272,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     showExportMetadataDialog = false
                     ConfigActionCoordinator.requestExport(
                         metadata = metadata,
-                        filename = context.getString(
-                            R.string.config_export_default_filename, LocalDate.now()
-                        ),
+                        filename = buildExportFilename(metadata),
                     )
                 },
                 onDismiss = { showExportMetadataDialog = false },
@@ -412,6 +414,17 @@ private fun ExportMetadataDialog(
         focusedTextColor = colors.onSurface,
         unfocusedTextColor = colors.onSurface,
     )
+    val focusManager = LocalFocusManager.current
+    val doConfirm = {
+        val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        onConfirm(
+            defaultMetadata.copy(
+                author = author.trim().ifEmpty { null },
+                description = description.trim().ifEmpty { null },
+                tags = parsedTags,
+            )
+        )
+    }
     BackHandler(onBack = onDismiss)
     Box(
         modifier = Modifier
@@ -441,6 +454,8 @@ private fun ExportMetadataDialog(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             )
             OutlinedTextField(
                 value = description,
@@ -449,6 +464,8 @@ private fun ExportMetadataDialog(
                 maxLines = 3,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             )
             OutlinedTextField(
                 value = tags,
@@ -457,6 +474,8 @@ private fun ExportMetadataDialog(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -465,16 +484,7 @@ private fun ExportMetadataDialog(
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.config_export_cancel), color = colors.onSurfaceSecondary)
                 }
-                TextButton(onClick = {
-                    val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                    onConfirm(
-                        defaultMetadata.copy(
-                            author = author.trim().ifEmpty { null },
-                            description = description.trim().ifEmpty { null },
-                            tags = parsedTags,
-                        )
-                    )
-                }) {
+                TextButton(onClick = doConfirm) {
                     Text(stringResource(R.string.config_export_confirm), color = accentColor)
                 }
             }
@@ -625,4 +635,25 @@ private fun InTreeMessageDialog(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Filename builder
+// ─────────────────────────────────────────────────────────────────────────────
 
+private val FILENAME_UNSAFE = Regex("[^A-Za-z0-9]")
+
+/**
+ * Builds a descriptive export filename from [metadata] and the current date.
+ *
+ * Format: `megingiard_<date>[_<author up to 20 chars>][_<desc up to 30 chars>].mgrd`
+ * All non-alphanumeric characters in author / description are replaced with `_`.
+ */
+private fun buildExportFilename(metadata: ExportMetadata): String {
+    val parts = mutableListOf("megingiard", LocalDate.now().toString())
+    metadata.author?.takeIf { it.isNotBlank() }?.let { raw ->
+        parts.add(raw.trim().take(20).replace(FILENAME_UNSAFE, "_"))
+    }
+    metadata.description?.takeIf { it.isNotBlank() }?.let { raw ->
+        parts.add(raw.trim().take(30).replace(FILENAME_UNSAFE, "_"))
+    }
+    return parts.joinToString("_") + ".mgrd"
+}

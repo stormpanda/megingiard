@@ -123,7 +123,11 @@ class MainActivity : ComponentActivity() {
             ConfigActionCoordinator.importRequested.collect { requested ->
                 if (requested) {
                     AppStateManager.setFilePickerOpen(true)
-                    openDocumentLauncher.launch(arrayOf(MGRD_MIME_TYPE))
+                    // Use "*/*" instead of the custom MGRD MIME type: the Android file
+                    // picker (DocumentsUI) does not know the custom MIME type and would
+                    // show an empty list. With "*/*" all files are visible and the user
+                    // can navigate to their .mgrd file.
+                    openDocumentLauncher.launch(arrayOf("*/*"))
                     ConfigActionCoordinator.clearImportRequest()
                 }
             }

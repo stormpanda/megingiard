@@ -21,11 +21,16 @@ the same device or share it with other Megingiard users ("community configs").
   controls the destination folder.
 - The user MAY optionally provide author, description, and comma-separated tags before exporting
   (community metadata).
+- The suggested default filename MUST include the current date and, if provided, the author
+  (up to 20 chars) and description (up to 30 chars) to help users identify files.
+  Format: `megingiard_<date>[_<author>][_<description>].mgrd`.
 - The export MUST embed an SHA-256 checksum to detect file corruption or tampering.
 
 ### FR-CF2: Configuration Import
 
-- The user MUST be able to import a `.mgrd` file from Global Settings.
+- The user MUST be able to import a `.mgrd` file from Global Settings via a system file picker
+  that shows all files (`*/*` filter — the custom MIME type is not registered in the Android
+  MIME database, so filtering by MIME type would produce an empty list).
 - The app MUST also respond to `ACTION_VIEW` intents with MIME type
   `application/vnd.megingiard.config+json`, so files can be opened from any file manager or
   sharing app.
@@ -56,17 +61,33 @@ the same device or share it with other Megingiard users ("community configs").
 ### Architecture Overview
 
 ```
-GlobalSettingsScreen / MainAppScreen (Compose UI)
+GlobalSettingsScreen (Compose UI, in-tree overlay dialogs)
         │
-        │  user picks SAF URI
+        │  user taps Export / Import
         ▼
-ConfigFileReader ─── reads raw bytes, 10 MB cap
+ConfigActionCoordinator  ← StateFlow bridge (GlobalSettingsScreen has no ActivityResultRegistryOwner
+        │                    when rendered inside MirrorPresentation)
         │
         ▼
-ConfigImporter.parseExport()  ─── JSON deserialise + SHA-256 verify
-        │  Result<MegingiardExport>
-        ▼
-ConfigImporter.applyImport()  ─── writes to SettingsManager / MacroPadState / MacroState
+MainActivity  ← holds ActivityResultLaunchers
+        │  createDocumentLauncher (export) / openDocumentLauncher (*/* — all files, import)
+        │
+        ├── Export path:
+        │       ConfigExporter.buildFullExport() → ConfigFileWriter.writeToUri()
+        │       → ConfigActionCoordinator.setExportResult()
+        │
+        └── Import path:
+                ConfigImportCoordinator.setPendingUri()
+                        │
+                        ▼
+                MainAppScreen.LaunchedEffect(pendingImportUri)
+                        │  suspend – Dispatchers.IO
+                        ▼
+                ConfigFileReader.readAndParse()  →  ConfigImportCoordinator.setParsedImport()
+                        │
+                        ▼
+                GlobalSettingsScreen ImportPreviewDialog (in-tree)
+                        → ConfigImporter.applyImport()
 ```
 
 For external file intents (`ACTION_VIEW`):
@@ -125,21 +146,22 @@ IncomingImportDialog  ─── user confirms → ConfigImporter.applyImport()
 
 ### Source Files
 
-| File                                   | Role                                                                                                                                   |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `config/ConfigSchema.kt`               | All `@Serializable` data classes (`MegingiardExport`, `ExportSections`, per-tool section classes, `ExportMetadata`, `ExportType` enum) |
-| `config/ChecksumUtil.kt`               | `computeChecksum()` and `verifyChecksum()` using SHA-256                                                                               |
-| `config/ConfigExporter.kt`             | `buildFullExport()` — reads current `StateFlow.value` from all singletons                                                              |
-| `config/ConfigFileWriter.kt`           | `writeToUri()` — serialises to pretty JSON, writes via SAF `OutputStream`                                                              |
-| `config/ConfigImporter.kt`             | `parseExport()` + `applyImport()` — deserialise, checksum verify, UUID remap, apply                                                    |
-| `config/ConfigFileReader.kt`           | `readAndParse()` — reads from SAF URI (≤ 10 MB), delegates to `ConfigImporter.parseExport()`                                           |
-| `config/ConfigImportCoordinator.kt`    | Singleton `StateFlow` bridge: `MainActivity` intent → `MainAppScreen` UI                                                               |
-| `settings/GlobalSettingsScreen.kt`     | Export/import entry rows, `ExportMetadataDialog`, `ImportPreviewDialog`                                                                |
-| `settings/GlobalSettingsComponents.kt` | `ConfigActionRow` reusable composable                                                                                                  |
-| `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                  |
-| `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to coordinator                                                   |
-| `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                               |
-| `res/values/strings.xml`               | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                        |
+| File                                   | Role                                                                                                                                          |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config/ConfigSchema.kt`               | All `@Serializable` data classes (`MegingiardExport`, `ExportSections`, per-tool section classes, `ExportMetadata`, `ExportType` enum)        |
+| `config/ChecksumUtil.kt`               | `computeChecksum()` and `verifyChecksum()` using SHA-256                                                                                      |
+| `config/ConfigExporter.kt`             | `buildFullExport()` — reads current `StateFlow.value` from all singletons                                                                     |
+| `config/ConfigFileWriter.kt`           | `writeToUri()` — serialises to pretty JSON, writes via SAF `OutputStream`                                                                     |
+| `config/ConfigImporter.kt`             | `parseExport()` + `applyImport()` — deserialise, checksum verify, UUID remap, apply                                                           |
+| `config/ConfigFileReader.kt`           | `readAndParse()` — reads from SAF URI (≤ 10 MB), delegates to `ConfigImporter.parseExport()`                                                  |
+| `config/ConfigImportCoordinator.kt`    | Singleton `StateFlow` bridge: `MainActivity` intent → `MainAppScreen` UI                                                                      |
+| `config/ConfigActionCoordinator.kt`    | Singleton `StateFlow` bridge: `GlobalSettingsScreen` export/import requests → `MainActivity` `ActivityResultLauncher`s                        |
+| `settings/GlobalSettingsScreen.kt`     | Export/import entry rows; all dialogs (`ExportMetadataDialog`, `ImportPreviewDialog`, result messages) rendered as **in-tree overlays**       |
+| `settings/GlobalSettingsComponents.kt` | `ConfigActionRow` reusable composable                                                                                                         |
+| `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                         |
+| `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to coordinator; holds `createDocumentLauncher` / `openDocumentLauncher` |
+| `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                      |
+| `res/values/strings.xml`               | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                               |
 
 ### UUID Remapping on Import
 
@@ -163,6 +185,18 @@ immediately and the relevant `StateFlow`s emit the new values, updating Compose 
 ### Error Handling
 
 - SAF read failures (permission denied, file not found) surface as `Result.failure` and are
-  displayed in a simple `AlertDialog` without crashing.
+  displayed as **in-tree overlay** dialogs (not `AlertDialog`) to avoid `BadTokenException`
+  inside `MirrorPresentation`.
 - Checksum mismatch rejects the import with a localized error message.
 - The 10 MB file size cap in `ConfigFileReader` prevents OOM when opening arbitrary files.
+
+### Dialog Rendering
+
+All dialogs in `GlobalSettingsScreen` (export metadata, import preview, success / error messages)
+are rendered as **in-tree overlays** — a full-screen `Box` with a semi-transparent scrim and a
+centered card, not as Compose `AlertDialog`. This is required because `GlobalSettingsScreen` may
+be rendered inside `MirrorPresentation` (`android.app.Presentation`), which has no valid Activity
+window token. Compose's `AlertDialog` creates an Android sub-window and would throw
+`BadTokenException: Unable to add window -- token null is not valid`.
+
+The pattern matches the existing `ColorWheelPicker` in the same file.
