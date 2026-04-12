@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
     private val createDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE)
     ) { uri ->
+        AppStateManager.setFilePickerOpen(false)
         val meta = pendingExportMetadata ?: return@registerForActivityResult
         pendingExportMetadata = null
         if (uri == null) return@registerForActivityResult
@@ -75,6 +76,7 @@ class MainActivity : ComponentActivity() {
     private val openDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
+        AppStateManager.setFilePickerOpen(false)
         if (uri == null) {
             ConfigActionCoordinator.clearImportRequest()
             return@registerForActivityResult
@@ -111,6 +113,7 @@ class MainActivity : ComponentActivity() {
             ConfigActionCoordinator.exportRequest.collect { meta ->
                 if (meta != null) {
                     pendingExportMetadata = meta
+                    AppStateManager.setFilePickerOpen(true)
                     createDocumentLauncher.launch(ConfigActionCoordinator.exportFilename.value)
                     ConfigActionCoordinator.clearExportRequest()
                 }
@@ -119,6 +122,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             ConfigActionCoordinator.importRequested.collect { requested ->
                 if (requested) {
+                    AppStateManager.setFilePickerOpen(true)
                     openDocumentLauncher.launch(arrayOf(MGRD_MIME_TYPE))
                     ConfigActionCoordinator.clearImportRequest()
                 }
