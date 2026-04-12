@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -77,8 +78,11 @@ private const val PC_RADIAL_CENTER_Y    = 0.5f
 // Radial grid: snap points evenly distributed along each circle
 private val PC_RADIAL_DOT_RADIUS    = 2.dp
 private val PC_RADIAL_CENTER_DOT    = 3.dp
-private const val PC_RADIAL_DOT_ALPHA   = 0.35f
-private const val PC_RADIAL_MIN_POINTS  = 4
+private const val PC_RADIAL_DOT_ALPHA      = 0.35f
+private const val PC_RADIAL_MIN_POINTS     = 4
+
+// Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
+private const val PC_BTN_GRADIENT_OUTER    = 0.9f
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid mode
@@ -216,21 +220,31 @@ private fun DraggableButton(
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
             .width(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .clip(chipShape)
             .drawWithContent {
+                val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
+                val bgBrush = Brush.radialGradient(
+                    0.00f to accentColor.copy(alpha = 0f),
+                    0.50f to accentColor.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.25f),
+                    0.75f to accentColor.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.5625f),
+                    1.00f to accentColor.copy(alpha = PC_BTN_GRADIENT_OUTER),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = halfDiag,
+                )
                 if (isDeviceDisabled) {
                     val p = Paint().apply {
                         colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
                         this.alpha = ED_BTN_DISABLED_ALPHA
                     }
                     drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                    drawRect(brush = bgBrush)
                     drawContent()
                     drawContext.canvas.restore()
                 } else {
+                    drawRect(brush = bgBrush)
                     drawContent()
                 }
             }
-            .clip(chipShape)
-            .background(accentColor.copy(alpha = 0.25f))
             .border(1.dp, accentColor, chipShape)
             .pointerInput(btn.id, canvasSize) {
                 detectDragGestures(

@@ -145,8 +145,8 @@ Each button supports one of the following actions:
   1. **Header** — Cancel (text button) | title | ✓ confirm (icon button).
   2. **Search row** — `OutlinedTextField` + Filled checkbox.
   3. **Selection row** (only visible when an icon is pending) — preview box (48 dp) + icon name + "Currently selected" subtext + 🗑 delete button.
-  Tapping a grid icon sets a local `pendingIcon` state (does **not** close the dialog). The user confirms with ✓ or clears via 🗑. Cancel discards any pending change.
-  The icon grid is a `LazyVerticalGrid` (5 columns) of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
+     Tapping a grid icon sets a local `pendingIcon` state (does **not** close the dialog). The user confirms with ✓ or clears via 🗑. Cancel discards any pending change.
+     The icon grid is a `LazyVerticalGrid` (5 columns) of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
 
@@ -438,29 +438,29 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 
 ### Source Files
 
-| File                         | Responsibility                                                                                                                                            |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                                                    |
-| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay           |
-| `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`)          |
-| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                              |
-| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                                                     |
-| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                                 |
-| `MacroData.kt`               | Macro data model: `Macro` (incl. `folderId`), `MacroFolder`, `MacroStep` sealed class, `JoystickStick` enum                                               |
-| `MacroState.kt`              | Singleton global macro library + folder library: CRUD methods for macros and folders, loaded by `SettingsManager`                                         |
-| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                                                        |
-| `MacroListEditor.kt`         | Full-screen macro library editor: folder sections (collapsible, reorderable), macro reorder within section, context menus for folder CRUD and macro move  |
-| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                                                     |
-| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                                                    |
-| `PadActionPicker.kt`         | Action-type picker; `MacroPicker` uses two-dropdown flow (folder → macro within folder)                                                                   |
-| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                             |
-| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                               |
-| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                                     |
-| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                           |
-| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                                   |
-| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                               |
-| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                            |
-| `MaterialIconRegistry.kt`    | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed)      |
-| `MaterialSymbols.kt`         | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures        |
+| File                         | Responsibility                                                                                                                                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                                                                                                           |
+| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay                                                                  |
+| `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`)                                                                 |
+| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                                                                                     |
+| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                                                                                                            |
+| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                                                                                        |
+| `MacroData.kt`               | Macro data model: `Macro` (incl. `folderId`), `MacroFolder`, `MacroStep` sealed class, `JoystickStick` enum                                                                                                      |
+| `MacroState.kt`              | Singleton global macro library + folder library: CRUD methods for macros and folders, loaded by `SettingsManager`                                                                                                |
+| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                                                                                                               |
+| `MacroListEditor.kt`         | Full-screen macro library editor: folder sections (collapsible, reorderable), macro reorder within section, context menus for folder CRUD and macro move                                                         |
+| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                                                                                                            |
+| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                                                                                                           |
+| `PadActionPicker.kt`         | Action-type picker; `MacroPicker` uses two-dropdown flow (folder → macro within folder)                                                                                                                          |
+| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                                                                                    |
+| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                                                                                      |
+| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                                                                                            |
+| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                                                                                  |
+| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                                                                                          |
+| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                                                                                      |
+| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                                                                                   |
+| `MaterialIconRegistry.kt`    | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed)                                                             |
+| `MaterialSymbols.kt`         | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures                                                               |
 | `IconPickerDialog.kt`        | Full-screen icon picker (3-zone layout: header with ✓, search + filled toggle, selection row with preview/name/🗑); `LazyVerticalGrid` (5 columns), `pendingIcon` local state; called from `PadButtonEditDialog` |
-| `RoundedIconNames.kt`        | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`) |
+| `RoundedIconNames.kt`        | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`)                                                        |

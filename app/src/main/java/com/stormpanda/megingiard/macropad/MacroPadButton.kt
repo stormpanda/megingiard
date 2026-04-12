@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -49,9 +51,9 @@ import kotlin.math.roundToInt
 
 internal val MP_BUTTON_UNIT_DP      = 60.dp   // 1×1 = this size on-screen; matches editor
 
-private val MP_BTN_PRESSED_ALPHA    = 0.80f
-private val MP_BTN_NORMAL_ALPHA     = 0.25f
-private const val MP_BTN_DISABLED_ALPHA = 0.38f
+private const val MP_BTN_PRESSED_ALPHA    = 0.80f
+private const val MP_BTN_NORMAL_ALPHA     = 0.25f
+private const val MP_BTN_DISABLED_ALPHA   = 0.38f
 
 private val  MP_BTN_SQUARE_RADIUS   = 4.dp
 private val  MP_BTN_ICON_UNIT        = 44.dp  // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
@@ -59,9 +61,14 @@ private val  MP_BTN_ICON_UNIT        = 44.dp  // icon size per grid unit (≈ 73
 private const val MP_PRESS_ANIM_MS   = 80
 private const val MP_RELEASE_ANIM_MS = 160
 
+// Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
+// Scale factor maps animated alpha (resting = MP_BTN_NORMAL_ALPHA) → MP_BTN_GRADIENT_OUTER.
+private const val MP_BTN_GRADIENT_OUTER = 0.7f
+private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_ALPHA
+
 // Neutral (theme-independent) ambient button style
 private val MP_AMBIENT_NEUTRAL_BG     = Color.White
-private val MP_AMBIENT_NEUTRAL_BORDER = Color(0xFFAAAAAA)
+private val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
 private val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -124,21 +131,31 @@ internal fun PadButton(
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
             .width(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .clip(chipShape)
             .drawWithContent {
+                val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
+                val bgBrush = Brush.radialGradient(
+                    0.00f to effectiveBg.copy(alpha = 0f),
+                    0.50f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.25f),
+                    0.75f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.5625f),
+                    1.00f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = halfDiag,
+                )
                 if (isDeviceDisabled) {
                     val p = Paint().apply {
                         colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
                         this.alpha = MP_BTN_DISABLED_ALPHA
                     }
                     drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                    drawRect(brush = bgBrush)
                     drawContent()
                     drawContext.canvas.restore()
                 } else {
+                    drawRect(brush = bgBrush)
                     drawContent()
                 }
             }
-            .clip(chipShape)
-            .background(effectiveBg.copy(alpha = alpha))
             .border(1.dp, effectiveBorder, chipShape),
     ) {
         if (isTrackpoint) {
