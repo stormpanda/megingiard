@@ -126,6 +126,10 @@ Each button supports one of the following actions:
     Like dim, the vignette is hidden when Peek is active.
 - A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, dim and vignette are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
+- **Button theme style** (`macropad_ambient_apply_theme`, default: off): A checkbox visible only when Ambient Display is enabled controls whether MacroPad buttons in the Ambient overlay use the active app theme or a neutral, theme-independent style.
+  - **Default (off / neutral style):** All buttons are rendered with a soft grey outline (`#AAAAAA`), a colourless white background at the standard press-animation alpha (0.25 / 0.80), and near-white text/icons (`#DDDDDD` at 90% opacity). This style is identical across all themes (DARK, LIGHT, CYBERPUNK).
+  - **Checked (apply theme):** Buttons use the normal themed accent colour and `onSurface` token exactly as in regular MacroPad mode — the previous default behaviour.
+  - The neutral style is implemented via a `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. It is only set to `true` inside `AmbientMacroPadOverlay`; regular `MacroPadScreen` always uses `neutralStyle = false`.
 
 ### FR-P10: Optional Button Icons
 

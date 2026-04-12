@@ -59,6 +59,11 @@ private val  MP_BTN_ICON_UNIT        = 44.dp  // icon size per grid unit (≈ 73
 private const val MP_PRESS_ANIM_MS   = 80
 private const val MP_RELEASE_ANIM_MS = 160
 
+// Neutral (theme-independent) ambient button style
+private val MP_AMBIENT_NEUTRAL_BG     = Color.White
+private val MP_AMBIENT_NEUTRAL_BORDER = Color(0xFFAAAAAA)
+private val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Individual pad button
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,9 +75,15 @@ internal fun PadButton(
     canvasSize:       IntSize,
     accentColor:      Color,
     isDeviceDisabled: Boolean,
+    neutralStyle:     Boolean = false,
 ) {
     val density = LocalDensity.current
     val colors  = LocalAppColors.current
+
+    val effectiveBg           = if (neutralStyle) MP_AMBIENT_NEUTRAL_BG     else accentColor
+    val effectiveBorder       = if (neutralStyle) MP_AMBIENT_NEUTRAL_BORDER else accentColor
+    val effectiveContentAccent = if (neutralStyle) MP_AMBIENT_NEUTRAL_TEXT  else accentColor
+    val effectiveTextTint     = if (neutralStyle) MP_AMBIENT_NEUTRAL_TEXT   else colors.onSurface
 
     val alphaTarget  = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
@@ -127,27 +138,27 @@ internal fun PadButton(
                 }
             }
             .clip(chipShape)
-            .background(accentColor.copy(alpha = alpha))
-            .border(1.dp, accentColor, chipShape),
+            .background(effectiveBg.copy(alpha = alpha))
+            .border(1.dp, effectiveBorder, chipShape),
     ) {
         if (isTrackpoint) {
-            Text("●", color = accentColor.copy(alpha = 0.7f), fontSize = 18.sp)
+            Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), fontSize = 18.sp)
         } else if (btn.action is PadAction.ScrollWheel) {
-            ScrollWheelFace(accentColor = accentColor)
+            ScrollWheelFace(accentColor = effectiveContentAccent)
         } else if (btn.action is PadAction.AmbientPeek) {
-            AmbientPeekFace(accentColor = accentColor)
+            AmbientPeekFace(accentColor = effectiveContentAccent)
         } else {
             if (btn.iconName != null) {
                 MaterialSymbol(
                     name = btn.iconName,
                     size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                    tint = colors.onSurface,
+                    tint = effectiveTextTint,
                     filled = btn.iconFilled,
                 )
             } else {
                 Text(
                     text     = btn.label,
-                    color    = colors.onSurface,
+                    color    = effectiveTextTint,
                     fontSize = (11 * btn.buttonSize.cols).sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

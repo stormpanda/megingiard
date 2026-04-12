@@ -119,6 +119,7 @@ object SettingsManager {
     private val KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR = intPreferencesKey("macropad_ambient_vignette_color")
     private val KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE = stringPreferencesKey("macropad_ambient_vignette_shape")
     private val KEY_MACROPAD_AMBIENT_PREVIEW = booleanPreferencesKey("macropad_ambient_preview")
+    private val KEY_MACROPAD_AMBIENT_APPLY_THEME = booleanPreferencesKey("macropad_ambient_apply_theme")
 
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
@@ -239,6 +240,9 @@ object SettingsManager {
     private val _macropadAmbientPreview = MutableStateFlow(false)
     val macropadAmbientPreview: StateFlow<Boolean> = _macropadAmbientPreview.asStateFlow()
 
+    private val _macropadAmbientApplyTheme = MutableStateFlow(false)
+    val macropadAmbientApplyTheme: StateFlow<Boolean> = _macropadAmbientApplyTheme.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -296,6 +300,7 @@ object SettingsManager {
                 _macropadAmbientVignetteColor.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR] ?: 0xFF000000.toInt()
                 _macropadAmbientVignetteShape.value = VignetteShape.entries.firstOrNull { it.name == prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE] } ?: VignetteShape.RADIAL
                 _macropadAmbientPreview.value = prefs[KEY_MACROPAD_AMBIENT_PREVIEW] ?: false
+                _macropadAmbientApplyTheme.value = prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] ?: false
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -611,6 +616,12 @@ object SettingsManager {
         AppLog.d(TAG, "setMacropadAmbientPreview($value)")
         _macropadAmbientPreview.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_PREVIEW] = value } }
+    }
+
+    fun setMacropadAmbientApplyTheme(value: Boolean) {
+        AppLog.d(TAG, "setMacropadAmbientApplyTheme($value)")
+        _macropadAmbientApplyTheme.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] = value } }
     }
 
     /**

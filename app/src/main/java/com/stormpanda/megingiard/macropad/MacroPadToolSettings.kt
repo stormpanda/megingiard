@@ -364,6 +364,7 @@ private fun AmbientSettingsSection(
     val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
     val ambientDim     by SettingsManager.macropadAmbientDim.collectAsState()
     val ambientPreview by SettingsManager.macropadAmbientPreview.collectAsState()
+    val applyTheme     by SettingsManager.macropadAmbientApplyTheme.collectAsState()
 
     SettingsLabel(stringResource(R.string.settings_macropad_ambient), accentColor)
 
@@ -402,6 +403,14 @@ private fun AmbientSettingsSection(
             checked = ambientPreview,
             accentColor = accentColor,
             onCheckedChange = { scope.launch { SettingsManager.setMacropadAmbientPreview(it) } }
+        )
+
+        RememberSettingRow(
+            label = stringResource(R.string.settings_macropad_ambient_apply_theme),
+            description = stringResource(R.string.settings_macropad_ambient_apply_theme_hint),
+            checked = applyTheme,
+            accentColor = accentColor,
+            onCheckedChange = { scope.launch { SettingsManager.setMacropadAmbientApplyTheme(it) } }
         )
 
         SliderSettingRow(

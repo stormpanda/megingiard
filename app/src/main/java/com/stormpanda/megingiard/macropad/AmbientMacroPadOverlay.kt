@@ -69,6 +69,7 @@ internal fun AmbientMacroPadOverlay() {
     val vignetteColorInt by SettingsManager.macropadAmbientVignetteColor.collectAsState()
     val vignetteShape by SettingsManager.macropadAmbientVignetteShape.collectAsState()
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
+    val applyTheme by SettingsManager.macropadAmbientApplyTheme.collectAsState()
 
     val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -196,6 +197,7 @@ internal fun AmbientMacroPadOverlay() {
                     accentColor = colors.accent,
                     isPeekActive = isPeekActive,
                     transparentBackground = true,
+                    neutralStyle = !applyTheme,
                 )
             }
         }

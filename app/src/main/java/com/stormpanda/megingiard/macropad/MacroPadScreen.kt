@@ -128,6 +128,7 @@ internal fun PadSurface(
     accentColor: Color,
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
+    neutralStyle: Boolean = false,
 ) {
     val density      = LocalDensity.current
     val context      = LocalContext.current
@@ -340,6 +341,7 @@ internal fun PadSurface(
                     canvasSize       = canvasSize,
                     accentColor      = accentColor,
                     isDeviceDisabled = isDeviceDisabled,
+                    neutralStyle     = neutralStyle,
                 )
             }
         }
