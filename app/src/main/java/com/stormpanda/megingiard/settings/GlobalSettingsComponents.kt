@@ -466,3 +466,48 @@ internal fun LanguagePickerRow(
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Config export/import row
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A settings row representing an actionable config operation (export or import).
+ * Displays a label with a secondary description line and an arrow icon.
+ */
+@Composable
+internal fun ConfigActionRow(
+    label: String,
+    description: String,
+    accentColor: Color,
+    colors: AppColors,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                color = colors.onSurface,
+                fontSize = 14.sp,
+            )
+            Text(
+                text = description,
+                color = colors.onSurfaceSecondary,
+                fontSize = 12.sp,
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+            contentDescription = null,
+            tint = accentColor,
+            modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
+        )
+    }
+}

@@ -25,6 +25,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.config.ConfigImportCoordinator
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -58,6 +59,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate")
+        // Handle .mgrd config files opened from a file manager or share sheet.
+        handleIncomingIntent(intent)
         // FLAG_NOT_FOCUSABLE must only be active in KEYBOARD mode so that uinput key events
         // are delivered to the focused app (the game) rather than to Megingiard.
         // Keeping it active in other modes would break in-app text fields (e.g. MacroPad
@@ -178,6 +181,27 @@ class MainActivity : ComponentActivity() {
                         MainAppScreen()
                     }
                 }
+            }
+        }
+    }
+
+    /** Called when the app is already running and receives a new ACTION_VIEW intent. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        AppLog.i(TAG, "onNewIntent")
+        handleIncomingIntent(intent)
+    }
+
+    /**
+     * Checks whether [intent] is an ACTION_VIEW intent carrying a `.mgrd` URI and, if so,
+     * notifies [ConfigImportCoordinator] so the Compose UI can show the import preview dialog.
+     */
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            val uri = intent.data
+            if (uri != null) {
+                AppLog.i(TAG, "handleIncomingIntent: .mgrd URI received: $uri")
+                ConfigImportCoordinator.setPendingUri(uri)
             }
         }
     }
