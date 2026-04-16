@@ -26,10 +26,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.config.ConfigActionCoordinator
-import com.stormpanda.megingiard.config.ConfigExporter
-import com.stormpanda.megingiard.config.ConfigFileWriter
-import com.stormpanda.megingiard.config.ConfigImportCoordinator
+import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -49,7 +46,7 @@ class MainActivity : ComponentActivity() {
     // ── File picker launchers ─────────────────────────────────────────────────
     // Registered here because ActivityResultLaunchers require an Activity context.
     // GlobalSettingsScreen (which may be inside MirrorPresentation) posts requests
-    // to ConfigActionCoordinator and these launchers pick them up.
+    // to ConfigManager and these launchers pick them up.
 
     private var pendingExportMetadata: ExportMetadata? = null
 
@@ -61,14 +58,14 @@ class MainActivity : ComponentActivity() {
         pendingExportMetadata = null
         if (uri == null) return@registerForActivityResult
         lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { ConfigFileWriter.writeToUri(this@MainActivity, uri, ConfigExporter.buildFullExport(meta)) }
+            runCatching { ConfigManager.writeToUri(this@MainActivity, uri, ConfigManager.buildExport(meta)) }
                 .onSuccess {
                     AppLog.i(TAG, "Export written to $uri")
-                    ConfigActionCoordinator.setExportResult(ConfigActionCoordinator.ExportResult.Success)
+                    ConfigManager.setExportResult(ConfigManager.ExportResult.Success)
                 }
                 .onFailure { e ->
                     AppLog.e(TAG, "Export failed", e)
-                    ConfigActionCoordinator.setExportResult(ConfigActionCoordinator.ExportResult.Failure(e.message))
+                    ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
                 }
         }
     }
@@ -78,10 +75,10 @@ class MainActivity : ComponentActivity() {
     ) { uri ->
         AppStateManager.setFilePickerOpen(false)
         if (uri == null) {
-            ConfigActionCoordinator.clearImportRequest()
+            ConfigManager.clearImportRequest()
             return@registerForActivityResult
         }
-        ConfigImportCoordinator.setPendingUri(uri)
+        ConfigManager.setPendingUri(uri)
     }
 
     // The manifest declares configChanges that prevent activity recreation when the app
@@ -110,17 +107,17 @@ class MainActivity : ComponentActivity() {
         // Collect export/import requests posted by GlobalSettingsScreen (which may be
         // inside MirrorPresentation and thus cannot hold ActivityResultLaunchers itself).
         lifecycleScope.launch {
-            ConfigActionCoordinator.exportRequest.collect { meta ->
+            ConfigManager.exportRequest.collect { meta ->
                 if (meta != null) {
                     pendingExportMetadata = meta
                     AppStateManager.setFilePickerOpen(true)
-                    createDocumentLauncher.launch(ConfigActionCoordinator.exportFilename.value)
-                    ConfigActionCoordinator.clearExportRequest()
+                    createDocumentLauncher.launch(ConfigManager.exportFilename.value)
+                    ConfigManager.clearExportRequest()
                 }
             }
         }
         lifecycleScope.launch {
-            ConfigActionCoordinator.importRequested.collect { requested ->
+            ConfigManager.importRequested.collect { requested ->
                 if (requested) {
                     AppStateManager.setFilePickerOpen(true)
                     // Use "*/*" instead of the custom MGRD MIME type: the Android file
@@ -128,7 +125,7 @@ class MainActivity : ComponentActivity() {
                     // show an empty list. With "*/*" all files are visible and the user
                     // can navigate to their .mgrd file.
                     openDocumentLauncher.launch(arrayOf("*/*"))
-                    ConfigActionCoordinator.clearImportRequest()
+                    ConfigManager.clearImportRequest()
                 }
             }
         }
@@ -265,14 +262,14 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Checks whether [intent] is an ACTION_VIEW intent carrying a `.mgrd` URI and, if so,
-     * notifies [ConfigImportCoordinator] so the Compose UI can show the import preview dialog.
+     * notifies [ConfigManager] so the Compose UI can show the import preview dialog.
      */
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
             val uri = intent.data
             if (uri != null) {
                 AppLog.i(TAG, "handleIncomingIntent: .mgrd URI received: $uri")
-                ConfigImportCoordinator.setPendingUri(uri)
+                ConfigManager.setPendingUri(uri)
             }
         }
     }

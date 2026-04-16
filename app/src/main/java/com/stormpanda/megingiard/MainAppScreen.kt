@@ -47,9 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.config.ConfigFileReader
-import com.stormpanda.megingiard.config.ConfigImportCoordinator
-import com.stormpanda.megingiard.config.ConfigImporter
+import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.MacroPadScreen
@@ -84,20 +82,20 @@ fun MainAppScreen() {
 
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
-    val pendingImportUri by ConfigImportCoordinator.pendingUri.collectAsState()
-    val pendingImport by ConfigImportCoordinator.pendingParsedImport.collectAsState()
+    val pendingImportUri by ConfigManager.pendingUri.collectAsState()
+    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
     var importError by remember { mutableStateOf<String?>(null) }
 
-    // When MainActivity receives a .mgrd file intent, ConfigImportCoordinator stores the URI here.
+    // When MainActivity receives a .mgrd file intent, ConfigManager stores the URI here.
     // We handle the I/O and parsing in a coroutine, then show the preview dialog on success.
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            ConfigFileReader.readAndParse(context, uri)
+            ConfigManager.readFromUri(context, uri)
         }.onSuccess { export ->
-            ConfigImportCoordinator.setParsedImport(export)
+            ConfigManager.setParsedImport(export)
         }.onFailure { err ->
-            ConfigImportCoordinator.clear()
+            ConfigManager.clearPendingImport()
             importError = err.message
         }
     }
@@ -257,10 +255,10 @@ fun MainAppScreen() {
         IncomingImportDialog(
             export = export,
             onConfirm = {
-                ConfigImporter.applyImport(export)
-                ConfigImportCoordinator.clear()
+                ConfigManager.applyImport(export)
+                ConfigManager.clearPendingImport()
             },
-            onDismiss = { ConfigImportCoordinator.clear() },
+            onDismiss = { ConfigManager.clearPendingImport() },
         )
     }
 
@@ -332,20 +330,18 @@ private fun IncomingImportDialog(
                     )
                 }
                 Spacer(Modifier.height(4.dp))
-                export.sections.macropad?.let { mp ->
+                if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
                     Text(
                         stringResource(
                             R.string.config_import_section_macropad,
-                            mp.profiles.size,
-                            mp.macros.size,
+                            export.profiles.size,
+                            export.macros.size,
                         ),
                         color = colors.onSurface,
                         fontSize = 13.sp,
                     )
                 }
-                if (export.sections.global != null || export.sections.mirror != null ||
-                    export.sections.touchpad != null || export.sections.keyboard != null
-                ) {
+                if (export.settings.isNotEmpty()) {
                     Text(
                         stringResource(R.string.config_import_section_settings),
                         color = colors.onSurface,

@@ -82,13 +82,8 @@ com.stormpanda.megingiard
 │ ├── KeyboardToolSettings.kt # Keyboard-mode settings Composable
 │ └── TouchpadToolSettings.kt # Touchpad-mode settings Composable
 ├── config/
-│ ├── ConfigSchema.kt # @Serializable data classes: MegingiardExport, ExportSections, per-tool sections, ExportMetadata, ExportType enum
-│ ├── ChecksumUtil.kt # SHA-256 integrity helpers: computeChecksum(), verifyChecksum()
-│ ├── ConfigExporter.kt # buildFullExport() — snapshots all StateFlow singletons into MegingiardExport
-│ ├── ConfigFileWriter.kt # writeToUri() — serialises to pretty JSON via SAF OutputStream
-│ ├── ConfigImporter.kt # parseExport() + applyImport() — JSON parse, checksum verify, UUID remap, apply
-│ ├── ConfigFileReader.kt # readAndParse() — SAF URI reader with 10 MB safety cap
-│ └── ConfigImportCoordinator.kt # Singleton StateFlow bridge: MainActivity intent → MainAppScreen UI
+│ ├── ConfigSchema.kt # @Serializable data classes: MegingiardExport, ExportMetadata
+│ └── ConfigManager.kt # Unified export/import: coordinator StateFlows, SAF I/O, v1 compat, UUID remap, checksum
 ├── macropad/
 │ ├── MacroPadScreen.kt # Use-mode Composable (pad render, multi-touch, injector lifecycle)
 │ ├── MacroPadButton.kt # PadButton & ScrollWheelFace Composables + button constants

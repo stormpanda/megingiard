@@ -51,10 +51,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.config.ConfigActionCoordinator
-import com.stormpanda.megingiard.config.ConfigExporter
-import com.stormpanda.megingiard.config.ConfigImportCoordinator
-import com.stormpanda.megingiard.config.ConfigImporter
+import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.ui.AppColors
@@ -90,8 +87,8 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val effectiveAccent = colors.accent
 
     var showColorPicker by remember { mutableStateOf(false) }
-    // Export-result feedback (set by ConfigActionCoordinator after MainActivity writes the file)
-    val exportResult by ConfigActionCoordinator.exportResult.collectAsState()
+    // Export-result feedback (set by ConfigManager after MainActivity writes the file)
+    val exportResult by ConfigManager.exportResult.collectAsState()
     // All dialog states are hoisted here so they can be rendered at the top-level Box
     // (in-tree, covering the Scaffold). AlertDialog creates a new Android sub-window
     // whose token is null inside MirrorPresentation → BadTokenException crash.
@@ -265,12 +262,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
         }
         if (showExportMetadataDialog) {
             ExportMetadataDialog(
-                defaultMetadata = ConfigExporter.defaultMetadata(context),
+                defaultMetadata = ConfigManager.defaultMetadata(context),
                 colors = colors,
                 accentColor = effectiveAccent,
                 onConfirm = { metadata ->
                     showExportMetadataDialog = false
-                    ConfigActionCoordinator.requestExport(
+                    ConfigManager.requestExport(
                         metadata = metadata,
                         filename = buildExportFilename(metadata),
                     )
@@ -285,14 +282,14 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 accentColor = effectiveAccent,
                 onConfirm = {
                     showImportPreviewDialog = null
-                    runCatching { ConfigImporter.applyImport(export) }
+                    runCatching { ConfigManager.applyImport(export) }
                         .onSuccess { importSuccess = true }
                         .onFailure { e -> importError = e.message }
-                    ConfigImportCoordinator.clear()
+                    ConfigManager.clearPendingImport()
                 },
                 onDismiss = {
                     showImportPreviewDialog = null
-                    ConfigImportCoordinator.clear()
+                    ConfigManager.clearPendingImport()
                 },
             )
         }
@@ -317,24 +314,24 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
             )
         }
         when (val result = exportResult) {
-            is ConfigActionCoordinator.ExportResult.Success -> {
+            is ConfigManager.ExportResult.Success -> {
                 InTreeMessageDialog(
                     title = stringResource(R.string.config_success_title),
                     text = stringResource(R.string.config_export_success),
                     buttonText = stringResource(R.string.config_ok),
                     colors = colors,
                     accentColor = effectiveAccent,
-                    onDismiss = { ConfigActionCoordinator.clearExportResult() },
+                    onDismiss = { ConfigManager.clearExportResult() },
                 )
             }
-            is ConfigActionCoordinator.ExportResult.Failure -> {
+            is ConfigManager.ExportResult.Failure -> {
                 InTreeMessageDialog(
                     title = stringResource(R.string.config_error_title),
                     text = result.message ?: "",
                     buttonText = stringResource(R.string.config_ok),
                     colors = colors,
                     accentColor = effectiveAccent,
-                    onDismiss = { ConfigActionCoordinator.clearExportResult() },
+                    onDismiss = { ConfigManager.clearExportResult() },
                 )
             }
             null -> {}
@@ -345,7 +342,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
 /**
  * Configuration export / import section.
  *
- * Posts export/import requests to [ConfigActionCoordinator] — MainActivity holds
+ * Posts export/import requests to [ConfigManager] — MainActivity holds
  * the actual [ActivityResultLauncher]s and opens the system file picker on behalf
  * of this composable. This means the section works correctly regardless of whether
  * GlobalSettingsScreen is rendered inside MainActivity or inside MirrorPresentation.
@@ -360,9 +357,9 @@ private fun ConfigSection(
     onShowExportDialog: () -> Unit,
     onImportPreviewReady: (MegingiardExport) -> Unit,
 ) {
-    // Import preview: ConfigImportCoordinator carries the parsed file once MainActivity
+    // Import preview: ConfigManager carries the parsed file once MainActivity
     // reads it. Notify parent to show the in-tree import preview overlay.
-    val pendingImport by ConfigImportCoordinator.pendingParsedImport.collectAsState()
+    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
     LaunchedEffect(pendingImport) {
         if (pendingImport != null) onImportPreviewReady(pendingImport!!)
     }
@@ -385,7 +382,7 @@ private fun ConfigSection(
         description = stringResource(R.string.settings_config_import_desc),
         accentColor = accentColor,
         colors = colors,
-        onClick = { ConfigActionCoordinator.requestImport() },
+        onClick = { ConfigManager.requestImport() },
     )
 }
 
@@ -502,7 +499,6 @@ private fun ImportPreviewDialog(
     onDismiss: () -> Unit,
 ) {
     val metadata = export.metadata
-    val sections = export.sections
     BackHandler(onBack = onDismiss)
     Box(
         modifier = Modifier
@@ -553,21 +549,21 @@ private fun ImportPreviewDialog(
                 color = colors.onSurface,
                 fontSize = 13.sp,
             )
-            if (sections.global != null) {
+            if ("global" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
             }
-            if (sections.mirror != null) {
+            if ("mirror" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
             }
-            if (sections.touchpad != null) {
+            if ("touchpad" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
             }
-            if (sections.keyboard != null) {
+            if ("keyboard" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
             }
-            sections.macropad?.let { mp ->
+            if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
                 Text(
-                    text = "\u2022 ${stringResource(R.string.config_import_section_macropad, mp.profiles.size, mp.macros.size)}",
+                    text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.macros.size)}",
                     color = colors.onSurfaceSecondary,
                     fontSize = 12.sp,
                 )

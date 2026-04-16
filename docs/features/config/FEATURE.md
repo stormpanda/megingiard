@@ -50,7 +50,9 @@ the same device or share it with other Megingiard users ("community configs").
 
 ### FR-CF4: Schema Versioning
 
-- Every `.mgrd` file MUST carry a `schemaVersion` field (SemVer, currently `"1.0.0"`).
+- Every `.mgrd` file MUST carry a `schemaVersion` field (integer, currently `2`).
+- The app MUST detect v1 files (string `schemaVersion`, `"sections"` key present) and
+  auto-convert them to v2 format on import. No user action required.
 - Future versions of the app MUST be able to detect and reject or migrate files produced by
   older or newer schema versions.
 
@@ -65,29 +67,29 @@ GlobalSettingsScreen (Compose UI, in-tree overlay dialogs)
         │
         │  user taps Export / Import
         ▼
-ConfigActionCoordinator  ← StateFlow bridge (GlobalSettingsScreen has no ActivityResultRegistryOwner
-        │                    when rendered inside MirrorPresentation)
+ConfigManager  ← StateFlow bridge (GlobalSettingsScreen has no ActivityResultRegistryOwner
+        │         when rendered inside MirrorPresentation)
         │
         ▼
 MainActivity  ← holds ActivityResultLaunchers
         │  createDocumentLauncher (export) / openDocumentLauncher (*/* — all files, import)
         │
         ├── Export path:
-        │       ConfigExporter.buildFullExport() → ConfigFileWriter.writeToUri()
-        │       → ConfigActionCoordinator.setExportResult()
+        │       ConfigManager.buildExport() → ConfigManager.writeToUri()
+        │       → ConfigManager.setExportResult()
         │
         └── Import path:
-                ConfigImportCoordinator.setPendingUri()
+                ConfigManager.setPendingUri()
                         │
                         ▼
                 MainAppScreen.LaunchedEffect(pendingImportUri)
                         │  suspend – Dispatchers.IO
                         ▼
-                ConfigFileReader.readAndParse()  →  ConfigImportCoordinator.setParsedImport()
+                ConfigManager.readFromUri()  →  ConfigManager.setParsedImport()
                         │
                         ▼
                 GlobalSettingsScreen ImportPreviewDialog (in-tree)
-                        → ConfigImporter.applyImport()
+                        → ConfigManager.applyImport()
 ```
 
 For external file intents (`ACTION_VIEW`):
@@ -99,26 +101,27 @@ File manager / share sheet
 MainActivity.onNewIntent() / onCreate()
         │
         ▼
-ConfigImportCoordinator.setPendingUri(uri)   ← StateFlow bridge
+ConfigManager.setPendingUri(uri)   ← StateFlow bridge
         │
         ▼
 MainAppScreen.LaunchedEffect(pendingImportUri)
         │  suspend – Dispatchers.IO
         ▼
-ConfigFileReader.readAndParse()  →  ConfigImportCoordinator.setParsedImport(export)
+ConfigManager.readFromUri()  →  ConfigManager.setParsedImport(export)
         │
         ▼
-IncomingImportDialog  ─── user confirms → ConfigImporter.applyImport()
+IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
 ```
 
 ### File Format — `.mgrd`
 
 `.mgrd` files are UTF-8 JSON with the schema defined in `ConfigSchema.kt`:
 
+**Schema v2 (current):**
+
 ```json
 {
-  "schemaVersion": "1.0.0",
-  "type": "FULL",
+  "schemaVersion": 2,
   "metadata": {
     "appVersionCode": 12,
     "appVersionName": "1.2.0",
@@ -129,43 +132,49 @@ IncomingImportDialog  ─── user confirms → ConfigImporter.applyImport()
     "tags": ["thor", "gaming"]
   },
   "checksum": "sha256:<hex>",
-  "sections": {
-    "global": { … },
-    "mirror": { … },
+  "settings": {
+    "global": { "enabled_tools": "MIRROR,KEYBOARD", "overlay_timeout_ms": 3000, … },
+    "mirror": { "auto_start_capture": true, … },
     "touchpad": { … },
     "keyboard": { … },
-    "macropad": { … }
-  }
+    "macropad_settings": { … }
+  },
+  "profiles": [ … ],
+  "macros": [ … ],
+  "macroFolders": [ … ]
 }
 ```
 
+Settings are stored as grouped DataStore key/value maps — no intermediate typed data classes.
+Adding a new setting only requires adding the key to the correct `*_KEYS` set in `SettingsManager`.
+
+**Schema v1 (legacy, import-only):**
+
+V1 files are auto-detected (string `schemaVersion` + `"sections"` key) and converted to v2 format
+on import via `ConfigManager.convertV1()` and a frozen `V1_FIELD_MAP` lookup table.
+
 - **MIME type:** `application/vnd.megingiard.config+json`
 - **Extension:** `.mgrd`
-- **Checksum scope:** SHA-256 of the canonical JSON of the `sections` field only
-  (pretty-printed with `encodeDefaults=true`). Metadata changes do not invalidate the checksum.
+- **Checksum scope:** SHA-256 of the canonical JSON of the data fields (settings, profiles,
+  macros, macroFolders). Metadata changes do not invalidate the checksum.
 
 ### Source Files
 
-| File                                   | Role                                                                                                                                          |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config/ConfigSchema.kt`               | All `@Serializable` data classes (`MegingiardExport`, `ExportSections`, per-tool section classes, `ExportMetadata`, `ExportType` enum)        |
-| `config/ChecksumUtil.kt`               | `computeChecksum()` and `verifyChecksum()` using SHA-256                                                                                      |
-| `config/ConfigExporter.kt`             | `buildFullExport()` — reads current `StateFlow.value` from all singletons                                                                     |
-| `config/ConfigFileWriter.kt`           | `writeToUri()` — serialises to pretty JSON, writes via SAF `OutputStream`                                                                     |
-| `config/ConfigImporter.kt`             | `parseExport()` + `applyImport()` — deserialise, checksum verify, UUID remap, apply                                                           |
-| `config/ConfigFileReader.kt`           | `readAndParse()` — reads from SAF URI (≤ 10 MB), delegates to `ConfigImporter.parseExport()`                                                  |
-| `config/ConfigImportCoordinator.kt`    | Singleton `StateFlow` bridge: `MainActivity` intent → `MainAppScreen` UI                                                                      |
-| `config/ConfigActionCoordinator.kt`    | Singleton `StateFlow` bridge: `GlobalSettingsScreen` export/import requests → `MainActivity` `ActivityResultLauncher`s                        |
-| `settings/GlobalSettingsScreen.kt`     | Export/import entry rows; all dialogs (`ExportMetadataDialog`, `ImportPreviewDialog`, result messages) rendered as **in-tree overlays**       |
-| `settings/GlobalSettingsComponents.kt` | `ConfigActionRow` reusable composable                                                                                                         |
-| `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                         |
-| `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to coordinator; holds `createDocumentLauncher` / `openDocumentLauncher` |
-| `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                      |
-| `res/values/strings.xml`               | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                               |
+| File                                   | Role                                                                                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config/ConfigSchema.kt`               | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                         |
+| `config/ConfigManager.kt`              | Unified export/import manager: coordinator StateFlows, export, import, v1 compat, UUID remap, checksum                                            |
+| `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettings()` — bulk DataStore I/O; section key groups (`GLOBAL_KEYS`, etc.)                              |
+| `settings/GlobalSettingsScreen.kt`     | Export/import entry rows; all dialogs (`ExportMetadataDialog`, `ImportPreviewDialog`, result messages) rendered as **in-tree overlays**           |
+| `settings/GlobalSettingsComponents.kt` | `ConfigActionRow` reusable composable                                                                                                             |
+| `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                             |
+| `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher` |
+| `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                          |
+| `res/values/strings.xml`               | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                                   |
 
 ### UUID Remapping on Import
 
-When MacroPad data is imported, `ConfigImporter.applyMacroPad()`:
+When MacroPad data is imported, `ConfigManager.importMacroPadData()`:
 
 1. Iterates imported `MacroFolder` items, assigns each a new UUID, builds `folderIdMap` (old → new).
 2. Iterates imported `Macro` items, assigns each a new UUID, builds `macroIdMap` (old → new).
@@ -178,9 +187,14 @@ file multiple times.
 
 ### Settings Application
 
-Non-MacroPad sections call individual `SettingsManager` setters matching each field in the
-schema. Because every setter calls the corresponding DataStore write, settings are persisted
-immediately and the relevant `StateFlow`s emit the new values, updating Compose UI automatically.
+Settings are exported/imported directly as DataStore key/value maps grouped by section.
+On import, `SettingsManager.importGroupedSettings()` writes all values to DataStore in a
+single `edit {}` call. The existing reactive pipeline (the `dataStore.data.collect {}` block
+in `SettingsManager.init()`) automatically re-hydrates all `StateFlow`s, updating Compose UI
+immediately.
+
+Adding a new setting to export/import requires only one change: adding the key to the
+corresponding `*_KEYS` set in `SettingsManager` (e.g. `GLOBAL_KEYS`, `MIRROR_KEYS`).
 
 ### Error Handling
 
@@ -188,7 +202,7 @@ immediately and the relevant `StateFlow`s emit the new values, updating Compose 
   displayed as **in-tree overlay** dialogs (not `AlertDialog`) to avoid `BadTokenException`
   inside `MirrorPresentation`.
 - Checksum mismatch rejects the import with a localized error message.
-- The 10 MB file size cap in `ConfigFileReader` prevents OOM when opening arbitrary files.
+- The 10 MB file size cap in `ConfigManager.readFromUri()` prevents OOM when opening arbitrary files.
 
 ### Dialog Rendering
 
