@@ -51,10 +51,7 @@ the same device or share it with other Megingiard users ("community configs").
 ### FR-CF4: Schema Versioning
 
 - Every `.mgrd` file MUST carry a `schemaVersion` field (integer, currently `2`).
-- The app MUST detect v1 files (string `schemaVersion`, `"sections"` key present) and
-  auto-convert them to v2 format on import. No user action required.
-- Future versions of the app MUST be able to detect and reject or migrate files produced by
-  older or newer schema versions.
+- Files with an unsupported `schemaVersion` MUST be rejected with an error.
 
 ---
 
@@ -148,11 +145,6 @@ IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
 Settings are stored as grouped DataStore key/value maps — no intermediate typed data classes.
 Adding a new setting only requires adding the key to the correct `*_KEYS` set in `SettingsManager`.
 
-**Schema v1 (legacy, import-only):**
-
-V1 files are auto-detected (string `schemaVersion` + `"sections"` key) and converted to v2 format
-on import via `ConfigManager.convertV1()` and a frozen `V1_FIELD_MAP` lookup table.
-
 - **MIME type:** `application/vnd.megingiard.config+json`
 - **Extension:** `.mgrd`
 - **Checksum scope:** SHA-256 of the canonical JSON of the data fields (settings, profiles,
@@ -163,7 +155,7 @@ on import via `ConfigManager.convertV1()` and a frozen `V1_FIELD_MAP` lookup tab
 | File                                   | Role                                                                                                                                              |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `config/ConfigSchema.kt`               | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                         |
-| `config/ConfigManager.kt`              | Unified export/import manager: coordinator StateFlows, export, import, v1 compat, UUID remap, checksum                                            |
+| `config/ConfigManager.kt`              | Unified export/import manager: coordinator StateFlows, export, import, UUID remap, checksum                                                       |
 | `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettings()` — bulk DataStore I/O; section key groups (`GLOBAL_KEYS`, etc.)                              |
 | `settings/GlobalSettingsScreen.kt`     | Export/import entry rows; all dialogs (`ExportMetadataDialog`, `ImportPreviewDialog`, result messages) rendered as **in-tree overlays**           |
 | `settings/GlobalSettingsComponents.kt` | `ConfigActionRow` reusable composable                                                                                                             |

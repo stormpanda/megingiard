@@ -20,20 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.float
-import kotlinx.serialization.json.floatOrNull
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
-import kotlinx.serialization.json.longOrNull
 
 private const val TAG = "ConfigManager"
 
@@ -219,22 +205,10 @@ object ConfigManager {
     }
 
     /**
-     * Parses a JSON string, auto-detects v1/v2, verifies checksum.
-     * Exposed for direct use by MainAppScreen when the raw JSON is already available.
+     * Parses a JSON string, verifies checksum, and returns the decoded [MegingiardExport].
      */
     internal fun parseAndVerify(json: String): MegingiardExport {
-        val root = importJson.parseToJsonElement(json).jsonObject
-        val schemaRaw = root["schemaVersion"]?.jsonPrimitive
-
-        // Detect v1: schemaVersion is a string (e.g. "1.0.0") and has "sections" key
-        val isV1 = schemaRaw?.isString == true && "sections" in root
-        val export = if (isV1) {
-            AppLog.i(TAG, "parseAndVerify: detected v1 schema, converting")
-            convertV1(root)
-        } else {
-            importJson.decodeFromString<MegingiardExport>(json)
-        }
-
+        val export = importJson.decodeFromString<MegingiardExport>(json)
         if (!verifyChecksum(export)) {
             error("Checksum mismatch — the file may be corrupted or tampered")
         }
@@ -255,132 +229,6 @@ object ConfigManager {
         if (export.profiles.isNotEmpty() || export.macros.isNotEmpty() || export.macroFolders.isNotEmpty()) {
             importMacroPadData(export.profiles, export.macros, export.macroFolders)
         }
-    }
-
-    // ── V1 compatibility ─────────────────────────────────────────────────────
-
-    /**
-     * Static mapping from (v1 section, v1 field name) → DataStore key name.
-     * Frozen legacy code — only used for importing old v1 `.mgrd` files.
-     */
-    private val V1_FIELD_MAP: Map<Pair<String, String>, Pair<String, String>> = mapOf(
-        // global section → DataStore key
-        ("global" to "enabledTools") to ("global" to "enabled_tools"),
-        ("global" to "toolOrder") to ("global" to "tool_order"),
-        ("global" to "overlayTimeoutMs") to ("global" to "overlay_timeout_ms"),
-        ("global" to "overlayAtBottom") to ("global" to "overlay_at_bottom"),
-        ("global" to "accentColor") to ("global" to "accent_color"),
-        ("global" to "themeMode") to ("global" to "theme_mode"),
-        ("global" to "appLanguage") to ("global" to "app_language"),
-        ("global" to "logLevel") to ("global" to "log_level"),
-        ("global" to "rememberLastTool") to ("global" to "remember_last_tool"),
-        // mirror section
-        ("mirror" to "autoStartCapture") to ("mirror" to "auto_start_capture"),
-        ("mirror" to "pinchWhileProjecting") to ("mirror" to "mirror_pinch_while_projecting"),
-        ("mirror" to "rememberViewport") to ("mirror" to "mirror_remember_viewport"),
-        ("mirror" to "rememberLock") to ("mirror" to "mirror_remember_lock"),
-        ("mirror" to "rememberProjection") to ("mirror" to "mirror_remember_projection"),
-        // touchpad section
-        ("touchpad" to "useMouse") to ("touchpad" to "touchpad_use_mouse"),
-        ("touchpad" to "tapToClick") to ("touchpad" to "touchpad_tap_to_click"),
-        ("touchpad" to "twoFingerTap") to ("touchpad" to "touchpad_two_finger_tap"),
-        // keyboard section
-        ("keyboard" to "layout") to ("keyboard" to "kb_layout"),
-        ("keyboard" to "trackpointEnabled") to ("keyboard" to "kb_trackpoint_enabled"),
-        ("keyboard" to "mouseBtnPos") to ("keyboard" to "kb_mouse_btn_pos"),
-        ("keyboard" to "repeatEnabled") to ("keyboard" to "kb_repeat_enabled"),
-        ("keyboard" to "fullscreen") to ("keyboard" to "kb_fullscreen"),
-        // macropad settings (nested under macropad.settings in v1)
-        ("macropad_settings" to "ambientEnabled") to ("macropad_settings" to "macropad_ambient_enabled"),
-        ("macropad_settings" to "ambientDim") to ("macropad_settings" to "macropad_ambient_dim"),
-        ("macropad_settings" to "ambientPreview") to ("macropad_settings" to "macropad_ambient_preview"),
-        ("macropad_settings" to "ambientApplyTheme") to ("macropad_settings" to "macropad_ambient_apply_theme"),
-        ("macropad_settings" to "vignetteEnabled") to ("macropad_settings" to "macropad_ambient_vignette_enabled"),
-        ("macropad_settings" to "vignetteShape") to ("macropad_settings" to "macropad_ambient_vignette_shape"),
-        ("macropad_settings" to "vignetteVisibleArea") to ("macropad_settings" to "macropad_ambient_vignette_visible_area"),
-        ("macropad_settings" to "vignetteTransition") to ("macropad_settings" to "macropad_ambient_vignette_transition"),
-        ("macropad_settings" to "vignetteOpacity") to ("macropad_settings" to "macropad_ambient_vignette_opacity"),
-        ("macropad_settings" to "vignetteColor") to ("macropad_settings" to "macropad_ambient_vignette_color"),
-    )
-
-    /**
-     * Converts a v1 JSON structure to v2 [MegingiardExport].
-     *
-     * V1 had typed per-section data classes under a "sections" key:
-     * `{ "sections": { "global": { "enabledTools": [...], ... }, "macropad": { "settings": {...}, "profiles": [...] } } }`
-     *
-     * V2 uses DataStore key names directly:
-     * `{ "settings": { "global": { "enabled_tools": "MIRROR,KEYBOARD", ... } }, "profiles": [...] }`
-     */
-    private fun convertV1(root: JsonObject): MegingiardExport {
-        val metadata = importJson.decodeFromString<ExportMetadata>(root["metadata"].toString())
-        val checksum = root["checksum"]?.jsonPrimitive?.contentOrNull ?: ""
-        val sections = root["sections"]?.jsonObject ?: JsonObject(emptyMap())
-
-        val v2Settings = mutableMapOf<String, MutableMap<String, JsonElement>>()
-
-        // Convert simple sections (global, mirror, touchpad, keyboard)
-        for (v1Section in listOf("global", "mirror", "touchpad", "keyboard")) {
-            val obj = sections[v1Section]?.jsonObject ?: continue
-            for ((fieldName, value) in obj) {
-                val mapping = V1_FIELD_MAP[v1Section to fieldName] ?: continue
-                val (v2Section, v2Key) = mapping
-                v2Settings.getOrPut(v2Section) { mutableMapOf() }[v2Key] = convertV1Value(v1Section, fieldName, value)
-            }
-        }
-
-        // Convert macropad settings (nested: sections.macropad.settings)
-        val macropadObj = sections["macropad"]?.jsonObject
-        val settingsObj = macropadObj?.get("settings")?.jsonObject
-        if (settingsObj != null) {
-            for ((fieldName, value) in settingsObj) {
-                val mapping = V1_FIELD_MAP["macropad_settings" to fieldName] ?: continue
-                val (v2Section, v2Key) = mapping
-                v2Settings.getOrPut(v2Section) { mutableMapOf() }[v2Key] = convertV1Value("macropad_settings", fieldName, value)
-            }
-        }
-
-        // Extract typed macropad data
-        val profiles: List<PadProfile> = macropadObj?.get("profiles")?.let {
-            importJson.decodeFromString(it.toString())
-        } ?: emptyList()
-        val macros: List<Macro> = macropadObj?.get("macros")?.let {
-            importJson.decodeFromString(it.toString())
-        } ?: emptyList()
-        val macroFolders: List<MacroFolder> = macropadObj?.get("macroFolders")?.let {
-            importJson.decodeFromString(it.toString())
-        } ?: emptyList()
-
-        return MegingiardExport(
-            schemaVersion = SCHEMA_VERSION,
-            metadata = metadata,
-            checksum = checksum,
-            settings = v2Settings,
-            profiles = profiles,
-            macros = macros,
-            macroFolders = macroFolders,
-        )
-    }
-
-    /**
-     * Converts v1 field values to v2 format.
-     * V1 stored lists as JSON arrays (e.g. enabledTools: ["MIRROR","KEYBOARD"]) and
-     * colors as hex strings ("#FFCC0000"). V2 uses DataStore format: comma-separated
-     * strings and raw ARGB ints.
-     */
-    private fun convertV1Value(section: String, field: String, value: JsonElement): JsonElement {
-        // List fields in v1 → comma-separated string in v2
-        if (section == "global" && (field == "enabledTools" || field == "toolOrder")) {
-            val items = value.jsonArray.map { it.jsonPrimitive.contentOrNull ?: "" }
-            return JsonPrimitive(items.joinToString(","))
-        }
-        // Hex color strings → ARGB int
-        if (field == "accentColor" || field == "vignetteColor") {
-            val hex = value.jsonPrimitive.contentOrNull ?: return value
-            val argb = hex.removePrefix("#").toLong(16).toInt()
-            return JsonPrimitive(argb)
-        }
-        return value
     }
 
     // ── MacroPad import with UUID remapping ─────────────────────────────────
