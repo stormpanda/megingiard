@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.TripOrigin
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
@@ -129,21 +128,31 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
     val macros by MacroState.macros.collectAsState()
-    var showMacroListEditor by remember { mutableStateOf(false) }
-    var showAddButton       by remember { mutableStateOf(false) }
-    var showAddMacroButton  by remember { mutableStateOf(false) }
-    var editingButton       by remember { mutableStateOf<PadButton?>(null) }
-    var editingButtonActive by remember { mutableStateOf(false) }
+    var showMacroListEditor      by remember { mutableStateOf(false) }
+    var showAddButton            by remember { mutableStateOf(false) }
+    var showAddMacroButton       by remember { mutableStateOf(false) }
+    var editingButton            by remember { mutableStateOf<PadButton?>(null) }
+    var editingButtonActive      by remember { mutableStateOf(false) }
+    var buttonPendingDelete      by remember { mutableStateOf<PadButton?>(null) }
+    var showNewProfileDialog     by remember { mutableStateOf(false) }
+    var showRenameProfileDialog  by remember { mutableStateOf(false) }
+    var showDeleteProfileConfirm by remember { mutableStateOf(false) }
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
-    val anyOverlayVisible = showMacroListEditor || showAddButton || showAddMacroButton || editingButtonActive
+    val anyOverlayVisible = showMacroListEditor || showAddButton || showAddMacroButton ||
+        editingButtonActive || buttonPendingDelete != null ||
+        showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm
     BackHandler(enabled = anyOverlayVisible) {
         when {
-            showMacroListEditor -> showMacroListEditor = false
-            showAddButton       -> showAddButton = false
-            showAddMacroButton  -> showAddMacroButton = false
-            editingButtonActive -> { editingButtonActive = false; editingButton = null }
+            showMacroListEditor      -> showMacroListEditor = false
+            showAddButton            -> showAddButton = false
+            showAddMacroButton       -> showAddMacroButton = false
+            editingButtonActive      -> { editingButtonActive = false; editingButton = null }
+            buttonPendingDelete != null -> buttonPendingDelete = null
+            showNewProfileDialog     -> showNewProfileDialog = false
+            showRenameProfileDialog  -> showRenameProfileDialog = false
+            showDeleteProfileConfirm -> showDeleteProfileConfirm = false
         }
     }
 
@@ -152,20 +161,14 @@ fun MacroPadEditor(onDone: () -> Unit) {
         containerColor = colors.appBackground,
         topBar = {
             EditorTopBar(
-                profiles    = profiles,
-                activeId    = activeId,
-                accentColor = colors.accent,
-                onSelectProfile  = { MacroPadState.setActiveProfileId(it) },
-                onNewProfile     = {
-                    val newProfile = PadProfile(
-                        id   = UUID.randomUUID().toString(),
-                        name = it,
-                    )
-                    MacroPadState.addProfile(newProfile)
-                },
-                onRenameProfile  = { id, name -> MacroPadState.renameProfile(id, name) },
-                onDeleteProfile  = { MacroPadState.deleteProfile(it) },
-                onDone           = onDone,
+                profiles                 = profiles,
+                activeId                 = activeId,
+                accentColor              = colors.accent,
+                onSelectProfile          = { MacroPadState.setActiveProfileId(it) },
+                onNewProfileRequested    = { showNewProfileDialog = true },
+                onRenameProfileRequested = { showRenameProfileDialog = true },
+                onDeleteProfileRequested = { showDeleteProfileConfirm = true },
+                onDone                   = onDone,
             )
         }
     ) { innerPadding ->
@@ -186,14 +189,15 @@ fun MacroPadEditor(onDone: () -> Unit) {
             }
         } else {
             EditorBody(
-                profile            = profile,
-                accentColor        = colors.accent,
-                hasMacros          = macros.isNotEmpty(),
-                onManageMacros     = { showMacroListEditor = true },
-                onAddButton        = { showAddButton = true },
-                onAddMacroButton   = { showAddMacroButton = true },
-                onEditButton       = { btn -> editingButton = btn; editingButtonActive = true },
-                modifier           = Modifier.padding(innerPadding),
+                profile           = profile,
+                accentColor       = colors.accent,
+                hasMacros         = macros.isNotEmpty(),
+                onManageMacros    = { showMacroListEditor = true },
+                onAddButton       = { showAddButton = true },
+                onAddMacroButton  = { showAddMacroButton = true },
+                onEditButton      = { btn -> editingButton = btn; editingButtonActive = true },
+                onDeleteRequested = { btn -> buttonPendingDelete = btn },
+                modifier          = Modifier.padding(innerPadding),
             )
         }
     }
@@ -257,6 +261,68 @@ fun MacroPadEditor(onDone: () -> Unit) {
             onDismiss      = { editingButtonActive = false; editingButton = null },
         )
     }
+
+    // Delete button confirmation (in-tree — no Dialog window, works in Presentation)
+    if (buttonPendingDelete != null && profile != null) {
+        val pendingBtn = buttonPendingDelete!!
+        InlineConfirmDeleteOverlay(
+            title     = stringResource(R.string.macropad_editor_delete_button),
+            body      = if (pendingBtn.action is PadAction.TrackpointMove)
+                            stringResource(R.string.macropad_action_trackpoint)
+                        else
+                            pendingBtn.label,
+            onConfirm = {
+                MacroPadState.updateProfile(
+                    profile.copy(buttons = profile.buttons.filter { it.id != pendingBtn.id })
+                )
+                buttonPendingDelete = null
+            },
+            onDismiss = { buttonPendingDelete = null },
+        )
+    }
+
+    // New profile (in-tree input overlay — no Dialog window)
+    if (showNewProfileDialog) {
+        InlineNameInputOverlay(
+            title        = stringResource(R.string.settings_macropad_new_profile),
+            initialValue = "",
+            accentColor  = colors.accent,
+            onConfirm    = { name ->
+                val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name)
+                MacroPadState.addProfile(newProfile)
+                showNewProfileDialog = false
+            },
+            onDismiss = { showNewProfileDialog = false },
+        )
+    }
+
+    // Rename profile (in-tree input overlay — no Dialog window)
+    if (showRenameProfileDialog && profile != null) {
+        InlineNameInputOverlay(
+            title        = stringResource(R.string.macropad_editor_rename),
+            initialValue = profile.name,
+            accentColor  = colors.accent,
+            onConfirm    = { name ->
+                MacroPadState.renameProfile(profile.id, name)
+                showRenameProfileDialog = false
+            },
+            onDismiss = { showRenameProfileDialog = false },
+        )
+    }
+
+    // Delete profile confirmation (in-tree — no Dialog window)
+    if (showDeleteProfileConfirm && profile != null) {
+        val activeProfile = profile
+        InlineConfirmDeleteOverlay(
+            title     = stringResource(R.string.macropad_editor_delete_profile),
+            body      = stringResource(R.string.macropad_editor_confirm_delete),
+            onConfirm = {
+                MacroPadState.deleteProfile(activeProfile.id)
+                showDeleteProfileConfirm = false
+            },
+            onDismiss = { showDeleteProfileConfirm = false },
+        )
+    }
     } // end Box
 }
 
@@ -266,19 +332,16 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
 @Composable
 private fun EditorTopBar(
-    profiles:        List<PadProfile>,
-    activeId:        String?,
-    accentColor:     Color,
-    onSelectProfile: (String) -> Unit,
-    onNewProfile:    (String) -> Unit,
-    onRenameProfile: (String, String) -> Unit,
-    onDeleteProfile: (String) -> Unit,
-    onDone:          () -> Unit,
+    profiles:                 List<PadProfile>,
+    activeId:                 String?,
+    accentColor:              Color,
+    onSelectProfile:          (String) -> Unit,
+    onNewProfileRequested:    () -> Unit,
+    onRenameProfileRequested: () -> Unit,
+    onDeleteProfileRequested: () -> Unit,
+    onDone:                   () -> Unit,
 ) {
     var profileMenuExpanded by remember { mutableStateOf(false) }
-    var showNewDialog       by remember { mutableStateOf(false) }
-    var showRenameDialog    by remember { mutableStateOf(false) }
-    var showDeleteConfirm   by remember { mutableStateOf(false) }
 
     val activeProfile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
     val colors        = LocalAppColors.current
@@ -335,17 +398,17 @@ private fun EditorTopBar(
                 HorizontalDivider(color = colors.divider)
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, fontSize = 14.sp) },
-                    onClick = { profileMenuExpanded = false; showNewDialog = true },
+                    onClick = { profileMenuExpanded = false; onNewProfileRequested() },
                 )
             }
         }
 
         // Rename & delete buttons (only when a profile exists)
         if (activeProfile != null) {
-            IconButton(onClick = { showRenameDialog = true }) {
+            IconButton(onClick = { onRenameProfileRequested() }) {
                 Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.macropad_editor_rename), tint = colors.onSurfaceSecondary)
             }
-            IconButton(onClick = { showDeleteConfirm = true }) {
+            IconButton(onClick = { onDeleteProfileRequested() }) {
                 Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_profile), tint = colors.onSurfaceSecondary)
             }
         }
@@ -358,46 +421,6 @@ private fun EditorTopBar(
         }
     }
 
-    // ── Dialogs ──
-
-    if (showNewDialog) {
-        NameInputDialog(
-            title         = stringResource(R.string.settings_macropad_new_profile),
-            initialValue  = "",
-            accentColor   = accentColor,
-            onConfirm     = { onNewProfile(it); showNewDialog = false },
-            onDismiss     = { showNewDialog = false },
-        )
-    }
-
-    if (showRenameDialog && activeProfile != null) {
-        NameInputDialog(
-            title        = stringResource(R.string.macropad_editor_rename),
-            initialValue = activeProfile.name,
-            accentColor  = accentColor,
-            onConfirm    = { onRenameProfile(activeProfile.id, it); showRenameDialog = false },
-            onDismiss    = { showRenameDialog = false },
-        )
-    }
-
-    if (showDeleteConfirm && activeProfile != null) {
-        AlertDialog(
-            containerColor = colors.surface,
-            onDismissRequest = { showDeleteConfirm = false },
-            title   = { Text(stringResource(R.string.macropad_editor_delete_profile), color = colors.onSurface) },
-            text    = { Text(stringResource(R.string.macropad_editor_confirm_delete), color = colors.onSurfaceSecondary) },
-            confirmButton = {
-                TextButton(onClick = { onDeleteProfile(activeProfile.id); showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-            },
-        )
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -406,14 +429,15 @@ private fun EditorTopBar(
 
 @Composable
 private fun EditorBody(
-    profile:          PadProfile,
-    accentColor:      Color,
-    hasMacros:        Boolean,
-    onManageMacros:   () -> Unit,
-    onAddButton:      () -> Unit,
-    onAddMacroButton: () -> Unit,
-    onEditButton:     (PadButton) -> Unit,
-    modifier:         Modifier = Modifier,
+    profile:           PadProfile,
+    accentColor:       Color,
+    hasMacros:         Boolean,
+    onManageMacros:    () -> Unit,
+    onAddButton:       () -> Unit,
+    onAddMacroButton:  () -> Unit,
+    onEditButton:      (PadButton) -> Unit,
+    onDeleteRequested: (PadButton) -> Unit,
+    modifier:          Modifier = Modifier,
 ) {
     val colors     = LocalAppColors.current
     var gridMode   by remember { mutableStateOf(GridMode.OFF) }
@@ -539,11 +563,7 @@ private fun EditorBody(
                                 profile.copy(buttons = profile.buttons.map { if (it.id == btn.id) updated else it })
                             )
                         },
-                        onDelete           = {
-                            MacroPadState.updateProfile(
-                                profile.copy(buttons = profile.buttons.filter { it.id != btn.id })
-                            )
-                        },
+                        onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
                         modifier           = Modifier.padding(horizontal = ED_PADDING),
                     )
@@ -715,7 +735,6 @@ private fun ButtonListItem(
     dragHandleModifier: Modifier,
     modifier:           Modifier = Modifier,
 ) {
-    var showDelete  by remember { mutableStateOf(false) }
     val colors      = LocalAppColors.current
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
@@ -792,7 +811,7 @@ private fun ButtonListItem(
             )
         }
 
-        IconButton(onClick = { showDelete = true }) {
+        IconButton(onClick = { onDelete() }) {
             Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = colors.onSurfaceSecondary)
         }
         Icon(
@@ -805,36 +824,52 @@ private fun ButtonListItem(
         )
     }
 
-    if (showDelete) {
-        AlertDialog(
-            containerColor   = colors.surface,
-            onDismissRequest = { showDelete = false },
-            title   = { Text(stringResource(R.string.macropad_editor_delete_button), color = colors.onSurface) },
-            text    = {
-                Text(
-                    if (isTrackpoint) stringResource(R.string.macropad_action_trackpoint) else btn.label,
-                    color = colors.onSurfaceSecondary,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { onDelete(); showDelete = false }) {
-                    Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDelete = false }) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-            },
-        )
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers & small UI
 // ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun NameInputDialog(
+private fun InlineConfirmDeleteOverlay(
+    title:    String,
+    body:     String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .clickable(enabled = true, onClick = {})
+                .padding(ED_PADDING),
+        ) {
+            Text(title, color = colors.onSurface, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(8.dp))
+            Text(body, color = colors.onSurfaceSecondary)
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+                TextButton(onClick = onConfirm) {
+                    Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InlineNameInputOverlay(
     title:        String,
     initialValue: String,
     accentColor:  Color,
@@ -843,16 +878,27 @@ private fun NameInputDialog(
 ) {
     var text by remember { mutableStateOf(initialValue) }
     val colors = LocalAppColors.current
-
-    AlertDialog(
-        containerColor   = colors.surface,
-        onDismissRequest = onDismiss,
-        title   = { Text(title, color = colors.onSurface) },
-        text    = {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .clickable(enabled = true, onClick = {})
+                .padding(ED_PADDING),
+        ) {
+            Text(title, color = colors.onSurface, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value         = text,
                 onValueChange = { text = it },
                 singleLine    = true,
+                modifier      = Modifier.fillMaxWidth(),
                 colors        = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = accentColor,
                     unfocusedBorderColor = colors.accentBorder,
@@ -861,17 +907,22 @@ private fun NameInputDialog(
                     cursorColor          = accentColor,
                 ),
             )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }, enabled = text.isNotBlank()) {
-                Text(stringResource(R.string.macropad_editor_done), color = if (text.isNotBlank()) accentColor else colors.onSurfaceSecondary)
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+                TextButton(
+                    onClick = { if (text.isNotBlank()) onConfirm(text.trim()) },
+                    enabled = text.isNotBlank(),
+                ) {
+                    Text(
+                        stringResource(R.string.macropad_editor_done),
+                        color = if (text.isNotBlank()) accentColor else colors.onSurfaceSecondary,
+                    )
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-        },
-    )
+        }
+    }
 }
 
