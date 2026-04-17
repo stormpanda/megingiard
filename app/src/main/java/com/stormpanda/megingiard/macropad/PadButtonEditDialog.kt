@@ -42,7 +42,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 
@@ -64,7 +63,7 @@ internal fun ButtonEditDialog(
 ) {
     val initAction = button?.action
         ?: initialAction
-        ?: PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
+        ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
     val initLabel = button?.label ?: when (val ia = initialAction) {
         is PadAction.Macro -> MacroState.macros.value.firstOrNull { it.id == ia.macroId }?.name ?: ""
         else               -> ""

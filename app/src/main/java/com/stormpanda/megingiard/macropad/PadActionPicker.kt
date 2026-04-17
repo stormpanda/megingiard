@@ -77,6 +77,17 @@ internal fun PadAction.categoryResId(): Int = when (this) {
     is PadAction.MouseRightClick -> R.string.macropad_action_mouse_button
 }
 
+internal fun PadAction.toCategory(): ActionCategory = when (this) {
+    is PadAction.KeyboardKey                                                   -> ActionCategory.KEYBOARD_KEY
+    is PadAction.GamepadButton                                                 -> ActionCategory.GAMEPAD_BUTTON
+    is PadAction.MouseButton, is PadAction.MouseLeftClick,
+    is PadAction.MouseRightClick                                               -> ActionCategory.MOUSE_BUTTON
+    is PadAction.ScrollWheel                                                   -> ActionCategory.SCROLL_WHEEL
+    is PadAction.TrackpointMove                                                -> ActionCategory.TRACKPOINT
+    is PadAction.Macro                                                         -> ActionCategory.MACRO
+    is PadAction.AmbientPeek                                                   -> ActionCategory.AMBIENT_PEEK
+}
+
 @Composable
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
@@ -144,45 +155,48 @@ internal fun ActionPicker(
     var categoryExpanded by remember { mutableStateOf(false) }
     val colors           = LocalAppColors.current
 
-    val categoryLabel = stringResource(current.categoryResId())
+    val categoryLabel   = stringResource(current.categoryResId())
+    val currentCategory = current.toCategory()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
-                .clickable { categoryExpanded = true }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(categoryLabel, color = colors.onSurface, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
-        }
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
+                    .clickable { categoryExpanded = true }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(categoryLabel, color = colors.onSurface, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+            }
 
-        DropdownMenu(
-            expanded         = categoryExpanded,
-            onDismissRequest = { categoryExpanded = false },
-            modifier         = Modifier.background(colors.surface),
-        ) {
-            ActionCategory.entries.forEach { cat ->
-                val catEnabled = when (cat) {
-                    ActionCategory.KEYBOARD_KEY   -> enableKeyboard
-                    ActionCategory.GAMEPAD_BUTTON -> enableGamepad
-                    ActionCategory.MOUSE_BUTTON,
-                    ActionCategory.SCROLL_WHEEL,
-                    ActionCategory.TRACKPOINT     -> enableMouse
-                    ActionCategory.MACRO          -> MacroState.macros.value.isNotEmpty()
-                    ActionCategory.AMBIENT_PEEK   -> true
-                }
-                if (catEnabled) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(cat.labelResId()), color = colors.onSurface, fontSize = 14.sp) },
-                        onClick = {
-                            categoryExpanded = false
-                            onChange(cat.defaultAction())
-                        },
-                    )
+            DropdownMenu(
+                expanded         = categoryExpanded,
+                onDismissRequest = { categoryExpanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
+                ActionCategory.entries.forEach { cat ->
+                    val catEnabled = when (cat) {
+                        ActionCategory.KEYBOARD_KEY   -> enableKeyboard
+                        ActionCategory.GAMEPAD_BUTTON -> enableGamepad
+                        ActionCategory.MOUSE_BUTTON,
+                        ActionCategory.SCROLL_WHEEL,
+                        ActionCategory.TRACKPOINT     -> enableMouse
+                        ActionCategory.MACRO          -> MacroState.macros.value.isNotEmpty()
+                        ActionCategory.AMBIENT_PEEK   -> true
+                    }
+                    if (catEnabled) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(cat.labelResId()), color = if (cat == currentCategory) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = {
+                                categoryExpanded = false
+                                onChange(cat.defaultAction())
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -224,98 +238,107 @@ internal fun KeyboardKeyPicker(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         // ── Base key ──────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { baseExpanded = true }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(current.label, color = accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-            }
-            DropdownMenu(
-                expanded         = baseExpanded,
-                onDismissRequest = { baseExpanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                KEYBOARD_KEY_PRESETS.forEach { (code, label) ->
-                    DropdownMenuItem(
-                        text    = { Text(label, color = if (code == current.keycode) accentColor else colors.onSurface, fontSize = 14.sp) },
-                        onClick = { emitChange(code, label, mod1, mod2); baseExpanded = false },
-                    )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.macropad_picker_label_key), color = colors.onSurfaceSecondary, fontSize = 10.sp)
+            Box {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { baseExpanded = true }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(current.label, color = accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
                 }
-            }
-        }
-
-        // ── Modifier 1 ──────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            val mod1Label = mod1?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, if (mod1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { mod1Expanded = true }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(mod1Label, color = if (mod1 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod1 == null) colors.onSurfaceSecondary else accentColor)
-            }
-            DropdownMenu(
-                expanded         = mod1Expanded,
-                onDismissRequest = { mod1Expanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                DropdownMenuItem(
-                    text    = { Text(noneLabel, color = if (mod1 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
-                    onClick = { mod1 = null; emitChange(current.keycode, current.label, null, mod2); mod1Expanded = false },
-                )
-                MODIFIER_PRESETS.forEach { (code, label) ->
-                    if (code != mod2) {
+                DropdownMenu(
+                    expanded         = baseExpanded,
+                    onDismissRequest = { baseExpanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    KEYBOARD_KEY_PRESETS.forEach { (code, label) ->
                         DropdownMenuItem(
-                            text    = { Text(label, color = if (mod1 == code) accentColor else colors.onSurface, fontSize = 14.sp) },
-                            onClick = { mod1 = code; emitChange(current.keycode, current.label, code, mod2); mod1Expanded = false },
+                            text    = { Text(label, color = if (code == current.keycode) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = { emitChange(code, label, mod1, mod2); baseExpanded = false },
                         )
                     }
                 }
             }
         }
 
-        // ── Modifier 2 ──────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            val mod2Label = mod2?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, if (mod2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { mod2Expanded = true }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(mod2Label, color = if (mod2 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod2 == null) colors.onSurfaceSecondary else accentColor)
+        // ── Modifier 1 ──────────────────────────────────────────────
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.macropad_picker_label_mod_1), color = colors.onSurfaceSecondary, fontSize = 10.sp)
+            Box {
+                val mod1Label = mod1?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, if (mod1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { mod1Expanded = true }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(mod1Label, color = if (mod1 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod1 == null) colors.onSurfaceSecondary else accentColor)
+                }
+                DropdownMenu(
+                    expanded         = mod1Expanded,
+                    onDismissRequest = { mod1Expanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    DropdownMenuItem(
+                        text    = { Text(noneLabel, color = if (mod1 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                        onClick = { mod1 = null; emitChange(current.keycode, current.label, null, mod2); mod1Expanded = false },
+                    )
+                    MODIFIER_PRESETS.forEach { (code, label) ->
+                        if (code != mod2) {
+                            DropdownMenuItem(
+                                text    = { Text(label, color = if (mod1 == code) accentColor else colors.onSurface, fontSize = 14.sp) },
+                                onClick = { mod1 = code; emitChange(current.keycode, current.label, code, mod2); mod1Expanded = false },
+                            )
+                        }
+                    }
+                }
             }
-            DropdownMenu(
-                expanded         = mod2Expanded,
-                onDismissRequest = { mod2Expanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                DropdownMenuItem(
-                    text    = { Text(noneLabel, color = if (mod2 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
-                    onClick = { mod2 = null; emitChange(current.keycode, current.label, mod1, null); mod2Expanded = false },
-                )
-                MODIFIER_PRESETS.forEach { (code, label) ->
-                    if (code != mod1) {
-                        DropdownMenuItem(
-                            text    = { Text(label, color = if (mod2 == code) accentColor else colors.onSurface, fontSize = 14.sp) },
-                            onClick = { mod2 = code; emitChange(current.keycode, current.label, mod1, code); mod2Expanded = false },
-                        )
+        }
+
+        // ── Modifier 2 ──────────────────────────────────────────────
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.macropad_picker_label_mod_2), color = colors.onSurfaceSecondary, fontSize = 10.sp)
+            Box {
+                val mod2Label = mod2?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, if (mod2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { mod2Expanded = true }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(mod2Label, color = if (mod2 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod2 == null) colors.onSurfaceSecondary else accentColor)
+                }
+                DropdownMenu(
+                    expanded         = mod2Expanded,
+                    onDismissRequest = { mod2Expanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    DropdownMenuItem(
+                        text    = { Text(noneLabel, color = if (mod2 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                        onClick = { mod2 = null; emitChange(current.keycode, current.label, mod1, null); mod2Expanded = false },
+                    )
+                    MODIFIER_PRESETS.forEach { (code, label) ->
+                        if (code != mod1) {
+                            DropdownMenuItem(
+                                text    = { Text(label, color = if (mod2 == code) accentColor else colors.onSurface, fontSize = 14.sp) },
+                                onClick = { mod2 = code; emitChange(current.keycode, current.label, mod1, code); mod2Expanded = false },
+                            )
+                        }
                     }
                 }
             }
