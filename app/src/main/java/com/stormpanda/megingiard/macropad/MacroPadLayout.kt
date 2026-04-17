@@ -185,9 +185,9 @@ data class PadProfile(
     val id: String,
     val name: String,
     val buttons: List<PadButton> = emptyList(),
-    val enableKeyboard: Boolean = true,
-    val enableGamepad: Boolean = true,
-    val enableMouse: Boolean = true,
+    val enableKeyboard: Boolean = false,
+    val enableGamepad: Boolean = false,
+    val enableMouse: Boolean = false,
     // Legacy fields — kept for JSON deserialization of existing profiles; ignored at runtime.
     // Profiles with hasTrackpoint=true are migrated to a TrackpointMove button in MacroPadState.loadFrom().
     @Suppress("unused") val hasTrackpoint: Boolean = false,

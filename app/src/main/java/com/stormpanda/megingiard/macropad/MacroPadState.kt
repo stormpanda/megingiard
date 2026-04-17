@@ -16,6 +16,24 @@ import kotlinx.coroutines.flow.stateIn
 private const val TAG = "MacroPadState"
 
 /**
+ * Recomputes [PadProfile.enableKeyboard], [PadProfile.enableGamepad], and [PadProfile.enableMouse]
+ * from the actual set of button actions so the injectors are started only when needed.
+ */
+private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
+    val kb = buttons.any { it.action is PadAction.KeyboardKey }
+    val gp = buttons.any { it.action is PadAction.GamepadButton }
+    val ms = buttons.any {
+        it.action is PadAction.MouseButton    ||
+        it.action is PadAction.ScrollWheel    ||
+        it.action is PadAction.TrackpointMove ||
+        it.action is PadAction.MouseLeftClick ||
+        it.action is PadAction.MouseRightClick
+    }
+    return if (enableKeyboard == kb && enableGamepad == gp && enableMouse == ms) this
+    else copy(enableKeyboard = kb, enableGamepad = gp, enableMouse = ms)
+}
+
+/**
  * Runtime state holder for the MacroPad tool.
  *
  * Manages the list of [PadProfile]s and the currently active profile.
@@ -81,9 +99,14 @@ object MacroPadState {
                 hasTrackpoint = false,
             )
         }
-        _profiles.value = migrated
+        val withFlags = migrated.map { profile ->
+            profile.withSyncedDeviceFlags().also { synced ->
+                if (synced != profile) needsSave = true
+            }
+        }
+        _profiles.value = withFlags
         _activeProfileId.value = activeProfileId
-        AppLog.d(TAG, "loadFrom: ${migrated.size} profiles, activeId=$activeProfileId, migrated=$needsSave")
+        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$activeProfileId, migrated=$needsSave")
         if (needsSave) SettingsManager.saveMacroPadData()
     }
 
@@ -99,8 +122,9 @@ object MacroPadState {
     }
 
     fun updateProfile(profile: PadProfile) {
-        AppLog.d(TAG, "updateProfile id=${profile.id}")
-        _profiles.value = _profiles.value.map { if (it.id == profile.id) profile else it }
+        val synced = profile.withSyncedDeviceFlags()
+        AppLog.d(TAG, "updateProfile id=${synced.id} (kb=${synced.enableKeyboard} gp=${synced.enableGamepad} ms=${synced.enableMouse})")
+        _profiles.value = _profiles.value.map { if (it.id == synced.id) synced else it }
         SettingsManager.saveMacroPadData()
     }
 

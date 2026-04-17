@@ -52,13 +52,17 @@ Each button supports one of the following actions:
 - `GamepadButton` actions use `GamepadInjector` / `ShellGamepadInjector`. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
 - For both `KeyboardKey` and `GamepadButton`, the action picker shows the selectors **inline in a single row** (3 dropdowns for keyboard: base key + 2 optional modifiers; 4 dropdowns for gamepad: primary button + 3 optional extras). Optional slots default to "—" (None).
 - `GamepadButton` and all mouse actions use dedicated injectors (`GamepadInjector`, `MouseInjector`) backed by their own native binary processes.
-- Only the injectors for devices **enabled in the active profile** (see FR-P4) are started; the others stay stopped.
+- Only the injectors for devices **enabled in the active profile** (see FR-P4) are started; the others stay stopped. The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
 
 ### FR-P4: Per-Profile Device Flags
 
-- Each profile has three independent boolean flags: `enableKeyboard`, `enableGamepad`, `enableMouse` (all default `true`).
-- The editor shows a **"Simulated Devices"** section with one checkbox per device. Unchecking a device immediately disables it.
-- When a device is **disabled**: its native injector binary is not started when entering MacroPad mode, and the corresponding action categories (Keyboard Key / Gamepad Button / Mouse Button, Scroll Wheel, Trackpoint) are **hidden** from the action picker in the editor.
+- Each profile has three independent boolean flags: `enableKeyboard`, `enableGamepad`, `enableMouse` (all default **`false`** — new profiles start with all injectors off).
+- These flags are **not user-configurable** directly. They are automatically recomputed whenever the button list changes (add / edit / delete) by inspecting the action types of all buttons:
+  - `enableKeyboard = true` if any button has a `KeyboardKey` action.
+  - `enableGamepad = true` if any button has a `GamepadButton` action.
+  - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, `TrackpointMove`, `MouseLeftClick`, or `MouseRightClick` action.
+- Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
+- When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
 
 ### FR-P5: Trackpoint Button
@@ -264,9 +268,9 @@ Pre-selection on open: resolve `currentMacroId` → find its `folderId` → pre-
 PadProfile
   ├── id: String                (UUID)
   ├── name: String
-  ├── enableKeyboard: Boolean   (default true)
-  ├── enableGamepad: Boolean    (default true)
-  ├── enableMouse: Boolean      (default true)
+  ├── enableKeyboard: Boolean   (default false — auto-set from button actions)
+  ├── enableGamepad: Boolean    (default false — auto-set from button actions)
+  ├── enableMouse: Boolean      (default false — auto-set from button actions)
   └── buttons: List<PadButton>
         ├── id: String          (UUID)
         ├── label: String       (empty for TrackpointMove / ScrollWheel)
@@ -401,7 +405,7 @@ DisposableEffect(Unit) {
 }
 ```
 
-The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed.
+The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. Because the flags are automatically derived from the button list (see FR-P4), adding the first `KeyboardKey` button to a profile will enable `KeyInjector` on the next mode entry without any manual user action.
 
 ### Hit Testing
 
@@ -446,7 +450,7 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 | `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay                                                                  |
 | `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`)                                                                 |
 | `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                                                                                     |
-| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger                                                                                                                                            |
+| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger; `withSyncedDeviceFlags()` auto-derives `enable*` flags from button actions on every mutation                                              |
 | `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                                                                                        |
 | `MacroData.kt`               | Macro data model: `Macro` (incl. `folderId`), `MacroFolder`, `MacroStep` sealed class, `JoystickStick` enum                                                                                                      |
 | `MacroState.kt`              | Singleton global macro library + folder library: CRUD methods for macros and folders, loaded by `SettingsManager`                                                                                                |

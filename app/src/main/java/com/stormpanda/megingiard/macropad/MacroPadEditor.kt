@@ -31,8 +31,6 @@ import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.TripOrigin
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -212,12 +210,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
     // Add button overlay
     if (showAddButton && profile != null) {
         ButtonEditDialog(
-            button         = null,
-            accentColor    = colors.accent,
-            enableKeyboard = profile.enableKeyboard,
-            enableGamepad  = profile.enableGamepad,
-            enableMouse    = profile.enableMouse,
-            onConfirm      = { newBtn ->
+            button      = null,
+            accentColor = colors.accent,
+            onConfirm   = { newBtn ->
                 MacroPadState.updateProfile(profile.copy(buttons = profile.buttons + newBtn))
                 showAddButton = false
             },
@@ -229,12 +224,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
     if (showAddMacroButton && profile != null) {
         val firstMacroId = MacroState.macros.value.firstOrNull()?.id ?: ""
         ButtonEditDialog(
-            button         = null,
-            accentColor    = colors.accent,
-            enableKeyboard = profile.enableKeyboard,
-            enableGamepad  = profile.enableGamepad,
-            enableMouse    = profile.enableMouse,
-            initialAction  = PadAction.Macro(firstMacroId),
+            button        = null,
+            accentColor   = colors.accent,
+            initialAction = PadAction.Macro(firstMacroId),
             onConfirm      = { newBtn ->
                 MacroPadState.updateProfile(profile.copy(buttons = profile.buttons + newBtn))
                 showAddMacroButton = false
@@ -246,12 +238,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
     // Edit existing button overlay
     if (editingButtonActive && editingButton != null && profile != null) {
         ButtonEditDialog(
-            button         = editingButton,
-            accentColor    = colors.accent,
-            enableKeyboard = profile.enableKeyboard,
-            enableGamepad  = profile.enableGamepad,
-            enableMouse    = profile.enableMouse,
-            onConfirm      = { updated ->
+            button      = editingButton,
+            accentColor = colors.accent,
+            onConfirm   = { updated ->
                 MacroPadState.updateProfile(
                     profile.copy(buttons = profile.buttons.map { if (it.id == updated.id) updated else it })
                 )
@@ -519,23 +508,7 @@ private fun EditorBody(
             HorizontalDivider(color = colors.divider, modifier = Modifier.padding(horizontal = ED_PADDING))
         }
 
-        // 4. Simulated-device checkboxes — shown in a horizontal row
-        item(key = "devices") {
-            DevicesSection(
-                profile     = profile,
-                accentColor = accentColor,
-                modifier    = Modifier
-                    .padding(horizontal = ED_PADDING)
-                    .padding(vertical = 4.dp),
-            )
-        }
-
-        // 5. Divider
-        item(key = "divider_2") {
-            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(horizontal = ED_PADDING))
-        }
-
-        // 6. Button list — tap to edit, drag handle to reorder
+        // 4. Button list — tap to edit, drag handle to reorder
         if (profile.buttons.isEmpty()) {
             item(key = "empty") {
                 Text(
@@ -574,75 +547,6 @@ private fun EditorBody(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DevicesSection(
-    profile:     PadProfile,
-    accentColor: Color,
-    modifier:    Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    Column(modifier = modifier) {
-        Text(
-            text       = stringResource(R.string.macropad_editor_devices),
-            color      = accentColor,
-            fontSize   = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            DeviceCheckboxRow(
-                label           = stringResource(R.string.macropad_editor_device_keyboard),
-                checked         = profile.enableKeyboard,
-                accentColor     = accentColor,
-                onCheckedChange = { MacroPadState.updateProfile(profile.copy(enableKeyboard = it)) },
-                modifier        = Modifier.weight(1f),
-            )
-            DeviceCheckboxRow(
-                label           = stringResource(R.string.macropad_editor_device_gamepad),
-                checked         = profile.enableGamepad,
-                accentColor     = accentColor,
-                onCheckedChange = { MacroPadState.updateProfile(profile.copy(enableGamepad = it)) },
-                modifier        = Modifier.weight(1f),
-            )
-            DeviceCheckboxRow(
-                label           = stringResource(R.string.macropad_editor_device_mouse),
-                checked         = profile.enableMouse,
-                accentColor     = accentColor,
-                onCheckedChange = { MacroPadState.updateProfile(profile.copy(enableMouse = it)) },
-                modifier        = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun DeviceCheckboxRow(
-    label:           String,
-    checked:         Boolean,
-    accentColor:     Color,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier:        Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        modifier = modifier
-            .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(
-            checked         = checked,
-            onCheckedChange = onCheckedChange,
-            colors          = CheckboxDefaults.colors(
-                checkedColor   = accentColor,
-                checkmarkColor = colors.appBackground,
-                uncheckedColor = colors.onSurfaceSecondary,
-            ),
-        )
-        Text(label, color = colors.onSurface, fontSize = 14.sp)
     }
 }
 
