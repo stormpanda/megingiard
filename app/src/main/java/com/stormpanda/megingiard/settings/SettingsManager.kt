@@ -181,7 +181,7 @@ object SettingsManager {
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
 
-    private val macropadJson = Json { ignoreUnknownKeys = true }
+    private val macropadJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val _enabledTools = MutableStateFlow(AppMode.entries.toSet())
     val enabledTools: StateFlow<Set<AppMode>> = _enabledTools.asStateFlow()

@@ -433,9 +433,9 @@ private fun EditorBody(
     val profileRef by rememberUpdatedState(profile)
 
     val lazyListState = rememberLazyListState()
-    // Items before buttons: toolbar(0), canvas(1), divider_1(2), devices(3), divider_2(4) → offset = 5
+    // Items before buttons: toolbar(0), canvas(1), divider_1(2) → offset = 3
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val offset     = 5
+        val offset     = 3
         val newButtons = profileRef.buttons.toMutableList()
         val fromIdx    = (from.index - offset).coerceIn(0, newButtons.lastIndex)
         val toIdx      = (to.index - offset).coerceIn(0, newButtons.lastIndex)
