@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.config
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -202,7 +203,15 @@ object ConfigManager {
     /** Creates pre-filled [ExportMetadata] with the app version and device info. */
     fun defaultMetadata(context: Context): ExportMetadata {
         val packageInfo = runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.PackageInfoFlags.of(0),
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            }
         }.getOrNull()
         return ExportMetadata(
             exportedAt = Instant.now().toString(),
@@ -267,13 +276,13 @@ object ConfigManager {
 
     /**
      * Applies all settings and macropad data from [export] to the running app state.
-     * Settings are written to DataStore in bulk; the reactive pipeline auto-updates StateFlows.
+     * Settings are awaited so callers know the DataStore write completed before showing success.
      * MacroPad profiles/macros/folders get new UUIDs and "(Imported)" suffix.
      */
-    fun applyImport(export: MegingiardExport) {
+    suspend fun applyImport(export: MegingiardExport) {
         AppLog.i(TAG, "applyImport: schema=${export.schemaVersion}")
         if (export.settings.isNotEmpty()) {
-            SettingsManager.importGroupedSettings(export.settings)
+            SettingsManager.importGroupedSettingsAwait(export.settings)
         }
         if (export.profiles.isNotEmpty() || export.macros.isNotEmpty() || export.macroFolders.isNotEmpty()) {
             importMacroPadData(export.profiles, export.macros, export.macroFolders)

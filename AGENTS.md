@@ -83,7 +83,7 @@ com.stormpanda.megingiard
 │ └── TouchpadToolSettings.kt # Touchpad-mode settings Composable
 ├── config/
 │ ├── ConfigSchema.kt # @Serializable data classes: MegingiardExport, ExportMetadata
-│ └── ConfigManager.kt # Unified export/import: coordinator StateFlows, SAF I/O, v1 compat, UUID remap, checksum
+│ └── ConfigManager.kt # Unified export/import: coordinator StateFlows, SAF I/O, UUID remap, checksum
 ├── macropad/
 │ ├── MacroPadScreen.kt # Use-mode Composable (pad render, multi-touch, injector lifecycle)
 │ ├── MacroPadButton.kt # PadButton & ScrollWheelFace Composables + button constants

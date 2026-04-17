@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,7 @@ import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
@@ -82,6 +84,7 @@ fun MainAppScreen() {
 
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
     val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
     val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsState()
@@ -269,8 +272,10 @@ fun MainAppScreen() {
         IncomingImportDialog(
             export = export,
             onConfirm = {
-                ConfigManager.applyImport(export)
-                ConfigManager.clearPendingImport()
+                coroutineScope.launch {
+                    ConfigManager.applyImport(export)
+                    ConfigManager.clearPendingImport()
+                }
             },
             onDismiss = { ConfigManager.clearPendingImport() },
         )

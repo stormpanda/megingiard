@@ -39,6 +39,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +61,7 @@ import com.stormpanda.megingiard.ui.ThemeMode
 import java.time.LocalDate
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import kotlinx.coroutines.launch
 
 // ── In-tree dialog constants ──────────────────────────────────────────────────
 // Dialogs must NOT use Compose AlertDialog (which creates an Android sub-window)
@@ -97,6 +99,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     var importError by remember { mutableStateOf<String?>(null) }
     var importSuccess by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val lazyListState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -282,10 +285,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 accentColor = effectiveAccent,
                 onConfirm = {
                     showImportPreviewDialog = null
-                    runCatching { ConfigManager.applyImport(export) }
-                        .onSuccess { importSuccess = true }
-                        .onFailure { e -> importError = e.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.config_error_unknown) }
-                    ConfigManager.clearInAppPendingImport()
+                    coroutineScope.launch {
+                        runCatching { ConfigManager.applyImport(export) }
+                            .onSuccess { importSuccess = true }
+                            .onFailure { e -> importError = e.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.config_error_unknown) }
+                        ConfigManager.clearInAppPendingImport()
+                    }
                 },
                 onDismiss = {
                     showImportPreviewDialog = null
@@ -561,6 +566,9 @@ private fun ImportPreviewDialog(
             }
             if ("keyboard" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+            }
+            if ("macropad_settings" in export.settings) {
+                Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
             }
             if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
                 Text(

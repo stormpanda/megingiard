@@ -820,7 +820,21 @@ object SettingsManager {
     fun importGroupedSettings(sections: Map<String, Map<String, JsonElement>>) {
         AppLog.i(TAG, "importGroupedSettings: sections=${sections.keys}")
         scope.launch {
-            dataStore.edit { prefs ->
+            importGroupedSettingsInternal(sections)
+        }
+    }
+
+    /**
+     * Awaitable variant — callers that need to know when the DataStore write completes
+     * (e.g. [ConfigManager.applyImport]) should call this directly from a suspend context.
+     */
+    suspend fun importGroupedSettingsAwait(sections: Map<String, Map<String, JsonElement>>) {
+        AppLog.i(TAG, "importGroupedSettingsAwait: sections=${sections.keys}")
+        importGroupedSettingsInternal(sections)
+    }
+
+    private suspend fun importGroupedSettingsInternal(sections: Map<String, Map<String, JsonElement>>) {
+        dataStore.edit { prefs ->
                 for ((_, entries) in sections) {
                     for ((keyName, element) in entries) {
                         if (element !is JsonPrimitive) continue
@@ -861,7 +875,6 @@ object SettingsManager {
             }
         }
     }
-}
 
 internal fun AppMode.displayNameResId(): Int = when (this) {
     AppMode.MIRROR -> R.string.tool_name_mirror

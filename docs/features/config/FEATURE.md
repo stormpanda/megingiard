@@ -24,7 +24,7 @@ the same device or share it with other Megingiard users ("community configs").
 - The suggested default filename MUST include the current date and, if provided, the author
   (up to 20 chars) and description (up to 30 chars) to help users identify files.
   Format: `megingiard_<date>[_<author>][_<description>].mgrd`.
-- The export MUST embed an SHA-256 checksum to detect file corruption or tampering.
+- The export MUST embed an SHA-256 checksum to detect file corruption or unintended modification.
 
 ### FR-CF2: Configuration Import
 
