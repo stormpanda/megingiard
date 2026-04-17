@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
             ConfigManager.clearImportRequest()
             return@registerForActivityResult
         }
-        ConfigManager.setPendingUri(uri)
+        ConfigManager.setPendingInAppUri(uri)
     }
 
     // The manifest declares configChanges that prevent activity recreation when the app

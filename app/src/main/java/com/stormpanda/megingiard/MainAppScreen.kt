@@ -84,6 +84,7 @@ fun MainAppScreen() {
     var showExitDialog by remember { mutableStateOf(false) }
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
     val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
+    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsState()
     var importError by remember { mutableStateOf<String?>(null) }
 
     // When MainActivity receives a .mgrd file intent, ConfigManager stores the URI here.
@@ -96,7 +97,20 @@ fun MainAppScreen() {
             ConfigManager.setParsedImport(export)
         }.onFailure { err ->
             ConfigManager.clearPendingImport()
-            importError = err.message
+            importError = err.message ?: context.getString(R.string.config_error_unknown)
+        }
+    }
+
+    // When the in-app Settings file picker returns, parse and route to GlobalSettingsScreen.
+    LaunchedEffect(pendingInAppUri) {
+        val uri = pendingInAppUri ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            ConfigManager.readFromUri(context, uri)
+        }.onSuccess { export ->
+            ConfigManager.setInAppParsedImport(export)
+        }.onFailure { err ->
+            ConfigManager.clearInAppPendingImport()
+            importError = err.message ?: context.getString(R.string.config_error_unknown)
         }
     }
 
@@ -267,7 +281,7 @@ fun MainAppScreen() {
             onDismissRequest = { importError = null },
             containerColor = colors.surface,
             title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
-            text = { Text(error, color = colors.onSurface, fontSize = 13.sp) },
+            text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, fontSize = 13.sp) },
             confirmButton = {
                 TextButton(onClick = { importError = null }) {
                     Text(stringResource(R.string.config_ok), color = colors.accent)

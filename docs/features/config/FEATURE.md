@@ -147,8 +147,11 @@ Adding a new setting only requires adding the key to the correct `*_KEYS` set in
 
 - **MIME type:** `application/vnd.megingiard.config+json`
 - **Extension:** `.mgrd`
-- **Checksum scope:** SHA-256 of the canonical JSON of the data fields (settings, profiles,
-  macros, macroFolders). Metadata changes do not invalidate the checksum.
+- **Checksum scope:** SHA-256 of the minified kotlinx.serialization JSON encoding (with
+  `encodeDefaults = true`) of the data fields (settings, profiles, macros, macroFolders).
+  Key order is determined by the declaration order of the `@Serializable` data class fields —
+  no additional sorting or canonicalization is applied. Metadata changes do not invalidate the
+  checksum.
 
 ### Source Files
 

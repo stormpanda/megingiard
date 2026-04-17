@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.config
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.provider.OpenableColumns
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.Macro
 import com.stormpanda.megingiard.macropad.MacroFolder
@@ -17,6 +18,8 @@ import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -89,11 +92,13 @@ object ConfigManager {
         _importRequested.value = false
     }
 
-    // ── Coordinator StateFlows (import from external intent) ─────────────────
+    // ── Coordinator StateFlows (import from external ACTION_VIEW intent) ────────
 
+    /** Non-null while MainAppScreen should parse an externally-opened .mgrd URI. */
     private val _pendingUri = MutableStateFlow<Uri?>(null)
     val pendingUri: StateFlow<Uri?> = _pendingUri.asStateFlow()
 
+    /** Non-null while MainAppScreen should show IncomingImportDialog for an external import. */
     private val _pendingParsedImport = MutableStateFlow<MegingiardExport?>(null)
     val pendingParsedImport: StateFlow<MegingiardExport?> = _pendingParsedImport.asStateFlow()
 
@@ -103,18 +108,48 @@ object ConfigManager {
         _pendingUri.value = uri
     }
 
-    /** Called by MainAppScreen after successfully parsing the URI's content. */
+    /** Called by MainAppScreen after successfully parsing an external import URI. */
     fun setParsedImport(export: MegingiardExport) {
         AppLog.d(TAG, "setParsedImport")
         _pendingParsedImport.value = export
         _pendingUri.value = null
     }
 
-    /** Clears both pending URI and parsed import — call after confirm or dismiss. */
+    /** Clears external import state — call after confirm or dismiss of IncomingImportDialog. */
     fun clearPendingImport() {
         AppLog.d(TAG, "clearPendingImport")
         _pendingUri.value = null
         _pendingParsedImport.value = null
+    }
+
+    // ── Coordinator StateFlows (import from in-app Settings picker) ───────────
+
+    /** Non-null while MainAppScreen should parse an in-app Settings .mgrd URI. */
+    private val _pendingInAppUri = MutableStateFlow<Uri?>(null)
+    val pendingInAppUri: StateFlow<Uri?> = _pendingInAppUri.asStateFlow()
+
+    /** Non-null while GlobalSettingsScreen should show ImportPreviewDialog. */
+    private val _pendingInAppParsedImport = MutableStateFlow<MegingiardExport?>(null)
+    val pendingInAppParsedImport: StateFlow<MegingiardExport?> = _pendingInAppParsedImport.asStateFlow()
+
+    /** Called by MainActivity when the in-app file picker returns a .mgrd URI. */
+    fun setPendingInAppUri(uri: Uri) {
+        AppLog.i(TAG, "setPendingInAppUri: $uri")
+        _pendingInAppUri.value = uri
+    }
+
+    /** Called by MainAppScreen after successfully parsing an in-app import URI. */
+    fun setInAppParsedImport(export: MegingiardExport) {
+        AppLog.d(TAG, "setInAppParsedImport")
+        _pendingInAppParsedImport.value = export
+        _pendingInAppUri.value = null
+    }
+
+    /** Clears in-app import state — call after confirm or dismiss of ImportPreviewDialog. */
+    fun clearInAppPendingImport() {
+        AppLog.d(TAG, "clearInAppPendingImport")
+        _pendingInAppUri.value = null
+        _pendingInAppParsedImport.value = null
     }
 
     // ── Export result feedback ────────────────────────────────────────────────
@@ -189,10 +224,21 @@ object ConfigManager {
     // ── Import ───────────────────────────────────────────────────────────────
 
     /**
-     * Reads a `.mgrd` file from [uri], auto-detects v1/v2 schema, verifies checksum.
+     * Reads a `.mgrd` file from [uri], verifies checksum and schema version.
      */
     fun readFromUri(context: Context, uri: Uri): Result<MegingiardExport> = runCatching {
         AppLog.i(TAG, "readFromUri: uri=$uri")
+        // Reject oversized files before allocating: check declared size if available.
+        context.contentResolver.query(
+            uri, arrayOf(OpenableColumns.SIZE), null, null, null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val declared = cursor.getLong(0)
+                check(declared <= MAX_FILE_SIZE_BYTES) {
+                    "File too large: $declared bytes (max $MAX_FILE_SIZE_BYTES)"
+                }
+            }
+        }
         val json = context.contentResolver.openInputStream(uri)?.use { input ->
             val bytes = input.readBytes()
             check(bytes.size <= MAX_FILE_SIZE_BYTES) {
@@ -205,10 +251,13 @@ object ConfigManager {
     }
 
     /**
-     * Parses a JSON string, verifies checksum, and returns the decoded [MegingiardExport].
+     * Parses a JSON string, validates the schema version, verifies checksum.
      */
     internal fun parseAndVerify(json: String): MegingiardExport {
         val export = importJson.decodeFromString<MegingiardExport>(json)
+        if (export.schemaVersion != SCHEMA_VERSION) {
+            error("Unsupported schema version ${export.schemaVersion} — expected $SCHEMA_VERSION")
+        }
         if (!verifyChecksum(export)) {
             error("Checksum mismatch — the file may be corrupted or tampered")
         }
@@ -309,7 +358,7 @@ object ConfigManager {
         return expected == export.checksum
     }
 
-    @kotlinx.serialization.Serializable
+    @Serializable
     private data class ChecksumPayload(
         val settings: Map<String, Map<String, JsonElement>>,
         val profiles: List<PadProfile>,

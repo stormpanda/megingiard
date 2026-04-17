@@ -187,6 +187,7 @@ Open Settings to create a layout.</string>
     <string name="config_import_success">Configuration imported successfully.</string>
     <string name="config_error_title">Error</string>
     <string name="config_success_title">Done</string>
+    <string name="config_error_unknown">An unexpected error occurred.</string>
     <string name="config_ok">OK</string>
     <string name="cd_icon_picker_button">Select icon for button</string>
     <string name="cd_icon_picker_confirm">Apply icon selection</string>

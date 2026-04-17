@@ -165,9 +165,14 @@ object SettingsManager {
         "macropad_settings" to MACROPAD_SETTINGS_KEYS,
     )
 
-    // Reverse lookup: DataStore key name → section name (for v1 conversion)
+    // Reverse lookup: DataStore key name → section name
     internal val KEY_TO_SECTION: Map<String, String> by lazy {
         SECTION_MAP.flatMap { (section, keys) -> keys.map { it.name to section } }.toMap()
+    }
+
+    /** Flat map from DataStore key name to the actual typed key instance, used by [importGroupedSettings]. */
+    internal val KEY_BY_NAME: Map<String, Preferences.Key<*>> by lazy {
+        SECTION_MAP.values.flatten().associateBy { it.name }
     }
 
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
@@ -779,7 +784,7 @@ object SettingsManager {
 
     /**
      * Snapshots all exportable settings from DataStore, grouped by section name.
-     * Each value is converted to a [JsonElement] so CallerManager can serialise it directly.
+     * Each value is converted to a [JsonElement] so ConfigManager can serialise it directly.
      */
     suspend fun exportGroupedSettings(): Map<String, Map<String, JsonElement>> {
         AppLog.d(TAG, "exportGroupedSettings")
@@ -807,6 +812,10 @@ object SettingsManager {
      * Writes all settings from [sections] into DataStore in a single edit.
      * The existing `.collect {}` in [init] automatically re-hydrates every [StateFlow]
      * after the edit completes — no manual setter calls needed.
+     *
+     * Type dispatch uses [KEY_BY_NAME] to resolve the actual [Preferences.Key] and
+     * `prefs.asMap()` to detect the stored type, so DataStore proto fields are always
+     * written with the correct type (not a heuristic-guessed type).
      */
     fun importGroupedSettings(sections: Map<String, Map<String, JsonElement>>) {
         AppLog.i(TAG, "importGroupedSettings: sections=${sections.keys}")
@@ -815,18 +824,37 @@ object SettingsManager {
                 for ((_, entries) in sections) {
                     for ((keyName, element) in entries) {
                         if (element !is JsonPrimitive) continue
-                        val p = element
-                        when {
-                            p.booleanOrNull != null ->
-                                prefs[booleanPreferencesKey(keyName)] = p.booleanOrNull!!
-                            p.longOrNull != null && keyName.contains("timeout") ->
-                                prefs[longPreferencesKey(keyName)] = p.longOrNull!!
-                            p.floatOrNull != null && p.contentOrNull?.contains('.') == true ->
-                                prefs[floatPreferencesKey(keyName)] = p.floatOrNull!!
-                            p.intOrNull != null ->
-                                prefs[intPreferencesKey(keyName)] = p.intOrNull!!
-                            p.isString ->
-                                prefs[stringPreferencesKey(keyName)] = p.contentOrNull ?: continue
+                        val key = KEY_BY_NAME[keyName]
+                        if (key == null) {
+                            AppLog.w(TAG, "importGroupedSettings: unknown key '$keyName', skipping")
+                            continue
+                        }
+                        val existingValue = prefs.asMap()[key]
+                        @Suppress("UNCHECKED_CAST")
+                        if (existingValue != null) {
+                            // Type is known from the currently stored value — safe cast by construction.
+                            when (existingValue) {
+                                is Boolean -> element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
+                                is Int     -> element.intOrNull?.let    { prefs[key as Preferences.Key<Int>]     = it }
+                                is Long    -> element.longOrNull?.let   { prefs[key as Preferences.Key<Long>]    = it }
+                                is Float   -> element.floatOrNull?.let  { prefs[key as Preferences.Key<Float>]   = it }
+                                is String  -> element.contentOrNull?.let { prefs[key as Preferences.Key<String>]  = it }
+                            }
+                        } else {
+                            // Key absent on fresh install — infer type from JSON primitive.
+                            @Suppress("UNCHECKED_CAST")
+                            when {
+                                element.booleanOrNull != null ->
+                                    prefs[key as Preferences.Key<Boolean>] = element.booleanOrNull!!
+                                element.floatOrNull != null && element.contentOrNull?.contains('.') == true ->
+                                    prefs[key as Preferences.Key<Float>] = element.floatOrNull!!
+                                element.longOrNull != null && key.name == "overlay_timeout_ms" ->
+                                    prefs[key as Preferences.Key<Long>] = element.longOrNull!!
+                                element.intOrNull != null ->
+                                    prefs[key as Preferences.Key<Int>] = element.intOrNull!!
+                                else ->
+                                    element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
+                            }
                         }
                     }
                 }

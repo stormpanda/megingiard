@@ -284,12 +284,12 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     showImportPreviewDialog = null
                     runCatching { ConfigManager.applyImport(export) }
                         .onSuccess { importSuccess = true }
-                        .onFailure { e -> importError = e.message }
-                    ConfigManager.clearPendingImport()
+                        .onFailure { e -> importError = e.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.config_error_unknown) }
+                    ConfigManager.clearInAppPendingImport()
                 },
                 onDismiss = {
                     showImportPreviewDialog = null
-                    ConfigManager.clearPendingImport()
+                    ConfigManager.clearInAppPendingImport()
                 },
             )
         }
@@ -327,7 +327,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
             is ConfigManager.ExportResult.Failure -> {
                 InTreeMessageDialog(
                     title = stringResource(R.string.config_error_title),
-                    text = result.message ?: "",
+                    text = result.message?.takeIf { it.isNotBlank() } ?: stringResource(R.string.config_error_unknown),
                     buttonText = stringResource(R.string.config_ok),
                     colors = colors,
                     accentColor = effectiveAccent,
@@ -357,9 +357,10 @@ private fun ConfigSection(
     onShowExportDialog: () -> Unit,
     onImportPreviewReady: (MegingiardExport) -> Unit,
 ) {
-    // Import preview: ConfigManager carries the parsed file once MainActivity
-    // reads it. Notify parent to show the in-tree import preview overlay.
-    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
+    // Import preview: ConfigManager carries the parsed file once MainAppScreen
+    // reads and parses it from the in-app file picker. Notify parent to show the
+    // in-tree import preview overlay.
+    val pendingImport by ConfigManager.pendingInAppParsedImport.collectAsState()
     LaunchedEffect(pendingImport) {
         if (pendingImport != null) onImportPreviewReady(pendingImport!!)
     }
@@ -524,7 +525,7 @@ private fun ImportPreviewDialog(
             Spacer(Modifier.height(4.dp))
             if (!metadata.author.isNullOrBlank()) {
                 Text(
-                    text = "${stringResource(R.string.config_import_author_label)}: ${metadata.author}",
+                    text = stringResource(R.string.config_import_meta_author, metadata.author!!),
                     color = colors.onSurface,
                     fontSize = 13.sp,
                 )
