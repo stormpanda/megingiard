@@ -48,7 +48,9 @@ Each button supports one of the following actions:
 | `MouseRightClick` | BTN_RIGHT (legacy alias)  | `mouseinjector_arm64`   |
 | `AmbientPeek`     | App-level peek toggle     | _(none)_                |
 
-- `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package.
+- `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). The `keyinjector_arm64` binary accepts keycodes in the range **1–464** (extended from the original 1–254 to include Fn).
+- `GamepadButton` actions use `GamepadInjector` / `ShellGamepadInjector`. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
+- For both `KeyboardKey` and `GamepadButton`, the action picker shows the selectors **inline in a single row** (3 dropdowns for keyboard: base key + 2 optional modifiers; 4 dropdowns for gamepad: primary button + 3 optional extras). Optional slots default to "—" (None).
 - `GamepadButton` and all mouse actions use dedicated injectors (`GamepadInjector`, `MouseInjector`) backed by their own native binary processes.
 - Only the injectors for devices **enabled in the active profile** (see FR-P4) are started; the others stay stopped.
 

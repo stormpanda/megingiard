@@ -31,9 +31,10 @@ int main(void) {
     if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) { perror("UI_SET_EVBIT EV_KEY"); return 1; }
     if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) { perror("UI_SET_EVBIT EV_SYN"); return 1; }
 
-    // Register all keycodes we will ever send (1–254 covers every standard key)
-    for (int i = 1; i < 255; i++) {
-        if (ioctl(fd, UI_SET_KEYBIT, i) < 0) { perror("UI_SET_KEYBIT"); return 1; }
+    // Register all keycodes we will ever send (1–254 covers standard keys; 464 = KEY_FN)
+    for (int i = 1; i <= 464; i++) {
+        // Gaps in the keycode space are silently ignored by the kernel
+        ioctl(fd, UI_SET_KEYBIT, i);
     }
 
     // Create the virtual device
@@ -59,7 +60,7 @@ int main(void) {
         char action[4];
         int  code;
         if (sscanf(line, "%3s %d", action, &code) != 2) continue;
-        if (code < 1 || code > 254) continue;
+        if (code < 1 || code > 464) continue;
 
         if (strcmp(action, "KD") == 0) {
             write_event(fd, EV_KEY, (__u16)code, 1);

@@ -14,8 +14,16 @@ private const val TAG = "MacroPadActionDispatch"
 
 internal fun injectActionDown(action: PadAction) {
     when (action) {
-        is PadAction.KeyboardKey     -> { AppLog.d(TAG, "actionDown: KeyboardKey keycode=${action.keycode}"); KeyInjector.keyDown(action.keycode) }
-        is PadAction.GamepadButton   -> { AppLog.d(TAG, "actionDown: GamepadButton code=${action.btnCode}"); GamepadInjector.buttonDown(action.btnCode) }
+        is PadAction.KeyboardKey -> {
+            AppLog.d(TAG, "actionDown: KeyboardKey keycode=${action.keycode} modifiers=${action.modifiers}")
+            action.modifiers.forEach { KeyInjector.keyDown(it) }
+            KeyInjector.keyDown(action.keycode)
+        }
+        is PadAction.GamepadButton -> {
+            AppLog.d(TAG, "actionDown: GamepadButton code=${action.btnCode} extras=${action.extraBtnCodes}")
+            GamepadInjector.buttonDown(action.btnCode)
+            action.extraBtnCodes.forEach { GamepadInjector.buttonDown(it) }
+        }
         is PadAction.MouseButton     -> {
             AppLog.d(TAG, "actionDown: MouseButton ${action.button}")
             when (action.button) {
@@ -41,8 +49,16 @@ internal fun injectActionDown(action: PadAction) {
 
 internal fun injectActionUp(action: PadAction) {
     when (action) {
-        is PadAction.KeyboardKey     -> { AppLog.d(TAG, "actionUp: KeyboardKey keycode=${action.keycode}"); KeyInjector.keyUp(action.keycode) }
-        is PadAction.GamepadButton   -> { AppLog.d(TAG, "actionUp: GamepadButton code=${action.btnCode}"); GamepadInjector.buttonUp(action.btnCode) }
+        is PadAction.KeyboardKey -> {
+            AppLog.d(TAG, "actionUp: KeyboardKey keycode=${action.keycode} modifiers=${action.modifiers}")
+            KeyInjector.keyUp(action.keycode)
+            action.modifiers.reversed().forEach { KeyInjector.keyUp(it) }
+        }
+        is PadAction.GamepadButton -> {
+            AppLog.d(TAG, "actionUp: GamepadButton code=${action.btnCode} extras=${action.extraBtnCodes}")
+            action.extraBtnCodes.reversed().forEach { GamepadInjector.buttonUp(it) }
+            GamepadInjector.buttonUp(action.btnCode)
+        }
         is PadAction.MouseButton     -> {
             AppLog.d(TAG, "actionUp: MouseButton ${action.button}")
             when (action.button) {

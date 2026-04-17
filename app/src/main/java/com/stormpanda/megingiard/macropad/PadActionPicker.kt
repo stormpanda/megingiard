@@ -81,8 +81,24 @@ internal fun PadAction.categoryResId(): Int = when (this) {
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
     return when (this) {
-        is PadAction.KeyboardKey     -> context.getString(R.string.macropad_display_keyboard_key, label)
-        is PadAction.GamepadButton   -> context.getString(R.string.macropad_display_gamepad_button, label)
+        is PadAction.KeyboardKey -> {
+            val modLabel = if (modifiers.isEmpty()) label else {
+                val modNames = modifiers.mapNotNull { code ->
+                    MODIFIER_PRESETS.firstOrNull { it.first == code }?.second
+                }.joinToString("+")
+                "$modNames+$label"
+            }
+            context.getString(R.string.macropad_display_keyboard_key, modLabel)
+        }
+        is PadAction.GamepadButton -> {
+            val comboLabel = if (extraBtnCodes.isEmpty()) label else {
+                val extraNames = extraBtnCodes.mapNotNull { code ->
+                    GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.shortLabel
+                }.joinToString("+")
+                "$label+$extraNames"
+            }
+            context.getString(R.string.macropad_display_gamepad_button, comboLabel)
+        }
         is PadAction.MouseButton     -> context.getString(R.string.macropad_display_mouse_button, button.displayLabel())
         is PadAction.ScrollWheel     -> context.getString(R.string.macropad_display_scroll_wheel)
         is PadAction.TrackpointMove  -> context.getString(R.string.macropad_display_trackpoint)
@@ -191,33 +207,117 @@ internal fun KeyboardKeyPicker(
     accentColor: Color,
     onChange: (PadAction) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val colors   = LocalAppColors.current
+    var baseExpanded by remember { mutableStateOf(false) }
+    var mod1Expanded by remember { mutableStateOf(false) }
+    var mod2Expanded by remember { mutableStateOf(false) }
+    var mod1         by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(0)) }
+    var mod2         by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(1)) }
+    val colors       = LocalAppColors.current
+    val noneLabel    = stringResource(R.string.macropad_modifier_none)
 
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(current.label, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
+    fun emitChange(keycode: Int, label: String, newMod1: Int?, newMod2: Int?) {
+        onChange(PadAction.KeyboardKey(keycode, label, listOfNotNull(newMod1, newMod2)))
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        // ── Base key ──────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { baseExpanded = true }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(current.label, color = accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
+            }
+            DropdownMenu(
+                expanded         = baseExpanded,
+                onDismissRequest = { baseExpanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
+                KEYBOARD_KEY_PRESETS.forEach { (code, label) ->
+                    DropdownMenuItem(
+                        text    = { Text(label, color = if (code == current.keycode) accentColor else colors.onSurface, fontSize = 14.sp) },
+                        onClick = { emitChange(code, label, mod1, mod2); baseExpanded = false },
+                    )
+                }
+            }
         }
 
-        DropdownMenu(
-            expanded         = expanded,
-            onDismissRequest = { expanded = false },
-            modifier         = Modifier.background(colors.surface),
-        ) {
-            KEYBOARD_KEY_PRESETS.forEach { (code, label) ->
+        // ── Modifier 1 ──────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            val mod1Label = mod1?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, if (mod1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { mod1Expanded = true }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(mod1Label, color = if (mod1 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod1 == null) colors.onSurfaceSecondary else accentColor)
+            }
+            DropdownMenu(
+                expanded         = mod1Expanded,
+                onDismissRequest = { mod1Expanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
                 DropdownMenuItem(
-                    text = { Text(label, color = if (code == current.keycode) accentColor else colors.onSurface, fontSize = 14.sp) },
-                    onClick = { onChange(PadAction.KeyboardKey(code, label)); expanded = false },
+                    text    = { Text(noneLabel, color = if (mod1 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                    onClick = { mod1 = null; emitChange(current.keycode, current.label, null, mod2); mod1Expanded = false },
                 )
+                MODIFIER_PRESETS.forEach { (code, label) ->
+                    if (code != mod2) {
+                        DropdownMenuItem(
+                            text    = { Text(label, color = if (mod1 == code) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = { mod1 = code; emitChange(current.keycode, current.label, code, mod2); mod1Expanded = false },
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Modifier 2 ──────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            val mod2Label = mod2?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, if (mod2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { mod2Expanded = true }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(mod2Label, color = if (mod2 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod2 == null) colors.onSurfaceSecondary else accentColor)
+            }
+            DropdownMenu(
+                expanded         = mod2Expanded,
+                onDismissRequest = { mod2Expanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
+                DropdownMenuItem(
+                    text    = { Text(noneLabel, color = if (mod2 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                    onClick = { mod2 = null; emitChange(current.keycode, current.label, mod1, null); mod2Expanded = false },
+                )
+                MODIFIER_PRESETS.forEach { (code, label) ->
+                    if (code != mod1) {
+                        DropdownMenuItem(
+                            text    = { Text(label, color = if (mod2 == code) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = { mod2 = code; emitChange(current.keycode, current.label, mod1, code); mod2Expanded = false },
+                        )
+                    }
+                }
             }
         }
     }
@@ -267,33 +367,161 @@ internal fun GamepadButtonPicker(
     accentColor: Color,
     onChange: (PadAction) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val colors   = LocalAppColors.current
+    var primaryExpanded by remember { mutableStateOf(false) }
+    var extra1Expanded  by remember { mutableStateOf(false) }
+    var extra2Expanded  by remember { mutableStateOf(false) }
+    var extra3Expanded  by remember { mutableStateOf(false) }
+    var extra1          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(0)) }
+    var extra2          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(1)) }
+    var extra3          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(2)) }
+    val colors          = LocalAppColors.current
+    val noneLabel       = stringResource(R.string.macropad_modifier_none)
 
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(current.label, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
+    val currentPreset = GamepadKeycodes.PRESETS.firstOrNull { it.code == current.btnCode }
+        ?: GamepadKeycodes.PRESETS.first()
+
+    fun presetShortLabel(code: Int?) = code?.let { c ->
+        GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.shortLabel
+    }
+
+    fun emitChange(primary: GamepadKeycodes.GamepadButtonPreset, e1: Int?, e2: Int?, e3: Int?) {
+        onChange(PadAction.GamepadButton(primary.code, primary.shortLabel, listOfNotNull(e1, e2, e3)))
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        // ── Primary button ────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { primaryExpanded = true }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(currentPreset.shortLabel, color = accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
+            }
+            DropdownMenu(
+                expanded         = primaryExpanded,
+                onDismissRequest = { primaryExpanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
+                GamepadKeycodes.PRESETS.forEach { preset ->
+                    DropdownMenuItem(
+                        text    = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else colors.onSurface, fontSize = 14.sp) },
+                        onClick = { emitChange(preset, extra1, extra2, extra3); primaryExpanded = false },
+                    )
+                }
+            }
         }
 
-        DropdownMenu(
-            expanded         = expanded,
-            onDismissRequest = { expanded = false },
-            modifier         = Modifier.background(colors.surface),
-        ) {
-            GamepadKeycodes.PRESETS.forEach { preset ->
+        // ── Extra button 1 ────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            val selectedLabel = presetShortLabel(extra1) ?: noneLabel
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, if (extra1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { extra1Expanded = true }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(selectedLabel, color = if (extra1 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra1 == null) colors.onSurfaceSecondary else accentColor)
+            }
+            DropdownMenu(
+                expanded         = extra1Expanded,
+                onDismissRequest = { extra1Expanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
                 DropdownMenuItem(
-                    text = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else colors.onSurface, fontSize = 14.sp) },
-                    onClick = { onChange(PadAction.GamepadButton(preset.code, preset.shortLabel)); expanded = false },
+                    text    = { Text(noneLabel, color = if (extra1 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                    onClick = { extra1 = null; emitChange(currentPreset, null, extra2, extra3); extra1Expanded = false },
                 )
+                GamepadKeycodes.PRESETS.forEach { preset ->
+                    if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra2, extra3)) {
+                        DropdownMenuItem(
+                            text    = { Text(preset.label, color = if (preset.code == extra1) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = { extra1 = preset.code; emitChange(currentPreset, preset.code, extra2, extra3); extra1Expanded = false },
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Extra button 2 ────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            val selectedLabel = presetShortLabel(extra2) ?: noneLabel
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, if (extra2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { extra2Expanded = true }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(selectedLabel, color = if (extra2 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra2 == null) colors.onSurfaceSecondary else accentColor)
+            }
+            DropdownMenu(
+                expanded         = extra2Expanded,
+                onDismissRequest = { extra2Expanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
+                DropdownMenuItem(
+                    text    = { Text(noneLabel, color = if (extra2 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                    onClick = { extra2 = null; emitChange(currentPreset, extra1, null, extra3); extra2Expanded = false },
+                )
+                GamepadKeycodes.PRESETS.forEach { preset ->
+                    if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra3)) {
+                        DropdownMenuItem(
+                            text    = { Text(preset.label, color = if (preset.code == extra2) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = { extra2 = preset.code; emitChange(currentPreset, extra1, preset.code, extra3); extra2Expanded = false },
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Extra button 3 ────────────────────────────────────────────
+        Box(modifier = Modifier.weight(1f)) {
+            val selectedLabel = presetShortLabel(extra3) ?: noneLabel
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, if (extra3 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable { extra3Expanded = true }
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(selectedLabel, color = if (extra3 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra3 == null) colors.onSurfaceSecondary else accentColor)
+            }
+            DropdownMenu(
+                expanded         = extra3Expanded,
+                onDismissRequest = { extra3Expanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
+                DropdownMenuItem(
+                    text    = { Text(noneLabel, color = if (extra3 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                    onClick = { extra3 = null; emitChange(currentPreset, extra1, extra2, null); extra3Expanded = false },
+                )
+                GamepadKeycodes.PRESETS.forEach { preset ->
+                    if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra2)) {
+                        DropdownMenuItem(
+                            text    = { Text(preset.label, color = if (preset.code == extra3) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = { extra3 = preset.code; emitChange(currentPreset, extra1, extra2, preset.code); extra3Expanded = false },
+                        )
+                    }
+                }
             }
         }
     }
@@ -427,6 +655,21 @@ internal fun MacroPicker(
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Modifier preset list (Ctrl/Shift/Alt/Meta/Fn — used in KeyboardKeyPicker dropdowns)
+// ─────────────────────────────────────────────────────────────────────────────
+
+internal val MODIFIER_PRESETS: List<Pair<Int, String>> = listOf(
+    LinuxKeycodes.KEY_LEFTCTRL   to "Ctrl L",
+    LinuxKeycodes.KEY_RIGHTCTRL  to "Ctrl R",
+    LinuxKeycodes.KEY_LEFTSHIFT  to "Shift L",
+    LinuxKeycodes.KEY_RIGHTSHIFT to "Shift R",
+    LinuxKeycodes.KEY_LEFTALT    to "Alt",
+    LinuxKeycodes.KEY_RIGHTALT   to "AltGr",
+    LinuxKeycodes.KEY_LEFTMETA   to "Meta/Win",
+    LinuxKeycodes.KEY_FN         to "Fn",
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Keyboard key preset list (common keys for MacroPad use)

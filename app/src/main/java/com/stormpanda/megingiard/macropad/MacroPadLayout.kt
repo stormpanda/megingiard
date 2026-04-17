@@ -52,6 +52,13 @@ sealed class PadAction {
     data class KeyboardKey(
         val keycode: Int,
         val label: String,
+        /**
+         * Optional modifier keycodes pressed simultaneously with [keycode].
+         * Maximum 2 entries. Modifiers are pressed before the base key (down)
+         * and released after it (up), in reverse order.
+         * Keycodes must be in range 1–464 (see [LinuxKeycodes]).
+         */
+        val modifiers: List<Int> = emptyList(),
     ) : PadAction()
 
     /** Injects a Linux gamepad button event via gamepadinjector_arm64. */
@@ -60,6 +67,12 @@ sealed class PadAction {
     data class GamepadButton(
         val btnCode: Int,
         val label: String,
+        /**
+         * Optional extra button codes pressed simultaneously with [btnCode].
+         * Maximum 3 entries. Extra buttons are pressed after the primary (down)
+         * and released before it (up), in reverse order.
+         */
+        val extraBtnCodes: List<Int> = emptyList(),
     ) : PadAction()
 
     /**

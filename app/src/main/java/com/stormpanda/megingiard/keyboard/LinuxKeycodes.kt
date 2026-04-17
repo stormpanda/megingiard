@@ -20,6 +20,7 @@ object LinuxKeycodes {
     const val KEY_LEFTMETA    = 125
     const val KEY_RIGHTALT    = 100  // AltGr
     const val KEY_RIGHTCTRL   = 97
+    const val KEY_FN          = 464  // Fn key (extended range, beyond standard 1–254)
 
     // F-keys
     const val KEY_F1          = 59

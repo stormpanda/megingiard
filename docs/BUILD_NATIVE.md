@@ -174,8 +174,8 @@ TOOLCHAIN="$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG"
 
 | Line sent to stdin | Meaning                          |
 | ------------------ | -------------------------------- |
-| `KD <keycode>\n`   | Key DOWN — Linux keycode (1–254) |
-| `KU <keycode>\n`   | Key UP — Linux keycode (1–254)   |
+| `KD <keycode>\n`   | Key DOWN — Linux keycode (1–464) |
+| `KU <keycode>\n`   | Key UP — Linux keycode (1–464)   |
 
 The binary signals readiness with `R\n` on stdout once the `/dev/uinput` virtual
 device is created. On stdin EOF it destroys the virtual device and exits.
