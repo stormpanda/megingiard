@@ -10,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -28,10 +29,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,14 +48,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.config.ConfigManager
+import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
@@ -76,6 +84,39 @@ fun MainAppScreen() {
 
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val pendingImportUri by ConfigManager.pendingUri.collectAsState()
+    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
+    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsState()
+    var importError by remember { mutableStateOf<String?>(null) }
+
+    // When MainActivity receives a .mgrd file intent, ConfigManager stores the URI here.
+    // We handle the I/O and parsing in a coroutine, then show the preview dialog on success.
+    LaunchedEffect(pendingImportUri) {
+        val uri = pendingImportUri ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            ConfigManager.readFromUri(context, uri)
+        }.onSuccess { export ->
+            ConfigManager.setParsedImport(export)
+        }.onFailure { err ->
+            ConfigManager.clearPendingImport()
+            importError = err.message ?: context.getString(R.string.config_error_unknown)
+        }
+    }
+
+    // When the in-app Settings file picker returns, parse and route to GlobalSettingsScreen.
+    LaunchedEffect(pendingInAppUri) {
+        val uri = pendingInAppUri ?: return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            ConfigManager.readFromUri(context, uri)
+        }.onSuccess { export ->
+            ConfigManager.setInAppParsedImport(export)
+        }.onFailure { err ->
+            ConfigManager.clearInAppPendingImport()
+            importError = err.message ?: context.getString(R.string.config_error_unknown)
+        }
+    }
+
     BackHandler { showExitDialog = true }
 
     Box(
@@ -226,6 +267,34 @@ fun MainAppScreen() {
         }
     }
 
+    // Show import preview when a .mgrd file is opened from a file manager or share sheet
+    pendingImport?.let { export ->
+        IncomingImportDialog(
+            export = export,
+            onConfirm = {
+                coroutineScope.launch {
+                    ConfigManager.applyImport(export)
+                    ConfigManager.clearPendingImport()
+                }
+            },
+            onDismiss = { ConfigManager.clearPendingImport() },
+        )
+    }
+
+    importError?.let { error ->
+        AlertDialog(
+            onDismissRequest = { importError = null },
+            containerColor = colors.surface,
+            title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
+            text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, fontSize = 13.sp) },
+            confirmButton = {
+                TextButton(onClick = { importError = null }) {
+                    Text(stringResource(R.string.config_ok), color = colors.accent)
+                }
+            },
+        )
+    }
+
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
@@ -244,5 +313,84 @@ fun MainAppScreen() {
             containerColor = colors.surface,
         )
     }
+}
+
+@Composable
+private fun IncomingImportDialog(
+    export: MegingiardExport,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    val meta = export.metadata
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.surface,
+        title = {
+            Text(
+                stringResource(R.string.config_import_title),
+                color = colors.onSurface,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (meta.author?.isNotBlank() == true) {
+                    Text(
+                        stringResource(R.string.config_import_meta_author, meta.author ?: ""),
+                        color = colors.onSurface,
+                        fontSize = 13.sp,
+                    )
+                }
+                if (meta.description?.isNotBlank() == true) {
+                    Text(
+                        meta.description ?: "",
+                        color = colors.onSurface,
+                        fontSize = 13.sp,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
+                    Text(
+                        stringResource(
+                            R.string.config_import_section_macropad,
+                            export.profiles.size,
+                            export.macros.size,
+                        ),
+                        color = colors.onSurface,
+                        fontSize = 13.sp,
+                    )
+                }
+                if (export.settings.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.config_import_section_settings),
+                        color = colors.onSurface,
+                        fontSize = 13.sp,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                        stringResource(R.string.config_import_warning),
+                    color = colors.onSurface,
+                    fontSize = 12.sp,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    stringResource(R.string.config_import_confirm),
+                    color = colors.accent,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    stringResource(R.string.config_import_cancel),
+                    color = colors.onSurface,
+                )
+            }
+        },
+    )
 }
 

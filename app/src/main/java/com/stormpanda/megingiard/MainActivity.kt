@@ -11,6 +11,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -25,18 +26,60 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.config.ConfigManager
+import com.stormpanda.megingiard.config.ExportMetadata
+import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.paletteFor
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
+
+    // ── File picker launchers ─────────────────────────────────────────────────
+    // Registered here because ActivityResultLaunchers require an Activity context.
+    // GlobalSettingsScreen (which may be inside MirrorPresentation) posts requests
+    // to ConfigManager and these launchers pick them up.
+
+    private var pendingExportMetadata: ExportMetadata? = null
+
+    private val createDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE)
+    ) { uri ->
+        AppStateManager.setFilePickerOpen(false)
+        val meta = pendingExportMetadata ?: return@registerForActivityResult
+        pendingExportMetadata = null
+        if (uri == null) return@registerForActivityResult
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { ConfigManager.writeToUri(this@MainActivity, uri, ConfigManager.buildExport(meta)) }
+                .onSuccess {
+                    AppLog.i(TAG, "Export written to $uri")
+                    ConfigManager.setExportResult(ConfigManager.ExportResult.Success)
+                }
+                .onFailure { e ->
+                    AppLog.e(TAG, "Export failed", e)
+                    ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
+                }
+        }
+    }
+
+    private val openDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        AppStateManager.setFilePickerOpen(false)
+        if (uri == null) {
+            ConfigManager.clearImportRequest()
+            return@registerForActivityResult
+        }
+        ConfigManager.setPendingInAppUri(uri)
+    }
 
     // The manifest declares configChanges that prevent activity recreation when the app
     // is moved between displays. Without this override, Compose never recomposes and
@@ -58,6 +101,34 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate")
+        // Handle .mgrd config files opened from a file manager or share sheet.
+        handleIncomingIntent(intent)
+
+        // Collect export/import requests posted by GlobalSettingsScreen (which may be
+        // inside MirrorPresentation and thus cannot hold ActivityResultLaunchers itself).
+        lifecycleScope.launch {
+            ConfigManager.exportRequest.collect { meta ->
+                if (meta != null) {
+                    pendingExportMetadata = meta
+                    AppStateManager.setFilePickerOpen(true)
+                    createDocumentLauncher.launch(ConfigManager.exportFilename.value)
+                    ConfigManager.clearExportRequest()
+                }
+            }
+        }
+        lifecycleScope.launch {
+            ConfigManager.importRequested.collect { requested ->
+                if (requested) {
+                    AppStateManager.setFilePickerOpen(true)
+                    // Use "*/*" instead of the custom MGRD MIME type: the Android file
+                    // picker (DocumentsUI) does not know the custom MIME type and would
+                    // show an empty list. With "*/*" all files are visible and the user
+                    // can navigate to their .mgrd file.
+                    openDocumentLauncher.launch(arrayOf("*/*"))
+                    ConfigManager.clearImportRequest()
+                }
+            }
+        }
         // FLAG_NOT_FOCUSABLE must only be active in KEYBOARD mode so that uinput key events
         // are delivered to the focused app (the game) rather than to Megingiard.
         // Keeping it active in other modes would break in-app text fields (e.g. MacroPad
@@ -178,6 +249,27 @@ class MainActivity : ComponentActivity() {
                         MainAppScreen()
                     }
                 }
+            }
+        }
+    }
+
+    /** Called when the app is already running and receives a new ACTION_VIEW intent. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        AppLog.i(TAG, "onNewIntent")
+        handleIncomingIntent(intent)
+    }
+
+    /**
+     * Checks whether [intent] is an ACTION_VIEW intent carrying a `.mgrd` URI and, if so,
+     * notifies [ConfigManager] so the Compose UI can show the import preview dialog.
+     */
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            val uri = intent.data
+            if (uri != null) {
+                AppLog.i(TAG, "handleIncomingIntent: .mgrd URI received: $uri")
+                ConfigManager.setPendingUri(uri)
             }
         }
     }

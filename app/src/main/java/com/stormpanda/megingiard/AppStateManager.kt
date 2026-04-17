@@ -139,4 +139,16 @@ object AppStateManager {
         AppLog.d(TAG, "setPillExpanded($expanded)")
         _pillExpanded.value = expanded
     }
+
+    // Whether the system file picker (SAF) is currently open. While true,
+    // MirrorPresentation hides itself so DocumentsUI is visible to the user on the
+    // secondary display. Without this, the Presentation (TYPE_PRIVATE_PRESENTATION)
+    // sits above the file-picker Activity and the user cannot see or interact with it.
+    private val _isFilePickerOpen = MutableStateFlow(false)
+    val isFilePickerOpen: StateFlow<Boolean> = _isFilePickerOpen.asStateFlow()
+
+    fun setFilePickerOpen(open: Boolean) {
+        AppLog.d(TAG, "setFilePickerOpen($open)")
+        _isFilePickerOpen.value = open
+    }
 }

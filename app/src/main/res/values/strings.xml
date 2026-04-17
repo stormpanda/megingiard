@@ -148,6 +148,48 @@ Open Settings to create a layout.</string>
     <string name="macropad_icon_picker_no_results">No icons found</string>
     <string name="macropad_icon_picker_filled">Filled</string>
     <string name="macropad_icon_picker_currently_selected">Currently selected</string>
+
+    <!-- Configuration export/import -->
+    <string name="settings_section_config">Configuration</string>
+    <string name="settings_config_export">Export configuration</string>
+    <string name="settings_config_export_desc">Save all settings, MacroPad profiles, and macros as a .mgrd file</string>
+    <string name="settings_config_import">Import configuration</string>
+    <string name="settings_config_import_desc">Load settings, MacroPad profiles, and macros from a .mgrd file</string>
+    <string name="config_export_default_filename">megingiard_%s.mgrd</string>
+
+    <!-- Export metadata dialog -->
+    <string name="config_export_dialog_title">Export info (optional)</string>
+    <string name="config_export_author">Author</string>
+    <string name="config_export_description">Description</string>
+    <string name="config_export_tags">Tags (comma-separated)</string>
+    <string name="config_export_confirm">Export</string>
+    <string name="config_export_cancel">Cancel</string>
+
+    <!-- Import preview dialog -->
+    <string name="config_import_title">Import configuration</string>
+    <string name="config_import_author_label">Author</string>
+    <string name="config_import_description_label">Description</string>
+    <string name="config_import_tags_label">Tags</string>
+    <string name="config_import_sections_label">Contains</string>
+    <string name="config_import_section_global">Global settings</string>
+    <string name="config_import_section_mirror">Mirror settings</string>
+    <string name="config_import_section_touchpad">Touchpad settings</string>
+    <string name="config_import_section_keyboard">Keyboard settings</string>
+    <string name="config_import_section_macropad">MacroPad (%1$d profiles, %2$d macros)</string>
+    <string name="config_import_section_macropad_settings">MacroPad settings</string>
+    <string name="config_import_section_settings">Settings (global / tool settings)</string>
+    <string name="config_import_meta_author">Author: %1$s</string>
+    <string name="config_import_warning">New profiles and macros will be added alongside existing ones.</string>
+    <string name="config_import_confirm">Import</string>
+    <string name="config_import_cancel">Cancel</string>
+
+    <!-- Export/import results -->
+    <string name="config_export_success">Configuration exported successfully.</string>
+    <string name="config_import_success">Configuration imported successfully.</string>
+    <string name="config_error_title">Error</string>
+    <string name="config_success_title">Done</string>
+    <string name="config_error_unknown">An unexpected error occurred.</string>
+    <string name="config_ok">OK</string>
     <string name="cd_icon_picker_button">Select icon for button</string>
     <string name="cd_icon_picker_confirm">Apply icon selection</string>
     <string name="cd_icon_picker_delete">Remove icon</string>

@@ -236,14 +236,20 @@ class MirrorPresentation(
                 AppStateManager.currentMode,
                 AppStateManager.isOnValidScreen,
                 SettingsManager.macropadAmbientEnabled,
-                ScreenCaptureManager.isCapturing
-            ) { mode, isValid, ambientEnabled, capturing ->
+                ScreenCaptureManager.isCapturing,
+                AppStateManager.isFilePickerOpen
+            ) { mode, isValid, ambientEnabled, capturing, filePickerOpen ->
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
                 // pushing MainActivity to background (ON_PAUSE ~70 ms). ON_STOP then set
                 // isResumed=false → hide(), and the cycle repeated indefinitely.
-                capturing && isValid && (
+                //
+                // filePickerOpen: while the SAF file picker is active we hide the
+                // Presentation so that DocumentsUI (TYPE_APPLICATION rank) is visible
+                // to the user. Without this the Presentation window (TYPE_PRIVATE_PRESENTATION),
+                // which sits above regular Activities, would block the picker entirely.
+                capturing && isValid && !filePickerOpen && (
                     mode == AppMode.MIRROR ||
                     (mode == AppMode.MACROPAD && ambientEnabled)
                 )

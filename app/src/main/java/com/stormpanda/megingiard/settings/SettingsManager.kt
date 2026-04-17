@@ -43,6 +43,13 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.floatOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 private const val DEFAULT_OVERLAY_TIMEOUT_MS = 3_000L
@@ -123,6 +130,50 @@ object SettingsManager {
 
     private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
     private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
+
+    // ── Section key groups for config export/import ───────────────────────────
+
+    private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
+        KEY_ENABLED_TOOLS, KEY_TOOL_ORDER, KEY_OVERLAY_TIMEOUT_MS, KEY_ACCENT_COLOR,
+        KEY_OVERLAY_AT_BOTTOM, KEY_REMEMBER_LAST_TOOL, KEY_THEME_MODE,
+        KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
+    )
+    private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
+        KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,
+        KEY_REMEMBER_VIEWPORT, KEY_REMEMBER_LOCK, KEY_REMEMBER_PROJECTION,
+    )
+    private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> = setOf(
+        KEY_TOUCHPAD_USE_MOUSE, KEY_TOUCHPAD_TAP_TO_CLICK, KEY_TOUCHPAD_TWO_FINGER_TAP,
+    )
+    private val KEYBOARD_KEYS: Set<Preferences.Key<*>> = setOf(
+        KEY_KB_LAYOUT, KEY_KB_TRACKPOINT_ENABLED, KEY_KB_REPEAT_ENABLED,
+        KEY_KB_FULLSCREEN, KEY_KB_MOUSE_BTN_POS,
+    )
+    private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
+        KEY_MACROPAD_AMBIENT_ENABLED, KEY_MACROPAD_AMBIENT_DIM,
+        KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED, KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA,
+        KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION, KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY,
+        KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR, KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE,
+        KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
+    )
+
+    internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(
+        "global" to GLOBAL_KEYS,
+        "mirror" to MIRROR_KEYS,
+        "touchpad" to TOUCHPAD_KEYS,
+        "keyboard" to KEYBOARD_KEYS,
+        "macropad_settings" to MACROPAD_SETTINGS_KEYS,
+    )
+
+    // Reverse lookup: DataStore key name → section name
+    internal val KEY_TO_SECTION: Map<String, String> by lazy {
+        SECTION_MAP.flatMap { (section, keys) -> keys.map { it.name to section } }.toMap()
+    }
+
+    /** Flat map from DataStore key name to the actual typed key instance, used by [importGroupedSettings]. */
+    internal val KEY_BY_NAME: Map<String, Preferences.Key<*>> by lazy {
+        SECTION_MAP.values.flatten().associateBy { it.name }
+    }
 
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
@@ -728,7 +779,102 @@ object SettingsManager {
             prefs[KEY_SAVED_PROJECTION]?.let { ScreenCaptureManager.setTouchProjectionActive(it) }
         }
     }
-}
+
+    // ── Bulk export/import for config files ──────────────────────────────────
+
+    /**
+     * Snapshots all exportable settings from DataStore, grouped by section name.
+     * Each value is converted to a [JsonElement] so ConfigManager can serialise it directly.
+     */
+    suspend fun exportGroupedSettings(): Map<String, Map<String, JsonElement>> {
+        AppLog.d(TAG, "exportGroupedSettings")
+        val prefs = dataStore.data.catch { emit(emptyPreferences()) }.first()
+        val result = mutableMapOf<String, Map<String, JsonElement>>()
+        for ((section, keys) in SECTION_MAP) {
+            val entries = mutableMapOf<String, JsonElement>()
+            for (key in keys) {
+                val raw = prefs[key] ?: continue
+                entries[key.name] = when (raw) {
+                    is Boolean -> JsonPrimitive(raw)
+                    is Int -> JsonPrimitive(raw)
+                    is Long -> JsonPrimitive(raw)
+                    is Float -> JsonPrimitive(raw)
+                    is String -> JsonPrimitive(raw)
+                    else -> continue
+                }
+            }
+            if (entries.isNotEmpty()) result[section] = entries
+        }
+        return result
+    }
+
+    /**
+     * Writes all settings from [sections] into DataStore in a single edit.
+     * The existing `.collect {}` in [init] automatically re-hydrates every [StateFlow]
+     * after the edit completes — no manual setter calls needed.
+     *
+     * Type dispatch uses [KEY_BY_NAME] to resolve the actual [Preferences.Key] and
+     * `prefs.asMap()` to detect the stored type, so DataStore proto fields are always
+     * written with the correct type (not a heuristic-guessed type).
+     */
+    fun importGroupedSettings(sections: Map<String, Map<String, JsonElement>>) {
+        AppLog.i(TAG, "importGroupedSettings: sections=${sections.keys}")
+        scope.launch {
+            importGroupedSettingsInternal(sections)
+        }
+    }
+
+    /**
+     * Awaitable variant — callers that need to know when the DataStore write completes
+     * (e.g. [ConfigManager.applyImport]) should call this directly from a suspend context.
+     */
+    suspend fun importGroupedSettingsAwait(sections: Map<String, Map<String, JsonElement>>) {
+        AppLog.i(TAG, "importGroupedSettingsAwait: sections=${sections.keys}")
+        importGroupedSettingsInternal(sections)
+    }
+
+    private suspend fun importGroupedSettingsInternal(sections: Map<String, Map<String, JsonElement>>) {
+        dataStore.edit { prefs ->
+                for ((_, entries) in sections) {
+                    for ((keyName, element) in entries) {
+                        if (element !is JsonPrimitive) continue
+                        val key = KEY_BY_NAME[keyName]
+                        if (key == null) {
+                            AppLog.w(TAG, "importGroupedSettings: unknown key '$keyName', skipping")
+                            continue
+                        }
+                        val existingValue = prefs.asMap()[key]
+                        @Suppress("UNCHECKED_CAST")
+                        if (existingValue != null) {
+                            // Type is known from the currently stored value — safe cast by construction.
+                            when (existingValue) {
+                                is Boolean -> element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
+                                is Int     -> element.intOrNull?.let    { prefs[key as Preferences.Key<Int>]     = it }
+                                is Long    -> element.longOrNull?.let   { prefs[key as Preferences.Key<Long>]    = it }
+                                is Float   -> element.floatOrNull?.let  { prefs[key as Preferences.Key<Float>]   = it }
+                                is String  -> element.contentOrNull?.let { prefs[key as Preferences.Key<String>]  = it }
+                            }
+                        } else {
+                            // Key absent on fresh install — infer type from JSON primitive.
+                            @Suppress("UNCHECKED_CAST")
+                            when {
+                                element.booleanOrNull != null ->
+                                    prefs[key as Preferences.Key<Boolean>] = element.booleanOrNull!!
+                                element.floatOrNull != null && element.contentOrNull?.contains('.') == true ->
+                                    prefs[key as Preferences.Key<Float>] = element.floatOrNull!!
+                                element.longOrNull != null && key.name == "overlay_timeout_ms" ->
+                                    prefs[key as Preferences.Key<Long>] = element.longOrNull!!
+                                element.intOrNull != null ->
+                                    prefs[key as Preferences.Key<Int>] = element.intOrNull!!
+                                else ->
+                                    element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 internal fun AppMode.displayNameResId(): Int = when (this) {
     AppMode.MIRROR -> R.string.tool_name_mirror
