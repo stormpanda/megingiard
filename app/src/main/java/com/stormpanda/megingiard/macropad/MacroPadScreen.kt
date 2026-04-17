@@ -218,7 +218,7 @@ internal fun PadSurface(
                                                     is PadAction.TrackpointMove,
                                                     is PadAction.MouseLeftClick,
                                                     is PadAction.MouseRightClick -> if (!profile.enableMouse) R.string.macropad_device_disabled_mouse else null
-                                                    is PadAction.Macro           -> if (!profile.enableGamepad) R.string.macropad_device_disabled_gamepad else null
+                                                    is PadAction.Macro           -> null
                                                     is PadAction.AmbientPeek     -> null
                                                 }
                                                 if (disabledMsgRes != null) {
@@ -331,7 +331,7 @@ internal fun PadSurface(
                     is PadAction.TrackpointMove,
                     is PadAction.MouseLeftClick,
                     is PadAction.MouseRightClick             -> !profile.enableMouse
-                    is PadAction.Macro                       -> !profile.enableGamepad
+                    is PadAction.Macro                       -> false
                     is PadAction.AmbientPeek                 -> false
                 }
                 val isPressed = btn.id in pressedIds

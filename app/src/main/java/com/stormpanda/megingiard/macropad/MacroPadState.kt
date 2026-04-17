@@ -20,9 +20,11 @@ private const val TAG = "MacroPadState"
  * from the actual set of button actions so the injectors are started only when needed.
  */
 private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
-    val kb = buttons.any { it.action is PadAction.KeyboardKey }
-    val gp = buttons.any { it.action is PadAction.GamepadButton }
-    val ms = buttons.any {
+    // Macro buttons can inject any event type — treat them as requiring all three devices.
+    val hasMacro = buttons.any { it.action is PadAction.Macro }
+    val kb = hasMacro || buttons.any { it.action is PadAction.KeyboardKey }
+    val gp = hasMacro || buttons.any { it.action is PadAction.GamepadButton }
+    val ms = hasMacro || buttons.any {
         it.action is PadAction.MouseButton    ||
         it.action is PadAction.ScrollWheel    ||
         it.action is PadAction.TrackpointMove ||
