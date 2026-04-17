@@ -420,7 +420,7 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 ### Layout Editor
 
-`MacroPadEditor` is opened as a full-screen `Dialog(usePlatformDefaultWidth = false)` from `MacroPadToolSettings` (shown inside `ToolSettingsPanel`). Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor canvas is scrollable (it is embedded in a `verticalScroll` Column), so the full-size canvas can extend beyond the visible area of the editor's content region.
+`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition) from `ToolSettingsPanel`, controlled by the `showMacroPadEditor` state flag. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`) instead of `AlertDialog`. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor list is scrollable via `LazyColumn`.
 
 ### Grid Snap Overlay
 

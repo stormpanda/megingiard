@@ -393,133 +393,145 @@ internal fun GamepadButtonPicker(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // ── Primary button ────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { primaryExpanded = true }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(currentPreset.shortLabel, color = accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-            }
-            DropdownMenu(
-                expanded         = primaryExpanded,
-                onDismissRequest = { primaryExpanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                GamepadKeycodes.PRESETS.forEach { preset ->
-                    DropdownMenuItem(
-                        text    = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else colors.onSurface, fontSize = 14.sp) },
-                        onClick = { emitChange(preset, extra1, extra2, extra3); primaryExpanded = false },
-                    )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.macropad_picker_label_button), color = colors.onSurfaceSecondary, fontSize = 10.sp)
+            Box {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { primaryExpanded = true }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(currentPreset.shortLabel, color = accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
+                }
+                DropdownMenu(
+                    expanded         = primaryExpanded,
+                    onDismissRequest = { primaryExpanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    GamepadKeycodes.PRESETS.forEach { preset ->
+                        DropdownMenuItem(
+                            text    = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else colors.onSurface, fontSize = 14.sp) },
+                            onClick = { emitChange(preset, extra1, extra2, extra3); primaryExpanded = false },
+                        )
+                    }
                 }
             }
         }
 
         // ── Extra button 1 ────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            val selectedLabel = presetShortLabel(extra1) ?: noneLabel
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, if (extra1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { extra1Expanded = true }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(selectedLabel, color = if (extra1 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra1 == null) colors.onSurfaceSecondary else accentColor)
-            }
-            DropdownMenu(
-                expanded         = extra1Expanded,
-                onDismissRequest = { extra1Expanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                DropdownMenuItem(
-                    text    = { Text(noneLabel, color = if (extra1 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
-                    onClick = { extra1 = null; emitChange(currentPreset, null, extra2, extra3); extra1Expanded = false },
-                )
-                GamepadKeycodes.PRESETS.forEach { preset ->
-                    if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra2, extra3)) {
-                        DropdownMenuItem(
-                            text    = { Text(preset.label, color = if (preset.code == extra1) accentColor else colors.onSurface, fontSize = 14.sp) },
-                            onClick = { extra1 = preset.code; emitChange(currentPreset, preset.code, extra2, extra3); extra1Expanded = false },
-                        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.macropad_picker_label_extra_1), color = colors.onSurfaceSecondary, fontSize = 10.sp)
+            Box {
+                val selectedLabel = presetShortLabel(extra1) ?: noneLabel
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, if (extra1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { extra1Expanded = true }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(selectedLabel, color = if (extra1 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra1 == null) colors.onSurfaceSecondary else accentColor)
+                }
+                DropdownMenu(
+                    expanded         = extra1Expanded,
+                    onDismissRequest = { extra1Expanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    DropdownMenuItem(
+                        text    = { Text(noneLabel, color = if (extra1 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                        onClick = { extra1 = null; emitChange(currentPreset, null, extra2, extra3); extra1Expanded = false },
+                    )
+                    GamepadKeycodes.PRESETS.forEach { preset ->
+                        if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra2, extra3)) {
+                            DropdownMenuItem(
+                                text    = { Text(preset.label, color = if (preset.code == extra1) accentColor else colors.onSurface, fontSize = 14.sp) },
+                                onClick = { extra1 = preset.code; emitChange(currentPreset, preset.code, extra2, extra3); extra1Expanded = false },
+                            )
+                        }
                     }
                 }
             }
         }
 
         // ── Extra button 2 ────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            val selectedLabel = presetShortLabel(extra2) ?: noneLabel
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, if (extra2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { extra2Expanded = true }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(selectedLabel, color = if (extra2 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra2 == null) colors.onSurfaceSecondary else accentColor)
-            }
-            DropdownMenu(
-                expanded         = extra2Expanded,
-                onDismissRequest = { extra2Expanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                DropdownMenuItem(
-                    text    = { Text(noneLabel, color = if (extra2 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
-                    onClick = { extra2 = null; emitChange(currentPreset, extra1, null, extra3); extra2Expanded = false },
-                )
-                GamepadKeycodes.PRESETS.forEach { preset ->
-                    if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra3)) {
-                        DropdownMenuItem(
-                            text    = { Text(preset.label, color = if (preset.code == extra2) accentColor else colors.onSurface, fontSize = 14.sp) },
-                            onClick = { extra2 = preset.code; emitChange(currentPreset, extra1, preset.code, extra3); extra2Expanded = false },
-                        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.macropad_picker_label_extra_2), color = colors.onSurfaceSecondary, fontSize = 10.sp)
+            Box {
+                val selectedLabel = presetShortLabel(extra2) ?: noneLabel
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, if (extra2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { extra2Expanded = true }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(selectedLabel, color = if (extra2 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra2 == null) colors.onSurfaceSecondary else accentColor)
+                }
+                DropdownMenu(
+                    expanded         = extra2Expanded,
+                    onDismissRequest = { extra2Expanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    DropdownMenuItem(
+                        text    = { Text(noneLabel, color = if (extra2 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                        onClick = { extra2 = null; emitChange(currentPreset, extra1, null, extra3); extra2Expanded = false },
+                    )
+                    GamepadKeycodes.PRESETS.forEach { preset ->
+                        if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra3)) {
+                            DropdownMenuItem(
+                                text    = { Text(preset.label, color = if (preset.code == extra2) accentColor else colors.onSurface, fontSize = 14.sp) },
+                                onClick = { extra2 = preset.code; emitChange(currentPreset, extra1, preset.code, extra3); extra2Expanded = false },
+                            )
+                        }
                     }
                 }
             }
         }
 
         // ── Extra button 3 ────────────────────────────────────────────
-        Box(modifier = Modifier.weight(1f)) {
-            val selectedLabel = presetShortLabel(extra3) ?: noneLabel
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, if (extra3 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { extra3Expanded = true }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(selectedLabel, color = if (extra3 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra3 == null) colors.onSurfaceSecondary else accentColor)
-            }
-            DropdownMenu(
-                expanded         = extra3Expanded,
-                onDismissRequest = { extra3Expanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                DropdownMenuItem(
-                    text    = { Text(noneLabel, color = if (extra3 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
-                    onClick = { extra3 = null; emitChange(currentPreset, extra1, extra2, null); extra3Expanded = false },
-                )
-                GamepadKeycodes.PRESETS.forEach { preset ->
-                    if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra2)) {
-                        DropdownMenuItem(
-                            text    = { Text(preset.label, color = if (preset.code == extra3) accentColor else colors.onSurface, fontSize = 14.sp) },
-                            onClick = { extra3 = preset.code; emitChange(currentPreset, extra1, extra2, preset.code); extra3Expanded = false },
-                        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.macropad_picker_label_extra_3), color = colors.onSurfaceSecondary, fontSize = 10.sp)
+            Box {
+                val selectedLabel = presetShortLabel(extra3) ?: noneLabel
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, if (extra3 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { extra3Expanded = true }
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(selectedLabel, color = if (extra3 == null) colors.onSurfaceSecondary else accentColor, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra3 == null) colors.onSurfaceSecondary else accentColor)
+                }
+                DropdownMenu(
+                    expanded         = extra3Expanded,
+                    onDismissRequest = { extra3Expanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    DropdownMenuItem(
+                        text    = { Text(noneLabel, color = if (extra3 == null) accentColor else colors.onSurface, fontSize = 14.sp) },
+                        onClick = { extra3 = null; emitChange(currentPreset, extra1, extra2, null); extra3Expanded = false },
+                    )
+                    GamepadKeycodes.PRESETS.forEach { preset ->
+                        if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra2)) {
+                            DropdownMenuItem(
+                                text    = { Text(preset.label, color = if (preset.code == extra3) accentColor else colors.onSurface, fontSize = 14.sp) },
+                                onClick = { extra3 = preset.code; emitChange(currentPreset, extra1, extra2, preset.code); extra3Expanded = false },
+                            )
+                        }
                     }
                 }
             }

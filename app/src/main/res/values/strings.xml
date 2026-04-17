@@ -109,6 +109,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_button_size">Button size</string>
     <string name="macropad_button_size_1x1">1×1</string>
     <string name="macropad_modifier_none">—</string>
+    <string name="macropad_picker_label_key">Key</string>
+    <string name="macropad_picker_label_mod_1">Modifier 1</string>
+    <string name="macropad_picker_label_mod_2">Modifier 2</string>
+    <string name="macropad_picker_label_button">Button</string>
+    <string name="macropad_picker_label_extra_1">Extra 1</string>
+    <string name="macropad_picker_label_extra_2">Extra 2</string>
+    <string name="macropad_picker_label_extra_3">Extra 3</string>
     <string name="macropad_button_size_2x1">2×1</string>
     <string name="macropad_button_size_1x2">1×2</string>
     <string name="macropad_button_size_2x2">2×2</string>
