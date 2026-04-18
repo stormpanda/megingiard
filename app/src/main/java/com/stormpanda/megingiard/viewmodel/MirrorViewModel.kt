@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
@@ -34,7 +35,7 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val surfaceWidth: StateFlow<Float> = ScreenCaptureManager.surfaceWidth
     val surfaceHeight: StateFlow<Float> = ScreenCaptureManager.surfaceHeight
     val isFrozen: StateFlow<Boolean> = ScreenCaptureManager.isFrozen
-    val frozenBitmap: StateFlow<android.graphics.Bitmap?> = ScreenCaptureManager.frozenBitmap
+    val frozenBitmap: StateFlow<Bitmap?> = ScreenCaptureManager.frozenBitmap
     val isLocked: StateFlow<Boolean> = ScreenCaptureManager.isLocked
     val isTouchProjectionActive: StateFlow<Boolean> = ScreenCaptureManager.isTouchProjectionActive
     val pinchWhileProjecting: StateFlow<Boolean> = SettingsManager.pinchWhileProjecting

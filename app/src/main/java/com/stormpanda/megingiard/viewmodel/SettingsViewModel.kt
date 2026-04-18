@@ -17,5 +17,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     /** Accent color as ARGB Int from domain; UI converts to Compose Color. */
     val accentColorArgb: StateFlow<Int> = SettingsManager.accentColor
 
-    fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
+    fun setAccentColor(argb: Int) {
+        AppLog.d(TAG, "setAccentColor 0x${argb.toString(16)}")
+        SettingsManager.setAccentColor(argb)
+    }
 }

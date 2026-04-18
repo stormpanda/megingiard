@@ -34,9 +34,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val userDeclinedCapture: StateFlow<Boolean> = AppStateManager.userDeclinedCapture
     val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val pendingUri: StateFlow<android.net.Uri?> = ConfigManager.pendingUri
+    val pendingUri: StateFlow<Uri?> = ConfigManager.pendingUri
     val pendingParsedImport: StateFlow<MegingiardExport?> = ConfigManager.pendingParsedImport
-    val pendingInAppUri: StateFlow<android.net.Uri?> = ConfigManager.pendingInAppUri
+    val pendingInAppUri: StateFlow<Uri?> = ConfigManager.pendingInAppUri
     val macropadAmbientEnabled: StateFlow<Boolean> = SettingsManager.macropadAmbientEnabled
     val isOnValidScreen: StateFlow<Boolean> = AppStateManager.isOnValidScreen
 
