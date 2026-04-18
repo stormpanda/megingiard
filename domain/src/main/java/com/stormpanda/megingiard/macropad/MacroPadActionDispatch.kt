@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 
@@ -41,9 +42,18 @@ fun injectActionDown(action: PadAction) {
             AppLog.d(TAG, "actionDown: Macro id=${action.macroId} found=${macro != null}")
             if (macro != null) MacroExecutor.execute(macro)
         }
-        is PadAction.AmbientPeek     -> { AppLog.d(TAG, "actionDown: AmbientPeek"); MacroPadState.togglePeek() }
-        is PadAction.MouseLeftClick  -> { AppLog.d(TAG, "actionDown: MouseLeftClick"); MouseInjector.leftDown() }
-        is PadAction.MouseRightClick -> { AppLog.d(TAG, "actionDown: MouseRightClick"); MouseInjector.rightDown() }
+        is PadAction.AmbientPeek          -> { AppLog.d(TAG, "actionDown: AmbientPeek"); MacroPadState.togglePeek() }
+        is PadAction.MouseLeftClick         -> { AppLog.d(TAG, "actionDown: MouseLeftClick"); MouseInjector.leftDown() }
+        is PadAction.MouseRightClick        -> { AppLog.d(TAG, "actionDown: MouseRightClick"); MouseInjector.rightDown() }
+        is PadAction.LayoutNext             -> { AppLog.d(TAG, "actionDown: LayoutNext"); MacroPadState.nextLayout() }
+        is PadAction.LayoutPrevious         -> { AppLog.d(TAG, "actionDown: LayoutPrevious"); MacroPadState.previousLayout() }
+        is PadAction.ProfileSwitcher        -> { AppLog.d(TAG, "actionDown: ProfileSwitcher"); AppStateManager.openPillMenu() }
+        is PadAction.FullScreenMouse        -> { AppLog.d(TAG, "actionDown: FullScreenMouse sens=${action.sensitivity}"); AppStateManager.setFullscreenMouseActive(true) }
+        is PadAction.FullScreenKeyboard     -> { AppLog.d(TAG, "actionDown: FullScreenKeyboard layout=${action.layout}"); AppStateManager.setFullscreenKeyboardActive(true) }
+        is PadAction.MirrorPlayStop         -> { AppLog.d(TAG, "actionDown: MirrorPlayStop") /* wired in mirror phase */ }
+        is PadAction.MirrorFreeze           -> { AppLog.d(TAG, "actionDown: MirrorFreeze") /* wired in mirror phase */ }
+        is PadAction.MirrorViewportEdit     -> { AppLog.d(TAG, "actionDown: MirrorViewportEdit") /* wired in mirror phase */ }
+        is PadAction.MirrorTouchProjection  -> { AppLog.d(TAG, "actionDown: MirrorTouchProjection") /* wired in mirror phase */ }
     }
 }
 
@@ -71,9 +81,18 @@ fun injectActionUp(action: PadAction) {
         }
         is PadAction.ScrollWheel     -> { /* handled via drag events */ }
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
-        is PadAction.Macro           -> { /* fire-and-forget on down; up is no-op */ }
-        is PadAction.AmbientPeek     -> { /* toggle on down; up is no-op */ }
-        is PadAction.MouseLeftClick  -> { AppLog.d(TAG, "actionUp: MouseLeftClick"); MouseInjector.leftUp() }
-        is PadAction.MouseRightClick -> { AppLog.d(TAG, "actionUp: MouseRightClick"); MouseInjector.rightUp() }
+        is PadAction.Macro                 -> { /* fire-and-forget on down; up is no-op */ }
+        is PadAction.AmbientPeek            -> { /* toggle on down; up is no-op */ }
+        is PadAction.MouseLeftClick         -> { AppLog.d(TAG, "actionUp: MouseLeftClick"); MouseInjector.leftUp() }
+        is PadAction.MouseRightClick        -> { AppLog.d(TAG, "actionUp: MouseRightClick"); MouseInjector.rightUp() }
+        is PadAction.LayoutNext             -> { /* fires on down; up is no-op */ }
+        is PadAction.LayoutPrevious         -> { /* fires on down; up is no-op */ }
+        is PadAction.ProfileSwitcher        -> { /* fires on down; up is no-op */ }
+        is PadAction.FullScreenMouse        -> { /* fires on down; up is no-op */ }
+        is PadAction.FullScreenKeyboard     -> { /* fires on down; up is no-op */ }
+        is PadAction.MirrorPlayStop         -> { /* fires on down; up is no-op */ }
+        is PadAction.MirrorFreeze           -> { /* fires on down; up is no-op */ }
+        is PadAction.MirrorViewportEdit     -> { /* fires on down; up is no-op */ }
+        is PadAction.MirrorTouchProjection  -> { /* fires on down; up is no-op */ }
     }
 }

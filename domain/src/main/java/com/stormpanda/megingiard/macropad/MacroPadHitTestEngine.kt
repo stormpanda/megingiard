@@ -193,6 +193,15 @@ class MacroPadHitTestEngine(
             is PadAction.MouseRightClick -> !profile.enableMouse
             is PadAction.Macro -> false
             is PadAction.AmbientPeek -> false
+            is PadAction.LayoutNext,
+            is PadAction.LayoutPrevious,
+            is PadAction.ProfileSwitcher,
+            is PadAction.MirrorPlayStop,
+            is PadAction.MirrorFreeze,
+            is PadAction.MirrorViewportEdit,
+            is PadAction.MirrorTouchProjection -> false
+            is PadAction.FullScreenMouse -> !profile.enableMouse
+            is PadAction.FullScreenKeyboard -> !profile.enableKeyboard
         }
 
         /**
@@ -211,6 +220,15 @@ class MacroPadHitTestEngine(
             is PadAction.MouseRightClick -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
             is PadAction.Macro -> null
             is PadAction.AmbientPeek -> null
+            is PadAction.LayoutNext,
+            is PadAction.LayoutPrevious,
+            is PadAction.ProfileSwitcher,
+            is PadAction.MirrorPlayStop,
+            is PadAction.MirrorFreeze,
+            is PadAction.MirrorViewportEdit,
+            is PadAction.MirrorTouchProjection -> null
+            is PadAction.FullScreenMouse -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
+            is PadAction.FullScreenKeyboard -> if (!profile.enableKeyboard) MACROPAD_DEVICE_DISABLED_KEYBOARD else null
         }
 
         // These will be set by the app module at init time to match R.string values.

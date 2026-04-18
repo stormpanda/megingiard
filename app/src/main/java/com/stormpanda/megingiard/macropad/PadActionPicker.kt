@@ -39,26 +39,49 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 // Action category enum
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, AMBIENT_PEEK }
+internal enum class ActionCategory {
+    KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, AMBIENT_PEEK,
+    LAYOUT_NEXT, LAYOUT_PREVIOUS, PROFILE_SWITCHER,
+    MIRROR_PLAY_STOP, MIRROR_FREEZE, MIRROR_VIEWPORT_EDIT, MIRROR_TOUCH_PROJECTION,
+    FULLSCREEN_MOUSE, FULLSCREEN_KEYBOARD,
+}
 
 internal fun ActionCategory.labelResId(): Int = when (this) {
-    ActionCategory.KEYBOARD_KEY   -> R.string.macropad_action_keyboard_key
-    ActionCategory.GAMEPAD_BUTTON -> R.string.macropad_action_gamepad_button
-    ActionCategory.MOUSE_BUTTON   -> R.string.macropad_action_mouse_button
-    ActionCategory.SCROLL_WHEEL   -> R.string.macropad_action_scroll_wheel
-    ActionCategory.TRACKPOINT     -> R.string.macropad_action_trackpoint
-    ActionCategory.MACRO          -> R.string.macropad_action_macro
-    ActionCategory.AMBIENT_PEEK   -> R.string.macropad_action_ambient_peek
+    ActionCategory.KEYBOARD_KEY          -> R.string.macropad_action_keyboard_key
+    ActionCategory.GAMEPAD_BUTTON        -> R.string.macropad_action_gamepad_button
+    ActionCategory.MOUSE_BUTTON          -> R.string.macropad_action_mouse_button
+    ActionCategory.SCROLL_WHEEL          -> R.string.macropad_action_scroll_wheel
+    ActionCategory.TRACKPOINT            -> R.string.macropad_action_trackpoint
+    ActionCategory.MACRO                 -> R.string.macropad_action_macro
+    ActionCategory.AMBIENT_PEEK          -> R.string.macropad_action_ambient_peek
+    ActionCategory.LAYOUT_NEXT           -> R.string.macropad_action_layout_next
+    ActionCategory.LAYOUT_PREVIOUS       -> R.string.macropad_action_layout_previous
+    ActionCategory.PROFILE_SWITCHER      -> R.string.macropad_action_profile_switcher
+    ActionCategory.MIRROR_PLAY_STOP      -> R.string.macropad_action_mirror_play_stop
+    ActionCategory.MIRROR_FREEZE         -> R.string.macropad_action_mirror_freeze
+    ActionCategory.MIRROR_VIEWPORT_EDIT  -> R.string.macropad_action_mirror_viewport_edit
+    ActionCategory.MIRROR_TOUCH_PROJECTION -> R.string.macropad_action_mirror_touch_projection
+    ActionCategory.FULLSCREEN_MOUSE      -> R.string.macropad_action_fullscreen_mouse
+    ActionCategory.FULLSCREEN_KEYBOARD   -> R.string.macropad_action_fullscreen_keyboard
 }
 
 internal fun ActionCategory.defaultAction(): PadAction = when (this) {
-    ActionCategory.KEYBOARD_KEY   -> PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
-    ActionCategory.GAMEPAD_BUTTON -> PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
-    ActionCategory.MOUSE_BUTTON   -> PadAction.MouseButton(MouseButton.LEFT)
-    ActionCategory.SCROLL_WHEEL   -> PadAction.ScrollWheel
-    ActionCategory.TRACKPOINT     -> PadAction.TrackpointMove()
-    ActionCategory.MACRO          -> PadAction.Macro(MacroState.macros.value.firstOrNull()?.id ?: "")
-    ActionCategory.AMBIENT_PEEK   -> PadAction.AmbientPeek
+    ActionCategory.KEYBOARD_KEY          -> PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
+    ActionCategory.GAMEPAD_BUTTON        -> PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
+    ActionCategory.MOUSE_BUTTON          -> PadAction.MouseButton(MouseButton.LEFT)
+    ActionCategory.SCROLL_WHEEL          -> PadAction.ScrollWheel
+    ActionCategory.TRACKPOINT            -> PadAction.TrackpointMove()
+    ActionCategory.MACRO                 -> PadAction.Macro(MacroState.macros.value.firstOrNull()?.id ?: "")
+    ActionCategory.AMBIENT_PEEK          -> PadAction.AmbientPeek
+    ActionCategory.LAYOUT_NEXT           -> PadAction.LayoutNext
+    ActionCategory.LAYOUT_PREVIOUS       -> PadAction.LayoutPrevious
+    ActionCategory.PROFILE_SWITCHER      -> PadAction.ProfileSwitcher
+    ActionCategory.MIRROR_PLAY_STOP      -> PadAction.MirrorPlayStop
+    ActionCategory.MIRROR_FREEZE         -> PadAction.MirrorFreeze
+    ActionCategory.MIRROR_VIEWPORT_EDIT  -> PadAction.MirrorViewportEdit
+    ActionCategory.MIRROR_TOUCH_PROJECTION -> PadAction.MirrorTouchProjection
+    ActionCategory.FULLSCREEN_MOUSE      -> PadAction.FullScreenMouse()
+    ActionCategory.FULLSCREEN_KEYBOARD   -> PadAction.FullScreenKeyboard()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,15 +89,24 @@ internal fun ActionCategory.defaultAction(): PadAction = when (this) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 internal fun PadAction.categoryResId(): Int = when (this) {
-    is PadAction.KeyboardKey     -> R.string.macropad_action_keyboard_key
-    is PadAction.GamepadButton   -> R.string.macropad_action_gamepad_button
-    is PadAction.MouseButton     -> R.string.macropad_action_mouse_button
-    is PadAction.ScrollWheel     -> R.string.macropad_action_scroll_wheel
-    is PadAction.TrackpointMove  -> R.string.macropad_action_trackpoint
-    is PadAction.Macro           -> R.string.macropad_action_macro
-    is PadAction.AmbientPeek     -> R.string.macropad_action_ambient_peek
-    is PadAction.MouseLeftClick  -> R.string.macropad_action_mouse_button
-    is PadAction.MouseRightClick -> R.string.macropad_action_mouse_button
+    is PadAction.KeyboardKey        -> R.string.macropad_action_keyboard_key
+    is PadAction.GamepadButton      -> R.string.macropad_action_gamepad_button
+    is PadAction.MouseButton        -> R.string.macropad_action_mouse_button
+    is PadAction.ScrollWheel        -> R.string.macropad_action_scroll_wheel
+    is PadAction.TrackpointMove     -> R.string.macropad_action_trackpoint
+    is PadAction.Macro              -> R.string.macropad_action_macro
+    is PadAction.AmbientPeek        -> R.string.macropad_action_ambient_peek
+    is PadAction.MouseLeftClick     -> R.string.macropad_action_mouse_button
+    is PadAction.MouseRightClick    -> R.string.macropad_action_mouse_button
+    is PadAction.LayoutNext         -> R.string.macropad_action_layout_next
+    is PadAction.LayoutPrevious     -> R.string.macropad_action_layout_previous
+    is PadAction.ProfileSwitcher    -> R.string.macropad_action_profile_switcher
+    is PadAction.MirrorPlayStop     -> R.string.macropad_action_mirror_play_stop
+    is PadAction.MirrorFreeze       -> R.string.macropad_action_mirror_freeze
+    is PadAction.MirrorViewportEdit -> R.string.macropad_action_mirror_viewport_edit
+    is PadAction.MirrorTouchProjection -> R.string.macropad_action_mirror_touch_projection
+    is PadAction.FullScreenMouse    -> R.string.macropad_action_fullscreen_mouse
+    is PadAction.FullScreenKeyboard -> R.string.macropad_action_fullscreen_keyboard
 }
 
 internal fun PadAction.toCategory(): ActionCategory = when (this) {
@@ -86,6 +118,15 @@ internal fun PadAction.toCategory(): ActionCategory = when (this) {
     is PadAction.TrackpointMove                                                -> ActionCategory.TRACKPOINT
     is PadAction.Macro                                                         -> ActionCategory.MACRO
     is PadAction.AmbientPeek                                                   -> ActionCategory.AMBIENT_PEEK
+    is PadAction.LayoutNext                                                    -> ActionCategory.LAYOUT_NEXT
+    is PadAction.LayoutPrevious                                                -> ActionCategory.LAYOUT_PREVIOUS
+    is PadAction.ProfileSwitcher                                               -> ActionCategory.PROFILE_SWITCHER
+    is PadAction.MirrorPlayStop                                                -> ActionCategory.MIRROR_PLAY_STOP
+    is PadAction.MirrorFreeze                                                  -> ActionCategory.MIRROR_FREEZE
+    is PadAction.MirrorViewportEdit                                            -> ActionCategory.MIRROR_VIEWPORT_EDIT
+    is PadAction.MirrorTouchProjection                                         -> ActionCategory.MIRROR_TOUCH_PROJECTION
+    is PadAction.FullScreenMouse                                               -> ActionCategory.FULLSCREEN_MOUSE
+    is PadAction.FullScreenKeyboard                                            -> ActionCategory.FULLSCREEN_KEYBOARD
 }
 
 @Composable
@@ -118,8 +159,17 @@ internal fun PadAction.displayLabel(): String {
             context.getString(R.string.macropad_display_macro, macroName)
         }
         is PadAction.AmbientPeek     -> context.getString(R.string.macropad_action_ambient_peek)
-        is PadAction.MouseLeftClick  -> context.getString(R.string.macropad_display_mouse_button, "Left")
-        is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_button, "Right")
+        is PadAction.MouseLeftClick   -> context.getString(R.string.macropad_display_mouse_button, "Left")
+        is PadAction.MouseRightClick  -> context.getString(R.string.macropad_display_mouse_button, "Right")
+        is PadAction.LayoutNext         -> context.getString(R.string.macropad_action_layout_next)
+        is PadAction.LayoutPrevious     -> context.getString(R.string.macropad_action_layout_previous)
+        is PadAction.ProfileSwitcher    -> context.getString(R.string.macropad_action_profile_switcher)
+        is PadAction.MirrorPlayStop     -> context.getString(R.string.macropad_action_mirror_play_stop)
+        is PadAction.MirrorFreeze       -> context.getString(R.string.macropad_action_mirror_freeze)
+        is PadAction.MirrorViewportEdit -> context.getString(R.string.macropad_action_mirror_viewport_edit)
+        is PadAction.MirrorTouchProjection -> context.getString(R.string.macropad_action_mirror_touch_projection)
+        is PadAction.FullScreenMouse    -> context.getString(R.string.macropad_action_fullscreen_mouse)
+        is PadAction.FullScreenKeyboard -> context.getString(R.string.macropad_action_fullscreen_keyboard)
     }
 }
 
@@ -180,13 +230,22 @@ internal fun ActionPicker(
             ) {
                 ActionCategory.entries.forEach { cat ->
                     val catEnabled = when (cat) {
-                        ActionCategory.KEYBOARD_KEY   -> enableKeyboard
-                        ActionCategory.GAMEPAD_BUTTON -> enableGamepad
+                        ActionCategory.KEYBOARD_KEY          -> enableKeyboard
+                        ActionCategory.GAMEPAD_BUTTON        -> enableGamepad
                         ActionCategory.MOUSE_BUTTON,
                         ActionCategory.SCROLL_WHEEL,
-                        ActionCategory.TRACKPOINT     -> enableMouse
-                        ActionCategory.MACRO          -> MacroState.macros.value.isNotEmpty()
-                        ActionCategory.AMBIENT_PEEK   -> true
+                        ActionCategory.TRACKPOINT            -> enableMouse
+                        ActionCategory.MACRO                 -> MacroState.macros.value.isNotEmpty()
+                        ActionCategory.AMBIENT_PEEK,
+                        ActionCategory.LAYOUT_NEXT,
+                        ActionCategory.LAYOUT_PREVIOUS,
+                        ActionCategory.PROFILE_SWITCHER,
+                        ActionCategory.MIRROR_PLAY_STOP,
+                        ActionCategory.MIRROR_FREEZE,
+                        ActionCategory.MIRROR_VIEWPORT_EDIT,
+                        ActionCategory.MIRROR_TOUCH_PROJECTION -> true
+                        ActionCategory.FULLSCREEN_MOUSE      -> enableMouse
+                        ActionCategory.FULLSCREEN_KEYBOARD   -> enableKeyboard
                     }
                     if (catEnabled) {
                         DropdownMenuItem(
@@ -210,7 +269,16 @@ internal fun ActionPicker(
             is PadAction.TrackpointMove,
             is PadAction.AmbientPeek,
             is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick -> { /* no further config needed */ }
+            is PadAction.MouseRightClick,
+            is PadAction.LayoutNext,
+            is PadAction.LayoutPrevious,
+            is PadAction.ProfileSwitcher,
+            is PadAction.MirrorPlayStop,
+            is PadAction.MirrorFreeze,
+            is PadAction.MirrorViewportEdit,
+            is PadAction.MirrorTouchProjection,
+            is PadAction.FullScreenMouse,
+            is PadAction.FullScreenKeyboard -> { /* no further config needed */ }
         }
     }
 }

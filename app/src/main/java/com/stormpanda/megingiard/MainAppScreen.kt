@@ -2,13 +2,11 @@ package com.stormpanda.megingiard
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,10 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,10 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.config.MegingiardExport
-import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.MacroPadScreen
-import com.stormpanda.megingiard.touchpad.TouchpadScreen
-import com.stormpanda.megingiard.ui.CarouselOverlay
+import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MainViewModel
 import kotlin.math.roundToInt
@@ -69,13 +63,10 @@ private val MAS_WRONG_SCREEN_TEXT_SIZE = 18.sp
 @Composable
 fun MainAppScreen() {
     val viewModel: MainViewModel = viewModel()
-    val currentMode by viewModel.currentMode.collectAsState()
-    val isCapturing by viewModel.isCapturing.collectAsState()
-    val userDeclinedCapture by viewModel.userDeclinedCapture.collectAsState()
+    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
+    val isValidScreen by viewModel.isOnValidScreen.collectAsState()
     val colors = LocalAppColors.current
 
-    val showControls by viewModel.overlayVisible.collectAsState()
-    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
@@ -88,8 +79,6 @@ fun MainAppScreen() {
     val pendingInAppUri by viewModel.pendingInAppUri.collectAsState()
     var importError by remember { mutableStateOf<String?>(null) }
 
-    // When MainActivity receives a .mgrd file intent, ConfigManager stores the URI here.
-    // We handle the I/O and parsing in a coroutine, then show the preview dialog on success.
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         viewModel.parseImportUri(context, uri)
@@ -101,7 +90,6 @@ fun MainAppScreen() {
             }
     }
 
-    // When the in-app Settings file picker returns, parse and route to GlobalSettingsScreen.
     LaunchedEffect(pendingInAppUri) {
         val uri = pendingInAppUri ?: return@LaunchedEffect
         viewModel.parseImportUri(context, uri)
@@ -144,104 +132,20 @@ fun MainAppScreen() {
                 }
             }
     ) {
-        Crossfade(targetState = currentMode, label = "Mode Switch") { mode ->
-            when (mode) {
-                AppMode.MIRROR -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(colors.appBackground),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!isCapturing && userDeclinedCapture) {
-                            OutlinedButton(
-                                onClick = { viewModel.setUserDeclinedCapture(false) },
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = colors.buttonBody,
-                                    contentColor = colors.buttonIconTint
-                                ),
-                                border = BorderStroke(2.dp, colors.navPillBorder),
-                                modifier = Modifier.padding(16.dp).height(72.dp)
-                            ) {
-                                Icon(
-                                    Icons.Rounded.PlayArrow,
-                                    contentDescription = stringResource(R.string.mirror_start_button),
-                                    modifier = Modifier.padding(end = 8.dp).size(36.dp),
-                                    tint = colors.buttonIconTint
-                                )
-                                Text(stringResource(R.string.mirror_start_button), color = colors.buttonIconTint)
-                            }
-                        }
-                    }
-                }
-                AppMode.TOUCHPAD -> TouchpadScreen()
-                AppMode.KEYBOARD -> KeyboardScreen()
-                AppMode.MACROPAD -> {
-                    val ambientEnabled by viewModel.macropadAmbientEnabled.collectAsState()
-                    val macroCapturing by viewModel.isCapturing.collectAsState()
-                    if (ambientEnabled && macroCapturing) {
-                        // Presentation handles rendering — show empty black background
-                        Box(Modifier.fillMaxSize().background(colors.appBackground))
-                    } else {
-                        MacroPadScreen()
-                    }
-                }
-            }
-        }
+        // MacroPad is the sole content screen
+        MacroPadScreen()
 
-        CarouselOverlay(visible = showControls, onInteraction = { viewModel.triggerOverlay() })
+        // Idle Pill + Pill Menu overlay
+        IdlePill()
 
         // ── Global wrong-screen overlay ─────────────────────────────────────
         // Blocks all interaction and renders on top of everything when the app
         // is running on the primary display instead of the secondary screen.
-        val isValidScreen by viewModel.isOnValidScreen.collectAsState()
         if (!isValidScreen) {
-            val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
-            val bounceOffset by bounceTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = MAS_ARROW_BOUNCE_PX,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = MAS_ARROW_BOUNCE_MS),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "arrow-y"
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(colors.appBackground)
-                    .pointerInput(Unit) {
-                        // Consume all touch events so nothing underneath is reachable.
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                event.changes.forEach { it.consume() }
-                            }
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.wrong_screen_message),
-                        color = colors.onSurface,
-                        fontSize = MAS_WRONG_SCREEN_TEXT_SIZE,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
-                    Spacer(Modifier.height(24.dp))
-                    Icon(
-                        Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.cd_wrong_screen_arrow),
-                        tint = colors.onSurface,
-                        modifier = Modifier
-                            .size(MAS_ARROW_SIZE)
-                            .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) }
-                    )
-                }
-            }
+            WrongScreenOverlay(colors = colors)
         }
     }
 
-    // Show import preview when a .mgrd file is opened from a file manager or share sheet
     pendingImport?.let { export ->
         IncomingImportDialog(
             export = export,
@@ -286,6 +190,53 @@ fun MainAppScreen() {
             },
             containerColor = colors.surface,
         )
+    }
+}
+
+@Composable
+private fun WrongScreenOverlay(colors: AppColors) {
+    val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
+    val bounceOffset by bounceTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = MAS_ARROW_BOUNCE_PX,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = MAS_ARROW_BOUNCE_MS),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "arrow-y"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.appBackground)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        event.changes.forEach { it.consume() }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(R.string.wrong_screen_message),
+                color = colors.onSurface,
+                fontSize = MAS_WRONG_SCREEN_TEXT_SIZE,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+            Spacer(Modifier.height(24.dp))
+            Icon(
+                Icons.Rounded.KeyboardArrowDown,
+                contentDescription = stringResource(R.string.cd_wrong_screen_arrow),
+                tint = colors.onSurface,
+                modifier = Modifier
+                    .size(MAS_ARROW_SIZE)
+                    .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) }
+            )
+        }
     }
 }
 
@@ -343,7 +294,7 @@ private fun IncomingImportDialog(
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                        stringResource(R.string.config_import_warning),
+                    stringResource(R.string.config_import_warning),
                     color = colors.onSurface,
                     fontSize = 12.sp,
                 )

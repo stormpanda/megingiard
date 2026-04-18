@@ -41,7 +41,7 @@ class SwipeGestureProcessor(
                 pointerY - swipeStartY
             }
             if (delta >= swipeThresholdPx) {
-                AppStateManager.triggerOverlay()
+                AppStateManager.handleEdgeSwipe()
                 swipeTriggered = true
             }
         }

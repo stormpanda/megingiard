@@ -652,6 +652,15 @@ private fun ButtonListItem(
         is PadAction.MouseRightClick             -> !enableMouse
         is PadAction.Macro                       -> !enableGamepad
         is PadAction.AmbientPeek                 -> false
+        is PadAction.LayoutNext,
+        is PadAction.LayoutPrevious,
+        is PadAction.ProfileSwitcher,
+        is PadAction.MirrorPlayStop,
+        is PadAction.MirrorFreeze,
+        is PadAction.MirrorViewportEdit,
+        is PadAction.MirrorTouchProjection       -> false
+        is PadAction.FullScreenMouse             -> !enableMouse
+        is PadAction.FullScreenKeyboard          -> !enableKeyboard
     }
 
     Row(

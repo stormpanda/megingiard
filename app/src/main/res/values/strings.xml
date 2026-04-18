@@ -209,6 +209,15 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
     <string name="macropad_action_ambient_peek">Ambient Peek</string>
+    <string name="macropad_action_layout_next">Next Layout</string>
+    <string name="macropad_action_layout_previous">Previous Layout</string>
+    <string name="macropad_action_profile_switcher">Profile Switcher</string>
+    <string name="macropad_action_mirror_play_stop">Mirror Start/Stop</string>
+    <string name="macropad_action_mirror_freeze">Mirror Freeze</string>
+    <string name="macropad_action_mirror_viewport_edit">Mirror Viewport</string>
+    <string name="macropad_action_mirror_touch_projection">Touch Projection</string>
+    <string name="macropad_action_fullscreen_mouse">Fullscreen Mouse</string>
+    <string name="macropad_action_fullscreen_keyboard">Fullscreen Keyboard</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
     <string name="settings_macropad_profile">Active Profile</string>
@@ -330,4 +339,20 @@ Open Settings to create a layout.</string>
     <string name="macropad_move_to_folder">Move to Folder…</string>
     <string name="macropad_picker_folder_empty">No macros in this folder</string>
     <string name="cd_more_options">More options</string>
+
+    <!-- Idle Pill -->
+    <string name="pill_x_close">× close</string>
+
+    <!-- Pill Menu -->
+    <string name="pill_menu_profile_label">Profile</string>
+    <string name="pill_menu_layout_label">Layout</string>
+    <string name="pill_menu_new_profile">New Profile</string>
+    <string name="pill_menu_new_layout">New Layout</string>
+    <string name="pill_menu_edit_layout">Edit Layout</string>
+    <string name="pill_menu_ambient_settings">Ambient Settings</string>
+    <string name="pill_menu_global_settings">Global Settings</string>
+    <string name="pill_menu_profile_name_hint">Profile name</string>
+    <string name="pill_menu_layout_name_hint">Layout name</string>
+    <string name="cd_layout_prev">Previous layout</string>
+    <string name="cd_layout_next">Next layout</string>
 </resources>

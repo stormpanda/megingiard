@@ -185,6 +185,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_scroll_wheel">Scrollrad</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative Maus)</string>
     <string name="macropad_action_ambient_peek">Vorschau-Taste</string>
+    <string name="macropad_action_layout_next">Nächstes Layout</string>
+    <string name="macropad_action_layout_previous">Vorheriges Layout</string>
+    <string name="macropad_action_profile_switcher">Profil wechseln</string>
+    <string name="macropad_action_mirror_play_stop">Spiegel Start/Stop</string>
+    <string name="macropad_action_mirror_freeze">Spiegel einfrieren</string>
+    <string name="macropad_action_mirror_viewport_edit">Spiegel Viewport</string>
+    <string name="macropad_action_mirror_touch_projection">Touch-Projektion</string>
+    <string name="macropad_action_fullscreen_mouse">Vollbild-Maus</string>
+    <string name="macropad_action_fullscreen_keyboard">Vollbild-Tastatur</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
     <string name="settings_macropad_profile">Aktives Profil</string>
