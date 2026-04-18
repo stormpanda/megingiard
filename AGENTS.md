@@ -63,10 +63,10 @@ com.stormpanda.megingiard
 │ └── ShellMouseInjector.kt # Native binary lifecycle + MOVE-coalescing writer thread (shared)
 ├── keyboard/
 │ ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
-│ ├── KeyboardKeyCap.kt # KeyBounds data class, findKeyInLayout(), KeyCap Composable
+│ ├── KeyboardKeyCap.kt # KeyBounds data class, KeyCap Composable
 │ ├── KeyboardMouseOverlay.kt # Mouse button overlay (MouseButtonColumn, ScrollWheelButton, etc.)
 │ ├── KeyboardState.kt # Modifier key state machine (INACTIVE/STICKY/HELD)
-│ ├── KeyboardLayout.kt # Layout definitions & KeyDef data class
+│ ├── KeyboardLayout.kt # Layout definitions, KeyDef data class, findKeyInLayout()
 │ ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
 │ ├── ShellKeyInjector.kt # Native binary lifecycle for key injection via /dev/uinput
 │ ├── KeyAction.kt # Shared DOWN/UP enum
@@ -445,14 +445,15 @@ startActivity(intent, options.toBundle())
 window?.decorView?.apply {
     setViewTreeLifecycleOwner(lifecycleOwner)
     setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+    setViewTreeViewModelStoreOwner(lifecycleOwner)
 }
 ```
 
-Without this, Compose cannot find a lifecycle owner and throws at runtime.
+Without this, Compose cannot find a lifecycle owner / ViewModel store and throws at runtime.
 
 **Teardown:** `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
 Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
-event that cleans up all Compose state registered against the owner.
+event that cleans up all Compose state registered against the owner and clears the `ViewModelStore`.
 
 ```kotlin
 setOnDismissListener {

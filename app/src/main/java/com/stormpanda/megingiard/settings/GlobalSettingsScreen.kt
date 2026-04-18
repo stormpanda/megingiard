@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -57,7 +58,6 @@ import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.ThemeMode
 import java.time.LocalDate
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -79,7 +79,8 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val enabledTools by SettingsManager.enabledTools.collectAsState()
     val toolOrder by SettingsManager.toolOrder.collectAsState()
     val overlayTimeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
-    val accentColor by SettingsManager.accentColor.collectAsState()
+    val accentColorArgb by SettingsManager.accentColor.collectAsState()
+    val accentColor = Color(accentColorArgb)
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val rememberLastTool by SettingsManager.rememberLastTool.collectAsState()
     val themeMode by SettingsManager.themeMode.collectAsState()
@@ -257,7 +258,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
             ColorWheelPicker(
                 initialColor = accentColor,
                 onColorSelected = { color ->
-                    SettingsManager.setAccentColor(color)
+                    SettingsManager.setAccentColor(color.toArgb())
                     showColorPicker = false
                 },
                 onDismiss = { showColorPicker = false }
@@ -535,9 +536,10 @@ private fun ImportPreviewDialog(
                     fontSize = 13.sp,
                 )
             }
-            if (!metadata.description.isNullOrBlank()) {
+            val description = metadata.description
+            if (!description.isNullOrBlank()) {
                 Text(
-                    text = metadata.description,
+                    text = description,
                     color = colors.onSurfaceSecondary,
                     fontSize = 12.sp,
                 )

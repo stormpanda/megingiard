@@ -15,7 +15,7 @@ import kotlinx.serialization.json.JsonElement
  * v1: per-section typed data classes (removed in v2).
  * v2: flat DataStore key/value map grouped by section name.
  */
-internal const val SCHEMA_VERSION = 2
+const val SCHEMA_VERSION = 2
 
 /** MIME type registered in AndroidManifest for `.mgrd` config files. */
 const val MGRD_MIME_TYPE = "application/vnd.megingiard.config+json"

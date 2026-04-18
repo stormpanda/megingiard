@@ -19,16 +19,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -40,63 +36,36 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.AppStateManager
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.input.TouchAction
-import com.stormpanda.megingiard.input.TouchInjector
-import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.AppLog
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.stormpanda.megingiard.viewmodel.TouchpadViewModel
 import kotlin.math.roundToInt
 
 private const val TOUCH_AREA_ASPECT_RATIO    = 16f / 9f
 private val   TOUCH_AREA_BORDER_WIDTH        = 1.dp
 private val   TOUCH_INDICATOR_SIZE           = 24.dp
-private const val TOUCH_INDICATOR_ALPHA      = 0.5f
 private val   TOUCH_AREA_CORNER_RADIUS       = 4.dp
-
-// Mouse mode
-private const val TP_MOUSE_SENSITIVITY       = 2f
-private const val TP_TAP_TIMEOUT_MS          = 200L
-private const val TP_TAP_SLOP_PX             = 20f
-private const val TP_CLICK_DURATION_MS       = 40L
 
 private const val TAG = "TouchpadScreen"
 
 @Composable
 fun TouchpadScreen(modifier: Modifier = Modifier) {
+    val viewModel: TouchpadViewModel = viewModel()
     val context    = LocalContext.current
-    val useMouse   by SettingsManager.touchpadUseMouse.collectAsState()
-    val tapToClick by SettingsManager.touchpadTapToClick.collectAsState()
-    val twoFinger  by SettingsManager.touchpadTwoFingerTap.collectAsState()
+    val useMouse   by viewModel.touchpadUseMouse.collectAsState()
+    val tapToClick by viewModel.touchpadTapToClick.collectAsState()
+    val twoFinger  by viewModel.touchpadTwoFingerTap.collectAsState()
 
     // Start the correct injector whenever the input method changes.
-    // Stops the other injector first to avoid both running simultaneously.
     LaunchedEffect(useMouse) {
-        withContext(Dispatchers.IO) {
-            if (useMouse) {
-                AppLog.d(TAG, "starting MouseInjector (useMouse=true)")
-                TouchInjector.stop()
-                MouseInjector.start(context)
-            } else {
-                AppLog.d(TAG, "starting TouchInjector (useMouse=false)")
-                MouseInjector.stop()
-                TouchInjector.start(context)
-            }
-        }
+        viewModel.startInjectors(context, useMouse)
     }
 
     // Stop both injectors when leaving TOUCHPAD mode.
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.d(TAG, "TouchpadScreen disposed → injectors stopped")
-            TouchInjector.stop()
-            MouseInjector.stop()
+            viewModel.stopInjectors()
         }
     }
 
@@ -105,6 +74,7 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center
     ) {
         TouchSurface(
+            viewModel  = viewModel,
             useMouse   = useMouse,
             tapToClick = tapToClick,
             twoFinger  = twoFinger
@@ -114,25 +84,26 @@ fun TouchpadScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun TouchSurface(
+    viewModel: TouchpadViewModel,
     useMouse: Boolean,
     tapToClick: Boolean,
     twoFinger: Boolean,
 ) {
+    // Processor created per useMouse mode change (same lifecycle as pointerInput restart).
+    val processor = remember(useMouse) { viewModel.createGestureProcessor(useMouse) }
     // Pixel size of the surface — needed for normalised coordinates in touch mode.
     var surfaceSize by remember { mutableStateOf(IntSize.Zero) }
-    // Visual indicator position: only tracked in touch mode.
-    var touchPos by remember { mutableStateOf<Offset?>(null) }
+    // Visual indicator position from the processor (touch mode only).
+    val touchPosState by processor.touchPos.collectAsState()
 
     val density         = LocalDensity.current
     val colors          = LocalAppColors.current
     val indicatorSizePx = remember(density) { with(density) { TOUCH_INDICATOR_SIZE.toPx() } }
 
-    val overlayVisible      by AppStateManager.overlayVisible.collectAsState()
+    val overlayVisible      by viewModel.overlayVisible.collectAsState()
     val overlayVisibleState  = rememberUpdatedState(overlayVisible)
     val tapToClickState      = rememberUpdatedState(tapToClick)
     val twoFingerState       = rememberUpdatedState(twoFinger)
-
-    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -144,138 +115,66 @@ private fun TouchSurface(
             // all per-mode tracking state is cleanly initialised.
             .pointerInput(useMouse) {
                 awaitPointerEventScope {
-                    if (useMouse) {
-                        // ── Mouse mode ────────────────────────────────────────────────
-                        // Per-pointer tracking for tap detection.
-                        val pressTimes:    HashMap<PointerId, Long>   = HashMap()
-                        val downPositions: HashMap<PointerId, Offset>  = HashMap()
-                        val movedTooFar:   HashSet<PointerId>          = HashSet()
-                        val releasedAsTap: ArrayList<PointerId>        = ArrayList()
-                        var primaryPointer: PointerId?                 = null
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
 
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Main)
-
-                            // Block input while the carousel overlay is shown.
-                            if (overlayVisibleState.value && event.type != PointerEventType.Release) {
-                                if (event.type == PointerEventType.Press && event.changes.any { !it.isConsumed }) {
-                                    AppStateManager.hideOverlay()
-                                }
-                                event.changes.forEach { change ->
-                                    if (!change.isConsumed) change.consume()
-                                }
-                                continue
+                        // Block input while the carousel overlay is shown.
+                        if (overlayVisibleState.value && event.type != PointerEventType.Release) {
+                            if (event.type == PointerEventType.Press && event.changes.any { !it.isConsumed }) {
+                                viewModel.hideOverlay()
                             }
+                            event.changes.forEach { change ->
+                                if (!change.isConsumed) change.consume()
+                            }
+                            continue
+                        }
 
+                        if (surfaceSize == IntSize.Zero) continue
+                        val sw = surfaceSize.width.toFloat()
+                        val sh = surfaceSize.height.toFloat()
+
+                        if (useMouse) {
+                            // ── Mouse mode ────────────────────────────────────────────────
                             for (change in event.changes) {
-                                val id = change.id
+                                val id = change.id.value
                                 when (event.type) {
                                     PointerEventType.Press -> {
                                         if (!change.previousPressed) {
-                                            pressTimes[id]    = System.currentTimeMillis()
-                                            downPositions[id] = change.position
-                                            if (primaryPointer == null) primaryPointer = id
+                                            processor.onPress(id, change.position.x, change.position.y, sw, sh, overlayOpen = false)
                                             change.consume()
                                         }
                                     }
                                     PointerEventType.Move -> {
-                                        // Disqualify as tap if slop exceeded.
-                                        val initPos = downPositions[id]
-                                        if (initPos != null && id !in movedTooFar) {
-                                            val dx = change.position.x - initPos.x
-                                            val dy = change.position.y - initPos.y
-                                            if (dx * dx + dy * dy > TP_TAP_SLOP_PX * TP_TAP_SLOP_PX) {
-                                                movedTooFar.add(id)
-                                            }
-                                        }
-                                        // Only the primary pointer drives cursor movement.
-                                        if (id == primaryPointer) {
-                                            val delta = change.positionChange()
-                                            val dx = (delta.x * TP_MOUSE_SENSITIVITY).roundToInt()
-                                            val dy = (delta.y * TP_MOUSE_SENSITIVITY).roundToInt()
-                                            if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
-                                        }
+                                        val delta = change.positionChange()
+                                        processor.onMove(id, change.position.x, change.position.y, delta.x, delta.y, sw, sh, overlayOpen = false)
                                         change.consume()
                                     }
                                     PointerEventType.Release -> {
                                         if (!change.pressed) {
-                                            val pressTime    = pressTimes.remove(id)
-                                            downPositions.remove(id)
-                                            val disqualified = movedTooFar.remove(id)
-                                            val isTap = pressTime != null
-                                                    && !disqualified
-                                                    && (System.currentTimeMillis() - pressTime) < TP_TAP_TIMEOUT_MS
-                                            if (id == primaryPointer) {
-                                                // Hand off primary role to the next active finger (if any).
-                                                primaryPointer = event.changes
-                                                    .firstOrNull { it.id != id && it.pressed }?.id
-                                            }
-                                            if (isTap) releasedAsTap.add(id)
+                                            val allUp = event.changes.none { it.pressed }
+                                            processor.onRelease(id, change.position.x, change.position.y, sw, sh, allUp, tapToClickState.value, twoFingerState.value)
                                             change.consume()
                                         }
                                     }
                                     else -> Unit
                                 }
                             }
-
-                            // After all changes in this event: when every finger is up,
-                            // evaluate collected taps and fire click if applicable.
-                            if (event.type == PointerEventType.Release
-                                && event.changes.none { it.pressed }
-                            ) {
-                                val tapCount = releasedAsTap.size
-                                releasedAsTap.clear()
-                                pressTimes.clear()
-                                downPositions.clear()
-                                movedTooFar.clear()
-                                primaryPointer = null
-                                when {
-                                    tapCount == 1 && tapToClickState.value -> scope.launch {
-                                        MouseInjector.leftDown()
-                                        delay(TP_CLICK_DURATION_MS)
-                                        MouseInjector.leftUp()
-                                    }
-                                    tapCount >= 2 && twoFingerState.value -> scope.launch {
-                                        MouseInjector.rightDown()
-                                        delay(TP_CLICK_DURATION_MS)
-                                        MouseInjector.rightUp()
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // ── Touch mode (absolute coordinates) ────────────────────────
-                        while (true) {
-                            val event   = awaitPointerEvent(PointerEventPass.Main)
+                        } else {
+                            // ── Touch mode (absolute coordinates) ────────────────────────
                             val pointer = event.changes.firstOrNull() ?: continue
-
-                            if (surfaceSize == IntSize.Zero) continue
-
-                            val nx = (pointer.position.x / surfaceSize.width).coerceIn(0f, 1f)
-                            val ny = (pointer.position.y / surfaceSize.height).coerceIn(0f, 1f)
-
-                            if (overlayVisibleState.value && event.type != PointerEventType.Release) {
-                                if (event.type == PointerEventType.Press && !pointer.isConsumed) {
-                                    AppStateManager.hideOverlay()
-                                }
-                                pointer.consume()
-                                continue
-                            }
-
+                            val id = pointer.id.value
                             when (event.type) {
                                 PointerEventType.Press -> {
-                                    touchPos = pointer.position
-                                    TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
+                                    processor.onPress(id, pointer.position.x, pointer.position.y, sw, sh, overlayOpen = false)
                                     pointer.consume()
                                 }
                                 PointerEventType.Move -> {
-                                    touchPos = pointer.position
-                                    TouchInjector.injectTouch(TouchAction.MOVE, nx, ny)
+                                    val delta = pointer.positionChange()
+                                    processor.onMove(id, pointer.position.x, pointer.position.y, delta.x, delta.y, sw, sh, overlayOpen = false)
                                     pointer.consume()
                                 }
                                 PointerEventType.Release -> {
-                                    touchPos = null
-                                    TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+                                    processor.onRelease(id, pointer.position.x, pointer.position.y, sw, sh, allPointersUp = true, tapToClick = false, twoFingerTap = false)
                                     pointer.consume()
                                 }
                                 else -> Unit
@@ -286,7 +185,7 @@ private fun TouchSurface(
             }
     ) {
         // Hint text: in touch mode only when no finger is down; in mouse mode always.
-        val showHint = if (useMouse) true else (touchPos == null)
+        val showHint = if (useMouse) true else (touchPosState == null)
         if (showHint) {
             Text(
                 text = stringResource(
@@ -303,15 +202,15 @@ private fun TouchSurface(
 
         // Touch indicator dot: only in touch mode, only while a finger is down.
         if (!useMouse) {
-            val pos = touchPos
+            val pos = touchPosState
             if (pos != null) {
                 Box(
                     modifier = Modifier
                         .size(TOUCH_INDICATOR_SIZE)
                         .offset {
                             IntOffset(
-                                x = (pos.x - indicatorSizePx / 2f).roundToInt(),
-                                y = (pos.y - indicatorSizePx / 2f).roundToInt()
+                                x = (pos.first - indicatorSizePx / 2f).roundToInt(),
+                                y = (pos.second - indicatorSizePx / 2f).roundToInt()
                             )
                         }
                         .background(colors.fingerCircle, CircleShape)

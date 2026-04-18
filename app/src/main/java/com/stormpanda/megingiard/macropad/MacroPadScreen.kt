@@ -13,18 +13,14 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
@@ -35,16 +31,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.AppLog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
+import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -68,30 +58,20 @@ private const val TAG = "MacroPadScreen"
 
 @Composable
 fun MacroPadScreen(modifier: Modifier = Modifier) {
+    val viewModel: MacroPadViewModel = viewModel()
     val context     = LocalContext.current
-    val profile     by MacroPadState.activeProfile.collectAsState()
+    val profile     by viewModel.activeProfile.collectAsState()
     val colors      = LocalAppColors.current
 
-    // Start injectors after the carousel overlay has closed (same pattern as KeyboardScreen)
+    // Start injectors after the carousel overlay has closed
     LaunchedEffect(Unit) {
-        AppStateManager.overlayVisible.first { !it }
-        withContext(Dispatchers.IO) {
-            val ap = MacroPadState.activeProfile.value
-            AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-            if (ap?.enableKeyboard != false) KeyInjector.start(context)
-            if (ap?.enableGamepad != false) GamepadInjector.start(context)
-            if (ap?.enableMouse != false) MouseInjector.start(context)
-        }
+        viewModel.startInjectors(context)
     }
 
     // Stop all injectors and reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.d(TAG, "MacroPadScreen disposed → all injectors stopped")
-            KeyInjector.stop()
-            GamepadInjector.stop()
-            MouseInjector.stop()
-            MacroPadState.resetPeek()
+            viewModel.stopInjectors()
         }
     }
 
@@ -130,22 +110,21 @@ internal fun PadSurface(
     transparentBackground: Boolean = false,
     neutralStyle: Boolean = false,
 ) {
+    val viewModel: MacroPadViewModel = viewModel()
     val density      = LocalDensity.current
     val context      = LocalContext.current
     val colors       = LocalAppColors.current
-    var canvasSize   by remember { mutableStateOf(IntSize.Zero) }
-    val overlayVisible      by AppStateManager.overlayVisible.collectAsState()
+    val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
+    val overlayVisible      by viewModel.overlayVisible.collectAsState()
     val overlayVisibleState  = rememberUpdatedState(overlayVisible)
 
-    // Track which button IDs are currently pressed (multi-touch)
-    var pressedIds  by remember { mutableStateOf(setOf<String>()) }
-    // Pointer → button/trackpoint mapping for multi-touch release
-    val pointerMap  = remember { mutableMapOf<PointerId, String>() }
+    // Create hit-test engine with density-aware dp→px converter
+    val engine = remember(profile) {
+        viewModel.createHitTestEngine { dpValue -> with(density) { dpValue.dp.toPx() } }
+    }
 
-    // Track last trackpoint finger position for delta computation
-    var lastTpPos   by remember { mutableStateOf<Offset?>(null) }
-    // Scroll-wheel buttons: track the Y position when the finger went down
-    val scrollStartY = remember { mutableMapOf<PointerId, Float>() }
+    // Track which button IDs are currently pressed (from engine)
+    val pressedIds by engine.pressedIds.collectAsState()
 
     Box(
         contentAlignment = Alignment.Center,
@@ -160,11 +139,12 @@ internal fun PadSurface(
                     if (transparentBackground) Modifier
                     else Modifier.border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
                 )
-                .onSizeChanged { canvasSize = it }
-                .pointerInput(profile, canvasSize) {
+                .onSizeChanged { canvasSizeState.value = it }
+                .pointerInput(profile, canvasSizeState.value) {
                     awaitPointerEventScope {
                         while (true) {
                             val event   = awaitPointerEvent(PointerEventPass.Main)
+                            val canvasSize = canvasSizeState.value
                             val w       = canvasSize.width.toFloat().coerceAtLeast(1f)
                             val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
 
@@ -175,136 +155,36 @@ internal fun PadSurface(
                             }
 
                             event.changes.forEach { change ->
-                                val id = change.id
-                                val px = change.position.x
-                                val py = change.position.y
-                                val nx = (px / w).coerceIn(0f, 1f)
-                                val ny = (py / h).coerceIn(0f, 1f)
+                                val id = change.id.value
 
                                 when (event.type) {
                                     PointerEventType.Press -> {
-                                        // Only act on the pointer that just went down;
-                                        // other pointers in this batch event are still held from before.
                                         if (!change.previousPressed) {
-                                        val hitList = if (isPeekActive) {
-                                            profile.buttons.filter { it.action is PadAction.AmbientPeek }
-                                        } else {
-                                            profile.buttons
-                                        }
-                                        val hitButton = hitList.firstOrNull { btn ->
-                                            val isTrackpoint = btn.action is PadAction.TrackpointMove
-                                            val chipWidthPx = with(density) {
-                                                if (isTrackpoint) (MP_BUTTON_UNIT_DP * (btn.action as PadAction.TrackpointMove).size.multiplier).toPx()
-                                                else (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
-                                            }
-                                            val chipHeightPx = with(density) {
-                                                if (isTrackpoint) (MP_BUTTON_UNIT_DP * (btn.action as PadAction.TrackpointMove).size.multiplier).toPx()
-                                                else (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
-                                            }
-                                            val bx = btn.posX * w
-                                            val by = btn.posY * h
-                                            px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
-                                            py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
-                                        }
-
-                                        when {
-                                            hitButton != null -> {
-                                                // Check if the required device is disabled
-                                                val disabledMsgRes = when (hitButton.action) {
-                                                    is PadAction.KeyboardKey   -> if (!profile.enableKeyboard) R.string.macropad_device_disabled_keyboard else null
-                                                    is PadAction.GamepadButton -> if (!profile.enableGamepad)  R.string.macropad_device_disabled_gamepad  else null
-                                                    is PadAction.MouseButton,
-                                                    is PadAction.ScrollWheel,
-                                                    is PadAction.TrackpointMove,
-                                                    is PadAction.MouseLeftClick,
-                                                    is PadAction.MouseRightClick -> if (!profile.enableMouse) R.string.macropad_device_disabled_mouse else null
-                                                    is PadAction.Macro           -> null
-                                                    is PadAction.AmbientPeek     -> null
+                                            val disabledBtn = engine.onPress(
+                                                id, change.position.x, change.position.y,
+                                                w, h, profile, isPeekActive
+                                            )
+                                            if (disabledBtn != null) {
+                                                val msgRes = MacroPadHitTestEngine.deviceDisabledMessageRes(
+                                                    disabledBtn.action, profile
+                                                )
+                                                if (msgRes != null) {
+                                                    Toast.makeText(context, msgRes, Toast.LENGTH_SHORT).show()
                                                 }
-                                                if (disabledMsgRes != null) {
-                                                    Toast.makeText(context, disabledMsgRes, Toast.LENGTH_SHORT).show()
-                                                } else {
-                                                pointerMap[id] = hitButton.id
-                                                when {
-                                                    hitButton.action is PadAction.ScrollWheel -> {
-                                                        // Scroll wheel: record start Y, do not inject down
-                                                        scrollStartY[id] = py
-                                                    }
-                                                    hitButton.action is PadAction.TrackpointMove -> {
-                                                        lastTpPos = change.position
-                                                    }
-                                                    else -> {
-                                                        pressedIds = pressedIds + hitButton.id
-                                                        injectActionDown(hitButton.action)
-                                                    }
-                                                }
-                                                } // end device-enabled check
                                             }
                                         }
-                                        } // end if (!change.previousPressed)
                                         change.consume()
                                     }
 
                                     PointerEventType.Move -> {
-                                        when (pointerMap[id]) {
-                                            null -> { /* unknown pointer */ }
-                                            else -> {
-                                                val mappedId  = pointerMap[id]
-                                                val mappedBtn = profile.buttons.firstOrNull { it.id == mappedId }
-                                                when {
-                                                    mappedBtn?.action is PadAction.TrackpointMove -> {
-                                                        val last = lastTpPos
-                                                        if (last != null) {
-                                                            val delta = change.positionChange()
-                                                            val dx = (delta.x * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                                                            val dy = (delta.y * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                                                            if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
-                                                        }
-                                                        lastTpPos = change.position
-                                                        change.consume()
-                                                    }
-                                                    mappedBtn?.action is PadAction.ScrollWheel -> {
-                                                        val startY = scrollStartY[id]
-                                                        if (startY != null) {
-                                                            val totalDeltaY = startY - py  // negative = scroll down
-                                                            // Convert pixel distance to scroll units with velocity scaling:
-                                                            // units grow quadratically with distance for natural feel
-                                                            val units = (totalDeltaY / MP_SCROLL_SENSITIVITY_PX).toInt()
-                                                            if (units != 0) {
-                                                                MouseInjector.scrollWheel(units)
-                                                                // Move start point by the consumed pixels so delta resets
-                                                                scrollStartY[id] = py
-                                                            }
-                                                        }
-                                                        change.consume()
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        val delta = change.positionChange()
+                                        engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, profile)
+                                        change.consume()
                                     }
 
                                     PointerEventType.Release -> {
-                                        // Only act on the pointer that actually lifted;
-                                        // other pointers in this batch event are still held.
                                         if (!change.pressed) {
-                                            when (val mapped = pointerMap.remove(id)) {
-                                                null -> { /* unknown pointer */ }
-                                                else -> {
-                                                    val btn = profile.buttons.firstOrNull { it.id == mapped }
-                                                    when {
-                                                        btn?.action is PadAction.TrackpointMove -> {
-                                                            lastTpPos = null
-                                                        }
-                                                        btn?.action is PadAction.ScrollWheel -> {
-                                                            scrollStartY.remove(id)
-                                                        }
-                                                        btn != null -> {
-                                                            pressedIds = pressedIds - mapped
-                                                            injectActionUp(btn.action)
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                            engine.onRelease(id, profile)
                                         }
                                         change.consume()
                                     }
@@ -323,22 +203,12 @@ internal fun PadSurface(
                 profile.buttons
             }
             visibleButtons.forEach { btn ->
-                val isDeviceDisabled = when (btn.action) {
-                    is PadAction.KeyboardKey                 -> !profile.enableKeyboard
-                    is PadAction.GamepadButton               -> !profile.enableGamepad
-                    is PadAction.MouseButton,
-                    is PadAction.ScrollWheel,
-                    is PadAction.TrackpointMove,
-                    is PadAction.MouseLeftClick,
-                    is PadAction.MouseRightClick             -> !profile.enableMouse
-                    is PadAction.Macro                       -> false
-                    is PadAction.AmbientPeek                 -> false
-                }
+                val isDeviceDisabled = MacroPadHitTestEngine.isDeviceDisabled(btn.action, profile)
                 val isPressed = btn.id in pressedIds
                 PadButton(
                     btn              = btn,
                     isPressed        = isPressed,
-                    canvasSize       = canvasSize,
+                    canvasSize       = canvasSizeState.value,
                     accentColor      = accentColor,
                     isDeviceDisabled = isDeviceDisabled,
                     neutralStyle     = neutralStyle,

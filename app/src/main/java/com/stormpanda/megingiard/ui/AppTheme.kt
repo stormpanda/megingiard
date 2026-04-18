@@ -6,19 +6,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
-
-// ─── Theme mode ──────────────────────────────────────────────────────────────
-
-/**
- * [supportsCustomAccent] – true when the user can override the palette's built-in
- * accent colour from Global Settings. false means the theme ships its own accent
- * and the colour picker is hidden.
- */
-enum class ThemeMode(val supportsCustomAccent: Boolean) {
-    DARK(supportsCustomAccent = true),
-    LIGHT(supportsCustomAccent = true),
-    CYBERPUNK(supportsCustomAccent = false),
-}
+import com.stormpanda.megingiard.settings.ThemeMode
 
 // ─── Semantic tokens ─────────────────────────────────────────────────────────
 //
