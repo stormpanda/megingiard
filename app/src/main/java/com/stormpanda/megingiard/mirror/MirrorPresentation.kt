@@ -1,11 +1,13 @@
 package com.stormpanda.megingiard.mirror
 
+import android.app.Application
 import android.app.Presentation
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import androidx.compose.ui.graphics.Color as ComposeColor
 import com.stormpanda.megingiard.AppLog
 import android.os.Handler
 import android.os.Looper
@@ -33,6 +35,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
@@ -93,10 +96,11 @@ class MirrorPresentation(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             onBackCallback
         )
-        val lifecycleOwner = MirrorPresentationLifecycleOwner()
+        val lifecycleOwner = MirrorPresentationLifecycleOwner(context.applicationContext as Application)
         window?.decorView?.apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+            setViewTreeViewModelStoreOwner(lifecycleOwner)
         }
 
         setOnDismissListener {
@@ -172,8 +176,8 @@ class MirrorPresentation(
         val composeView = ComposeView(composeViewContext).apply {
             setContent {
                 val themeMode by SettingsManager.themeMode.collectAsState()
-                val userAccent by SettingsManager.accentColor.collectAsState()
-                val appColors = paletteFor(themeMode, userAccent)
+                val userAccentArgb by SettingsManager.accentColor.collectAsState()
+                val appColors = paletteFor(themeMode, ComposeColor(userAccentArgb))
 
                 // The Presentation window has its own Context that is never updated when
                 // LocaleManager.applicationLocales changes (only the Activity recreates).

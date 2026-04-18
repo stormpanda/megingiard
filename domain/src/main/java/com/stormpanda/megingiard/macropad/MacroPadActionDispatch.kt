@@ -12,7 +12,7 @@ private const val TAG = "MacroPadActionDispatch"
 // Injection helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal fun injectActionDown(action: PadAction) {
+fun injectActionDown(action: PadAction) {
     when (action) {
         is PadAction.KeyboardKey -> {
             AppLog.d(TAG, "actionDown: KeyboardKey keycode=${action.keycode} modifiers=${action.modifiers}")
@@ -47,7 +47,7 @@ internal fun injectActionDown(action: PadAction) {
     }
 }
 
-internal fun injectActionUp(action: PadAction) {
+fun injectActionUp(action: PadAction) {
     when (action) {
         is PadAction.KeyboardKey -> {
             AppLog.d(TAG, "actionUp: KeyboardKey keycode=${action.keycode} modifiers=${action.modifiers}")

@@ -165,9 +165,10 @@ internal fun PadButton(
         } else if (btn.action is PadAction.AmbientPeek) {
             AmbientPeekFace(accentColor = effectiveContentAccent)
         } else {
-            if (btn.iconName != null) {
+            val iconName = btn.iconName
+            if (iconName != null) {
                 MaterialSymbol(
-                    name = btn.iconName,
+                    name = iconName,
                     size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                     tint = effectiveTextTint,
                     filled = btn.iconFilled,

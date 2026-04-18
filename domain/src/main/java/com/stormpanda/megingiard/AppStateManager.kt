@@ -14,8 +14,6 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
 
-enum class AppMode { MIRROR, TOUCHPAD, KEYBOARD, MACROPAD }
-
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.

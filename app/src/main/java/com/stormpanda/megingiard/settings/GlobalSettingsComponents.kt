@@ -42,7 +42,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
-import com.stormpanda.megingiard.ui.ThemeMode
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -233,6 +232,13 @@ internal fun RememberLastToolRow(
             )
         )
     }
+}
+
+internal fun AppMode.displayNameResId(): Int = when (this) {
+    AppMode.MIRROR -> R.string.tool_name_mirror
+    AppMode.TOUCHPAD -> R.string.tool_name_touchpad
+    AppMode.KEYBOARD -> R.string.tool_name_keyboard
+    AppMode.MACROPAD -> R.string.tool_name_macropad
 }
 
 internal fun ThemeMode.displayNameResId(): Int = when (this) {

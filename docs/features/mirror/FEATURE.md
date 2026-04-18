@@ -95,15 +95,16 @@ Primary Display
 
 ### Synthetic Lifecycle Owner
 
-Jetpack Compose requires a `LifecycleOwner` and `SavedStateRegistryOwner`. These are not natively available in a `Presentation` window spawned by a background service.
+Jetpack Compose requires a `LifecycleOwner`, `SavedStateRegistryOwner`, and `ViewModelStoreOwner`. These are not natively available in a `Presentation` window spawned by a background service.
 
 **`MirrorPresentationLifecycleOwner`** is a synthetic implementation that:
 
 1. Fires `ON_CREATE → ON_START → ON_RESUME` lifecycle transitions immediately on instantiation.
-2. Is injected into the `Presentation`'s DecorView via `setViewTreeLifecycleOwner()` and `setViewTreeSavedStateRegistryOwner()`.
-3. Is destroyed (`ON_PAUSE → ON_STOP → ON_DESTROY`) via `destroy()` called in `setOnDismissListener`.
+2. Is injected into the `Presentation`'s DecorView via `setViewTreeLifecycleOwner()`, `setViewTreeSavedStateRegistryOwner()`, and `setViewTreeViewModelStoreOwner()`.
+3. Implements `HasDefaultViewModelProviderFactory` so that `AndroidViewModel` subclasses (e.g. `MirrorViewModel`) can be created via `viewModel()` inside the Compose tree.
+4. Is destroyed (`ON_PAUSE → ON_STOP → ON_DESTROY`) via `destroy()` called in `setOnDismissListener`, which also clears the `ViewModelStore`.
 
-This lets Compose run inside the detached `Presentation` window exactly as it would inside a normal `Activity`, with proper recomposition and coroutine cleanup.
+This lets Compose run inside the detached `Presentation` window exactly as it would inside a normal `Activity`, with proper recomposition, ViewModel scoping, and coroutine cleanup.
 
 **ComposeView window context:** The `ComposeView` is created with a dedicated `TYPE_APPLICATION` window context on the secondary display (via `context.createWindowContext(display, TYPE_APPLICATION, null)`), separate from the Presentation's own `TYPE_PRIVATE_PRESENTATION` context. Without this, any Compose `Dialog()` composable would throw a "Window type mismatch" error, because `Dialog.show()` inherits the context's window type (2037) but can only create windows of type 2 (`TYPE_APPLICATION`).
 
@@ -267,12 +268,12 @@ An optional setting ("Pinch-to-zoom while projecting", default off) allows the u
 
 ### Source Files
 
-| File                                  | Responsibility                                                                          |
-| ------------------------------------- | --------------------------------------------------------------------------------------- |
-| `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                 |
-| `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic |
-| `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` for Compose-in-Presentation      |
-| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap     |
-| `MirrorScreen.kt`                     | Compose UI: gesture handling, 4 control buttons, touch projection, `CarouselOverlay`    |
-| `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                         |
-| `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                        |
+| File                                  | Responsibility                                                                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                                    |
+| `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic                    |
+| `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` + `ViewModelStoreOwner` for Compose-in-Presentation |
+| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap                        |
+| `MirrorScreen.kt`                     | Compose UI: gesture handling, 4 control buttons, touch projection, `CarouselOverlay`                       |
+| `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
+| `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

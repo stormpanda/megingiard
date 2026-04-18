@@ -63,10 +63,10 @@ com.stormpanda.megingiard
 │ └── ShellMouseInjector.kt # Native binary lifecycle + MOVE-coalescing writer thread (shared)
 ├── keyboard/
 │ ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
-│ ├── KeyboardKeyCap.kt # KeyBounds data class, findKeyInLayout(), KeyCap Composable
+│ ├── KeyboardKeyCap.kt # KeyBounds data class, KeyCap Composable
 │ ├── KeyboardMouseOverlay.kt # Mouse button overlay (MouseButtonColumn, ScrollWheelButton, etc.)
 │ ├── KeyboardState.kt # Modifier key state machine (INACTIVE/STICKY/HELD)
-│ ├── KeyboardLayout.kt # Layout definitions & KeyDef data class
+│ ├── KeyboardLayout.kt # Layout definitions, KeyDef data class, findKeyInLayout()
 │ ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
 │ ├── ShellKeyInjector.kt # Native binary lifecycle for key injection via /dev/uinput
 │ ├── KeyAction.kt # Shared DOWN/UP enum
@@ -445,14 +445,15 @@ startActivity(intent, options.toBundle())
 window?.decorView?.apply {
     setViewTreeLifecycleOwner(lifecycleOwner)
     setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+    setViewTreeViewModelStoreOwner(lifecycleOwner)
 }
 ```
 
-Without this, Compose cannot find a lifecycle owner and throws at runtime.
+Without this, Compose cannot find a lifecycle owner / ViewModel store and throws at runtime.
 
 **Teardown:** `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
 Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
-event that cleans up all Compose state registered against the owner.
+event that cleans up all Compose state registered against the owner and clears the `ViewModelStore`.
 
 ```kotlin
 setOnDismissListener {
@@ -494,6 +495,12 @@ setOnDismissListener {
 - The device node `/dev/uinput` is accessible under the standard shell UID (2000) on the AYN Thor —
   no root or special permission required.
   See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
+- **Keycode registration range: 1–255 only.** The binary registers `UI_SET_KEYBIT` for codes 1–255.
+  Codes 256+ are BTN\_ device buttons (mouse, gamepad, stylus). Registering `BTN_TOOL_PEN` (0x140 = 320)
+  causes Android's `EventHub` to classify the device as `EXTERNAL_STYLUS` instead of `KEYBOARD`;
+  an `EXTERNAL_STYLUS` device has no `KeyboardInputMapper`, so EV_KEY events are silently ignored by
+  Android's input pipeline. All keyboard keycodes used by the app are ≤ 125. `ShellKeyInjector.injectKey()`
+  enforces the matching 1..255 guard.
 
 ---
 

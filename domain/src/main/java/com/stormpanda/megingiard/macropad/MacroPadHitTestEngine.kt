@@ -1,0 +1,221 @@
+package com.stormpanda.megingiard.macropad
+
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.input.MouseInjector
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.roundToInt
+
+private const val TAG = "MacroPadHitTest"
+
+private const val MP_TRACKPOINT_SENSITIVITY = 3f
+private const val MP_SCROLL_SENSITIVITY_PX = 12f
+
+/**
+ * Hit-test engine and multi-touch dispatch for MacroPad use-mode.
+ *
+ * Extracted from [MacroPadScreen.PadSurface]: handles button lookup,
+ * per-pointer tracking, trackpoint delta accumulation, and scroll-wheel
+ * gesture processing — all without any Compose dependency.
+ *
+ * The UI creates one instance per pointer-input scope restart and
+ * dispatches raw pointer events through the `on*` methods.
+ *
+ * @param buttonUnitDpToPx  conversion function: `(dp: Float) -> Float`
+ *                          for calculating button chip sizes from dp units
+ */
+class MacroPadHitTestEngine(
+    private val buttonUnitDpToPx: (Float) -> Float,
+) {
+    private val _pressedIds = MutableStateFlow(emptySet<String>())
+    /** Set of currently pressed button IDs (for visual highlighting). */
+    val pressedIds: StateFlow<Set<String>> = _pressedIds.asStateFlow()
+
+    // Per-pointer tracking
+    private val pointerMap = mutableMapOf<Long, String>()
+    private var lastTpPos: Pair<Float, Float>? = null
+    private val scrollStartY = mutableMapOf<Long, Float>()
+
+    /**
+     * Handle a Press event.
+     *
+     * @param pointerId     unique pointer ID
+     * @param px            pointer X in canvas pixels
+     * @param py            pointer Y in canvas pixels
+     * @param canvasW       canvas width in pixels
+     * @param canvasH       canvas height in pixels
+     * @param profile       active pad profile
+     * @param isPeekActive  true if ambient-peek mode is active
+     * @return the button that was hit (for device-disabled toast), or null
+     */
+    fun onPress(
+        pointerId: Long,
+        px: Float,
+        py: Float,
+        canvasW: Float,
+        canvasH: Float,
+        profile: PadProfile,
+        isPeekActive: Boolean,
+    ): PadButton? {
+        val hitList = if (isPeekActive) {
+            profile.buttons.filter { it.action is PadAction.AmbientPeek }
+        } else {
+            profile.buttons
+        }
+
+        val hitButton = hitList.firstOrNull { btn ->
+            val isTrackpoint = btn.action is PadAction.TrackpointMove
+            val chipWidthPx = if (isTrackpoint) {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+            } else {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.cols)
+            }
+            val chipHeightPx = if (isTrackpoint) {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+            } else {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.rows)
+            }
+            val bx = btn.posX * canvasW
+            val by = btn.posY * canvasH
+            px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
+            py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
+        } ?: return null
+
+        // Check if the required device is disabled
+        if (isDeviceDisabled(hitButton.action, profile)) return hitButton
+
+        pointerMap[pointerId] = hitButton.id
+        when {
+            hitButton.action is PadAction.ScrollWheel -> {
+                scrollStartY[pointerId] = py
+            }
+            hitButton.action is PadAction.TrackpointMove -> {
+                lastTpPos = Pair(px, py)
+            }
+            else -> {
+                _pressedIds.value = _pressedIds.value + hitButton.id
+                injectActionDown(hitButton.action)
+            }
+        }
+        return null // null = no toast needed
+    }
+
+    /**
+     * Handle a Move event.
+     *
+     * @param pointerId  the pointer that moved
+     * @param px         current pointer X
+     * @param py         current pointer Y
+     * @param deltaX     position change X since last event
+     * @param deltaY     position change Y since last event
+     * @param profile    active pad profile
+     */
+    fun onMove(
+        pointerId: Long,
+        px: Float,
+        py: Float,
+        deltaX: Float,
+        deltaY: Float,
+        profile: PadProfile,
+    ) {
+        val mappedId = pointerMap[pointerId] ?: return
+        val mappedBtn = profile.buttons.firstOrNull { it.id == mappedId } ?: return
+
+        when {
+            mappedBtn.action is PadAction.TrackpointMove -> {
+                if (lastTpPos != null) {
+                    val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                    val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                    if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
+                }
+                lastTpPos = Pair(px, py)
+            }
+            mappedBtn.action is PadAction.ScrollWheel -> {
+                val startY = scrollStartY[pointerId] ?: return
+                val totalDeltaY = startY - py
+                val units = (totalDeltaY / MP_SCROLL_SENSITIVITY_PX).toInt()
+                if (units != 0) {
+                    MouseInjector.scrollWheel(units)
+                    scrollStartY[pointerId] = py
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle a Release event.
+     *
+     * @param pointerId  the pointer that released
+     * @param profile    active pad profile
+     */
+    fun onRelease(
+        pointerId: Long,
+        profile: PadProfile,
+    ) {
+        val mapped = pointerMap.remove(pointerId) ?: return
+        val btn = profile.buttons.firstOrNull { it.id == mapped } ?: return
+
+        when {
+            btn.action is PadAction.TrackpointMove -> {
+                lastTpPos = null
+            }
+            btn.action is PadAction.ScrollWheel -> {
+                scrollStartY.remove(pointerId)
+            }
+            else -> {
+                _pressedIds.value = _pressedIds.value - mapped
+                injectActionUp(btn.action)
+            }
+        }
+    }
+
+    /** Reset all tracking state. */
+    fun reset() {
+        pointerMap.clear()
+        _pressedIds.value = emptySet()
+        lastTpPos = null
+        scrollStartY.clear()
+    }
+
+    companion object {
+        /** Raw dp value of MP_BUTTON_UNIT_DP (keep in sync with MacroPadButton). */
+        const val MP_BUTTON_UNIT_DP_VALUE = 60f
+
+        /** Check whether the device needed for a given action is disabled. */
+        fun isDeviceDisabled(action: PadAction, profile: PadProfile): Boolean = when (action) {
+            is PadAction.KeyboardKey -> !profile.enableKeyboard
+            is PadAction.GamepadButton -> !profile.enableGamepad
+            is PadAction.MouseButton,
+            is PadAction.ScrollWheel,
+            is PadAction.TrackpointMove,
+            is PadAction.MouseLeftClick,
+            is PadAction.MouseRightClick -> !profile.enableMouse
+            is PadAction.Macro -> false
+            is PadAction.AmbientPeek -> false
+        }
+
+        /**
+         * Returns the R.string resource ID for a "device disabled" toast,
+         * or null if the device is enabled.
+         * NOTE: this references R.string constants which are Int values — the caller
+         * must resolve them to actual strings via `context.getString()`.
+         */
+        fun deviceDisabledMessageRes(action: PadAction, profile: PadProfile): Int? = when (action) {
+            is PadAction.KeyboardKey -> if (!profile.enableKeyboard) MACROPAD_DEVICE_DISABLED_KEYBOARD else null
+            is PadAction.GamepadButton -> if (!profile.enableGamepad) MACROPAD_DEVICE_DISABLED_GAMEPAD else null
+            is PadAction.MouseButton,
+            is PadAction.ScrollWheel,
+            is PadAction.TrackpointMove,
+            is PadAction.MouseLeftClick,
+            is PadAction.MouseRightClick -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
+            is PadAction.Macro -> null
+            is PadAction.AmbientPeek -> null
+        }
+
+        // These will be set by the app module at init time to match R.string values.
+        var MACROPAD_DEVICE_DISABLED_KEYBOARD = 0
+        var MACROPAD_DEVICE_DISABLED_GAMEPAD = 0
+        var MACROPAD_DEVICE_DISABLED_MOUSE = 0
+    }
+}

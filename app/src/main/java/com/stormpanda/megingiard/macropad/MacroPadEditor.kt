@@ -676,9 +676,10 @@ private fun ButtonListItem(
             if (isTrackpoint) {
                 Text("●", color = colors.onSurface, fontSize = 10.sp)
             } else {
-                if (btn.iconName != null) {
+                val iconName = btn.iconName
+                if (iconName != null) {
                     MaterialSymbol(
-                        name = btn.iconName,
+                        name = iconName,
                         size = 18.dp,
                         tint = colors.onSurface,
                         filled = btn.iconFilled,

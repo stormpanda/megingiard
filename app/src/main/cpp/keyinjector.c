@@ -31,8 +31,13 @@ int main(void) {
     if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) { perror("UI_SET_EVBIT EV_KEY"); return 1; }
     if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) { perror("UI_SET_EVBIT EV_SYN"); return 1; }
 
-    // Register all keycodes we will ever send (1–254 covers standard keys; 464 = KEY_FN)
-    for (int i = 1; i <= 464; i++) {
+    // Register standard keyboard keycodes (1–255: KEY_* range).
+    // Deliberately stopping at 255 to avoid the BTN_* range (256+).  The BTN_TOOL_PEN
+    // code (0x140 = 320) and its neighbours cause Android's EventHub to classify this
+    // device as EXTERNAL_STYLUS instead of KEYBOARD, which prevents EV_KEY events from
+    // being delivered to apps as Android KeyEvent objects.  All keycodes actually used
+    // by this app are ≤ 125 (KEY_META_RIGHT), so 255 is a safe upper bound.
+    for (int i = 1; i <= 255; i++) {
         // Gaps in the keycode space are silently ignored by the kernel
         ioctl(fd, UI_SET_KEYBIT, i);
     }

@@ -34,19 +34,6 @@ internal data class KeyBounds(
 }
 
 // ---------------------------------------------------------------------------
-// Layout traversal helper
-// ---------------------------------------------------------------------------
-
-internal fun findKeyInLayout(layout: List<List<KeyDef>>, id: String): KeyDef? {
-    for (row in layout) {
-        for (key in row) {
-            if (key.id == id) return key
-        }
-    }
-    return null
-}
-
-// ---------------------------------------------------------------------------
 // Key cap composable
 // ---------------------------------------------------------------------------
 

@@ -23,13 +23,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -39,18 +37,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.AppLog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.CAROUSEL_PILL_INSET
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
+import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -59,27 +51,25 @@ private const val F_ROW_HEIGHT_WEIGHT = 0.7f
 private val KEY_PADDING_H = 2.dp
 private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
-private const val KB_REPEAT_INITIAL_DELAY_MS = 500L
-private const val KB_REPEAT_INTERVAL_MS = 30L
-private const val KB_MODIFIER_HOLD_MS = 300L
 private val KB_IME_BOTTOM_PADDING = 56.dp
-private const val KB_TRACKPOINT_MOUSE_SENSITIVITY = 3f
 
 private const val TAG = "KeyboardScreen"
 
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
+    val viewModel: KeyboardViewModel = viewModel()
     val context = LocalContext.current
-    val kbLayout by SettingsManager.kbLayout.collectAsState()
-    val kbRepeatEnabled by SettingsManager.kbRepeatEnabled.collectAsState()
-    val kbTrackpointEnabled by SettingsManager.kbTrackpointEnabled.collectAsState()
-    val kbFullscreen by SettingsManager.kbFullscreen.collectAsState()
-    val kbMouseBtnPos by SettingsManager.kbMouseBtnPos.collectAsState()
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val overlayVisible by AppStateManager.overlayVisible.collectAsState()
+    val kbLayout by viewModel.kbLayout.collectAsState()
+    val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsState()
+    val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsState()
+    val kbFullscreen by viewModel.kbFullscreen.collectAsState()
+    val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsState()
+    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
+    val overlayVisible by viewModel.overlayVisible.collectAsState()
     val overlayVisibleState = rememberUpdatedState(overlayVisible)
     val colors = LocalAppColors.current
     val accentColor = colors.accent
+    val controller = viewModel.controller
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -90,26 +80,14 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val isCapsActive  = capsState   != ModifierState.INACTIVE
     val isAltGrActive = altGrState  != ModifierState.INACTIVE
 
+    // Start injectors via ViewModel (waits for overlay to close).
     LaunchedEffect(Unit) {
-        KeyboardState.reset()
-        // Wait until the carousel overlay has closed before starting the native binaries.
-        // Starting them during the mode-switch animation (while the overlay is still open)
-        // causes the blocking binary startup to race against the Compose frame clock.
-        AppStateManager.overlayVisible.first { !it }
-        AppLog.d(TAG, "overlay closed, starting KeyInjector + MouseInjector")
-        withContext(Dispatchers.IO) {
-            KeyInjector.start(context)
-            MouseInjector.start(context)
-        }
-        AppLog.d(TAG, "KeyInjector + MouseInjector started")
+        viewModel.startInjectors(context)
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.d(TAG, "KeyboardScreen disposed → KeyInjector + MouseInjector stopped, KeyboardState reset")
-            KeyInjector.stop()
-            MouseInjector.stop()
-            KeyboardState.reset()
+            viewModel.stopAndReset()
         }
     }
 
@@ -126,42 +104,9 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     // Outer Box layout coords — used to convert pointer positions to root space
     val boxCoordsState = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
-    // UI state
-    var pressedKeys by remember { mutableStateOf(setOf<String>()) }
-    var trackpointVisible by remember { mutableStateOf(false) }
-    var heldKey by remember { mutableStateOf<KeyDef?>(null) }
-    var modifierBeingHeld by remember { mutableStateOf<KeyDef?>(null) }
-
-    // Per-pointer tracking (mutableMapOf is not state; it's mutated inside pointerInput)
-    val pointerKeyMap = remember { mutableMapOf<PointerId, String>() }
-    val trackpointPointers = remember { mutableSetOf<PointerId>() }
-
-    // Key repeat: fires while heldKey is non-null and repeat is enabled
-    LaunchedEffect(heldKey, kbRepeatEnabled) {
-        val key = heldKey ?: return@LaunchedEffect
-        if (!kbRepeatEnabled) return@LaunchedEffect
-        delay(KB_REPEAT_INITIAL_DELAY_MS)
-        while (heldKey == key) {
-            if (key.linuxKeycode != 0) {
-                val mods = KeyboardState.activeModifierKeycodes(layout)
-                mods.forEach { KeyInjector.keyDown(it) }
-                KeyInjector.keyDown(key.linuxKeycode)
-                KeyInjector.keyUp(key.linuxKeycode)
-                mods.forEach { KeyInjector.keyUp(it) }
-            }
-            delay(KB_REPEAT_INTERVAL_MS)
-        }
-    }
-
-    // Modifier long-press: fires after threshold to transition INACTIVE → HELD
-    LaunchedEffect(modifierBeingHeld) {
-        val mod = modifierBeingHeld ?: return@LaunchedEffect
-        delay(KB_MODIFIER_HOLD_MS)
-        if (modifierBeingHeld == mod) {
-            val keycode = KeyboardState.onModifierLongPress(mod.id, mod.linuxKeycode)
-            if (keycode != null) KeyInjector.keyDown(keycode)
-        }
-    }
+    // UI state from controller
+    val pressedKeys by controller.pressedKeys.collectAsState()
+    val trackpointVisible by controller.trackpointVisible.collectAsState()
 
     val trackpointAlpha by animateFloatAsState(
         targetValue = if (trackpointVisible) KB_TRACKPOINT_OVERLAY_ALPHA else 0f,
@@ -179,13 +124,11 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Main)
                         // While the carousel overlay is visible, block new key input.
-                        // Tapping outside the pill dismisses the overlay.
-                        // Release events fall through so held keys are cleaned up.
                         if (overlayVisibleState.value) {
                             when (event.type) {
                                 PointerEventType.Press -> {
                                     if (event.changes.none { it.isConsumed }) {
-                                        AppStateManager.hideOverlay()
+                                        viewModel.hideOverlay()
                                     }
                                     event.changes.forEach { it.consume() }
                                     continue
@@ -198,39 +141,28 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                             }
                         }
                         val boxCoords = boxCoordsState.value ?: continue
-                        forChanges@ for (change in event.changes) {
-                            val pid = change.id
+                        for (change in event.changes) {
+                            val pid = change.id.value
 
-                            // Trackpoint pointers are handled unconditionally — their Release
-                            // must always fire, regardless of whether a child consumed the event.
-                            // IMPORTANT: dispatch on per-pointer pressed state, NOT event.type.
-                            // event.type == Release fires when *any* finger lifts; in a multi-touch
-                            // scenario (e.g. mouse button finger releasing while trackpoint is still
-                            // held) the still-held trackpoint pointer would otherwise be treated as
-                            // released and close the overlay prematurely.
-                            if (pid in trackpointPointers) {
+                            // Trackpoint pointers must be handled even if consumed by a child
+                            // (e.g. mouse button press in trackpoint overlay).
+                            if (controller.isTrackpointPointer(pid)) {
                                 when {
                                     change.pressed && event.type == PointerEventType.Move -> {
                                         val delta = change.positionChange()
-                                        val dx = (delta.x * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
-                                        val dy = (delta.y * KB_TRACKPOINT_MOUSE_SENSITIVITY).roundToInt()
-                                        if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
+                                        controller.onKeyMove(pid, null, delta.x, delta.y, layout, kbRepeatEnabled)
                                         change.consume()
                                     }
                                     !change.pressed && change.previousPressed -> {
-                                        // This specific pointer was released (not just some other finger)
-                                        trackpointPointers -= pid
-                                        pointerKeyMap.remove(pid)
-                                        if (trackpointPointers.isEmpty()) trackpointVisible = false
+                                        controller.onKeyUp(pid, layout, kbRepeatEnabled)
                                         change.consume()
                                     }
                                 }
-                                continue@forChanges
+                                continue
                             }
 
-                            // Non-trackpoint events consumed by a child (e.g. mouse button press)
-                            // are skipped so they never trigger key presses or other side-effects.
-                            if (change.isConsumed) continue@forChanges
+                            // Non-trackpoint events consumed by a child are skipped.
+                            if (change.isConsumed) continue
 
                             // Convert pointer position to root space for hit testing
                             val rootPos = boxCoords.localToRoot(change.position)
@@ -240,105 +172,25 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
 
                             when (event.type) {
                                 PointerEventType.Press -> {
-                                    val id = keyId ?: continue@forChanges
-                                    val keyDef = findKeyInLayout(layout, id) ?: continue@forChanges
-                                    when (keyDef.type) {
-                                        KeyType.NORMAL -> {
-                                            pointerKeyMap[pid] = id
-                                            pressedKeys = pressedKeys + id
-                                            heldKey = keyDef
-                                            if (keyDef.linuxKeycode != 0) {
-                                                KeyboardState.activeModifierKeycodes(layout)
-                                                    .forEach { KeyInjector.keyDown(it) }
-                                                KeyInjector.keyDown(keyDef.linuxKeycode)
-                                                if (!kbRepeatEnabled) {
-                                                    // Send keyUp immediately so the kernel never fires
-                                                    // its own repeat — the user must re-tap to repeat.
-                                                    KeyInjector.keyUp(keyDef.linuxKeycode)
-                                                    KeyboardState.activeModifierKeycodes(layout)
-                                                        .forEach { KeyInjector.keyUp(it) }
-                                                }
-                                            }
-                                        }
-                                        KeyType.MODIFIER -> {
-                                            pointerKeyMap[pid] = id
-                                            modifierBeingHeld = keyDef
-                                            KeyboardState.onModifierTouchDown(id)
-                                        }
-                                        KeyType.TRACKPOINT -> {
-                                            trackpointPointers += pid
-                                            pointerKeyMap[pid] = id
-                                            trackpointVisible = true
+                                    if (!change.previousPressed) {
+                                        if (controller.onKeyDown(pid, keyId, layout, kbRepeatEnabled)) {
+                                            change.consume()
                                         }
                                     }
-                                    change.consume()
                                 }
 
                                 PointerEventType.Move -> {
-                                    val prevId = pointerKeyMap[pid] ?: continue@forChanges
-                                    val newId = keyId ?: continue@forChanges
-                                    if (prevId == newId) continue@forChanges
-
-                                    val prevDef = findKeyInLayout(layout, prevId)
-                                    val newDef = findKeyInLayout(layout, newId) ?: continue@forChanges
-
-                                    // Release previous NORMAL key
-                                    if (prevDef?.type == KeyType.NORMAL && prevDef.linuxKeycode != 0) {
-                                        heldKey = null
-                                        if (kbRepeatEnabled) {
-                                            KeyInjector.keyUp(prevDef.linuxKeycode)
-                                            KeyboardState.activeModifierKeycodes(layout)
-                                                .forEach { KeyInjector.keyUp(it) }
-                                        }
-                                        pressedKeys = pressedKeys - prevId
-                                    }
-
-                                    // Press new NORMAL key
-                                    if (newDef.type == KeyType.NORMAL) {
-                                        pointerKeyMap[pid] = newId
-                                        pressedKeys = pressedKeys + newId
-                                        heldKey = newDef
-                                        if (newDef.linuxKeycode != 0) {
-                                            KeyboardState.activeModifierKeycodes(layout)
-                                                .forEach { KeyInjector.keyDown(it) }
-                                            KeyInjector.keyDown(newDef.linuxKeycode)
-                                            if (!kbRepeatEnabled) {
-                                                // Same as Press handler: send keyUp immediately so the
-                                                // kernel never fires its own repeat for swiped keys.
-                                                KeyInjector.keyUp(newDef.linuxKeycode)
-                                                KeyboardState.activeModifierKeycodes(layout)
-                                                    .forEach { KeyInjector.keyUp(it) }
-                                            }
-                                        }
+                                    val delta = change.positionChange()
+                                    if (controller.onKeyMove(pid, keyId, delta.x, delta.y, layout, kbRepeatEnabled)) {
                                         change.consume()
                                     }
                                 }
 
                                 PointerEventType.Release -> {
-                                    val releasedId = pointerKeyMap.remove(pid) ?: continue@forChanges
-                                    val keyDef = findKeyInLayout(layout, releasedId) ?: continue@forChanges
-                                    when (keyDef.type) {
-                                        KeyType.NORMAL -> {
-                                            heldKey = null
-                                            if (keyDef.linuxKeycode != 0 && kbRepeatEnabled) {
-                                                KeyInjector.keyUp(keyDef.linuxKeycode)
-                                                KeyboardState.releaseStickyModifiers(layout)
-                                                    .forEach { KeyInjector.keyUp(it) }
-                                            } else if (keyDef.linuxKeycode != 0) {
-                                                // keyUp was already sent at press/move-time; only release sticky modifiers
-                                                KeyboardState.releaseStickyModifiers(layout)
-                                                    .forEach { KeyInjector.keyUp(it) }
-                                            }
-                                            pressedKeys = pressedKeys - releasedId
-                                        }
-                                        KeyType.MODIFIER -> {
-                                            modifierBeingHeld = null
-                                            KeyboardState.onModifierTouchUp(releasedId, keyDef.linuxKeycode)
-                                                .forEach { KeyInjector.keyUp(it) }
-                                        }
-                                        KeyType.TRACKPOINT -> { /* handled in trackpoint block above */ }
+                                    if (!change.pressed && change.previousPressed) {
+                                        controller.onKeyUp(pid, layout, kbRepeatEnabled)
+                                        change.consume()
                                     }
-                                    change.consume()
                                 }
 
                                 else -> Unit

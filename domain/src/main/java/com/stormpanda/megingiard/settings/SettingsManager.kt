@@ -1,9 +1,6 @@
 package com.stormpanda.megingiard.settings
 
 import android.content.Context
-import android.graphics.Color as AndroidColor
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -17,8 +14,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.ThemeMode
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.Macro
@@ -64,7 +59,7 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
     name = SETTINGS_DATASTORE_NAME
 )
 
-private val DEFAULT_ACCENT_COLOR: Int = AndroidColor.argb(255, 204, 0, 0)
+private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 
 private const val TAG = "SettingsManager"
 
@@ -198,8 +193,8 @@ object SettingsManager {
     private val _activeTools = MutableStateFlow(AppMode.entries.toList())
     val activeTools: StateFlow<List<AppMode>> = _activeTools.asStateFlow()
 
-    private val _accentColor = MutableStateFlow(Color(DEFAULT_ACCENT_COLOR))
-    val accentColor: StateFlow<Color> = _accentColor.asStateFlow()
+    private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
+    val accentColor: StateFlow<Int> = _accentColor.asStateFlow()
 
     private val _themeMode = MutableStateFlow(ThemeMode.DARK)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
@@ -323,7 +318,7 @@ object SettingsManager {
 
                 _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
                 _overlayTimeoutMs.value = prefs[KEY_OVERLAY_TIMEOUT_MS] ?: DEFAULT_OVERLAY_TIMEOUT_MS
-                _accentColor.value = Color(prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR)
+                _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                 _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                 _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
                 _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
@@ -468,12 +463,12 @@ object SettingsManager {
         }
     }
 
-    fun setAccentColor(color: Color) {
-        AppLog.d(TAG, "setAccentColor(${color.toArgb().toString(16)})")
-        _accentColor.value = color
+    fun setAccentColor(argb: Int) {
+        AppLog.d(TAG, "setAccentColor(${argb.toString(16)})")
+        _accentColor.value = argb
         scope.launch {
             dataStore.edit { prefs ->
-                prefs[KEY_ACCENT_COLOR] = color.toArgb()
+                prefs[KEY_ACCENT_COLOR] = argb
             }
         }
     }
@@ -876,9 +871,3 @@ object SettingsManager {
         }
     }
 
-internal fun AppMode.displayNameResId(): Int = when (this) {
-    AppMode.MIRROR -> R.string.tool_name_mirror
-    AppMode.TOUCHPAD -> R.string.tool_name_touchpad
-    AppMode.KEYBOARD -> R.string.tool_name_keyboard
-    AppMode.MACROPAD -> R.string.tool_name_macropad
-}

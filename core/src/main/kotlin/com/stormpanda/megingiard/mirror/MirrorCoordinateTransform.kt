@@ -28,7 +28,7 @@ package com.stormpanda.megingiard.mirror
  * @param offsetY  Current pan offset Y (pixels)
  * @return Pair(normalizedX, normalizedY) or null if out-of-bounds
  */
-internal fun projectCoordinates(
+fun projectCoordinates(
     touchX: Float,
     touchY: Float,
     screenW: Float,

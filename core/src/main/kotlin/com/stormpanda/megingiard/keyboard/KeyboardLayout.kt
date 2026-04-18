@@ -348,3 +348,16 @@ private fun bottomRowAzerty(): List<KeyDef> = listOf(
     KeyDef("uarrow", "↑",     KEY_UP,         widthWeight = 1.7f),
     KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.5f, type = KeyType.MODIFIER),
 )
+
+// ---------------------------------------------------------------------------
+// Layout traversal helper
+// ---------------------------------------------------------------------------
+
+fun findKeyInLayout(layout: List<List<KeyDef>>, id: String): KeyDef? {
+    for (row in layout) {
+        for (key in row) {
+            if (key.id == id) return key
+        }
+    }
+    return null
+}

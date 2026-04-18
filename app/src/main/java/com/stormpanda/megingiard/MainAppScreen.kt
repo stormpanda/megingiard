@@ -48,19 +48,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.config.ConfigManager
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.MacroPadScreen
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadScreen
 import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.viewmodel.MainViewModel
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
@@ -71,13 +68,14 @@ private val MAS_WRONG_SCREEN_TEXT_SIZE = 18.sp
 
 @Composable
 fun MainAppScreen() {
-    val currentMode by AppStateManager.currentMode.collectAsState()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
+    val viewModel: MainViewModel = viewModel()
+    val currentMode by viewModel.currentMode.collectAsState()
+    val isCapturing by viewModel.isCapturing.collectAsState()
+    val userDeclinedCapture by viewModel.userDeclinedCapture.collectAsState()
     val colors = LocalAppColors.current
 
-    val showControls by AppStateManager.overlayVisible.collectAsState()
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val showControls by viewModel.overlayVisible.collectAsState()
+    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
@@ -85,36 +83,34 @@ fun MainAppScreen() {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val pendingImportUri by ConfigManager.pendingUri.collectAsState()
-    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
-    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsState()
+    val pendingImportUri by viewModel.pendingUri.collectAsState()
+    val pendingImport by viewModel.pendingParsedImport.collectAsState()
+    val pendingInAppUri by viewModel.pendingInAppUri.collectAsState()
     var importError by remember { mutableStateOf<String?>(null) }
 
     // When MainActivity receives a .mgrd file intent, ConfigManager stores the URI here.
     // We handle the I/O and parsing in a coroutine, then show the preview dialog on success.
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
-        withContext(Dispatchers.IO) {
-            ConfigManager.readFromUri(context, uri)
-        }.onSuccess { export ->
-            ConfigManager.setParsedImport(export)
-        }.onFailure { err ->
-            ConfigManager.clearPendingImport()
-            importError = err.message ?: context.getString(R.string.config_error_unknown)
-        }
+        viewModel.parseImportUri(context, uri)
+            .onSuccess { export ->
+                viewModel.setParsedImport(export)
+            }.onFailure { err ->
+                viewModel.clearPendingImport()
+                importError = err.message ?: context.getString(R.string.config_error_unknown)
+            }
     }
 
     // When the in-app Settings file picker returns, parse and route to GlobalSettingsScreen.
     LaunchedEffect(pendingInAppUri) {
         val uri = pendingInAppUri ?: return@LaunchedEffect
-        withContext(Dispatchers.IO) {
-            ConfigManager.readFromUri(context, uri)
-        }.onSuccess { export ->
-            ConfigManager.setInAppParsedImport(export)
-        }.onFailure { err ->
-            ConfigManager.clearInAppPendingImport()
-            importError = err.message ?: context.getString(R.string.config_error_unknown)
-        }
+        viewModel.parseImportUri(context, uri)
+            .onSuccess { export ->
+                viewModel.setInAppParsedImport(export)
+            }.onFailure { err ->
+                viewModel.clearInAppPendingImport()
+                importError = err.message ?: context.getString(R.string.config_error_unknown)
+            }
     }
 
     BackHandler { showExitDialog = true }
@@ -123,46 +119,24 @@ fun MainAppScreen() {
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(overlayAtBottom) {
+                val swipe = viewModel.createSwipeProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
                 awaitPointerEventScope {
-                    var swipeStartY = Float.NaN
-                    var swipeTriggered = false
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         when (event.type) {
                             PointerEventType.Press -> {
-                                AppStateManager.setTouching(true)
-                                val y = event.changes.firstOrNull()?.position?.y ?: 0f
-                                val nearEdge = if (overlayAtBottom) {
-                                    y >= size.height - edgeZonePx
-                                } else {
-                                    y <= edgeZonePx
-                                }
-                                swipeStartY = if (nearEdge) y else Float.NaN
-                                swipeTriggered = false
+                                swipe.onPress(
+                                    event.changes.firstOrNull()?.position?.y ?: 0f,
+                                    size.height.toFloat()
+                                )
                             }
                             PointerEventType.Move -> {
-                                if (!swipeStartY.isNaN() && !swipeTriggered) {
-                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
-                                    val delta = if (overlayAtBottom) {
-                                        swipeStartY - y
-                                    } else {
-                                        y - swipeStartY
-                                    }
-                                    if (delta >= swipeThresholdPx) {
-                                        AppStateManager.triggerOverlay()
-                                        swipeTriggered = true
-                                    }
-                                }
+                                swipe.onMove(
+                                    event.changes.firstOrNull()?.position?.y ?: 0f
+                                )
                             }
                             PointerEventType.Release -> {
-                                // Only clear touching when all pointers are up
-                                // (multi-touch: one finger may release while another is still down)
-                                if (!event.changes.any { it.pressed }) {
-                                    AppStateManager.setTouching(false)
-                                    AppStateManager.setPillExpanded(false)
-                                }
-                                swipeStartY = Float.NaN
-                                swipeTriggered = false
+                                swipe.onRelease(!event.changes.any { it.pressed })
                             }
                             else -> {}
                         }
@@ -179,7 +153,7 @@ fun MainAppScreen() {
                     ) {
                         if (!isCapturing && userDeclinedCapture) {
                             OutlinedButton(
-                                onClick = { AppStateManager.setUserDeclinedCapture(false) },
+                                onClick = { viewModel.setUserDeclinedCapture(false) },
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = colors.buttonBody,
                                     contentColor = colors.buttonIconTint
@@ -201,8 +175,8 @@ fun MainAppScreen() {
                 AppMode.TOUCHPAD -> TouchpadScreen()
                 AppMode.KEYBOARD -> KeyboardScreen()
                 AppMode.MACROPAD -> {
-                    val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
-                    val macroCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+                    val ambientEnabled by viewModel.macropadAmbientEnabled.collectAsState()
+                    val macroCapturing by viewModel.isCapturing.collectAsState()
                     if (ambientEnabled && macroCapturing) {
                         // Presentation handles rendering — show empty black background
                         Box(Modifier.fillMaxSize().background(colors.appBackground))
@@ -213,12 +187,12 @@ fun MainAppScreen() {
             }
         }
 
-        CarouselOverlay(visible = showControls, onInteraction = { AppStateManager.triggerOverlay() })
+        CarouselOverlay(visible = showControls, onInteraction = { viewModel.triggerOverlay() })
 
         // ── Global wrong-screen overlay ─────────────────────────────────────
         // Blocks all interaction and renders on top of everything when the app
         // is running on the primary display instead of the secondary screen.
-        val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
+        val isValidScreen by viewModel.isOnValidScreen.collectAsState()
         if (!isValidScreen) {
             val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
             val bounceOffset by bounceTransition.animateFloat(
@@ -273,11 +247,11 @@ fun MainAppScreen() {
             export = export,
             onConfirm = {
                 coroutineScope.launch {
-                    ConfigManager.applyImport(export)
-                    ConfigManager.clearPendingImport()
+                    viewModel.applyImport(export)
+                    viewModel.clearPendingImport()
                 }
             },
-            onDismiss = { ConfigManager.clearPendingImport() },
+            onDismiss = { viewModel.clearPendingImport() },
         )
     }
 

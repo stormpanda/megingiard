@@ -290,9 +290,10 @@ private fun DraggableButton(
                 Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(14.dp))
             }
         } else {
-            if (btn.iconName != null) {
+            val iconName = btn.iconName
+            if (iconName != null) {
                 MaterialSymbol(
-                    name = btn.iconName,
+                    name = iconName,
                     size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                     tint = colors.onSurface,
                     filled = btn.iconFilled,

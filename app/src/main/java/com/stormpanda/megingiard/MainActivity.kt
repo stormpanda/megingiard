@@ -29,7 +29,10 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
+import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
+import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
+import androidx.compose.ui.graphics.Color
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.colorSchemeFor
@@ -88,12 +91,10 @@ class MainActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         val displayId = display?.displayId ?: Display.DEFAULT_DISPLAY
-        val isValid = displayId != Display.DEFAULT_DISPLAY
-        AppLog.i(TAG, "onConfigurationChanged: displayId=$displayId isValid=$isValid")
-        AppStateManager.setOnValidScreen(isValid)
+        DisplayDetector.updateDisplayValidity(displayId)
         // Mirror the ON_RESUME auto-start behaviour: if the app just moved onto the
         // valid screen, let the capture prompt fire (if the user enabled auto-start).
-        if (isValid && SettingsManager.autoStartCapture.value) {
+        if (AppStateManager.isOnValidScreen.value && SettingsManager.autoStartCapture.value) {
             AppStateManager.setUserDeclinedCapture(false)
         }
     }
@@ -101,6 +102,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate")
+
+        // Initialise R.string resource IDs for the domain-layer MacroPadHitTestEngine.
+        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_KEYBOARD = R.string.macropad_device_disabled_keyboard
+        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_GAMEPAD = R.string.macropad_device_disabled_gamepad
+        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_MOUSE = R.string.macropad_device_disabled_mouse
+
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
 
@@ -237,8 +244,8 @@ class MainActivity : ComponentActivity() {
             }
 
             val themeMode by SettingsManager.themeMode.collectAsState()
-            val userAccent by SettingsManager.accentColor.collectAsState()
-            val appColors = paletteFor(themeMode, userAccent)
+            val userAccentArgb by SettingsManager.accentColor.collectAsState()
+            val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
             MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
                 CompositionLocalProvider(LocalAppColors provides appColors) {
