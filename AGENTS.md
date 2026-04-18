@@ -495,6 +495,12 @@ setOnDismissListener {
 - The device node `/dev/uinput` is accessible under the standard shell UID (2000) on the AYN Thor —
   no root or special permission required.
   See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
+- **Keycode registration range: 1–255 only.** The binary registers `UI_SET_KEYBIT` for codes 1–255.
+  Codes 256+ are BTN_ device buttons (mouse, gamepad, stylus). Registering `BTN_TOOL_PEN` (0x140 = 320)
+  causes Android's `EventHub` to classify the device as `EXTERNAL_STYLUS` instead of `KEYBOARD`;
+  an `EXTERNAL_STYLUS` device has no `KeyboardInputMapper`, so EV_KEY events are silently ignored by
+  Android's input pipeline. All keyboard keycodes used by the app are ≤ 125. `ShellKeyInjector.injectKey()`
+  enforces the matching 1..255 guard.
 
 ---
 

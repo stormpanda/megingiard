@@ -113,8 +113,10 @@ object ShellKeyInjector {
 
     fun injectKey(action: KeyAction, linuxKeycode: Int) {
         if (!running) return
-        // Native protocol accepts keycodes 1–464 (464 = KEY_FN); drop anything outside.
-        if (linuxKeycode !in 1..464) {
+        // The native binary only registers KEY bits 1–255. Codes 256+ are BTN_*
+        // (mouse/gamepad/stylus buttons) and are intentionally excluded so that the
+        // virtual device is classified as KEYBOARD (not EXTERNAL_STYLUS) by Android.
+        if (linuxKeycode !in 1..255) {
             AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for action=$action")
             return
         }

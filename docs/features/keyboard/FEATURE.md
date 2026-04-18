@@ -93,11 +93,13 @@ The pre-built `keyinjector_arm64` binary is bundled in `app/src/main/assets/`. O
 2. Call `setExecutable(true)` — the files directory has the execute bit disabled by default.
 3. Launch via `ProcessBuilder(binary.absolutePath)`.
 
-The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks waiting for this signal with a 500 ms timeout; startup fails if the signal does not arrive or the process exits prematurely.
+The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks waiting for this signal with a 5-second timeout; startup fails if the signal does not arrive or the process exits prematurely.
 
 The binary opens `/dev/uinput` using the standard `uinput` protocol (register a virtual keyboard device, then inject `EV_KEY` events). It remains alive for the entire Keyboard session and is terminated when `ShellKeyInjector.stop()` is called, which happens in `KeyboardScreen` via:
 
 > **Important — bus type must be `BUS_VIRTUAL`:** The AYN Thor firmware (`PkDeviceHelper`) continuously scans for physical keyboard devices. It matches any uinput device with keyboard capabilities and `BUS_USB` bus type, and when found, triggers its "show physical keyboard" handler — which takes window focus away from Megingiard (app appears to minimise). The uinput setup therefore uses `BUS_VIRTUAL` so the firmware ignores the virtual keyboard entirely. Key injection is unaffected; bus type is purely ID metadata.
+
+> **Important — keycode registration range must be 1–255:** Android's `EventHub` classifies a uinput device as `EXTERNAL_STYLUS` when it has `BTN_TOOL_PEN` (0x140 = 320) or similar stylus BTN_ codes registered. Devices with this class do NOT receive a `KeyboardInputMapper` and EV_KEY events are therefore silently discarded by Android's input pipeline. The binary registers only keycodes **1–255** (standard `KEY_*` range; all keycodes used by the app are ≤ 125). Codes 256–464 are BTN_ codes (mouse, gamepad, stylus) and must NOT be registered via `UI_SET_KEYBIT` for the virtual keyboard device.
 
 ```kotlin
 DisposableEffect(Unit) {
