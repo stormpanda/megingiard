@@ -36,8 +36,8 @@ import kotlin.math.sqrt
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private const val MP_SCREEN_PADDING_DP = 8
-private val MP_SCREEN_PADDING = MP_SCREEN_PADDING_DP.dp
+private const val AM_SCREEN_PADDING_DP = 8
+private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
 
@@ -123,7 +123,7 @@ internal fun AmbientMacroPadOverlay() {
         val l = layout
         if (p == null || l == null) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(MP_SCREEN_PADDING),
+                modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -135,7 +135,7 @@ internal fun AmbientMacroPadOverlay() {
                 )
             }
         } else {
-            Box(modifier = Modifier.fillMaxSize().padding(MP_SCREEN_PADDING)) {
+            Box(modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING)) {
                 PadSurface(
                     profile = p,
                     layout = l,

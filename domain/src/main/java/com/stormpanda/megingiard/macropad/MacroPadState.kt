@@ -345,6 +345,12 @@ object MacroPadState {
         ))
     }
 
+    fun reorderMacros(newOrder: List<Macro>) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "reorderMacros count=${newOrder.size}")
+        updateProfile(profile.copy(macros = newOrder))
+    }
+
     /** Copy a macro from any profile into the active profile with a new UUID. */
     fun copyMacroToActiveProfile(macro: Macro) {
         val profile = activeProfile.value ?: return
