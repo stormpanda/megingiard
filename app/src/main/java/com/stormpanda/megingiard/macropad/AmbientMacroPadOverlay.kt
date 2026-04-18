@@ -17,16 +17,22 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,6 +44,8 @@ import kotlin.math.sqrt
 
 private const val AM_SCREEN_PADDING_DP = 8
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
+private val AM_SWIPE_EDGE_ZONE = 40.dp
+private val AM_SWIPE_THRESHOLD = 25.dp
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
 
@@ -63,6 +71,10 @@ internal fun AmbientMacroPadOverlay() {
     val vignetteShape = layout?.ambientVignetteShape ?: VignetteShape.RADIAL
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val applyTheme by SettingsManager.macropadAmbientApplyTheme.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val density = LocalDensity.current
+    val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
 
     // Effective dim/vignette: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
@@ -91,7 +103,31 @@ internal fun AmbientMacroPadOverlay() {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx) {
+                val swipeProcessor = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        when (event.type) {
+                            PointerEventType.Press -> {
+                                swipeProcessor.onPress(
+                                    event.changes.firstOrNull()?.position?.y ?: 0f,
+                                    size.height.toFloat(),
+                                )
+                            }
+                            PointerEventType.Move -> {
+                                swipeProcessor.onMove(event.changes.firstOrNull()?.position?.y ?: 0f)
+                            }
+                            PointerEventType.Release -> {
+                                swipeProcessor.onRelease(!event.changes.any { it.pressed })
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+            }
     ) {
         // Layer 1: Dim overlay
         if (effectiveDim > 0f) {
@@ -146,6 +182,8 @@ internal fun AmbientMacroPadOverlay() {
                 )
             }
         }
+
+        IdlePill()
     }
 }
 
