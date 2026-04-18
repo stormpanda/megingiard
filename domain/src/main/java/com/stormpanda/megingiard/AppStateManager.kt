@@ -43,6 +43,40 @@ object AppStateManager {
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
+    // ── Mirror control signals ────────────────────────────────────────────────
+    // One-shot fire-and-forget flags: MainActivity resets them after handling.
+
+    /** Set to true by MirrorPlayStop when mirror is not yet capturing; MainActivity launches
+     * CaptureRequestActivity and resets. Distinct from userDeclinedCapture so that a "declined"
+     * state within the session can be overridden by an explicit button press. */
+    private val _mirrorStartRequested = MutableStateFlow(false)
+    val mirrorStartRequested: StateFlow<Boolean> = _mirrorStartRequested.asStateFlow()
+
+    /** Set to true by MirrorPlayStop when mirror is currently capturing; MainActivity sends
+     * a STOP intent to ScreenCaptureService and resets. */
+    private val _mirrorStopRequested = MutableStateFlow(false)
+    val mirrorStopRequested: StateFlow<Boolean> = _mirrorStopRequested.asStateFlow()
+
+    fun requestMirrorStart() {
+        AppLog.i(TAG, "requestMirrorStart")
+        _mirrorStartRequested.value = true
+    }
+
+    fun requestMirrorStop() {
+        AppLog.i(TAG, "requestMirrorStop")
+        _mirrorStopRequested.value = true
+    }
+
+    fun consumeMirrorStartRequest() {
+        AppLog.d(TAG, "consumeMirrorStartRequest")
+        _mirrorStartRequested.value = false
+    }
+
+    fun consumeMirrorStopRequest() {
+        AppLog.d(TAG, "consumeMirrorStopRequest")
+        _mirrorStopRequested.value = false
+    }
+
     fun setActivityResumed(resumed: Boolean) {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed

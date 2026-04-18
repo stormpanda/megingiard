@@ -62,13 +62,13 @@ internal fun AmbientMacroPadOverlay() {
     val layout by MacroPadState.activeLayout.collectAsState()
     val colors = LocalAppColors.current
 
-    val dimAlpha by SettingsManager.macropadAmbientDim.collectAsState()
-    val vignetteEnabled by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
-    val vignetteVisibleArea by SettingsManager.macropadAmbientVignetteVisibleArea.collectAsState()
-    val vignetteTransition by SettingsManager.macropadAmbientVignetteTransition.collectAsState()
-    val vignetteOpacity by SettingsManager.macropadAmbientVignetteOpacity.collectAsState()
-    val vignetteColorInt by SettingsManager.macropadAmbientVignetteColor.collectAsState()
-    val vignetteShape by SettingsManager.macropadAmbientVignetteShape.collectAsState()
+    val dimAlpha = layout?.ambientDim ?: 0f
+    val vignetteEnabled = layout?.ambientVignetteEnabled ?: false
+    val vignetteVisibleArea = layout?.ambientVignetteVisibleArea ?: 0.7f
+    val vignetteTransition = layout?.ambientVignetteTransition ?: 0.5f
+    val vignetteOpacity = layout?.ambientVignetteOpacity ?: 0.6f
+    val vignetteColorInt = layout?.ambientVignetteColor ?: 0xFF000000.toInt()
+    val vignetteShape = layout?.ambientVignetteShape ?: VignetteShape.RADIAL
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val applyTheme by SettingsManager.macropadAmbientApplyTheme.collectAsState()
 

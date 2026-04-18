@@ -4,6 +4,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 
 // MacroState and MacroExecutor are in the same package — no import needed.
 
@@ -50,10 +51,17 @@ fun injectActionDown(action: PadAction) {
         is PadAction.ProfileSwitcher        -> { AppLog.d(TAG, "actionDown: ProfileSwitcher"); AppStateManager.openPillMenu() }
         is PadAction.FullScreenMouse        -> { AppLog.d(TAG, "actionDown: FullScreenMouse sens=${action.sensitivity}"); AppStateManager.setFullscreenMouseActive(true, action.sensitivity) }
         is PadAction.FullScreenKeyboard     -> { AppLog.d(TAG, "actionDown: FullScreenKeyboard layout=${action.layout}"); AppStateManager.setFullscreenKeyboardActive(true, action.layout) }
-        is PadAction.MirrorPlayStop         -> { AppLog.d(TAG, "actionDown: MirrorPlayStop") /* wired in mirror phase */ }
-        is PadAction.MirrorFreeze           -> { AppLog.d(TAG, "actionDown: MirrorFreeze") /* wired in mirror phase */ }
-        is PadAction.MirrorViewportEdit     -> { AppLog.d(TAG, "actionDown: MirrorViewportEdit") /* wired in mirror phase */ }
-        is PadAction.MirrorTouchProjection  -> { AppLog.d(TAG, "actionDown: MirrorTouchProjection") /* wired in mirror phase */ }
+        is PadAction.MirrorPlayStop         -> {
+            AppLog.d(TAG, "actionDown: MirrorPlayStop capturing=${ScreenCaptureManager.isCapturing.value}")
+            if (ScreenCaptureManager.isCapturing.value) {
+                AppStateManager.requestMirrorStop()
+            } else {
+                AppStateManager.requestMirrorStart()
+            }
+        }
+        is PadAction.MirrorFreeze           -> { AppLog.d(TAG, "actionDown: MirrorFreeze"); ScreenCaptureManager.toggleFrozen() }
+        is PadAction.MirrorViewportEdit     -> { AppLog.d(TAG, "actionDown: MirrorViewportEdit"); AppStateManager.setViewportEditActive(true) }
+        is PadAction.MirrorTouchProjection  -> { AppLog.d(TAG, "actionDown: MirrorTouchProjection"); ScreenCaptureManager.toggleTouchProjection() }
     }
 }
 

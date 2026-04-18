@@ -243,6 +243,31 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // ── Mirror button signals from MacroPad ───────────────────────────────
+            // MirrorPlayStop button sets these flags in AppStateManager; MainActivity
+            // handles them here because sending intents or launching Activities requires
+            // a Context only available in the Activity layer.
+            val mirrorStartRequested by AppStateManager.mirrorStartRequested.collectAsState()
+            val mirrorStopRequested by AppStateManager.mirrorStopRequested.collectAsState()
+
+            LaunchedEffect(mirrorStartRequested) {
+                if (!mirrorStartRequested) return@LaunchedEffect
+                AppLog.i(TAG, "mirrorStartRequested → triggering capture flow")
+                AppStateManager.consumeMirrorStartRequest()
+                // Override any in-session decline so the capture prompt fires.
+                AppStateManager.setUserDeclinedCapture(false)
+            }
+
+            LaunchedEffect(mirrorStopRequested) {
+                if (!mirrorStopRequested) return@LaunchedEffect
+                AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
+                AppStateManager.consumeMirrorStopRequest()
+                val stopIntent = Intent(this@MainActivity, com.stormpanda.megingiard.mirror.ScreenCaptureService::class.java).apply {
+                    action = "STOP"
+                }
+                startService(stopIntent)
+            }
+
             val themeMode by SettingsManager.themeMode.collectAsState()
             val userAccentArgb by SettingsManager.accentColor.collectAsState()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
