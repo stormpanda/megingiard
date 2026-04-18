@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -365,6 +366,14 @@ class MirrorPresentation(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
+                                        // Reserve the IdlePill swipe edge zone so
+                                        // AmbientMacroPadOverlay's SwipeGestureProcessor
+                                        // can detect the edge-swipe and call
+                                        // handleEdgeSwipe() → closeActiveModal().
+                                        .padding(
+                                            top = if (overlayAtBottom) 0.dp else MP_EDGE_ZONE,
+                                            bottom = if (overlayAtBottom) MP_EDGE_ZONE else 0.dp,
+                                        )
                                         .pointerInput(Unit) {
                                             detectTransformGestures { _, pan, zoom, _ ->
                                                 val sw = ScreenCaptureManager.surfaceWidth.value

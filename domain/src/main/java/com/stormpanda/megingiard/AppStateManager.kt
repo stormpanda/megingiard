@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -173,7 +174,8 @@ object AppStateManager {
         _isFullscreenMouseActive,
         _isViewportEditActive,
         _isAmbientSettingsActive,
-    ) { kb, ms, vp, amb -> kb || ms || vp || amb }
+        MacroPadState.isPeekActive,
+    ) { kb, ms, vp, amb, peek -> kb || ms || vp || amb || peek }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setFullscreenKeyboardActive(active: Boolean, layout: KbLayout = KbLayout.QWERTZ) {
@@ -225,11 +227,12 @@ object AppStateManager {
 
     /** Closes whichever fullscreen modal overlay is currently active. */
     fun closeActiveModal() {
-        AppLog.i(TAG, "closeActiveModal: kb=${_isFullscreenKeyboardActive.value} ms=${_isFullscreenMouseActive.value} vp=${_isViewportEditActive.value} amb=${_isAmbientSettingsActive.value}")
+        AppLog.i(TAG, "closeActiveModal: kb=${_isFullscreenKeyboardActive.value} ms=${_isFullscreenMouseActive.value} vp=${_isViewportEditActive.value} amb=${_isAmbientSettingsActive.value} peek=${MacroPadState.isPeekActive.value}")
         _isFullscreenKeyboardActive.value = false
         _isFullscreenMouseActive.value = false
         _isViewportEditActive.value = false
         _isAmbientSettingsActive.value = false
+        MacroPadState.resetPeek()
     }
 
     /**
