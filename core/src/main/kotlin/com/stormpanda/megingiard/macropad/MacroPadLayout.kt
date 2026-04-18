@@ -113,7 +113,7 @@ sealed class PadAction {
     ) : PadAction()
 
     /**
-     * Executes a [Macro] from the global [MacroState] library when this button is pressed.
+     * Executes a [Macro] from the active [PadProfile] when this button is pressed.
      * The macro is identified by [macroId] (UUID string). If the referenced macro has been
      * deleted, the button press is silently ignored.
      */

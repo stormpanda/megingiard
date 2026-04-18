@@ -17,7 +17,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,7 +70,7 @@ internal fun ActionCategory.defaultAction(): PadAction = when (this) {
     ActionCategory.MOUSE_BUTTON          -> PadAction.MouseButton(MouseButton.LEFT)
     ActionCategory.SCROLL_WHEEL          -> PadAction.ScrollWheel
     ActionCategory.TRACKPOINT            -> PadAction.TrackpointMove()
-    ActionCategory.MACRO                 -> PadAction.Macro(MacroState.macros.value.firstOrNull()?.id ?: "")
+    ActionCategory.MACRO                 -> PadAction.Macro(MacroPadState.activeProfile.value?.macros?.firstOrNull()?.id ?: "")
     ActionCategory.AMBIENT_PEEK          -> PadAction.AmbientPeek
     ActionCategory.LAYOUT_NEXT           -> PadAction.LayoutNext
     ActionCategory.LAYOUT_PREVIOUS       -> PadAction.LayoutPrevious
@@ -155,7 +154,7 @@ internal fun PadAction.displayLabel(): String {
         is PadAction.ScrollWheel     -> context.getString(R.string.macropad_display_scroll_wheel)
         is PadAction.TrackpointMove  -> context.getString(R.string.macropad_display_trackpoint)
         is PadAction.Macro           -> {
-            val macroName = MacroState.macros.value.firstOrNull { it.id == macroId }?.name ?: macroId
+            val macroName = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == macroId }?.name ?: macroId
             context.getString(R.string.macropad_display_macro, macroName)
         }
         is PadAction.AmbientPeek     -> context.getString(R.string.macropad_action_ambient_peek)
@@ -235,7 +234,7 @@ internal fun ActionPicker(
                         ActionCategory.MOUSE_BUTTON,
                         ActionCategory.SCROLL_WHEEL,
                         ActionCategory.TRACKPOINT            -> enableMouse
-                        ActionCategory.MACRO                 -> MacroState.macros.value.isNotEmpty()
+                        ActionCategory.MACRO                 -> MacroPadState.activeProfile.value?.macros?.isNotEmpty() == true
                         ActionCategory.AMBIENT_PEEK,
                         ActionCategory.LAYOUT_NEXT,
                         ActionCategory.LAYOUT_PREVIOUS,
@@ -635,12 +634,9 @@ internal fun GamepadButtonPicker(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Two-step macro selector:
- * 1. **Folder dropdown** — "Nicht zugeordnet" first, then named folders in stored order.
- * 2. **Macro dropdown** — macros belonging to the selected folder only.
+ * Macro picker: a single dropdown of all macros in the active profile (flat list).
  *
- * Pre-selects the folder and macro that match [current.macroId] on first composition.
- * When the selected folder changes, the first macro in that folder is auto-selected.
+ * Pre-selects the macro that matches [current.macroId] on first composition.
  */
 @Composable
 internal fun MacroPicker(
@@ -648,98 +644,34 @@ internal fun MacroPicker(
     accentColor: Color,
     onChange:    (PadAction) -> Unit,
 ) {
-    val macros          by MacroState.macros.collectAsState()
-    val folders         by MacroState.folders.collectAsState()
-    val colors          = LocalAppColors.current
-    val unassignedLabel = stringResource(R.string.macropad_folder_unassigned)
+    val profile by MacroPadState.activeProfile.collectAsState()
+    val macros  = profile?.macros ?: emptyList()
+    val colors  = LocalAppColors.current
     val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
 
-    // selectedFolderId is derived from the macro's persisted folderId once macros load.
-    // A LaunchedEffect keeps it in sync when macros arrive from DataStore.
-    // Once the user explicitly picks a folder, userHasChosenFolder prevents the effect
-    // from overwriting that deliberate choice.
-    var userHasChosenFolder by remember(current.macroId) { mutableStateOf(false) }
-    var selectedFolderId    by remember(current.macroId) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(current.macroId, macros) {
-        if (!userHasChosenFolder) {
-            selectedFolderId = macros.firstOrNull { it.id == current.macroId }?.folderId
-        }
-    }
-
-    val macrosInFolder = remember(macros, selectedFolderId) {
-        macros.filter { it.folderId == selectedFolderId }
-    }
-
-    var folderExpanded by remember { mutableStateOf(false) }
-    var macroExpanded  by remember { mutableStateOf(false) }
-
-    // Folder display list: (label, folderId)
-    val folderItems = remember(folders, unassignedLabel) {
-        buildList {
-            add(unassignedLabel to null as String?)
-            folders.forEach { f -> add(f.name to f.id) }
-        }
-    }
-    val selectedFolderLabel = folderItems.firstOrNull { it.second == selectedFolderId }?.first ?: unassignedLabel
-    val selectedMacroName   = macros.firstOrNull { it.id == current.macroId }?.name
-        ?: macrosInFolder.firstOrNull()?.name
+    var macroExpanded by remember { mutableStateOf(false) }
+    val selectedMacroName = macros.firstOrNull { it.id == current.macroId }?.name
+        ?: macros.firstOrNull()?.name
         ?: ""
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // ── Folder dropdown ──────────────────────────────────────────────────
         Box {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { folderExpanded = true }
+                    .clickable(enabled = macros.isNotEmpty()) { macroExpanded = true }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(selectedFolderLabel, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-            }
-            DropdownMenu(
-                expanded         = folderExpanded,
-                onDismissRequest = { folderExpanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                folderItems.forEach { (label, fId) ->
-                    DropdownMenuItem(
-                        text    = { Text(label, color = if (fId == selectedFolderId) accentColor else colors.onSurface, fontSize = 14.sp) },
-                        onClick = {
-                            userHasChosenFolder = true
-                            selectedFolderId    = fId
-                            folderExpanded      = false
-                            val first = macros.filter { it.folderId == fId }.firstOrNull()
-                            if (first != null) onChange(PadAction.Macro(first.id))
-                        },
-                    )
-                }
-            }
-        }
-
-        // ── Macro dropdown (filtered by selected folder) ─────────────────────
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable(enabled = macrosInFolder.isNotEmpty()) { macroExpanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val label = if (macrosInFolder.isEmpty()) folderEmptyLabel else selectedMacroName
                 Text(
-                    label,
-                    color    = if (macrosInFolder.isEmpty()) colors.onSurfaceSecondary else accentColor,
+                    selectedMacroName.ifEmpty { folderEmptyLabel },
+                    color    = if (macros.isEmpty()) colors.onSurfaceSecondary else accentColor,
                     fontSize = 14.sp,
                     modifier = Modifier.weight(1f),
                 )
-                if (macrosInFolder.isNotEmpty()) {
+                if (macros.isNotEmpty()) {
                     Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
                 }
             }
@@ -748,7 +680,7 @@ internal fun MacroPicker(
                 onDismissRequest = { macroExpanded = false },
                 modifier         = Modifier.background(colors.surface),
             ) {
-                macrosInFolder.forEach { macro ->
+                macros.forEach { macro ->
                     DropdownMenuItem(
                         text    = { Text(macro.name, color = if (macro.id == current.macroId) accentColor else colors.onSurface, fontSize = 14.sp) },
                         onClick = { onChange(PadAction.Macro(macro.id)); macroExpanded = false },

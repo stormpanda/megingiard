@@ -136,17 +136,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // FLAG_NOT_FOCUSABLE must only be active in KEYBOARD mode so that uinput key events
-        // are delivered to the focused app (the game) rather than to Megingiard.
-        // Keeping it active in other modes would break in-app text fields (e.g. MacroPad
-        // profile name inputs).
+        // FLAG_NOT_FOCUSABLE must only be active when the fullscreen keyboard overlay is
+        // shown so that uinput key events are delivered to the focused app (the game) rather
+        // than to Megingiard. Keeping it active otherwise would break in-app text fields
+        // (e.g. MacroPad profile name inputs).
         lifecycleScope.launch {
-            AppStateManager.currentMode.collect { mode ->
-                if (mode == AppMode.KEYBOARD) {
-                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (mode=KEYBOARD)")
+            AppStateManager.isFullscreenKeyboardActive.collect { active ->
+                if (active) {
+                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (fullscreen keyboard active)")
                     window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
                 } else {
-                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (mode=$mode)")
+                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared")
                     window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
                 }
             }
@@ -211,15 +211,13 @@ class MainActivity : ComponentActivity() {
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
 
-            val currentMode by AppStateManager.currentMode.collectAsState()
             val macropadAmbientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
 
-            // Auto-start capture when entering MacroPad mode with Ambient Display enabled,
-            // mirroring the autoStartCapture behaviour for Mirror mode.
+            // Auto-start capture when Ambient Display is enabled.
             // Declining within a session is respected until the next mode entry.
             // Guard: skip when on the primary display — no capture should start there.
-            LaunchedEffect(currentMode, macropadAmbientEnabled, isOnValidScreenLocal) {
-                if (currentMode == AppMode.MACROPAD && macropadAmbientEnabled
+            LaunchedEffect(macropadAmbientEnabled, isOnValidScreenLocal) {
+                if (macropadAmbientEnabled
                     && isOnValidScreenLocal && !isCapturing
                 ) {
                     AppStateManager.setUserDeclinedCapture(false)

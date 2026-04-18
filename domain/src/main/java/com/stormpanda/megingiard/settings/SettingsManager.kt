@@ -11,14 +11,10 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppMode
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.Macro
-import com.stormpanda.megingiard.macropad.MacroFolder
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.MacroState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.VignetteShape
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -80,7 +76,6 @@ object SettingsManager {
     private val KEY_MACROPAD_PROFILES           = stringPreferencesKey("macropad_profiles")
     private val KEY_MACROPAD_ACTIVE_PROFILE_ID  = stringPreferencesKey("macropad_active_profile_id")
     private val KEY_MACROPAD_MACROS             = stringPreferencesKey("macropad_macros")
-    private val KEY_MACROPAD_MACRO_FOLDERS      = stringPreferencesKey("macropad_macro_folders")
 
     // Keyboard settings
     private val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
@@ -266,9 +261,6 @@ object SettingsManager {
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
 
-        // MacroPad is the only active tool — set immediately.
-        AppStateManager.setMode(AppMode.MACROPAD)
-
         scope.launch {
             dataStore.data
                 .catch { emit(emptyPreferences()) }
@@ -316,28 +308,6 @@ object SettingsManager {
                     }.getOrElse { emptyList() }
                     val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
                     MacroPadState.loadFrom(profiles, activeId, globalMacros)
-                }
-
-                // MacroPad macros (global library — kept for legacy compat, Phase 8 removal)
-                val macrosJson = prefs[KEY_MACROPAD_MACROS]
-                if (macrosJson != null) {
-                    val macros = runCatching {
-                        macropadJson.decodeFromString<List<Macro>>(macrosJson)
-                    }.getOrElse { emptyList() }
-                    MacroState.loadFrom(macros)
-                } else {
-                    MacroState.loadFrom(emptyList())
-                }
-
-                // MacroPad macro folders
-                val foldersJson = prefs[KEY_MACROPAD_MACRO_FOLDERS]
-                if (foldersJson != null) {
-                    val folders = runCatching {
-                        macropadJson.decodeFromString<List<MacroFolder>>(foldersJson)
-                    }.getOrElse { emptyList() }
-                    MacroState.loadFoldersFrom(folders)
-                } else {
-                    MacroState.loadFoldersFrom(emptyList())
                 }
             }
         }
@@ -550,32 +520,6 @@ object SettingsManager {
         AppLog.d(TAG, "setMacropadAmbientApplyTheme($value)")
         _macropadAmbientApplyTheme.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] = value } }
-    }
-
-    /**
-     * Persists the global macro library to DataStore.
-     * Called by [MacroState] mutators whenever the macro list changes.
-     */
-    fun saveMacroData() {
-        val macros = MacroState.macros.value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_MACROPAD_MACROS] = macropadJson.encodeToString(macros)
-            }
-        }
-    }
-
-    /**
-     * Persists the macro folder list to DataStore.
-     * Called by [MacroState] mutators whenever the folder list changes.
-     */
-    fun saveMacroFolderData() {
-        val folders = MacroState.folders.value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_MACROPAD_MACRO_FOLDERS] = macropadJson.encodeToString(folders)
-            }
-        }
     }
 
     /**

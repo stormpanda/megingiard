@@ -19,23 +19,21 @@ Primary Display (DEFAULT_DISPLAY) — top screen, game display
 
 Secondary Display (non-default displayId) — bottom screen, Megingiard UI
   ├─ MainActivity → MainAppScreen (Jetpack Compose)
-  │    ├─ Crossfade: MIRROR / TOUCHPAD / KEYBOARD / MACROPAD mode content
-  │    └─ CarouselOverlay: pill-based dot navigation + settings
-  └─ MirrorPresentation (android.app.Presentation — in MIRROR and MACROPAD+ambient modes)
+  │    └─ MacroPad-centric main content
+  └─ MirrorPresentation (android.app.Presentation — ambient mirroring modes)
        ├─ SurfaceView: hardware VirtualDisplay output (mirrors primary display)
-       └─ ComposeView → MirrorScreen: gesture controls + CarouselOverlay
+       └─ ComposeView → AmbientMacroPadOverlay / MirrorScreen
 ```
 
-`MainActivity` and `MainAppScreen` run on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). In MIRROR mode, `MirrorPresentation` is layered on top of `MainAppScreen` on the same secondary display, rendering mirrored content from the primary display. In non-mirror modes (TOUCHPAD, KEYBOARD, MACROPAD), `MirrorPresentation` is hidden (`hide()`) and those screens fill the secondary display directly.
+`MainActivity` and `MainAppScreen` run on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). `MirrorPresentation` is layered on top of `MainAppScreen` on the same secondary display when ambient mirroring is active and hidden (`hide()`) when it is not needed.
 
 ### Wrong-Screen Overlay
 
-When `MainActivity` detects that it is running on the **primary display** (`displayId == Display.DEFAULT_DISPLAY`) — either because the app was launched there or moved there at runtime — a global full-screen blocking overlay is shown in `MainAppScreen` on top of all mode content and the `CarouselOverlay`. The overlay:
+When `MainActivity` detects that it is running on the **primary display** (`displayId == Display.DEFAULT_DISPLAY`) — either because the app was launched there or moved there at runtime — a global full-screen blocking overlay is shown in `MainAppScreen` on top of all content. The overlay:
 
 - Displays a plain-language message instructing the user to move the app to the bottom screen.
 - Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
-- Consumes all pointer events, preventing interaction with any underlying tool screen or the carousel.
-- Covers **all modes** (Mirror, Touchpad, Keyboard, MacroPad) — not just Mirror mode.
+- Consumes all pointer events, preventing interaction with any underlying controls.
 
 Display detection is performed synchronously in `MainActivity`'s Compose tree via `LocalContext.current.display?.displayId` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (`autoStartCapture` on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
 

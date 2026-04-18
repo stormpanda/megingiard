@@ -17,7 +17,6 @@ import android.view.Display
 import android.view.Surface
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -100,11 +99,8 @@ class ScreenCaptureService : Service() {
             presentation.onSurfaceReady = { surface ->
                 currentSurface = surface
                 virtualDisplay?.release()
-                val mode = AppStateManager.currentMode.value
                 val ambientEnabled = SettingsManager.macropadAmbientEnabled.value
-                val shouldCreateVd = mode == AppMode.MIRROR ||
-                    (mode == AppMode.MACROPAD && ambientEnabled)
-                if (shouldCreateVd) {
+                if (ambientEnabled) {
                     try {
                         val isFrozen = ScreenCaptureManager.isFrozen.value
                         virtualDisplay = mediaProjection?.createVirtualDisplay(

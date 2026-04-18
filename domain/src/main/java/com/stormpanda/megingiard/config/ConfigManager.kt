@@ -6,8 +6,8 @@ import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.config.LegacyMacroFolder
 import com.stormpanda.megingiard.macropad.Macro
-import com.stormpanda.megingiard.macropad.MacroFolder
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -396,7 +396,7 @@ object ConfigManager {
         settings: Map<String, Map<String, JsonElement>>,
         profiles: List<PadProfile>,
         macros: List<Macro>,
-        macroFolders: List<MacroFolder>,
+        macroFolders: List<LegacyMacroFolder>,
     ): String {
         val payload = checksumJson.encodeToString(ChecksumPayloadV2(settings, profiles, macros, macroFolders))
         val digest = MessageDigest.getInstance("SHA-256")
@@ -425,6 +425,6 @@ object ConfigManager {
         val settings: Map<String, Map<String, JsonElement>>,
         val profiles: List<PadProfile>,
         val macros: List<Macro>,
-        val macroFolders: List<MacroFolder>,
+        val macroFolders: List<LegacyMacroFolder>,
     )
 }

@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.ui.CAROUSEL_PILL_INSET
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
@@ -52,6 +51,7 @@ private val KEY_PADDING_H = 2.dp
 private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
 private val KB_IME_BOTTOM_PADDING = 56.dp
+private val KB_PILL_INSET = 13.dp
 
 private const val TAG = "KeyboardScreen"
 
@@ -218,8 +218,8 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                     .padding(
                         start = 4.dp,
                         end = 4.dp,
-                        top = if (overlayAtBottom) 4.dp else CAROUSEL_PILL_INSET,
-                        bottom = if (effectiveFullscreen) (if (overlayAtBottom) CAROUSEL_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
+                        top = if (overlayAtBottom) 4.dp else KB_PILL_INSET,
+                        bottom = if (effectiveFullscreen) (if (overlayAtBottom) KB_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
                     ),
                 verticalArrangement = Arrangement.SpaceEvenly
             ) {

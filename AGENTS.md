@@ -103,7 +103,7 @@ com.stormpanda.megingiard
 ├── touchpad/
 │ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
 └── ui/
-└── CarouselOverlay.kt # Shared overlay components (auto-hide, chevron nav)
+└── ToolpadOverlay.kt # Shared overlay components (auto-hide, chevron nav)
 \`\`\`
 
 **Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`.
@@ -299,8 +299,8 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 ### 6.4 Shared UI Components
 
 - Reusable Composables (overlay controls, auto-hide timers) belong in `ui/`.
-- Do not duplicate overlay or carousel code across screens. Use
-  `CarouselOverlay` and `AppStateManager.overlayVisible` / `triggerOverlay()`.
+- Do not duplicate overlay code across screens. Use
+  shared overlay tools and `AppStateManager.overlayVisible` / `triggerOverlay()`.
 
 ### 6.5 Collecting StateFlows
 
@@ -350,11 +350,10 @@ When logic depends on **two or more independent `StateFlow`s**, use `combine()` 
 // ✅ Correct – single derived signal
 scope.launch {
     combine(
-        AppStateManager.currentMode,
         AppStateManager.isActivityResumed,
         AppStateManager.isOnValidScreen
-    ) { mode, resumed, valid ->
-        mode == AppMode.MIRROR && resumed && valid
+    ) { resumed, valid ->
+        resumed && valid
     }.collect { shouldShow ->
         if (shouldShow) show() else hide()
     }
@@ -602,7 +601,7 @@ Before marking a task as done, verify:
 - [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
 - [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR`
+- [ ] `MirrorPresentation` show/hide reacts to presentation visibility conditions
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)

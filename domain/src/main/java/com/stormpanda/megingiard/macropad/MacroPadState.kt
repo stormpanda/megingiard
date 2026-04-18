@@ -351,7 +351,6 @@ object MacroPadState {
         val copied = macro.copy(
             id = UUID.randomUUID().toString(),
             name = "${macro.name} (Copy)",
-            folderId = null,
         )
         AppLog.d(TAG, "copyMacroToActiveProfile originalId=${macro.id} newId=${copied.id}")
         updateProfile(profile.copy(macros = profile.macros + copied))

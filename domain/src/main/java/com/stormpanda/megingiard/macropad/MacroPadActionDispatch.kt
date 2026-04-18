@@ -6,7 +6,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 
-// MacroState and MacroExecutor are in the same package — no import needed.
+// MacroPadState and MacroExecutor are in the same package — no import needed.
 
 private const val TAG = "MacroPadActionDispatch"
 
@@ -39,7 +39,7 @@ fun injectActionDown(action: PadAction) {
         is PadAction.ScrollWheel     -> { /* handled via drag events */ }
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
         is PadAction.Macro           -> {
-            val macro = MacroState.macros.value.firstOrNull { it.id == action.macroId }
+            val macro = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == action.macroId }
             AppLog.d(TAG, "actionDown: Macro id=${action.macroId} found=${macro != null}")
             if (macro != null) MacroExecutor.execute(macro)
         }

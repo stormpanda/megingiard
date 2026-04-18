@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 private const val TAG = "AppStateManager"
 private const val PILL_AUTO_HIDE_MS = 5000L
 
-enum class AppMode { MIRROR, TOUCHPAD, KEYBOARD, MACROPAD }
+enum class AppMode { MACROPAD }
 
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
@@ -93,26 +93,6 @@ object AppStateManager {
         AppLog.d(TAG, "hideOverlay")
         _overlayVisible.value = false
         _pillExpanded.value = false
-    }
-
-    fun nextMode() {
-        val active = AppMode.entries
-        if (active.size <= 1) return
-        val currentIndex = active.indexOf(_currentMode.value)
-        val prev = _currentMode.value
-        if (currentIndex == -1) { _currentMode.value = active.first(); return }
-        _currentMode.value = active[(currentIndex + 1) % active.size]
-        AppLog.i(TAG, "nextMode: $prev → ${_currentMode.value}")
-    }
-
-    fun prevMode() {
-        val active = AppMode.entries
-        if (active.size <= 1) return
-        val currentIndex = active.indexOf(_currentMode.value)
-        val prev = _currentMode.value
-        if (currentIndex == -1) { _currentMode.value = active.first(); return }
-        _currentMode.value = active[(currentIndex - 1 + active.size) % active.size]
-        AppLog.i(TAG, "prevMode: $prev → ${_currentMode.value}")
     }
 
     fun setMode(mode: AppMode) {

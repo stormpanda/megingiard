@@ -18,15 +18,6 @@
     <string name="touchpad_hint">Touch here to control the top screen</string>
     <string name="touchpad_hint_mouse">Slide to move cursor · Tap to click</string>
 
-    <!-- Tool display names -->
-    <string name="tool_name_mirror">Mirror</string>
-    <string name="tool_name_touchpad">Touchpad</string>
-    <string name="tool_name_keyboard">Keyboard</string>
-    <string name="tool_name_macropad">MacroPad</string>
-    <string name="keyboard_placeholder">Keyboard coming soon…</string>
-    <string name="cd_keyboard_key">Key %s</string>
-    <string name="cd_keyboard_trackpoint">Trackpoint</string>
-
     <!-- Settings screen -->
     <string name="settings_close">Close</string>
     <string name="cd_open_settings">Open settings</string>
@@ -37,8 +28,6 @@
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_auto_start_capture">Auto-start mirroring</string>
     <string name="settings_auto_start_capture_desc">Automatically request screen capture permission when the app opens</string>
-    <string name="settings_overlay_timeout">Controls hide after: %ds</string>
-    <string name="settings_no_tool_settings">No settings available for this tool.</string>
     <string name="settings_global_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_accent_color">Accent color</string>
@@ -53,6 +42,7 @@
     <string name="settings_color_apply">Apply</string>
 
     <!-- Keyboard settings -->
+    <string name="cd_keyboard_trackpoint">Trackpoint</string>
     <string name="settings_kb_layout">Keyboard layout</string>
     <string name="settings_kb_layout_desc">Key arrangement for letters</string>
     <string name="settings_kb_layout_qwertz">QWERTZ</string>
@@ -83,12 +73,6 @@
     <string name="settings_remember_lock">Remember lock</string>
     <string name="settings_remember_lock_desc">Restore view lock state when mirroring restarts</string>
     <string name="settings_remember_projection">Remember touch projection</string>
-    <string name="settings_remember_projection_desc">Restore touch projection state when mirroring restarts</string>
-
-    <!-- General session -->
-    <string name="settings_remember_last_tool">Remember last used tool</string>
-    <string name="settings_remember_last_tool_desc">Restore the active tool when the app restarts</string>
-
     <!-- MacroPad tool -->
     <string name="macropad_no_profile">No profile configured.
 Open Settings to create a layout.</string>
@@ -286,6 +270,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_display_macro">Macro: %s</string>
 
     <!-- MacroPad macro picker (PadActionPicker) -->
+    <string name="macropad_picker_folder_empty">No macros available</string>
     <string name="macropad_macro_picker_no_macros">No macros available</string>
     <string name="macropad_macro_picker_unknown">Unknown Macro</string>
 
@@ -336,18 +321,6 @@ Open Settings to create a layout.</string>
     <!-- %1$d = start time ms, %2$d = duration ms -->
     <string name="macropad_macro_step_timing">@%1$dms  ⟶  %2$dms</string>
 
-    <!-- MacroPad macro folders -->
-    <string name="macropad_folder_unassigned">Unassigned</string>
-    <string name="macropad_folder_new">New Folder</string>
-    <string name="macropad_folder_rename">Rename Folder</string>
-    <string name="macropad_folder_delete">Delete Folder</string>
-    <string name="macropad_folder_delete_confirm">All macros in this folder will be moved to &#8220;Unassigned&#8221;.</string>
-    <string name="macropad_folder_name_hint">Folder name</string>
-    <string name="macropad_folder_move_title">Move to Folder</string>
-    <string name="macropad_folder_move_up">Move Up</string>
-    <string name="macropad_folder_move_down">Move Down</string>
-    <string name="macropad_move_to_folder">Move to Folder…</string>
-    <string name="macropad_picker_folder_empty">No macros in this folder</string>
     <string name="cd_more_options">More options</string>
 
     <!-- Idle Pill -->

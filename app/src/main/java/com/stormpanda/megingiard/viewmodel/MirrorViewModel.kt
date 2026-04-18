@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.mirror.MirrorViewportController
@@ -50,7 +49,6 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     // ── Overlay/settings ────────────────────────────────────────────────────
     val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val currentMode: StateFlow<AppMode> = AppStateManager.currentMode
     val isTouching: StateFlow<Boolean> = AppStateManager.isTouching
     val overlayTimeoutMs: StateFlow<Long> = MutableStateFlow(MIRROR_CONTROLS_AUTO_HIDE_MS)
 

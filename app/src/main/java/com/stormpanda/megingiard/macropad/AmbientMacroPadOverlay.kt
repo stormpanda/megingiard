@@ -17,26 +17,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.macropad.VignetteShape
-import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
 
@@ -44,8 +36,8 @@ import kotlin.math.sqrt
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val AMO_SWIPE_EDGE_ZONE = 40.dp
-private val AMO_SWIPE_THRESHOLD = 25.dp
+private const val MP_SCREEN_PADDING_DP = 8
+private val MP_SCREEN_PADDING = MP_SCREEN_PADDING_DP.dp
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
 
@@ -72,19 +64,12 @@ internal fun AmbientMacroPadOverlay() {
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val applyTheme by SettingsManager.macropadAmbientApplyTheme.collectAsState()
 
-    val showControls by AppStateManager.overlayVisible.collectAsState()
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val density = LocalDensity.current
-    val edgeZonePx = with(density) { AMO_SWIPE_EDGE_ZONE.toPx() }
-    val swipeThresholdPx = with(density) { AMO_SWIPE_THRESHOLD.toPx() }
-
     // Effective dim/vignette: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
     val effectiveVignetteOpacity = if (isPeekActive) 0f else vignetteOpacity
 
-    // Start injectors after the carousel overlay has closed (same pattern as MacroPadScreen)
+    // Start injectors immediately
     LaunchedEffect(Unit) {
-        AppStateManager.overlayVisible.first { !it }
         withContext(Dispatchers.IO) {
             val ap = MacroPadState.activeProfile.value
             AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
@@ -106,50 +91,7 @@ internal fun AmbientMacroPadOverlay() {
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            // Initial pass: detect swipe from the pill edge to trigger carousel overlay,
-            // without consuming events so MacroPad button presses still work.
-            .pointerInput(overlayAtBottom) {
-                awaitPointerEventScope {
-                    var swipeStartY = Float.NaN
-                    var swipeTriggered = false
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        when (event.type) {
-                            PointerEventType.Press -> {
-                                val y = event.changes.firstOrNull()?.position?.y ?: 0f
-                                val nearEdge = if (overlayAtBottom) {
-                                    y >= size.height - edgeZonePx
-                                } else {
-                                    y <= edgeZonePx
-                                }
-                                swipeStartY = if (nearEdge) y else Float.NaN
-                                swipeTriggered = false
-                            }
-                            PointerEventType.Move -> {
-                                if (!swipeStartY.isNaN() && !swipeTriggered) {
-                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
-                                    val delta = if (overlayAtBottom) {
-                                        swipeStartY - y
-                                    } else {
-                                        y - swipeStartY
-                                    }
-                                    if (delta >= swipeThresholdPx) {
-                                        AppStateManager.triggerOverlay()
-                                        swipeTriggered = true
-                                    }
-                                }
-                            }
-                            PointerEventType.Release -> {
-                                swipeStartY = Float.NaN
-                                swipeTriggered = false
-                            }
-                            else -> {}
-                        }
-                    }
-                }
-            }
+        modifier = Modifier.fillMaxSize()
     ) {
         // Layer 1: Dim overlay
         if (effectiveDim > 0f) {
@@ -204,12 +146,6 @@ internal fun AmbientMacroPadOverlay() {
                 )
             }
         }
-
-        // Layer 5: Carousel overlay for mode switching
-        CarouselOverlay(
-            visible = showControls,
-            onInteraction = { AppStateManager.triggerOverlay() },
-        )
     }
 }
 

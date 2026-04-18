@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.CarouselOverlay
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MirrorViewModel
 import kotlinx.coroutines.delay
@@ -48,7 +47,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private val MR_SWIPE_EDGE_ZONE = 40.dp
-private val MR_SWIPE_THRESHOLD = 25.dp
 private val MR_TOUCH_INDICATOR_SIZE = 24.dp
 private const val MR_TOUCH_INDICATOR_ALPHA = 0.5f
 private const val ZOOM_MIN = 1f
@@ -81,7 +79,6 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
     val showControls by viewModel.overlayVisible.collectAsState()
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val edgeZonePx = with(density) { MR_SWIPE_EDGE_ZONE.toPx() }
-    val swipeThresholdPx = with(density) { MR_SWIPE_THRESHOLD.toPx() }
 
     // Local visibility for the control button row — shown on any touch (or edge-swipe
     // when touch projection is active), independently of the carousel overlay timer.
@@ -150,8 +147,6 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
             }
     }
 
-    // Outer Box: gesture surface and CarouselOverlay are siblings so overlay touch
-    // events are not intercepted by the gesture detectors below.
     Box(modifier = modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -161,8 +156,6 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
                 // touch-projection-aware logic), and detects edge-zone swipe for overlay.
                 .pointerInput(overlayAtBottom, isTouchProjectionActive) {
                     awaitPointerEventScope {
-                        var swipeStartY = Float.NaN
-                        var swipeTriggered = false
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             when (event.type) {
@@ -181,30 +174,12 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
                                         showButtons = true
                                         buttonTriggerCount++
                                     }
-                                    swipeStartY = if (nearEdge) y else Float.NaN
-                                    swipeTriggered = false
-                                }
-                                PointerEventType.Move -> {
-                                    if (!swipeStartY.isNaN() && !swipeTriggered) {
-                                        val y = event.changes.firstOrNull()?.position?.y ?: 0f
-                                        val delta = if (overlayAtBottom) {
-                                            swipeStartY - y
-                                        } else {
-                                            y - swipeStartY
-                                        }
-                                        if (delta >= swipeThresholdPx) {
-                                            viewModel.triggerOverlay()
-                                            swipeTriggered = true
-                                        }
-                                    }
                                 }
                                 PointerEventType.Release -> {
                                     if (!event.changes.any { it.pressed }) {
                                         viewModel.setTouching(false)
                                         viewModel.setPillExpanded(false)
                                     }
-                                    swipeStartY = Float.NaN
-                                    swipeTriggered = false
                                 }
                                 else -> {}
                             }
@@ -424,11 +399,5 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
             )
         }
 
-        // CarouselOverlay is a sibling of the gesture Box so its touch events are
-        // not intercepted by detectTapGestures / detectTransformGestures.
-        // It must live here (inside MirrorPresentation's ComposeView) because
-        // MirrorPresentation is a separate window on top of the Activity window;
-        // MainAppScreen's CarouselOverlay would be invisible while mirroring.
-        CarouselOverlay(visible = showControls, onInteraction = { viewModel.triggerOverlay() })
     }
 }

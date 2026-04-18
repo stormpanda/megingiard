@@ -1,10 +1,16 @@
 package com.stormpanda.megingiard.config
 
 import com.stormpanda.megingiard.macropad.Macro
-import com.stormpanda.megingiard.macropad.MacroFolder
 import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+
+/** @deprecated v2 legacy — folders removed. Used only for migrating old exports. */
+@Serializable
+data class LegacyMacroFolder(
+    val id: String,
+    val name: String,
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schema version & MIME type
@@ -48,7 +54,7 @@ data class MegingiardExport(
     /** @deprecated v2 legacy — macros now live inside PadProfile.macros. Present only in v2 imports. */
     val macros: List<Macro> = emptyList(),
     /** @deprecated v2 legacy — folders removed. Present only in v2 imports. */
-    val macroFolders: List<MacroFolder> = emptyList(),
+    val macroFolders: List<LegacyMacroFolder> = emptyList(),
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

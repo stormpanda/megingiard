@@ -189,9 +189,9 @@ The trackpoint key renders as an accent-colored `●` in the home row. When the 
 
 ### Overlay Blocking
 
-When the `CarouselOverlay` is visible:
+When a full-screen UI overlay is visible:
 
-- New **Press** and **Move** events on keyboard keys are blocked — a tap on any key dismisses the overlay instead.
+- New **Press** and **Move** events on keyboard keys are blocked so overlay gestures and menu actions take precedence.
 - **Release** events always pass through so that any key already in-flight receives a proper UP injection and does not get stuck.
 
 ### Settings

@@ -78,7 +78,6 @@ private fun VignetteShape.labelResId(): Int = when (this) {
 
 /**
  * Tool-settings panel content for the MacroPad tool.
- * Shown inside [com.stormpanda.megingiard.settings.ToolSettingsPanel].
  *
  * @param onOpenEditor  Called when the user taps "Edit Layout…" to open the full-screen editor.
  */

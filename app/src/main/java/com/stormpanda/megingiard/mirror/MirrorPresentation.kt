@@ -37,7 +37,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -72,21 +71,19 @@ class MirrorPresentation(
 
     // System back events arrive here via the Presentation's OnBackInvokedDispatcher.
     // We forward them to backDispatcher first so that BackHandlers registered by
-    // Compose (Dialog dismiss, ToolSettingsPanel, etc.) fire correctly. Only if no
+    // Compose (Dialog dismiss, etc.) fire correctly. Only if no
     // Compose callback is enabled do we fall back to switching mode.
     private val onBackCallback = OnBackInvokedCallback {
         if (backDispatcher.hasEnabledCallbacks()) {
             AppLog.d(TAG, "back pressed: delegating to Compose")
             backDispatcher.onBackPressed()
         } else {
-            AppLog.d(TAG, "back pressed: no Compose handler → switching to TOUCHPAD")
-            AppStateManager.setMode(AppMode.TOUCHPAD)
+            AppLog.d(TAG, "back pressed: no Compose handler → ignoring")
         }
     }
 
     override fun cancel() {
-        AppLog.d(TAG, "cancel → TOUCHPAD")
-        AppStateManager.setMode(AppMode.TOUCHPAD)
+        AppLog.d(TAG, "cancel → ignoring")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -149,7 +146,7 @@ class MirrorPresentation(
 
         container.addView(sv)
 
-        // BackHandler (used in ToolSettingsPanel and Compose Dialog) requires
+        // BackHandler (used in Compose Dialog) requires
         // LocalOnBackPressedDispatcherOwner. backDispatcher is a class property so that
         // onBackCallback (the system back receiver) can delegate into it, making all
         // BackHandlers inside this ComposeView fire correctly before falling back to
@@ -201,12 +198,10 @@ class MirrorPresentation(
                     LocalAppColors provides appColors
                 ) {
                     MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
-                        val mode by AppStateManager.currentMode.collectAsState()
                         val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
                         val capturing by ScreenCaptureManager.isCapturing.collectAsState()
-                        when {
-                            mode == AppMode.MIRROR -> MirrorScreen()
-                            mode == AppMode.MACROPAD && ambientEnabled && capturing -> AmbientMacroPadOverlay()
+                        if (ambientEnabled && capturing) {
+                            AmbientMacroPadOverlay()
                         }
                     }
                 }
@@ -237,12 +232,11 @@ class MirrorPresentation(
     private fun bindStateFlows(sv: SurfaceView) {
         scope.launch {
             combine(
-                AppStateManager.currentMode,
                 AppStateManager.isOnValidScreen,
                 SettingsManager.macropadAmbientEnabled,
                 ScreenCaptureManager.isCapturing,
                 AppStateManager.isFilePickerOpen
-            ) { mode, isValid, ambientEnabled, capturing, filePickerOpen ->
+            ) { isValid, ambientEnabled, capturing, filePickerOpen ->
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
@@ -253,10 +247,7 @@ class MirrorPresentation(
                 // Presentation so that DocumentsUI (TYPE_APPLICATION rank) is visible
                 // to the user. Without this the Presentation window (TYPE_PRIVATE_PRESENTATION),
                 // which sits above regular Activities, would block the picker entirely.
-                capturing && isValid && !filePickerOpen && (
-                    mode == AppMode.MIRROR ||
-                    (mode == AppMode.MACROPAD && ambientEnabled)
-                )
+                capturing && isValid && !filePickerOpen && ambientEnabled
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }

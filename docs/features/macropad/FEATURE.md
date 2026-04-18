@@ -99,7 +99,7 @@ Each button supports one of the following actions:
 ### FR-P8: Multi-Layout Profiles
 
 - Each profile MUST support **multiple named layouts** (`PadLayout`). Each layout has its own button list, enabled/disabled state, and ambient display settings.
-- Exactly **one layout is active** at a time within the active profile. Layout switching is performed via left/right `CarouselOverlay` navigation (shared with other modes).
+- Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
 - Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable **layout bar** with chips for each layout. Long-press drag reorders layouts within the profile.
 - Each layout chip has a **visibility toggle** (eye icon) to enable/disable the layout. Disabled layouts are skipped during carousel navigation in use mode.
 - **At least one layout must remain enabled** — disabling the last enabled layout is prevented.
@@ -403,7 +403,7 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 ### Layout Editor
 
-`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition) from `ToolSettingsPanel`, controlled by the `showMacroPadEditor` state flag. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile, new layout) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`, `NewLayoutOverlay`) instead of `AlertDialog`. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor's **layout bar** (`EditorLayoutBar`) shows horizontally scrollable layout chips with drag-reorder (long-press drag via `rememberReorderableLazyListState`), visibility toggles, and a "+" chip for creating new layouts (blank or from template). The editor list is scrollable via `LazyColumn`.
+`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition), controlled by UI state in the hosting screen. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile, new layout) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`, `NewLayoutOverlay`) instead of `AlertDialog`. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor's **layout bar** (`EditorLayoutBar`) shows horizontally scrollable layout chips with drag-reorder (long-press drag via `rememberReorderableLazyListState`), visibility toggles, and a "+" chip for creating new layouts (blank or from template). The editor list is scrollable via `LazyColumn`.
 
 ### Grid Snap Overlay
 
