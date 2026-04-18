@@ -206,6 +206,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
     <string name="settings_macropad_edit">Bearbeiten</string>
     <string name="settings_macropad_new">Neu</string>
+    <string name="macropad_layout_template_title">Vorlage</string>
+    <string name="macropad_layout_template_blank">Leer</string>
 
     <!-- MacroPad-Ambient-Display-Einstellungen -->
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>

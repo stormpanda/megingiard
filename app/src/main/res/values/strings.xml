@@ -147,6 +147,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_rename">Rename</string>
     <string name="macropad_editor_delete_profile">Delete Profile</string>
     <string name="macropad_editor_confirm_delete">Delete this profile?</string>
+    <string name="macropad_editor_delete_layout">Delete Layout</string>
+    <string name="cd_layout_enable_toggle">Toggle layout enabled</string>
     <string name="macropad_editor_cancel">Cancel</string>
     <string name="macropad_editor_confirm">Delete</string>
 
@@ -230,6 +232,8 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_new_layout">New Layout</string>
     <string name="settings_macropad_edit">Edit</string>
     <string name="settings_macropad_new">New</string>
+    <string name="macropad_layout_template_title">Template</string>
+    <string name="macropad_layout_template_blank">Blank</string>
 
     <!-- MacroPad ambient display settings -->
     <string name="settings_macropad_ambient">Ambient Display</string>

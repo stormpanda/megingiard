@@ -17,7 +17,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 - The MacroPad MUST support **multiple named profiles** that can be created, renamed, and deleted at any time in the editor.
 - Exactly **one profile is active** at a time; the active profile is displayed in use mode. Changing the active profile takes effect immediately.
-  Each profile stores its own button list and device flags (see FR-P4).
+  Each profile stores its own layout list, macro list, and device flags (see FR-P4, FR-P7, FR-P8).
 - Profiles MUST persist across app restarts via **DataStore** (serialised as JSON using `kotlinx.serialization`).
 
 ### FR-P2: Free-Placement Buttons
@@ -86,34 +86,27 @@ Each button supports one of the following actions:
 
 ### FR-P7: Macros
 
-- A **macro** is a named, globally-shared sequence of timed input steps that can be triggered by any pad button across any profile.
-- Macros are stored **independently of profiles** under the DataStore key `macropad_macros` and are managed via the **Macro Library** editor (opened from the "Macros…" chip in the layout editor toolbar).
+- A **macro** is a named, **per-profile** sequence of timed input steps stored in `PadProfile.macros`. Each profile maintains its own macro list; macros are not shared across profiles.
+- Macros are managed via the **Macro Library** editor (opened from the "Macros…" chip in the layout editor toolbar).
 - Each macro contains a list of **`MacroStep`** subtypes: `GamepadButtonTap`, `JoystickMove`, and `DPadTap`. Each step has `startTimeMs` and `durationMs` fields that allow overlapping parallel steps within the same macro.
 - A **`PadAction.Macro(macroId)`** button action MUST reference a macro by ID; pressing the button fires the macro **once (fire-and-forget)** without blocking further input.
-- The MacroPad editor toolbar exposes two new chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
+- The MacroPad editor toolbar exposes two chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
 - The macro editor shows a **visual horizontal timeline** (Canvas, 0.3 dp/ms scale) colour-coded by step type (accent = Gamepad Button, orange = Joystick, blue = D-Pad), plus a scrollable step list for editing individual steps.
 - Steps are configured in **`MacroStepEditDialog`** which provides: step-type chips (Gamepad / Joystick / D-Pad), gamepad button dropdown, 3×3 direction grid for joystick/D-Pad, a magnitude slider (0–1, default 1) for joystick, and numeric fields for start/duration timing.
+- The macro list is a **flat list** (no folders). Macros can be reordered via drag handle, and CRUD operations (add, edit, duplicate, delete) are available via context menu on each row.
+- Macro CRUD is performed through `MacroPadState.addMacro()`, `updateMacro()`, `deleteMacro()`, `renameMacro()`, `reorderMacros()`. All mutations persist via `SettingsManager.saveMacroPadData()`.
 
-### FR-P8: Macro Folders
+### FR-P8: Multi-Layout Profiles
 
-- The macro library MUST support **named folders** to group macros. Folders have one level of depth only — no sub-folders.
-- Every macro may belong to exactly **one folder** (identified by `folderId: String?`). Macros with `folderId = null` are implicitly assigned to the **"Nicht zugeordnet"** (Unassigned) virtual folder.
-- Folders are stored as `List<MacroFolder>` under the DataStore key `macropad_macro_folders`. The `Macro.folderId` field defaults to `null` — existing saved data is therefore **automatically backward-compatible** with no migration required.
-- The **Macro Library editor** (`MacroListEditor`) groups macros into folder sections:
-  - The **"Nicht zugeordnet"** section is always displayed **first**. It cannot be renamed or deleted.
-  - Named folders follow in user-defined order and can be reordered via **Move Up** / **Move Down** context menu actions on their section headers.
-  - Each section is **collapsible** (expand/collapse toggle on the header).
-  - Within a section, macros can be **reordered** by drag handle (reorder is scoped to the section).
-- Folder **CRUD** is available via context menus in the section header:
-  - **Rename** — In-place rename dialog.
-  - **Delete** — Confirmation dialog warns that all macros in the folder will be moved to "Nicht zugeordnet". After confirmation, all affected macros have their `folderId` set to `null`.
-- A **"Neuer Ordner"** button is provided in the macro library top bar to create a new folder.
-- Macros can be **moved to a different folder** via a context menu entry ("In Ordner verschieben…") on each macro row. A simple dialog presents a flat list of available folders (including "Nicht zugeordnet" at the top). Selecting an entry updates `Macro.folderId` and immediately persists.
-- Duplicating a macro preserves the original's `folderId` — the copy lands in the same folder.
-- The **`MacroPicker`** in `PadActionPicker` uses a two-step selection flow:
-  1. **Folder dropdown** — lists "Nicht zugeordnet" first, then all named folders in their stored order. Pre-selects the folder of the currently assigned macro (if any).
-  2. **Macro dropdown** — shows only macros belonging to the folder selected in step 1. Pre-selects the currently assigned macro (if any).
-  - If the selected folder has no macros, the macro dropdown shows a disabled placeholder ("Keine Makros in diesem Ordner").
+- Each profile MUST support **multiple named layouts** (`PadLayout`). Each layout has its own button list, enabled/disabled state, and ambient display settings.
+- Exactly **one layout is active** at a time within the active profile. Layout switching is performed via left/right `CarouselOverlay` navigation (shared with other modes).
+- Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable **layout bar** with chips for each layout. Long-press drag reorders layouts within the profile.
+- Each layout chip has a **visibility toggle** (eye icon) to enable/disable the layout. Disabled layouts are skipped during carousel navigation in use mode.
+- **At least one layout must remain enabled** — disabling the last enabled layout is prevented.
+- A new layout can be created as **blank** or from a **template**. The template picker (`NewLayoutOverlay`) lists all layouts from all profiles; selecting one deep-copies its buttons with new UUIDs.
+- Quick layout creation from the **PillMenu** creates a blank layout with a user-provided name (no template selection).
+- Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all enabled layouts** in the profile (via `withSyncedDeviceFlags()`).
+- Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). Profiles loaded from older saves without a `layouts` list are migrated: a default layout named "Layout 1" is created containing the profile's legacy `buttons` list.
 
 ### FR-P9: Ambient Display
 
@@ -121,8 +114,9 @@ Each button supports one of the following actions:
 - Enabled via a **toggle** in MacroPad tool settings (default: off).
 - When Ambient Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
 - When ambient is enabled and capturing is active, the `MirrorPresentation` renders `AmbientMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
+- **Per-layout ambient settings:** Dimming and vignette parameters are stored **per layout** in `PadLayout` (not globally). Each layout has its own `ambientDim`, `ambientVignetteEnabled`, `ambientVignetteShape`, `ambientVignetteVisibleArea`, `ambientVignetteTransition`, `ambientVignetteOpacity`, and `ambientVignetteColor` fields. Switching layouts automatically applies the active layout's ambient settings.
+- **Ambient Settings Overlay** (`AmbientSettingsOverlay`): A dedicated full-screen overlay (opened from the editor) for configuring the active layout's ambient parameters. Provides sliders for dim and vignette settings, shape dropdown, and colour picker. Changes are committed to `MacroPadState.updateLayout()` on slider release (live-update + persist-on-release pattern).
 - **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
-  - **Slider persistence:** The dim slider and all three vignette numeric sliders (Visible Area, Transition, Opacity) use a **live-update + persist-on-release** pattern. `onValueChange` calls an in-memory-only setter (e.g. `updateMacropadAmbientDimLive`) for immediate visual feedback without triggering DataStore I/O. DataStore is written only in `onValueChangeFinished` (when the user lifts their finger), preventing per-frame writes during a drag gesture.
 - **Vignette** (optional, default off) darkens the screen edges using a shape-specific gradient layer. Configurable via five settings:
   - **Shape** (`RADIAL` / `LETTERBOX` / `PILLARBOX`): `RADIAL` = circular vignette centred on the screen; `LETTERBOX` = horizontal dark bars at top and bottom; `PILLARBOX` = vertical dark bars at left and right.
   - **Visible Area** (0–100%, default 70%): controls the size of the inner transparent zone. At 100% the transparent zone reaches all four corners (`innerRadius = halfDiag = √(w²+h²)/2`) — the vignette is effectively off-screen. At 0% the entire screen is covered. For `LETTERBOX` the visible area is the fraction of the screen height that remains transparent; for `PILLARBOX` the fraction of the screen width.
@@ -171,11 +165,15 @@ Compose UI (MacroPadScreen)
       └──── PadAction.TrackpointMove → MouseInjector.moveMouse()
 
 MacroPadState (object singleton)
-      │  StateFlow<List<PadProfile>>, StateFlow<String?>, StateFlow<PadProfile?>
+      │  StateFlow<List<PadProfile>>, StateFlow<PadProfile?>, StateFlow<PadLayout?>
+      │  Profile CRUD, Layout CRUD (add/delete/reorder/enable), Macro CRUD (per-profile)
       └── persisted via SettingsManager (DataStore + kotlinx.serialization JSON)
 
 MacroPadEditor (Composable, opened from MacroPadToolSettings)
-      └── CRUD on profiles via MacroPadState
+      ├── Profile CRUD (create/rename/delete)
+      ├── Layout bar (create/rename/delete/reorder/enable-disable, template selection)
+      ├── Button CRUD on active layout via PadCanvas
+      └── Macro library (MacroListEditor, per-profile flat list)
 ```
 
 #### Ambient Display Rendering Pipeline
@@ -198,71 +196,31 @@ When Ambient Display is enabled and `ScreenCaptureService` is capturing:
 
 `PadProfile` and all sub-types are `@Serializable` data classes (sealed class `PadAction` with `@SerialName` discriminators). The full list of profiles is serialised to a single JSON string stored in DataStore under the key `macropad_profiles`. The active profile ID is stored separately under `macropad_active_profile_id`.
 
-**Macro Folder data model** — new in `MacroData.kt`:
+**Macro data model:**
 
-```kotlin
-@Serializable
-data class MacroFolder(
-    val id: String,   // UUID
-    val name: String,
-)
-```
-
-The `Macro` data class gains one optional field (default `null` → fully backward-compatible):
+Macros are stored **per profile** in `PadProfile.macros: List<Macro>`. There are no folders — macros form a flat list.
 
 ```kotlin
 @Serializable
 data class Macro(
     val id: String,
     val name: String,
-    val folderId: String? = null,   // null → "Nicht zugeordnet"
     val steps: List<MacroStep> = emptyList(),
 )
 ```
-
-`List<MacroFolder>` is persisted under the DataStore key `macropad_macro_folders`. On load `SettingsManager` calls `MacroState.loadFoldersFrom(folders)`. Because `Macro.folderId` defaults to `null`, no JSON migration is needed — existing saves automatically produce unassigned macros.
-
-**`MacroState` additions:**
-
-```kotlin
-// New flows
-val folders: StateFlow<List<MacroFolder>>
-
-// New CRUD
-fun addFolder(folder: MacroFolder)
-fun renameFolder(id: String, newName: String)
-fun deleteFolder(folderId: String)       // moves contained macros to folderId=null
-fun reorderFolders(newList: List<MacroFolder>)
-fun moveMacroToFolder(macroId: String, folderId: String?)
-
-// Init hook
-internal fun loadFoldersFrom(folders: List<MacroFolder>)
-```
-
-Every mutation calls `SettingsManager.saveMacroFolderData()` (new save function alongside the existing `saveMacroData()`).
 
 **`MacroListEditor` rendering model:**
 
 ```
 MacroListEditor
-  └── MacroListView
-        ├── FolderSection("Nicht zugeordnet", collapsible, no rename/delete)
-        │     └── MacroRow... (drag-reorder scoped to section)
-        ├── FolderSection(folder1.name, collapsible, rename/delete context menu, drag handle)
-        │     └── MacroRow... (drag-reorder scoped to section)
-        └── ...
-        └── [Neuer Ordner] button in top bar
+  └── MacroListView (flat LazyColumn)
+        ├── MacroRow... (drag-reorder via ReorderableItem)
+        └── [New Macro] chip at bottom
 ```
 
-Context menu actions per macro row: Edit, Duplicate, **In Ordner verschieben…**, Delete.
-Context menu actions per named folder header: **Umbenennen**, **Löschen**.
+Context menu actions per macro row: Edit, Duplicate, Delete.
 
-**`MacroPicker` in `PadActionPicker`** replaces the current single dropdown with two:
-
-1. `FolderDropdown` — items: `[("Nicht zugeordnet", null), (folder.name, folder.id), …]` in stored order. On change: updates `selectedFolderId`, resets `selectedMacroId` to first macro in new folder (or null if empty).
-2. `MacroDropdown` — items filtered by `selectedFolderId`; disabled with placeholder label `macro_picker_folder_empty` when filtered list is empty.
-
-Pre-selection on open: resolve `currentMacroId` → find its `folderId` → pre-select that folder → pre-select that macro.
+**`MacroPicker` in `PadActionPicker`** uses a single dropdown listing all macros in the active profile. Pre-selects the currently assigned macro (if any).
 
 ```
 PadProfile
@@ -271,7 +229,21 @@ PadProfile
   ├── enableKeyboard: Boolean   (default false — auto-set from button actions)
   ├── enableGamepad: Boolean    (default false — auto-set from button actions)
   ├── enableMouse: Boolean      (default false — auto-set from button actions)
-  └── buttons: List<PadButton>
+  ├── macros: List<Macro>       (per-profile macro library)
+  └── layouts: List<PadLayout>  (multi-layout support)
+        PadLayout
+        ├── id: String          (UUID)
+        ├── name: String
+        ├── enabled: Boolean    (default true — disabled layouts skipped in carousel)
+        ├── buttons: List<PadButton>
+        ├── ambientDim: Float              (0–0.9, default 0)
+        ├── ambientVignetteEnabled: Boolean (default false)
+        ├── ambientVignetteShape: VignetteShape (RADIAL/LETTERBOX/PILLARBOX)
+        ├── ambientVignetteVisibleArea: Float  (0–1, default 0.7)
+        ├── ambientVignetteTransition: Float   (0–1, default 0.5)
+        ├── ambientVignetteOpacity: Float      (0–1, default 0.6)
+        └── ambientVignetteColor: Long         (ARGB, default 0xFF000000)
+        PadButton
         ├── id: String          (UUID)
         ├── label: String       (empty for TrackpointMove / ScrollWheel)
         ├── iconName: String?   (optional Material Symbols snake_case ligature name, e.g. "arrow_back"; shown instead of label in use mode + editor canvas; null = label)
@@ -287,7 +259,7 @@ PadProfile
               MouseLeftClick / MouseRightClick  (legacy)
 ```
 
-Legacy fields `hasTrackpoint`, `trackpointPosX/Y`, `trackpointSize`, `padShape`, and `padSizePercent` are kept as `@Suppress("unused")` in `PadProfile` for JSON deserialization compatibility. Profiles loaded with `hasTrackpoint=true` are migrated to a `TrackpointMove` button in `MacroPadState.loadFrom()`.
+Legacy fields `hasTrackpoint`, `trackpointPosX/Y`, `trackpointSize`, `padShape`, and `padSizePercent` are kept as `@Suppress("unused")` in `PadProfile` for JSON deserialization compatibility. Profiles loaded with `hasTrackpoint=true` are migrated to a `TrackpointMove` button in `MacroPadState.loadFrom()`. Profiles loaded without a `layouts` list are migrated: a default layout named "Layout 1" is created from the profile's legacy `buttons` list.
 
 ### Icon Rendering — Material Symbols Font
 
@@ -372,14 +344,21 @@ object MacroPadState {
     private val _activeProfileId = MutableStateFlow<String?>(null)
     val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
 
-    val activeProfile: StateFlow<PadProfile?> = combine(_profiles, _activeProfileId) { ps, id ->
-        ps.firstOrNull { it.id == id } ?: ps.firstOrNull()
-    }.stateIn(scope, SharingStarted.Eagerly, null)
-    // CRUD methods call SettingsManager.saveMacroPadData() after every mutation
+    val activeProfile: StateFlow<PadProfile?> = combine(_profiles, _activeProfileId) { … }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    val activeLayout: StateFlow<PadLayout?> = combine(activeProfile, _activeLayoutId) { … }
+        .stateIn(scope, SharingStarted.Eagerly, null)
+
+    // Profile CRUD: addProfile, updateProfile, deleteProfile, renameProfile, setActiveProfileId
+    // Layout CRUD: addLayout, updateLayout, deleteLayout, reorderLayouts, setEnabled, previous/nextLayout, setActiveLayoutId
+    // Macro CRUD:  addMacro, updateMacro, deleteMacro, renameMacro, reorderMacros
+    // All mutations call SettingsManager.saveMacroPadData()
+    // withSyncedDeviceFlags() auto-derives enable* flags from buttons across all enabled layouts
 }
 ```
 
-`SettingsManager` loads profiles on `init` via `MacroPadState.loadFrom()` and exposes `saveMacroPadData()` for any mutation.
+`SettingsManager` loads profiles on `init` via `MacroPadState.loadFrom()` and exposes `saveMacroPadData()` for any mutation. The `loadFrom()` method performs two-step migration: (1) legacy `hasTrackpoint` → `TrackpointMove` button, (2) legacy flat `buttons` list → single `PadLayout`.
 
 ### Injector Lifecycle in MacroPadScreen
 
@@ -424,7 +403,7 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 ### Layout Editor
 
-`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition) from `ToolSettingsPanel`, controlled by the `showMacroPadEditor` state flag. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`) instead of `AlertDialog`. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor list is scrollable via `LazyColumn`.
+`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition) from `ToolSettingsPanel`, controlled by the `showMacroPadEditor` state flag. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile, new layout) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`, `NewLayoutOverlay`) instead of `AlertDialog`. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor's **layout bar** (`EditorLayoutBar`) shows horizontally scrollable layout chips with drag-reorder (long-press drag via `rememberReorderableLazyListState`), visibility toggles, and a "+" chip for creating new layouts (blank or from template). The editor list is scrollable via `LazyColumn`.
 
 ### Grid Snap Overlay
 
@@ -444,29 +423,30 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 
 ### Source Files
 
-| File                         | Responsibility                                                                                                                                                                                                   |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                                                                                                           |
-| `MacroPadEditor.kt`          | Full-screen layout editor: profile CRUD, drag-repositioning, button config; toolbar chips for Macros… and Add Macro Button; grid toggle overlay                                                                  |
-| `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`)                                                                 |
-| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                                                                                     |
-| `MacroPadState.kt`           | Singleton state: profiles + active profile, CRUD, persistence trigger; `withSyncedDeviceFlags()` auto-derives `enable*` flags from button actions on every mutation                                              |
-| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                                                                                        |
-| `MacroData.kt`               | Macro data model: `Macro` (incl. `folderId`), `MacroFolder`, `MacroStep` sealed class, `JoystickStick` enum                                                                                                      |
-| `MacroState.kt`              | Singleton global macro library + folder library: CRUD methods for macros and folders, loaded by `SettingsManager`                                                                                                |
-| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                                                                                                               |
-| `MacroListEditor.kt`         | Full-screen macro library editor: folder sections (collapsible, reorderable), macro reorder within section, context menus for folder CRUD and macro move                                                         |
-| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                                                                                                            |
-| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                                                                                                           |
-| `PadActionPicker.kt`         | Action-type picker; `MacroPicker` uses two-dropdown flow (folder → macro within folder)                                                                                                                          |
-| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                                                                                    |
-| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                                                                                      |
-| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                                                                                            |
-| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                                                                                  |
-| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                                                                                          |
-| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                                                                                      |
-| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                                                                                   |
-| `MaterialIconRegistry.kt`    | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed)                                                             |
-| `MaterialSymbols.kt`         | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures                                                               |
-| `IconPickerDialog.kt`        | Full-screen icon picker (3-zone layout: header with ✓, search + filled toggle, selection row with preview/name/🗑); `LazyVerticalGrid` (5 columns), `pendingIcon` local state; called from `PadButtonEditDialog` |
-| `RoundedIconNames.kt`        | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`)                                                        |
+| File                         | Responsibility                                                                                                                                                                                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MacroPadScreen.kt`          | Use-mode Composable: pad render, multi-touch input, injector lifecycle                                                                                                                                                                              |
+| `MacroPadEditor.kt`          | Full-screen layout editor: profile/layout CRUD, drag-repositioning, button config; layout bar with drag-reorder and enable/disable toggles; template selection for new layouts; toolbar chips for Macros… and Add Macro Button; grid toggle overlay |
+| `PadCanvas.kt`               | Editor pad canvas: button drag positioning, grid overlay rendering (`GridMode`, `GridOverlay`), snap functions (`snapRectangular`, `snapRadial`); accepts `layout: PadLayout?` parameter                                                            |
+| `MacroPadToolSettings.kt`    | Tool-settings panel: profile picker, shape/size controls, Edit Layout button                                                                                                                                                                        |
+| `MacroPadState.kt`           | Singleton state: profiles + active profile + active layout, profile/layout/macro CRUD, persistence trigger; `withSyncedDeviceFlags()` auto-derives `enable*` flags from button actions across all enabled layouts                                   |
+| `MacroPadLayout.kt`          | Serializable data model: `PadProfile`, `PadLayout`, `PadButton`, `PadAction` (incl. `PadAction.Macro`)                                                                                                                                              |
+| `MacroData.kt`               | Macro data model: `Macro`, `MacroStep` sealed class, `JoystickStick` enum                                                                                                                                                                           |
+| `MacroExecutor.kt`           | Fire-and-forget macro playback: compiles steps to sorted event list, replays with coroutine delays                                                                                                                                                  |
+| `MacroListEditor.kt`         | Full-screen per-profile macro editor: flat list with drag-reorder, context menus for edit/duplicate/delete                                                                                                                                          |
+| `MacroTimelineEditor.kt`     | Single-macro step timeline editor: visual Canvas timeline + step list                                                                                                                                                                               |
+| `MacroStepEditDialog.kt`     | Modal dialog for creating/editing a single `MacroStep`                                                                                                                                                                                              |
+| `PadActionPicker.kt`         | Action-type picker; `MacroPicker` uses single dropdown listing macros from active profile                                                                                                                                                           |
+| `PadButtonEditDialog.kt`     | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                                                                                                                       |
+| `AmbientMacroPadOverlay.kt`  | Ambient Display overlay on secondary display: mirror background + dim/vignette + MacroPad buttons                                                                                                                                                   |
+| `AmbientSettingsOverlay.kt`  | Per-layout ambient settings editor: dim slider, vignette shape/visible area/transition/opacity/colour                                                                                                                                               |
+| `GamepadInjector.kt`         | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                                                                                                                         |
+| `ShellGamepadInjector.kt`    | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                                                                                                                               |
+| `GamepadKeycodes.kt`         | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                                                                                                                     |
+| `MouseInjector.kt`           | Public facade over `ShellMouseInjector`                                                                                                                                                                                                             |
+| `ShellMouseInjector.kt`      | Native binary lifecycle + MOVE-coalescing writer thread for mouse injection                                                                                                                                                                         |
+| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions)                                                                                                                                                                                      |
+| `MaterialIconRegistry.kt`    | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed)                                                                                                |
+| `MaterialSymbols.kt`         | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures                                                                                                  |
+| `IconPickerDialog.kt`        | Full-screen icon picker (3-zone layout: header with ✓, search + filled toggle, selection row with preview/name/🗑); `LazyVerticalGrid` (5 columns), `pendingIcon` local state; called from `PadButtonEditDialog`                                    |
+| `RoundedIconNames.kt`        | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`)                                                                                           |

@@ -95,7 +95,7 @@ internal enum class GridMode { OFF, RECTANGULAR, RADIAL }
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun PadCanvas(profile: PadProfile, accentColor: Color, gridMode: GridMode) {
+internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Color, gridMode: GridMode) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val colors     = LocalAppColors.current
     val density    = LocalDensity.current
@@ -123,7 +123,7 @@ internal fun PadCanvas(profile: PadProfile, accentColor: Color, gridMode: GridMo
         }
 
         // Render each button as a draggable chip
-        profile.buttons.forEach { btn ->
+        (layout?.buttons ?: emptyList()).forEach { btn ->
             DraggableButton(
                 btn            = btn,
                 canvasSize     = canvasSize,
@@ -134,13 +134,16 @@ internal fun PadCanvas(profile: PadProfile, accentColor: Color, gridMode: GridMo
                 gridMode       = gridMode,
                 gridStepPx     = gridStepPx,
                 onPositionChanged = { nx, ny ->
-                    MacroPadState.updateProfile(
-                        profile.copy(
-                            buttons = profile.buttons.map { b ->
-                                if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
-                            }
+                    val currentLayout = MacroPadState.activeLayout.value
+                    if (currentLayout != null) {
+                        MacroPadState.updateLayout(
+                            currentLayout.copy(
+                                buttons = currentLayout.buttons.map { b ->
+                                    if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
+                                }
+                            )
                         )
-                    )
+                    }
                 },
             )
         }

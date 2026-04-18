@@ -94,6 +94,7 @@ com.stormpanda.megingiard
 │ ├── PadActionPicker.kt # Action-selection UI (ActionPicker, sub-pickers, KEYBOARD_KEY_PRESETS)
 │ ├── MacroPadToolSettings.kt # Tool-settings panel (profile picker, shape/size, Edit Layout)
 │ ├── AmbientMacroPadOverlay.kt # Ambient Display overlay (mirror background + blur/dim + MacroPad)
+│ ├── AmbientSettingsOverlay.kt # Per-layout ambient settings editor (dim, vignette shape/area/transition/opacity/colour)
 │ ├── MacroPadState.kt # Singleton state: profiles + active profile, CRUD, persistence
 │ ├── MacroPadLayout.kt # Serializable data model: PadProfile, PadButton, PadAction
 │ ├── GamepadInjector.kt # Public facade over ShellGamepadInjector
