@@ -60,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -223,6 +224,9 @@ class MirrorPresentation(
                         val capturing by ScreenCaptureManager.isCapturing.collectAsState()
                         val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
                         val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
+                        val scale by ScreenCaptureManager.scale.collectAsState()
+                        val offsetX by ScreenCaptureManager.offsetX.collectAsState()
+                        val offsetY by ScreenCaptureManager.offsetY.collectAsState()
                         val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
                         val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
                         val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -322,16 +326,26 @@ class MirrorPresentation(
                                     }
                                 },
                         ) {
-                            // Layer 1: Frozen bitmap — visible when the SurfaceView is hidden
-                            // (sv.visibility = INVISIBLE on freeze). Rendered below
-                            // AmbientMacroPadOverlay so IdlePill × close stays accessible.
+                            // Layer 1: Frozen bitmap — rendered with the same viewport
+                            // transform (graphicsLayer) that was applied to the SurfaceView,
+                            // so it looks identical to what was visible before freeze.
+                            // PixelCopy captures without View transforms, so we re-apply
+                            // scale/offsetX/offsetY here. Collecting via StateFlow also
+                            // makes it reactive during viewport-edit pan/zoom.
                             val bitmap = frozenBitmap
                             if (isFrozen && bitmap != null) {
                                 Image(
                                     bitmap = bitmap.asImageBitmap(),
                                     contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.FillBounds,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer(
+                                            scaleX = scale,
+                                            scaleY = scale,
+                                            translationX = offsetX,
+                                            translationY = offsetY,
+                                        ),
+                                    contentScale = ContentScale.Fit,
                                 )
                             }
 
