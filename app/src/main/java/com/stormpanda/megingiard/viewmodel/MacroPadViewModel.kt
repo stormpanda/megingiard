@@ -11,6 +11,7 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.GamepadInjector
 import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,7 @@ private const val TAG = "MacroPadViewModel"
 class MacroPadViewModel(application: Application) : AndroidViewModel(application) {
 
     val activeProfile: StateFlow<PadProfile?> = MacroPadState.activeProfile
+    val activeLayout: StateFlow<PadLayout?> = MacroPadState.activeLayout
     val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
 
     fun createHitTestEngine(buttonUnitDpToPx: (Float) -> Float) =

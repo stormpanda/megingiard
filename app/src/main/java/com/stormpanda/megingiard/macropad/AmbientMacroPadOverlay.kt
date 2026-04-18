@@ -59,6 +59,7 @@ private const val TAG = "AmbientMacroPadOverlay"
 internal fun AmbientMacroPadOverlay() {
     val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsState()
+    val layout by MacroPadState.activeLayout.collectAsState()
     val colors = LocalAppColors.current
 
     val dimAlpha by SettingsManager.macropadAmbientDim.collectAsState()
@@ -177,7 +178,8 @@ internal fun AmbientMacroPadOverlay() {
 
         // Layer 4: MacroPad buttons
         val p = profile
-        if (p == null) {
+        val l = layout
+        if (p == null || l == null) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(MP_SCREEN_PADDING),
                 contentAlignment = Alignment.Center,
@@ -194,6 +196,7 @@ internal fun AmbientMacroPadOverlay() {
             Box(modifier = Modifier.fillMaxSize().padding(MP_SCREEN_PADDING)) {
                 PadSurface(
                     profile = p,
+                    layout = l,
                     accentColor = colors.accent,
                     isPeekActive = isPeekActive,
                     transparentBackground = true,
