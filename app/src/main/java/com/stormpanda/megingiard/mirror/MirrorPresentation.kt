@@ -31,6 +31,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -51,7 +52,26 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.input.TouchInjector
 
+private val MP_EDGE_ZONE = 40.dp
+private val MP_SWIPE_THRESHOLD = 25.dp
 private const val TAG = "MirrorPresentation"
 
 class MirrorPresentation(
@@ -200,8 +220,118 @@ class MirrorPresentation(
                     MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
                         val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
                         val capturing by ScreenCaptureManager.isCapturing.collectAsState()
-                        if (ambientEnabled && capturing) {
-                            AmbientMacroPadOverlay()
+                        val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
+                        val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
+                        val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+                        val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+                        val density = LocalDensity.current
+                        val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
+                        val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
+                        val projectionController = remember(edgeZonePx, overlayAtBottom) {
+                            TouchProjectionController(edgeZonePx, overlayAtBottom)
+                        }
+
+                        LaunchedEffect(isTouchProjectionActive) {
+                            if (isTouchProjectionActive) {
+                                TouchInjector.start(localeContext)
+                            } else {
+                                TouchInjector.stop()
+                            }
+                        }
+                        DisposableEffect(Unit) {
+                            onDispose { TouchInjector.stop() }
+                        }
+
+                        var gestureBoxSize by remember { mutableStateOf(IntSize.Zero) }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .onGloballyPositioned { coords -> gestureBoxSize = coords.size }
+                                .pointerInput(isTouchProjectionActive, overlayAtBottom) {
+                                    if (!isTouchProjectionActive) return@pointerInput
+                                    projectionController.reset()
+                                    var swipeStartY = Float.NaN
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent(PointerEventPass.Main)
+                                            if (gestureBoxSize == IntSize.Zero) continue
+                                            val scW = gestureBoxSize.width.toFloat()
+                                            val scH = gestureBoxSize.height.toFloat()
+                                            when (event.type) {
+                                                PointerEventType.Press -> {
+                                                    val change = event.changes.firstOrNull() ?: continue
+                                                    val y = change.position.y
+                                                    val nearEdge = if (overlayAtBottom) {
+                                                        y >= scH - edgeZonePx
+                                                    } else {
+                                                        y <= edgeZonePx
+                                                    }
+                                                    swipeStartY = if (nearEdge) y else Float.NaN
+                                                    if (!nearEdge) {
+                                                        projectionController.onPress(
+                                                            pointerId = change.id.value,
+                                                            x = change.position.x,
+                                                            y = y,
+                                                            boxW = scW,
+                                                            boxH = scH,
+                                                            isConsumed = change.isConsumed,
+                                                            pointerCount = event.changes.size,
+                                                        )
+                                                    }
+                                                }
+                                                PointerEventType.Move -> {
+                                                    val change = event.changes.firstOrNull() ?: continue
+                                                    val y = change.position.y
+                                                    if (!swipeStartY.isNaN()) {
+                                                        val delta = if (overlayAtBottom) {
+                                                            swipeStartY - y
+                                                        } else {
+                                                            y - swipeStartY
+                                                        }
+                                                        if (delta >= swipeThresholdPx) {
+                                                            ScreenCaptureManager.setTouchProjectionActive(false)
+                                                            swipeStartY = Float.NaN
+                                                        }
+                                                    } else {
+                                                        projectionController.onMove(
+                                                            pointerId = change.id.value,
+                                                            x = change.position.x,
+                                                            y = y,
+                                                            boxW = scW,
+                                                            boxH = scH,
+                                                            isConsumed = change.isConsumed,
+                                                        )
+                                                    }
+                                                }
+                                                PointerEventType.Release -> {
+                                                    val change = event.changes.firstOrNull()
+                                                    swipeStartY = Float.NaN
+                                                    projectionController.onRelease(
+                                                        pointerId = change?.id?.value ?: -1L,
+                                                        x = change?.position?.x,
+                                                        y = change?.position?.y,
+                                                        boxW = scW,
+                                                        boxH = scH,
+                                                    )
+                                                }
+                                                else -> Unit
+                                            }
+                                        }
+                                    }
+                                },
+                        ) {
+                            if (ambientEnabled && capturing && !isTouchProjectionActive) {
+                                AmbientMacroPadOverlay()
+                            }
+                            val bitmap = frozenBitmap
+                            if (isFrozen && bitmap != null) {
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.FillBounds,
+                                )
+                            }
                         }
                     }
                 }
@@ -238,6 +368,7 @@ class MirrorPresentation(
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isAmbientSettingsActive,
+                AppStateManager.isPillMenuOpen,
             ) { values ->
                 val isValid = values[0] as Boolean
                 val ambientEnabled = values[1] as Boolean
@@ -245,19 +376,20 @@ class MirrorPresentation(
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
+                val pillMenuOpen = values[6] as Boolean
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
                 // pushing MainActivity to background (ON_PAUSE ~70 ms). ON_STOP then set
                 // isResumed=false → hide(), and the cycle repeated indefinitely.
                 //
-                // filePickerOpen / editorActive / ambientSettingsActive: while any of
-                // these Activity-level modals are visible we hide the Presentation so
-                // the user can interact with them.  Without this the Presentation window
+                // filePickerOpen / editorActive / ambientSettingsActive / pillMenuOpen:
+                // while any of these modals are visible we hide the Presentation so the
+                // user can interact with them.  Without this the Presentation window
                 // (TYPE_PRIVATE_PRESENTATION), which sits above regular Activities, would
                 // block input entirely.
                 capturing && isValid && ambientEnabled &&
-                    !filePickerOpen && !editorActive && !ambientSettingsActive
+                    !filePickerOpen && !editorActive && !ambientSettingsActive && !pillMenuOpen
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }
@@ -285,7 +417,6 @@ class MirrorPresentation(
                             { result ->
                                 if (result == PixelCopy.SUCCESS) {
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
-                                    sv.visibility = View.INVISIBLE
                                 } else {
                                     AppLog.e(TAG, "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
@@ -297,7 +428,6 @@ class MirrorPresentation(
                         AppLog.e(TAG, "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
-                    sv.visibility = View.VISIBLE
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }

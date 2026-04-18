@@ -154,6 +154,9 @@ class ScreenCaptureService : Service() {
         // the UI state is cleaned up so the app doesn't get stuck.
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         AppStateManager.setPromptInFlight(false)
+        // Prevent the auto-start LaunchedEffect in MainActivity from re-triggering capture
+        // as soon as isCapturing transitions to false. The user must explicitly press Start again.
+        AppStateManager.setUserDeclinedCapture(true)
         virtualDisplay?.release()
         mediaProjection?.stop()
         mirrorPresentation?.dismiss()
