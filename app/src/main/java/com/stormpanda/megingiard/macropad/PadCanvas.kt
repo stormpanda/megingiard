@@ -124,6 +124,7 @@ internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Col
 
         // Render each button as a draggable chip
         (layout?.buttons ?: emptyList()).forEach { btn ->
+            val targetLayoutId = layout?.id
             DraggableButton(
                 btn            = btn,
                 canvasSize     = canvasSize,
@@ -134,15 +135,19 @@ internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Col
                 gridMode       = gridMode,
                 gridStepPx     = gridStepPx,
                 onPositionChanged = { nx, ny ->
-                    val currentLayout = MacroPadState.activeLayout.value
-                    if (currentLayout != null) {
-                        MacroPadState.updateLayout(
-                            currentLayout.copy(
-                                buttons = currentLayout.buttons.map { b ->
-                                    if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
-                                }
+                    val layoutId = targetLayoutId
+                    val activeProfile = MacroPadState.activeProfile.value
+                    if (layoutId != null && activeProfile != null) {
+                        val currentLayout = activeProfile.layouts.firstOrNull { it.id == layoutId }
+                        if (currentLayout != null) {
+                            MacroPadState.updateLayout(
+                                currentLayout.copy(
+                                    buttons = currentLayout.buttons.map { b ->
+                                        if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
+                                    },
+                                ),
                             )
-                        )
+                        }
                     }
                 },
             )

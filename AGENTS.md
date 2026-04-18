@@ -101,9 +101,10 @@ com.stormpanda.megingiard
 │ ├── ShellGamepadInjector.kt # Native binary lifecycle + writer thread for gamepad injection
 │ └── GamepadKeycodes.kt # Linux BTN\_ constants + preset list
 ├── touchpad/
-│ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
+│ └── FullscreenMouseOverlay.kt # Fullscreen mouse overlay for macro action dispatch
 └── ui/
-└── ToolpadOverlay.kt # Shared overlay components (auto-hide, chevron nav)
+    ├── IdlePill.kt # Always-visible edge pill (swipe affordance + close label)
+    └── PillMenu.kt # Fullscreen pill menu overlay (profile/layout/mode actions)
 \`\`\`
 
 **Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`.
