@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTransformGestures
 import com.stormpanda.megingiard.input.TouchInjector
 
 private val MP_EDGE_ZONE = 40.dp
@@ -223,6 +224,7 @@ class MirrorPresentation(
                         val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
                         val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
                         val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+                        val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
                         val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
                         val density = LocalDensity.current
                         val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
@@ -320,9 +322,9 @@ class MirrorPresentation(
                                     }
                                 },
                         ) {
-                            if (ambientEnabled && capturing && !isTouchProjectionActive) {
-                                AmbientMacroPadOverlay()
-                            }
+                            // Layer 1: Frozen bitmap — visible when the SurfaceView is hidden
+                            // (sv.visibility = INVISIBLE on freeze). Rendered below
+                            // AmbientMacroPadOverlay so IdlePill × close stays accessible.
                             val bitmap = frozenBitmap
                             if (isFrozen && bitmap != null) {
                                 Image(
@@ -330,6 +332,45 @@ class MirrorPresentation(
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.FillBounds,
+                                )
+                            }
+
+                            // Layer 2: AmbientMacroPadOverlay — always rendered when active
+                            // so IdlePill remains visible in all modes. Internally hides
+                            // buttons/dim/vignette during touch projection, freeze, and
+                            // viewport edit.
+                            if (ambientEnabled && capturing) {
+                                AmbientMacroPadOverlay()
+                            }
+
+                            // Layer 3: Viewport edit gesture overlay — transparent fullscreen
+                            // pinch/pan surface for adjusting the mirror viewport.
+                            // Exit via edge-swipe (isViewportEditActive is part of
+                            // isAnyModalActive → closeActiveModal() in SwipeGestureProcessor).
+                            if (isViewportEditActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .pointerInput(Unit) {
+                                            detectTransformGestures { _, pan, zoom, _ ->
+                                                val sw = ScreenCaptureManager.surfaceWidth.value
+                                                val sh = ScreenCaptureManager.surfaceHeight.value
+                                                val newScale =
+                                                    (ScreenCaptureManager.scale.value * zoom)
+                                                        .coerceIn(1f, 5f)
+                                                ScreenCaptureManager.setScale(newScale)
+                                                val maxX = (sw * (newScale - 1f)) / 2f
+                                                val maxY = (sh * (newScale - 1f)) / 2f
+                                                ScreenCaptureManager.setOffsetX(
+                                                    (ScreenCaptureManager.offsetX.value + pan.x)
+                                                        .coerceIn(-maxX, maxX)
+                                                )
+                                                ScreenCaptureManager.setOffsetY(
+                                                    (ScreenCaptureManager.offsetY.value + pan.y)
+                                                        .coerceIn(-maxY, maxY)
+                                                )
+                                            }
+                                        }
                                 )
                             }
                         }
@@ -368,7 +409,6 @@ class MirrorPresentation(
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isAmbientSettingsActive,
-                AppStateManager.isPillMenuOpen,
             ) { values ->
                 val isValid = values[0] as Boolean
                 val ambientEnabled = values[1] as Boolean
@@ -376,20 +416,21 @@ class MirrorPresentation(
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
-                val pillMenuOpen = values[6] as Boolean
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
                 // pushing MainActivity to background (ON_PAUSE ~70 ms). ON_STOP then set
                 // isResumed=false → hide(), and the cycle repeated indefinitely.
                 //
-                // filePickerOpen / editorActive / ambientSettingsActive / pillMenuOpen:
-                // while any of these modals are visible we hide the Presentation so the
-                // user can interact with them.  Without this the Presentation window
+                // filePickerOpen / editorActive / ambientSettingsActive: while any of these
+                // Activity-level modals are visible we hide the Presentation so the user
+                // can interact with them.  Without this the Presentation window
                 // (TYPE_PRIVATE_PRESENTATION), which sits above regular Activities, would
                 // block input entirely.
+                // NOTE: isPillMenuOpen intentionally excluded — PillMenu renders inside
+                // the Presentation's own ComposeView; hiding would pause mirroring.
                 capturing && isValid && ambientEnabled &&
-                    !filePickerOpen && !editorActive && !ambientSettingsActive && !pillMenuOpen
+                    !filePickerOpen && !editorActive && !ambientSettingsActive
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }
@@ -417,6 +458,7 @@ class MirrorPresentation(
                             { result ->
                                 if (result == PixelCopy.SUCCESS) {
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
+                                    sv.visibility = View.INVISIBLE
                                 } else {
                                     AppLog.e(TAG, "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
@@ -428,6 +470,7 @@ class MirrorPresentation(
                         AppLog.e(TAG, "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
+                    sv.visibility = View.VISIBLE
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }

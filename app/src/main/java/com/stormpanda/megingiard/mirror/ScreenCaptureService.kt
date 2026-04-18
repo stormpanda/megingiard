@@ -82,11 +82,11 @@ class ScreenCaptureService : Service() {
             val dpi = windowContext.resources.configuration.densityDpi
 
             var currentSurface: Surface? = null
-            scope.launch {
-                ScreenCaptureManager.isFrozen.collect { frozen ->
-                    virtualDisplay?.surface = if (frozen) null else currentSurface
-                }
-            }
+            // NOTE: freeze is handled entirely by MirrorPresentation.bindStateFlows:
+            // PixelCopy captures the last frame, then sv.visibility = INVISIBLE hides the
+            // SurfaceView overlay so the ComposeView frozen-bitmap Image is visible.
+            // Setting virtualDisplay.surface = null *before* PixelCopy completes would
+            // make the SurfaceView go black before the bitmap is captured.
 
             val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
             mirrorPresentation = presentation

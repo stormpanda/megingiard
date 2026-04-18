@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -72,6 +73,12 @@ internal fun AmbientMacroPadOverlay() {
     val vignetteColorInt = layout?.ambientVignetteColor ?: 0xFF000000.toInt()
     val vignetteShape = layout?.ambientVignetteShape ?: VignetteShape.RADIAL
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
+    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    // When any of these special modes is active, hide pad content (dim/vignette/buttons)
+    // but keep IdlePill visible so the user can always swipe out.
+    val hideContent = isTouchProjectionActive || isFrozen || isViewportEditActive
     val applyTheme by SettingsManager.macropadAmbientApplyTheme.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
@@ -157,7 +164,7 @@ internal fun AmbientMacroPadOverlay() {
             }
     ) {
         // Layer 1: Dim overlay
-        if (effectiveDim > 0f) {
+        if (!hideContent && effectiveDim > 0f) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -166,7 +173,7 @@ internal fun AmbientMacroPadOverlay() {
         }
 
         // Layer 3: Vignette overlay (shape-specific gradient darkening the edges)
-        if (vignetteEnabled && effectiveVignetteOpacity > 0f) {
+        if (!hideContent && vignetteEnabled && effectiveVignetteOpacity > 0f) {
             val vColor = Color(vignetteColorInt)
             Box(
                 modifier = Modifier
@@ -181,32 +188,34 @@ internal fun AmbientMacroPadOverlay() {
             )
         }
 
-        // Layer 4: MacroPad buttons
-        val p = profile
-        val l = layout
-        if (p == null || l == null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.macropad_no_profile),
-                    color = colors.onSurfaceSecondary,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(32.dp),
-                )
-            }
-        } else {
-            Box(modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING)) {
-                PadSurface(
-                    profile = p,
-                    layout = l,
-                    accentColor = colors.accent,
-                    isPeekActive = isPeekActive,
-                    transparentBackground = true,
-                    neutralStyle = !applyTheme,
-                )
+        // Layer 4: MacroPad buttons — hidden during touch projection, freeze, viewport edit
+        if (!hideContent) {
+            val p = profile
+            val l = layout
+            if (p == null || l == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_no_profile),
+                        color = colors.onSurfaceSecondary,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(32.dp),
+                    )
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING)) {
+                    PadSurface(
+                        profile = p,
+                        layout = l,
+                        accentColor = colors.accent,
+                        isPeekActive = isPeekActive,
+                        transparentBackground = true,
+                        neutralStyle = !applyTheme,
+                    )
+                }
             }
         }
 
