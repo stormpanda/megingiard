@@ -47,7 +47,7 @@ import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.SliderSettingRow
-import com.stormpanda.megingiard.settings.VignetteShape
+import com.stormpanda.megingiard.macropad.VignetteShape
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.launch

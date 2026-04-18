@@ -21,6 +21,7 @@ import com.stormpanda.megingiard.macropad.MacroFolder
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.MacroState
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.VignetteShape
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,8 +53,7 @@ private const val DEFAULT_OVERLAY_TIMEOUT_MS = 3_000L
 /** Per-app language preference. [SYSTEM] follows the device locale. */
 enum class AppLanguage { SYSTEM, EN, DE }
 
-/** Shape of the vignette overlay in Ambient Display mode. */
-enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX }
+// VignetteShape is defined in core: com.stormpanda.megingiard.macropad.VignetteShape
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = SETTINGS_DATASTORE_NAME
