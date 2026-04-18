@@ -169,34 +169,38 @@ fun PillMenu(
                     onClick = onDismiss,
                 ),
         ) {
-            // ── Top card — Mirror controls (only when capturing) ───────────
-            AnimatedVisibility(
-                visible = isCapturing,
-                enter = slideInVertically { -it } + fadeIn(),
-                exit  = slideOutVertically { -it } + fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
-                MirrorControlCard(
-                    colors = colors,
-                    isFrozen = isFrozen,
-                    isViewportEditActive = isViewportEditActive,
-                    isTouchProjectionActive = isTouchProjectionActive,
-                    onAmbientSettings = {
-                        AppStateManager.setAmbientSettingsActive(true)
-                        onDismiss()
-                    },
-                    onStop = {
-                        AppStateManager.requestMirrorStop()
-                        onDismiss()
-                    },
-                    onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
-                    onToggleViewportEdit = {
-                        AppStateManager.setViewportEditActive(true)
-                        onDismiss()
-                    },
-                    onToggleTouchProjection = { ScreenCaptureManager.toggleTouchProjection() },
-                )
-            }
+            // ── Top card — Mirror controls (always visible) ───────────────
+            MirrorControlCard(
+                colors = colors,
+                isCapturing = isCapturing,
+                isFrozen = isFrozen,
+                isViewportEditActive = isViewportEditActive,
+                isTouchProjectionActive = isTouchProjectionActive,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .animateEnterExit(
+                        enter = slideInVertically { -it },
+                        exit  = slideOutVertically { -it },
+                    ),
+                onAmbientSettings = {
+                    AppStateManager.setAmbientSettingsActive(true)
+                    onDismiss()
+                },
+                onStart = {
+                    AppStateManager.requestMirrorStart()
+                    onDismiss()
+                },
+                onStop = {
+                    AppStateManager.requestMirrorStop()
+                    onDismiss()
+                },
+                onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
+                onToggleViewportEdit = {
+                    AppStateManager.setViewportEditActive(true)
+                    onDismiss()
+                },
+                onToggleTouchProjection = { ScreenCaptureManager.toggleTouchProjection() },
+            )
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
             Column(
@@ -465,17 +469,20 @@ private fun LayoutRow(
 @Composable
 private fun MirrorControlCard(
     colors: AppColors,
+    isCapturing: Boolean,
     isFrozen: Boolean,
     isViewportEditActive: Boolean,
     isTouchProjectionActive: Boolean,
+    modifier: Modifier = Modifier,
     onAmbientSettings: () -> Unit,
+    onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
     onToggleViewportEdit: () -> Unit,
     onToggleTouchProjection: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
             .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
@@ -505,15 +512,30 @@ private fun MirrorControlCard(
         Spacer(Modifier.weight(1f))
 
         // Mirror control icon buttons (right)
-        IconButton(onClick = onStop, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
-            Icon(
-                Icons.Rounded.Stop,
-                contentDescription = stringResource(R.string.cd_stop_mirroring),
-                tint = colors.onControlOverlay,
-                modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
-            )
+        if (isCapturing) {
+            IconButton(onClick = onStop, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+                Icon(
+                    Icons.Rounded.Stop,
+                    contentDescription = stringResource(R.string.cd_stop_mirroring),
+                    tint = colors.onControlOverlay,
+                    modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
+                )
+            }
+        } else {
+            IconButton(onClick = onStart, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+                Icon(
+                    Icons.Rounded.PlayArrow,
+                    contentDescription = stringResource(R.string.cd_start_mirroring),
+                    tint = colors.onControlOverlay,
+                    modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
+                )
+            }
         }
-        IconButton(onClick = onToggleFreeze, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+        IconButton(
+            onClick = onToggleFreeze,
+            enabled = isCapturing,
+            modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE),
+        ) {
             Icon(
                 if (isFrozen) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
                 contentDescription = stringResource(
@@ -523,7 +545,11 @@ private fun MirrorControlCard(
                 modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
             )
         }
-        IconButton(onClick = onToggleViewportEdit, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+        IconButton(
+            onClick = onToggleViewportEdit,
+            enabled = isCapturing,
+            modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE),
+        ) {
             Icon(
                 Icons.Rounded.CropFree,
                 contentDescription = stringResource(R.string.cd_viewport_edit),
@@ -531,7 +557,11 @@ private fun MirrorControlCard(
                 modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
             )
         }
-        IconButton(onClick = onToggleTouchProjection, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+        IconButton(
+            onClick = onToggleTouchProjection,
+            enabled = isCapturing,
+            modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE),
+        ) {
             Icon(
                 Icons.Rounded.TouchApp,
                 contentDescription = stringResource(

@@ -8,6 +8,7 @@
     <string name="cd_previous_tool">Vorheriges Werkzeug</string>
     <string name="cd_next_tool">Nächstes Werkzeug</string>
     <string name="cd_stop_mirroring">Spiegelung stoppen</string>
+    <string name="cd_start_mirroring">Spiegelung starten</string>
     <string name="cd_freeze">Einfrieren</string>
     <string name="cd_unfreeze">Einfrieren aufheben</string>
     <string name="cd_lock_view">Ansicht sperren</string>
