@@ -10,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -75,6 +76,9 @@ internal fun AmbientMacroPadOverlay() {
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
+    val swipeProcessor = remember(overlayAtBottom, edgeZonePx, swipeThresholdPx) {
+        SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+    }
 
     // Effective dim/vignette: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
@@ -106,22 +110,23 @@ internal fun AmbientMacroPadOverlay() {
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx) {
-                val swipeProcessor = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val primaryChange = event.changes.firstOrNull()
                         when (event.type) {
                             PointerEventType.Press -> {
                                 swipeProcessor.onPress(
-                                    event.changes.firstOrNull()?.position?.y ?: 0f,
+                                    primaryChange?.position?.y ?: 0f,
                                     size.height.toFloat(),
                                 )
                             }
                             PointerEventType.Move -> {
-                                swipeProcessor.onMove(event.changes.firstOrNull()?.position?.y ?: 0f)
+                                swipeProcessor.onMove(primaryChange?.position?.y ?: 0f)
                             }
                             PointerEventType.Release -> {
-                                swipeProcessor.onRelease(!event.changes.any { it.pressed })
+                                val allPointersReleased = !event.changes.any { it.pressed }
+                                swipeProcessor.onRelease(allPointersReleased)
                             }
                             else -> {}
                         }
