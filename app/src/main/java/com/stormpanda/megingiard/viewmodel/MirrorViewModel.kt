@@ -59,7 +59,6 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
 
     // ── UI interactions ─────────────────────────────────────────────────────
     fun setTouching(touching: Boolean) = AppStateManager.setTouching(touching)
-    fun setPillExpanded(expanded: Boolean) = AppStateManager.setPillExpanded(expanded)
     fun triggerOverlay() = AppStateManager.triggerOverlay()
 
     // ── Viewport operations ─────────────────────────────────────────────────

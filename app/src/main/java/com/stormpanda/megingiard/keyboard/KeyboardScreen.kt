@@ -127,7 +127,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Main)
-                        // While the carousel overlay is visible, block new key input.
+                        // While the pill menu overlay is visible, block new key input.
                         if (overlayVisibleState.value) {
                             when (event.type) {
                                 PointerEventType.Press -> {

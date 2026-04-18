@@ -81,7 +81,7 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
     val edgeZonePx = with(density) { MR_SWIPE_EDGE_ZONE.toPx() }
 
     // Local visibility for the control button row — shown on any touch (or edge-swipe
-    // when touch projection is active), independently of the carousel overlay timer.
+    // when touch projection is active), independently of the pill menu overlay.
     var showButtons by remember { mutableStateOf(false) }
     var buttonTriggerCount by remember { mutableIntStateOf(0) }
     val isTouchingState by viewModel.isTouching.collectAsState()
@@ -113,7 +113,7 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
         }
     }
 
-    // Auto-hide timer for the control button row (independent of carousel overlay timer).
+    // Auto-hide timer for the control button row (independent of pill menu overlay).
     LaunchedEffect(buttonTriggerCount, isTouchingState, overlayTimeoutMs) {
         if (showButtons) {
             if (isTouchingState) return@LaunchedEffect
@@ -178,7 +178,6 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
                                 PointerEventType.Release -> {
                                     if (!event.changes.any { it.pressed }) {
                                         viewModel.setTouching(false)
-                                        viewModel.setPillExpanded(false)
                                     }
                                 }
                                 else -> {}

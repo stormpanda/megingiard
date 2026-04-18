@@ -96,7 +96,7 @@ private val ED_GRID_TOGGLE_MARGIN = 8.dp
 /**
  * Full-screen MacroPad layout editor.
  *
- * Opened from [MacroPadToolSettings]. Allows the user to:
+ * Opened from the Pill Menu. Allows the user to:
  * - Create, rename, and delete profiles
  * - Add, configure, reposition, and delete buttons
  * - Toggle the trackpoint area

@@ -16,8 +16,6 @@
     <string name="cd_touch_projection_off">Touch Projection off</string>
     <string name="cd_frozen_image">Frozen Stream Image</string>
     <string name="notification_mirroring_active">Mirroring active</string>
-    <string name="touchpad_hint">Touch here to control the top screen</string>
-    <string name="touchpad_hint_mouse">Slide to move cursor · Tap to click</string>
 
     <!-- Settings screen -->
     <string name="settings_close">Close</string>

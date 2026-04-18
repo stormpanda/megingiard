@@ -59,7 +59,7 @@ class TouchpadGestureProcessor(
      * @param y            pointer Y in surface pixels
      * @param surfaceW     width of the touch surface in pixels
      * @param surfaceH     height of the touch surface in pixels
-     * @param overlayOpen  true if the carousel overlay is currently visible
+     * @param overlayOpen  true if the pill menu overlay is currently visible
      */
     fun onPress(
         pointerId: Long,
@@ -96,7 +96,7 @@ class TouchpadGestureProcessor(
      * @param deltaY     position change Y since last event
      * @param surfaceW   width of the touch surface in pixels
      * @param surfaceH   height of the touch surface in pixels
-     * @param overlayOpen  true if the carousel overlay is currently visible
+     * @param overlayOpen  true if the pill menu overlay is currently visible
      */
     fun onMove(
         pointerId: Long,

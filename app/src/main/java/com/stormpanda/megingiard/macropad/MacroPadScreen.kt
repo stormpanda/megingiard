@@ -62,7 +62,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val layout      by viewModel.activeLayout.collectAsState()
     val colors      = LocalAppColors.current
 
-    // Start injectors after the carousel overlay has closed
+    // Start injectors after the pill menu has closed
     LaunchedEffect(Unit) {
         viewModel.startInjectors(context)
     }
@@ -150,7 +150,7 @@ internal fun PadSurface(
                             val w       = canvasSize.width.toFloat().coerceAtLeast(1f)
                             val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
 
-                            // Block input while carousel overlay is open
+                            // Block input while pill menu overlay is open
                             if (overlayVisibleState.value && event.type != PointerEventType.Release) {
                                 event.changes.forEach { it.consume() }
                                 continue

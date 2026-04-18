@@ -19,16 +19,6 @@ object AppStateManager {
     // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // ── Mode (kept for backward compat with ScreenCaptureManager / MirrorPresentation)
-    // Default is MACROPAD; mirror capture is explicitly started via MirrorPlayStop button action.
-    private val _currentMode = MutableStateFlow(AppMode.MACROPAD)
-    val currentMode: StateFlow<AppMode> = _currentMode.asStateFlow()
-
-    fun setMode(mode: AppMode) {
-        if (_currentMode.value != mode) AppLog.i(TAG, "setMode: ${_currentMode.value} → $mode")
-        _currentMode.value = mode
-    }
-
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     private val _isActivityResumed = MutableStateFlow(true)
@@ -101,16 +91,7 @@ object AppStateManager {
     private val _isTouching = MutableStateFlow(false)
     val isTouching: StateFlow<Boolean> = _isTouching.asStateFlow()
 
-    // Kept for backward compat with legacy components during transition. Will be removed in Phase 8.
-    private val _pillExpanded = MutableStateFlow(false)
-    val pillExpanded: StateFlow<Boolean> = _pillExpanded.asStateFlow()
-
-    private val _pillFingerXFraction = MutableStateFlow(0f)
-    val pillFingerXFraction: StateFlow<Float> = _pillFingerXFraction.asStateFlow()
-
     fun setTouching(touching: Boolean) { _isTouching.value = touching }
-    fun setPillExpanded(expanded: Boolean) { _pillExpanded.value = expanded }
-    fun setPillFingerXFraction(fraction: Float) { _pillFingerXFraction.value = fraction }
 
     // ── SAF file picker ───────────────────────────────────────────────────────
 
@@ -248,9 +229,10 @@ object AppStateManager {
         }
     }
 
-    // ── Backward compat aliases — remove in Phase 8 ──────────────────────────
-    // Required by legacy composables (KeyboardScreen, TouchpadScreen, MacroPadScreen,
-    // AmbientMacroPadOverlay, MirrorScreen, *ViewModel) during phase transition.
+    // ── Backward compat aliases ─────────────────────────────────────────────
+    // Used by KeyboardScreen, MacroPadScreen, MirrorScreen, *ViewModel,
+    // TouchpadGestureProcessor. These map the old "overlay" naming to the
+    // new Pill Menu API so callers do not all need to be renamed at once.
     val overlayVisible: StateFlow<Boolean> = isPillMenuOpen
     fun triggerOverlay() = openPillMenu()
     fun hideOverlay() = closePillMenu()

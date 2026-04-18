@@ -76,11 +76,7 @@ com.stormpanda.megingiard
 │ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable (scaffold + state only)
 │ ├── GlobalSettingsComponents.kt # Extracted setting row Composables for GlobalSettingsScreen
 │ ├── SettingsManager.kt # App-wide settings persistence via DataStore
-│ ├── ToolSettingsPanel.kt # Per-tool settings Dialog orchestrator (mode dispatch only)
-│ ├── ToolSettingsComponents.kt # Reusable row Composables (RememberSettingRow, SliderSettingRow, dropdowns, etc.)
-│ ├── MirrorToolSettings.kt # Mirror-mode settings Composable
-│ ├── KeyboardToolSettings.kt # Keyboard-mode settings Composable
-│ └── TouchpadToolSettings.kt # Touchpad-mode settings Composable
+│ └── ToolSettingsComponents.kt # Reusable row Composables (RememberSettingRow, SliderSettingRow, dropdowns, etc.)
 ├── config/
 │ ├── ConfigSchema.kt # @Serializable data classes: MegingiardExport, ExportMetadata
 │ └── ConfigManager.kt # Unified export/import: coordinator StateFlows, SAF I/O, UUID remap, checksum
@@ -92,7 +88,6 @@ com.stormpanda.megingiard
 │ ├── PadCanvas.kt # Draggable editor canvas (DraggableButton, PadCanvas)
 │ ├── PadButtonEditDialog.kt # Button create/edit dialog (ButtonEditDialog, SectionLabel)
 │ ├── PadActionPicker.kt # Action-selection UI (ActionPicker, sub-pickers, KEYBOARD_KEY_PRESETS)
-│ ├── MacroPadToolSettings.kt # Tool-settings panel (profile picker, shape/size, Edit Layout)
 │ ├── AmbientMacroPadOverlay.kt # Ambient Display overlay (mirror background + blur/dim + MacroPad)
 │ ├── AmbientSettingsOverlay.kt # Per-layout ambient settings editor (dim, vignette shape/area/transition/opacity/colour)
 │ ├── MacroPadState.kt # Singleton state: profiles + active profile, CRUD, persistence
@@ -167,7 +162,7 @@ bitmap.recycle() // manager never got it, local cleanup required
 
 ### 5.1 Language Level
 
-- Use `AppMode.entries` (Kotlin 1.9+), never `AppMode.values()`.
+- Use `enum.entries` (Kotlin 1.9+), never `enum.values()`.
 - Use `kotlin.math.min` / `kotlin.math.max`, never `java.lang.Math.*`.
 - Use `data class` destructuring or named access (`triple.first`) — avoid
   anonymous destructuring of non-data-class types like `Triple` in lambdas
@@ -475,8 +470,8 @@ setOnDismissListener {
 - `TouchInjector.injectTouch()` converts normalised Compose coordinates to
   the sensor's physical portrait space:
   `sensor_x = (1 − normalizedY) * 1080`, `sensor_y = normalizedX * 1920`.
-- `ShellInputInjector.stop()` **must** be called when leaving `TOUCHPAD` mode.
-  In `TouchpadScreen` this is done via `DisposableEffect(Unit) { onDispose { TouchInjector.stop() } }`.
+- `ShellInputInjector.stop()` **must** be called when leaving fullscreen mouse mode.
+  In `FullscreenMouseOverlay` this is done via `DisposableEffect(Unit) { onDispose { TouchInjector.stop() } }`.
 - The device node `/dev/input/event6` is `crw-rw-rw-` on the AYN Thor —
   no root or special permission required beyond the standard shell UID (2000).
   See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
