@@ -1,8 +1,6 @@
 package com.stormpanda.megingiard
 
-import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
+private const val PILL_AUTO_HIDE_MS = 5000L
 
 enum class AppMode { MIRROR, TOUCHPAD, KEYBOARD, MACROPAD }
 
@@ -25,7 +24,7 @@ object AppStateManager {
     // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    private val _currentMode = MutableStateFlow(AppMode.MIRROR)
+    private val _currentMode = MutableStateFlow(AppMode.MACROPAD)
     val currentMode: StateFlow<AppMode> = _currentMode.asStateFlow()
 
     private val _isActivityResumed = MutableStateFlow(true)
@@ -64,20 +63,19 @@ object AppStateManager {
     private val _overlayInteractionTime = MutableStateFlow(0L)
 
     init {
-        // Auto-hide coroutine: hides the overlay after the user-configured timeout.
-        // collectLatest restarts whenever visibility, interaction time, touch, or timeout changes.
+        // Auto-hide coroutine: hides the overlay after a fixed timeout.
+        // collectLatest restarts whenever visibility, interaction time, or touch changes.
         scope.launch {
             combine(
                 _overlayVisible,
                 _overlayInteractionTime,
                 _isTouching,
-                SettingsManager.overlayTimeoutMs
-            ) { visible, _, touching, timeout -> Triple(visible, touching, timeout) }
-                .collectLatest { (visible, touching, timeout) ->
+            ) { visible, _, touching -> Pair(visible, touching) }
+                .collectLatest { (visible, touching) ->
                     if (visible) {
                         // Wait until finger is lifted before starting the countdown
                         if (touching) return@collectLatest
-                        delay(timeout)
+                        delay(PILL_AUTO_HIDE_MS)
                         _overlayVisible.value = false
                         _pillExpanded.value = false
                     }
@@ -98,7 +96,7 @@ object AppStateManager {
     }
 
     fun nextMode() {
-        val active = SettingsManager.activeTools.value
+        val active = AppMode.entries
         if (active.size <= 1) return
         val currentIndex = active.indexOf(_currentMode.value)
         val prev = _currentMode.value
@@ -108,7 +106,7 @@ object AppStateManager {
     }
 
     fun prevMode() {
-        val active = SettingsManager.activeTools.value
+        val active = AppMode.entries
         if (active.size <= 1) return
         val currentIndex = active.indexOf(_currentMode.value)
         val prev = _currentMode.value

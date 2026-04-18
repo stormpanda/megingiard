@@ -13,9 +13,11 @@ import com.stormpanda.megingiard.mirror.MirrorViewportController
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 private const val TAG = "MirrorViewModel"
+private const val MIRROR_CONTROLS_AUTO_HIDE_MS = 5000L
 
 /**
  * ViewModel for [MirrorScreen] — bridges viewport controller, touch projection,
@@ -50,7 +52,7 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val currentMode: StateFlow<AppMode> = AppStateManager.currentMode
     val isTouching: StateFlow<Boolean> = AppStateManager.isTouching
-    val overlayTimeoutMs: StateFlow<Long> = SettingsManager.overlayTimeoutMs
+    val overlayTimeoutMs: StateFlow<Long> = MutableStateFlow(MIRROR_CONTROLS_AUTO_HIDE_MS)
 
     init {
         MirrorViewportController.startPersistence(viewModelScope)

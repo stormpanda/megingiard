@@ -217,6 +217,22 @@ object MacroPadState {
         SettingsManager.saveMacroPadData()
     }
 
+    /** Deletes all profiles and creates a single blank default profile. */
+    fun restoreDefaults() {
+        val defaultId = UUID.randomUUID().toString()
+        val defaultLayoutId = UUID.randomUUID().toString()
+        val defaultProfile = PadProfile(
+            id = defaultId,
+            name = "Default",
+            layouts = listOf(PadLayout(id = defaultLayoutId, name = "Default")),
+            activeLayoutId = defaultLayoutId,
+        )
+        _profiles.value = listOf(defaultProfile)
+        _activeProfileId.value = defaultId
+        AppLog.i(TAG, "restoreDefaults: created default profile $defaultId")
+        SettingsManager.saveMacroPadData()
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Layout CRUD (within the active profile)
     // ─────────────────────────────────────────────────────────────────────────

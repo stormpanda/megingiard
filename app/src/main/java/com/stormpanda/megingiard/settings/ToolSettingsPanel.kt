@@ -45,6 +45,7 @@ import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadToolSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.nameResId
 
 private val PANEL_CORNER = 16.dp
 private val PANEL_PADDING = 20.dp
@@ -131,7 +132,7 @@ fun ToolSettingsPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(currentMode.displayNameResId()),
+                    text = stringResource(currentMode.nameResId()),
                     color = colors.onSurface,
                     fontSize = 18.sp,
                     modifier = Modifier.weight(1f)

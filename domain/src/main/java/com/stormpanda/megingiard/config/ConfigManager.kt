@@ -9,7 +9,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.Macro
 import com.stormpanda.megingiard.macropad.MacroFolder
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.MacroState
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -30,6 +29,9 @@ private const val TAG = "ConfigManager"
 /** Safety cap — reject files larger than 10 MB to prevent OOM. */
 private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
+/** Oldest schema we support importing. */
+private const val MIN_SUPPORTED_SCHEMA = 2
+
 private val exportJson = Json {
     prettyPrint = true
     encodeDefaults = true
@@ -48,11 +50,9 @@ private val checksumJson = Json {
 /**
  * Unified config export/import manager.
  *
- * Replaces ConfigExporter, ConfigImporter, ConfigFileReader, ConfigFileWriter,
- * ChecksumUtil, ConfigImportCoordinator, and ConfigActionCoordinator.
- *
- * Settings are exported/imported as grouped DataStore key/value maps —
- * no intermediate typed data classes. MacroPad data stays typed for UUID remapping.
+ * Schema v3: macros embedded inside PadProfile.macros; macroFolders removed.
+ * v2 imports are migrated: separate macros list is merged into each profile
+ * that references them, folders are discarded.
  */
 object ConfigManager {
 
@@ -175,19 +175,16 @@ object ConfigManager {
     // ── Export ────────────────────────────────────────────────────────────────
 
     /**
-     * Builds a full export from the current app state.
-     * Reads all settings from DataStore via [SettingsManager.exportGroupedSettings],
-     * snapshots MacroPad data from live StateFlows.
+     * Builds a v3 export from the current app state.
+     * Macros are embedded inside each PadProfile — no top-level macros or folders.
      */
     suspend fun buildExport(metadata: ExportMetadata): MegingiardExport {
         AppLog.i(TAG, "buildExport: author=${metadata.author}")
         val settings = SettingsManager.exportGroupedSettings()
         val profiles = MacroPadState.profiles.value
-        val macros = MacroState.macros.value
-        val macroFolders = MacroState.folders.value
 
-        val checksum = computeChecksum(settings, profiles, macros, macroFolders)
-        AppLog.d(TAG, "buildExport: checksum=$checksum profiles=${profiles.size} macros=${macros.size}")
+        val checksum = computeChecksum(settings, profiles)
+        AppLog.d(TAG, "buildExport: checksum=$checksum profiles=${profiles.size}")
 
         return MegingiardExport(
             schemaVersion = SCHEMA_VERSION,
@@ -195,8 +192,6 @@ object ConfigManager {
             checksum = checksum,
             settings = settings,
             profiles = profiles,
-            macros = macros,
-            macroFolders = macroFolders,
         )
     }
 
@@ -261,11 +256,12 @@ object ConfigManager {
 
     /**
      * Parses a JSON string, validates the schema version, verifies checksum.
+     * Accepts v2 and v3 formats; v2 is migrated to v3 in [applyImport].
      */
     internal fun parseAndVerify(json: String): MegingiardExport {
         val export = importJson.decodeFromString<MegingiardExport>(json)
-        if (export.schemaVersion != SCHEMA_VERSION) {
-            error("Unsupported schema version ${export.schemaVersion} — expected $SCHEMA_VERSION")
+        if (export.schemaVersion < MIN_SUPPORTED_SCHEMA || export.schemaVersion > SCHEMA_VERSION) {
+            error("Unsupported schema version ${export.schemaVersion} — expected $MIN_SUPPORTED_SCHEMA..$SCHEMA_VERSION")
         }
         if (!verifyChecksum(export)) {
             error("Checksum mismatch — the file may be corrupted or tampered")
@@ -277,64 +273,94 @@ object ConfigManager {
     /**
      * Applies all settings and macropad data from [export] to the running app state.
      * Settings are awaited so callers know the DataStore write completed before showing success.
-     * MacroPad profiles/macros/folders get new UUIDs and "(Imported)" suffix.
+     * MacroPad profiles get new UUIDs and "(Imported)" suffix.
+     * v2 imports: separate macros/folders are migrated into profiles.
      */
     suspend fun applyImport(export: MegingiardExport) {
         AppLog.i(TAG, "applyImport: schema=${export.schemaVersion}")
         if (export.settings.isNotEmpty()) {
             SettingsManager.importGroupedSettingsAwait(export.settings)
         }
-        if (export.profiles.isNotEmpty() || export.macros.isNotEmpty() || export.macroFolders.isNotEmpty()) {
-            importMacroPadData(export.profiles, export.macros, export.macroFolders)
+        if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
+            importMacroPadData(export.profiles, export.macros)
         }
     }
 
     // ── MacroPad import with UUID remapping ─────────────────────────────────
 
+    /**
+     * Imports profiles with new UUIDs. For v2 imports, merges separate [legacyMacros]
+     * into each profile that references them via PadAction.Macro.
+     */
     private fun importMacroPadData(
         profiles: List<PadProfile>,
-        macros: List<Macro>,
-        macroFolders: List<MacroFolder>,
+        legacyMacros: List<Macro>,
     ) {
-        AppLog.d(TAG, "importMacroPadData: ${profiles.size} profiles, ${macros.size} macros, ${macroFolders.size} folders")
+        AppLog.d(TAG, "importMacroPadData: ${profiles.size} profiles, ${legacyMacros.size} legacyMacros")
 
-        // Step 1: import folders with new UUIDs
-        val folderIdMap = mutableMapOf<String, String>()
-        for (folder in macroFolders) {
-            val newId = UUID.randomUUID().toString()
-            folderIdMap[folder.id] = newId
-            MacroState.addFolder(MacroFolder(id = newId, name = importedName(folder.name)))
-            AppLog.d(TAG, "imported folder '${folder.name}' → $newId")
-        }
+        // Build a lookup for legacy macros (v2 imports only)
+        val legacyMacroMap = legacyMacros.associateBy { it.id }
 
-        // Step 2: import macros with new UUIDs, remap folder references
-        val macroIdMap = mutableMapOf<String, String>()
-        for (macro in macros) {
-            val newId = UUID.randomUUID().toString()
-            macroIdMap[macro.id] = newId
-            val newFolderId = macro.folderId?.let { folderIdMap[it] }
-            MacroState.addMacro(
-                macro.copy(id = newId, name = importedName(macro.name), folderId = newFolderId)
-            )
-            AppLog.d(TAG, "imported macro '${macro.name}' → $newId")
-        }
-
-        // Step 3: import profiles with new UUIDs, remap PadAction.Macro references
         for (profile in profiles) {
             val newProfileId = UUID.randomUUID().toString()
+
+            // Build macro ID remap: old → new for all macros in this profile
+            val macroIdMap = mutableMapOf<String, String>()
+
+            // Macros already inside the profile (v3 format)
+            val existingMacros = profile.macros.map { macro ->
+                val newId = UUID.randomUUID().toString()
+                macroIdMap[macro.id] = newId
+                macro.copy(id = newId, name = importedName(macro.name))
+            }
+
+            // Collect referenced legacy macros not already in the profile (v2 migration)
+            val referencedIds = profile.layouts
+                .flatMap { it.buttons }
+                .mapNotNull { (it.action as? PadAction.Macro)?.macroId }
+                .toSet()
+            val adoptedLegacy = referencedIds
+                .filter { id -> id !in macroIdMap } // not already remapped
+                .mapNotNull { legacyMacroMap[it] }
+                .map { macro ->
+                    val newId = UUID.randomUUID().toString()
+                    macroIdMap[macro.id] = newId
+                    macro.copy(id = newId, name = importedName(macro.name))
+                }
+
+            val allMacros = existingMacros + adoptedLegacy
+
+            // Remap macro references in button actions
+            val remappedLayouts = profile.layouts.map { layout ->
+                layout.copy(
+                    id = UUID.randomUUID().toString(),
+                    buttons = layout.buttons.map { button ->
+                        button.copy(
+                            id = UUID.randomUUID().toString(),
+                            action = remapMacroAction(button.action, macroIdMap),
+                        )
+                    }
+                )
+            }
+
+            // Also remap legacy buttons field (pre-layout-migration profiles)
             val remappedButtons = profile.buttons.map { button ->
                 button.copy(
                     id = UUID.randomUUID().toString(),
                     action = remapMacroAction(button.action, macroIdMap),
                 )
             }
+
             val importedProfile = profile.copy(
                 id = newProfileId,
                 name = importedName(profile.name),
+                layouts = remappedLayouts,
                 buttons = remappedButtons,
+                macros = allMacros,
+                activeLayoutId = remappedLayouts.firstOrNull()?.id ?: profile.activeLayoutId,
             )
             MacroPadState.addProfile(importedProfile)
-            AppLog.d(TAG, "imported profile '${profile.name}' → $newProfileId")
+            AppLog.d(TAG, "imported profile '${profile.name}' → $newProfileId (${allMacros.size} macros)")
         }
     }
 
@@ -348,14 +374,31 @@ object ConfigManager {
 
     // ── Checksum ─────────────────────────────────────────────────────────────
 
+    /**
+     * Computes a v3 checksum over settings and profiles.
+     */
     private fun computeChecksum(
+        settings: Map<String, Map<String, JsonElement>>,
+        profiles: List<PadProfile>,
+    ): String {
+        val payload = checksumJson.encodeToString(ChecksumPayload(settings, profiles))
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hashBytes = digest.digest(payload.toByteArray(Charsets.UTF_8))
+        val hex = hashBytes.joinToString("") { "%02x".format(it) }
+        return "sha256:$hex"
+    }
+
+    /**
+     * Computes a v2-compatible checksum (includes macros and macroFolders).
+     * Used to verify older exports.
+     */
+    private fun computeChecksumV2(
         settings: Map<String, Map<String, JsonElement>>,
         profiles: List<PadProfile>,
         macros: List<Macro>,
         macroFolders: List<MacroFolder>,
     ): String {
-        // Build a canonical payload containing all data fields (not metadata)
-        val payload = checksumJson.encodeToString(ChecksumPayload(settings, profiles, macros, macroFolders))
+        val payload = checksumJson.encodeToString(ChecksumPayloadV2(settings, profiles, macros, macroFolders))
         val digest = MessageDigest.getInstance("SHA-256")
         val hashBytes = digest.digest(payload.toByteArray(Charsets.UTF_8))
         val hex = hashBytes.joinToString("") { "%02x".format(it) }
@@ -363,12 +406,22 @@ object ConfigManager {
     }
 
     private fun verifyChecksum(export: MegingiardExport): Boolean {
-        val expected = computeChecksum(export.settings, export.profiles, export.macros, export.macroFolders)
-        return expected == export.checksum
+        // v3 checksum (settings + profiles only)
+        val v3 = computeChecksum(export.settings, export.profiles)
+        if (v3 == export.checksum) return true
+        // v2 fallback (settings + profiles + macros + macroFolders)
+        val v2 = computeChecksumV2(export.settings, export.profiles, export.macros, export.macroFolders)
+        return v2 == export.checksum
     }
 
     @Serializable
     private data class ChecksumPayload(
+        val settings: Map<String, Map<String, JsonElement>>,
+        val profiles: List<PadProfile>,
+    )
+
+    @Serializable
+    private data class ChecksumPayloadV2(
         val settings: Map<String, Map<String, JsonElement>>,
         val profiles: List<PadProfile>,
         val macros: List<Macro>,

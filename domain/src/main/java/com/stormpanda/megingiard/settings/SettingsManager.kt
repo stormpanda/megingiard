@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
@@ -30,11 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -48,7 +43,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
-private const val DEFAULT_OVERLAY_TIMEOUT_MS = 3_000L
 
 /** Per-app language preference. [SYSTEM] follows the device locale. */
 enum class AppLanguage { SYSTEM, EN, DE }
@@ -64,14 +58,9 @@ private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 private const val TAG = "SettingsManager"
 
 object SettingsManager {
-    private val KEY_ENABLED_TOOLS = stringPreferencesKey("enabled_tools")
-    private val KEY_TOOL_ORDER = stringPreferencesKey("tool_order")
     private val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
-    private val KEY_OVERLAY_TIMEOUT_MS = longPreferencesKey("overlay_timeout_ms")
     private val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
     private val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
-    private val KEY_REMEMBER_LAST_TOOL = booleanPreferencesKey("remember_last_tool")
-    private val KEY_LAST_TOOL = stringPreferencesKey("last_tool")
 
     // Mirror touch projection settings
     private val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
@@ -129,8 +118,7 @@ object SettingsManager {
     // ── Section key groups for config export/import ───────────────────────────
 
     private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
-        KEY_ENABLED_TOOLS, KEY_TOOL_ORDER, KEY_OVERLAY_TIMEOUT_MS, KEY_ACCENT_COLOR,
-        KEY_OVERLAY_AT_BOTTOM, KEY_REMEMBER_LAST_TOOL, KEY_THEME_MODE,
+        KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_THEME_MODE,
         KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
     )
     private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
@@ -178,20 +166,8 @@ object SettingsManager {
 
     private val macropadJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-    private val _enabledTools = MutableStateFlow(AppMode.entries.toSet())
-    val enabledTools: StateFlow<Set<AppMode>> = _enabledTools.asStateFlow()
-
-    private val _toolOrder = MutableStateFlow(AppMode.entries.toList())
-    val toolOrder: StateFlow<List<AppMode>> = _toolOrder.asStateFlow()
-
     private val _autoStartCapture = MutableStateFlow(false)
     val autoStartCapture: StateFlow<Boolean> = _autoStartCapture.asStateFlow()
-
-    private val _overlayTimeoutMs = MutableStateFlow(DEFAULT_OVERLAY_TIMEOUT_MS)
-    val overlayTimeoutMs: StateFlow<Long> = _overlayTimeoutMs.asStateFlow()
-
-    private val _activeTools = MutableStateFlow(AppMode.entries.toList())
-    val activeTools: StateFlow<List<AppMode>> = _activeTools.asStateFlow()
 
     private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
     val accentColor: StateFlow<Int> = _accentColor.asStateFlow()
@@ -246,10 +222,6 @@ object SettingsManager {
     private val _rememberProjection = MutableStateFlow(false)
     val rememberProjection: StateFlow<Boolean> = _rememberProjection.asStateFlow()
 
-    // General session — remember last used tool across restarts
-    private val _rememberLastTool = MutableStateFlow(false)
-    val rememberLastTool: StateFlow<Boolean> = _rememberLastTool.asStateFlow()
-
     // App language
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
@@ -294,30 +266,16 @@ object SettingsManager {
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
 
+        // MacroPad is the only active tool — set immediately.
+        AppStateManager.setMode(AppMode.MACROPAD)
+
         scope.launch {
             dataStore.data
                 .catch { emit(emptyPreferences()) }
                 .collect { prefs ->
                 AppLog.i(TAG, "settings loaded from DataStore")
-                val enabledStr = prefs[KEY_ENABLED_TOOLS]
-                if (enabledStr != null) {
-                    val parsed = enabledStr.split(",")
-                        .mapNotNull { runCatching { AppMode.valueOf(it) }.getOrNull() }
-                        .toSet()
-                    _enabledTools.value = parsed.ifEmpty { AppMode.entries.toSet() }
-                }
-
-                val orderStr = prefs[KEY_TOOL_ORDER]
-                if (orderStr != null) {
-                    val parsed = orderStr.split(",")
-                        .mapNotNull { runCatching { AppMode.valueOf(it) }.getOrNull() }
-                    if (parsed.containsAll(AppMode.entries)) {
-                        _toolOrder.value = parsed
-                    }
-                }
 
                 _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
-                _overlayTimeoutMs.value = prefs[KEY_OVERLAY_TIMEOUT_MS] ?: DEFAULT_OVERLAY_TIMEOUT_MS
                 _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                 _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                 _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
@@ -325,7 +283,6 @@ object SettingsManager {
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
                 _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
-                _rememberLastTool.value = prefs[KEY_REMEMBER_LAST_TOOL] ?: false
                 _kbLayout.value = KbLayout.entries.firstOrNull { it.name == prefs[KEY_KB_LAYOUT] } ?: KbLayout.QWERTZ
                 _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
                 _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
@@ -348,17 +305,20 @@ object SettingsManager {
                 _macropadAmbientPreview.value = prefs[KEY_MACROPAD_AMBIENT_PREVIEW] ?: false
                 _macropadAmbientApplyTheme.value = prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] ?: false
 
-                // MacroPad profiles
+                // MacroPad profiles (with global macros for migration)
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
+                val globalMacros = prefs[KEY_MACROPAD_MACROS]?.let { json ->
+                    runCatching { macropadJson.decodeFromString<List<Macro>>(json) }.getOrElse { emptyList() }
+                } ?: emptyList()
                 if (macropadProfilesJson != null) {
                     val profiles = runCatching {
                         macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
                     }.getOrElse { emptyList() }
                     val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
-                    MacroPadState.loadFrom(profiles, activeId)
+                    MacroPadState.loadFrom(profiles, activeId, globalMacros)
                 }
 
-                // MacroPad macros (global library)
+                // MacroPad macros (global library — kept for legacy compat, Phase 8 removal)
                 val macrosJson = prefs[KEY_MACROPAD_MACROS]
                 if (macrosJson != null) {
                     val macros = runCatching {
@@ -381,66 +341,6 @@ object SettingsManager {
                 }
             }
         }
-
-        combine(_enabledTools, _toolOrder) { enabled, order ->
-            order.filter { it in enabled }.ifEmpty { listOf(AppMode.entries.first()) }
-        }.onEach { active ->
-            _activeTools.value = active
-            if (AppStateManager.currentMode.value !in active) {
-                AppStateManager.setMode(active.first())
-            }
-        }.launchIn(scope)
-
-        // One-shot: select the correct initial tool once DataStore data is available.
-        // Uses the first tool in the active list, or the last used tool if that option is on.
-        scope.launch {
-            val prefs = dataStore.data.catch { emit(emptyPreferences()) }.first()
-            val enabledStr = prefs[KEY_ENABLED_TOOLS]
-            val enabled = if (enabledStr != null) {
-                enabledStr.split(",")
-                    .mapNotNull { runCatching { AppMode.valueOf(it) }.getOrNull() }
-                    .toSet()
-                    .ifEmpty { AppMode.entries.toSet() }
-            } else AppMode.entries.toSet()
-            val orderStr = prefs[KEY_TOOL_ORDER]
-            val order = if (orderStr != null) {
-                val parsed = orderStr.split(",")
-                    .mapNotNull { runCatching { AppMode.valueOf(it) }.getOrNull() }
-                if (parsed.containsAll(AppMode.entries)) parsed else AppMode.entries.toList()
-            } else AppMode.entries.toList()
-            val active = order.filter { it in enabled }.ifEmpty { listOf(AppMode.entries.first()) }
-            val rememberLast = prefs[KEY_REMEMBER_LAST_TOOL] ?: false
-            val lastTool = prefs[KEY_LAST_TOOL]?.let { runCatching { AppMode.valueOf(it) }.getOrNull() }
-            val startMode = if (rememberLast && lastTool != null && lastTool in active) lastTool else active.first()
-            AppStateManager.setMode(startMode)
-        }
-
-        // Persist the active tool whenever the user navigates, so it can be restored on restart.
-        AppStateManager.currentMode
-            .drop(1)
-            .onEach { mode -> dataStore.edit { prefs -> prefs[KEY_LAST_TOOL] = mode.name } }
-            .launchIn(scope)
-    }
-
-    fun setEnabledTools(tools: Set<AppMode>) {
-        require(tools.isNotEmpty()) { "At least one tool must remain enabled" }
-        AppLog.d(TAG, "setEnabledTools($tools)")
-        _enabledTools.value = tools
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_ENABLED_TOOLS] = tools.joinToString(",") { it.name }
-            }
-        }
-    }
-
-    fun setToolOrder(order: List<AppMode>) {
-        AppLog.d(TAG, "setToolOrder($order)")
-        _toolOrder.value = order
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_TOOL_ORDER] = order.joinToString(",") { it.name }
-            }
-        }
     }
 
     fun setAutoStartCapture(value: Boolean) {
@@ -449,16 +349,6 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs ->
                 prefs[KEY_AUTO_START_CAPTURE] = value
-            }
-        }
-    }
-
-    fun setOverlayTimeoutMs(value: Long) {
-        AppLog.d(TAG, "setOverlayTimeoutMs($value)")
-        _overlayTimeoutMs.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_OVERLAY_TIMEOUT_MS] = value
             }
         }
     }
@@ -518,14 +408,6 @@ object SettingsManager {
         _rememberProjection.value = value
         scope.launch {
             dataStore.edit { prefs -> prefs[KEY_REMEMBER_PROJECTION] = value }
-        }
-    }
-
-    fun setRememberLastTool(value: Boolean) {
-        AppLog.d(TAG, "setRememberLastTool($value)")
-        _rememberLastTool.value = value
-        scope.launch {
-            dataStore.edit { prefs -> prefs[KEY_REMEMBER_LAST_TOOL] = value }
         }
     }
 
@@ -857,8 +739,6 @@ object SettingsManager {
                                     prefs[key as Preferences.Key<Boolean>] = element.booleanOrNull!!
                                 element.floatOrNull != null && element.contentOrNull?.contains('.') == true ->
                                     prefs[key as Preferences.Key<Float>] = element.floatOrNull!!
-                                element.longOrNull != null && key.name == "overlay_timeout_ms" ->
-                                    prefs[key as Preferences.Key<Long>] = element.longOrNull!!
                                 element.intOrNull != null ->
                                     prefs[key as Preferences.Key<Int>] = element.intOrNull!!
                                 else ->

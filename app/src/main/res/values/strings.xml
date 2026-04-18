@@ -161,6 +161,12 @@ Open Settings to create a layout.</string>
 
     <!-- Configuration export/import -->
     <string name="settings_section_config">Configuration</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_restore_defaults">Restore default profiles</string>
+    <string name="settings_restore_defaults_desc">Deletes all profiles and creates a blank default profile</string>
+    <string name="settings_restore_defaults_confirm">This will delete all existing profiles and macros and create a single blank profile. This action cannot be undone.</string>
+    <string name="settings_restore_defaults_confirm_button">Restore</string>
+    <string name="settings_cancel">Cancel</string>
     <string name="settings_config_export">Export configuration</string>
     <string name="settings_config_export_desc">Save all settings, MacroPad profiles, and macros as a .mgrd file</string>
     <string name="settings_config_import">Import configuration</string>

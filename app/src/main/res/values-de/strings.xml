@@ -316,4 +316,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_move_to_folder">In Ordner verschieben…</string>
     <string name="macropad_picker_folder_empty">Keine Makros in diesem Ordner</string>
     <string name="cd_more_options">Weitere Optionen</string>
+
+    <!-- Data / restore -->
+    <string name="settings_section_data">Daten</string>
+    <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
+    <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
+    <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="settings_restore_defaults_confirm_button">Wiederherstellen</string>
+    <string name="settings_cancel">Abbrechen</string>
 </resources>

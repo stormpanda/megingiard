@@ -16,7 +16,7 @@ the same device or share it with other Megingiard users ("community configs").
 ### FR-CF1: Full App Configuration Export
 
 - The user MUST be able to export all app settings (Global, Mirror, Touchpad, Keyboard) and all
-  MacroPad profiles, macros, and macro folders to a single `.mgrd` file.
+  MacroPad profiles (each containing its own macros) to a single `.mgrd` file.
 - The export file MUST be created via the Android Storage Access Framework (SAF) so the user
   controls the destination folder.
 - The user MAY optionally provide author, description, and comma-separated tags before exporting
@@ -41,17 +41,26 @@ the same device or share it with other Megingiard users ("community configs").
 
 ### FR-CF3: Conflict-Free Side-by-Side Import
 
-- Imported MacroPad profiles, macros, and macro folders MUST be added alongside existing items
+- Imported MacroPad profiles (with embedded macros) MUST be added alongside existing items
   with new UUIDs — never merging or overwriting existing data.
-- Imported profiles and macros MUST receive an `" (Imported)"` suffix appended to their names
+- Imported profiles and their macros MUST receive an `" (Imported)"` suffix appended to their names
   to help users identify them.
 - Tool settings (Global, Mirror, Touchpad, Keyboard) that are present in the file ARE applied
   directly, overwriting current values; this is expected for a "restore settings" workflow.
 
 ### FR-CF4: Schema Versioning
 
-- Every `.mgrd` file MUST carry a `schemaVersion` field (integer, currently `2`).
-- Files with an unsupported `schemaVersion` MUST be rejected with an error.
+- Every `.mgrd` file MUST carry a `schemaVersion` field (integer, currently `3`).
+- The app MUST accept imports with `schemaVersion` 2 or 3. v2 imports are migrated
+  automatically: separate `macros` and `macroFolders` lists are merged into the profiles
+  that reference them.
+- Files with an unsupported `schemaVersion` (below 2 or above 3) MUST be rejected with an error.
+
+### FR-CF5: Restore Default Profiles
+
+- The user MUST be able to restore default MacroPad profiles from Global Settings.
+- This operation deletes all existing profiles and creates a single blank "Default" profile.
+- A confirmation dialog MUST be shown before the operation is executed.
 
 ---
 
@@ -114,11 +123,11 @@ IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
 
 `.mgrd` files are UTF-8 JSON with the schema defined in `ConfigSchema.kt`:
 
-**Schema v2 (current):**
+**Schema v3 (current):**
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "metadata": {
     "appVersionCode": 12,
     "appVersionName": "1.2.0",
@@ -130,15 +139,20 @@ IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
   },
   "checksum": "sha256:<hex>",
   "settings": {
-    "global": { "enabled_tools": "MIRROR,KEYBOARD", "overlay_timeout_ms": 3000, … },
+    "global": { … },
     "mirror": { "auto_start_capture": true, … },
     "touchpad": { … },
     "keyboard": { … },
     "macropad_settings": { … }
   },
-  "profiles": [ … ],
-  "macros": [ … ],
-  "macroFolders": [ … ]
+  "profiles": [
+    {
+      "id": "…",
+      "name": "My Profile",
+      "layouts": [ … ],
+      "macros": [ … ]
+    }
+  ]
 }
 ```
 
@@ -147,8 +161,12 @@ Adding a new setting only requires adding the key to the correct `*_KEYS` set in
 
 - **MIME type:** `application/vnd.megingiard.config+json`
 - **Extension:** `.mgrd`
-- **Checksum scope:** SHA-256 of the minified kotlinx.serialization JSON encoding (with
-  `encodeDefaults = true`) of the data fields (settings, profiles, macros, macroFolders).
+  In v3, macros are embedded inside each `PadProfile.macros`; the top-level `macros` and
+  `macroFolders` fields are omitted (empty defaults in the schema for v2 backward compatibility).
+
+- **Checksum scope (v3):** SHA-256 of the minified kotlinx.serialization JSON encoding (with
+  `encodeDefaults = true`) of settings and profiles only. For verifying v2 imports, a fallback
+  checksum including the legacy macros and macroFolders fields is also checked.
   Key order is determined by the declaration order of the `@Serializable` data class fields —
   no additional sorting or canonicalization is applied. Metadata changes do not invalidate the
   checksum.
@@ -171,11 +189,12 @@ Adding a new setting only requires adding the key to the correct `*_KEYS` set in
 
 When MacroPad data is imported, `ConfigManager.importMacroPadData()`:
 
-1. Iterates imported `MacroFolder` items, assigns each a new UUID, builds `folderIdMap` (old → new).
-2. Iterates imported `Macro` items, assigns each a new UUID, builds `macroIdMap` (old → new).
-3. Iterates imported `PadProfile` items, assigns each a new UUID; for every `PadButton` whose
-   action is `PadAction.Macro`, updates `macroId` via `macroIdMap` (falls back to original ID
-   if not mapped).
+1. For each imported `PadProfile`, assigns a new UUID.
+2. For each macro inside the profile, assigns a new UUID and builds `macroIdMap` (old → new).
+3. For v2 imports: collects referenced legacy macros (from the top-level `macros` list) that
+   aren't already inside the profile and adopts them with new UUIDs.
+4. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap`
+   (falls back to original ID if not mapped).
 
 This guarantees imported data never collides with existing data even when re-importing the same
 file multiple times.

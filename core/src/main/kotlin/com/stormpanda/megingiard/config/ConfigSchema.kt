@@ -13,9 +13,11 @@ import kotlinx.serialization.json.JsonElement
 /**
  * Schema version — integer, incremented on breaking changes.
  * v1: per-section typed data classes (removed in v2).
- * v2: flat DataStore key/value map grouped by section name.
+ * v2: flat DataStore key/value map grouped by section name, separate macros/macroFolders.
+ * v3: macros embedded inside PadProfile.macros; macroFolders removed.
+ *     Legacy v2 fields are kept for parsing old exports (migration on import).
  */
-const val SCHEMA_VERSION = 2
+const val SCHEMA_VERSION = 3
 
 /** MIME type registered in AndroidManifest for `.mgrd` config files. */
 const val MGRD_MIME_TYPE = "application/vnd.megingiard.config+json"
@@ -31,18 +33,21 @@ const val MGRD_MIME_TYPE = "application/vnd.megingiard.config+json"
  * where keys match the DataStore preference key names. This means adding a new
  * setting requires zero changes to the config package — only SettingsManager.
  *
- * MacroPad data (profiles, macros, folders) uses typed lists because import
- * requires UUID remapping and conflict resolution (\"(Imported)\" suffix).
+ * MacroPad profiles carry their own macros (`PadProfile.macros`).
+ * The top-level [macros] and [macroFolders] fields are v2 legacy — only present
+ * in older exports. On import, [ConfigManager] migrates them into profiles.
  */
 @Serializable
 data class MegingiardExport(
     val schemaVersion: Int,
     val metadata: ExportMetadata,
     val checksum: String,
-    /** Settings grouped by section: `{\"global\": {\"accent_color\": 123, ...}, \"mirror\": {...}}` */
+    /** Settings grouped by section: `{"global": {"accent_color": 123, ...}, "mirror": {...}}` */
     val settings: Map<String, Map<String, JsonElement>> = emptyMap(),
     val profiles: List<PadProfile> = emptyList(),
+    /** @deprecated v2 legacy — macros now live inside PadProfile.macros. Present only in v2 imports. */
     val macros: List<Macro> = emptyList(),
+    /** @deprecated v2 legacy — folders removed. Present only in v2 imports. */
     val macroFolders: List<MacroFolder> = emptyList(),
 )
 

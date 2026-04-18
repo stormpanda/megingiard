@@ -86,7 +86,7 @@ private val CO_BORDER_WIDTH = 2.dp
 private val CO_HANDLE_CONTENT_H_PADDING = 12.dp
 private val CO_HANDLE_CONTENT_V_PADDING = 8.dp
 
-private fun AppMode.nameResId(): Int = when (this) {
+internal fun AppMode.nameResId(): Int = when (this) {
     AppMode.MIRROR -> R.string.tool_name_mirror
     AppMode.TOUCHPAD -> R.string.tool_name_touchpad
     AppMode.KEYBOARD -> R.string.tool_name_keyboard
@@ -112,7 +112,7 @@ fun CarouselOverlay(
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val activeTools by SettingsManager.activeTools.collectAsState()
+    val activeTools = AppMode.entries
     val currentMode by AppStateManager.currentMode.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     var showToolPanel by remember { mutableStateOf(false) }
