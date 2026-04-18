@@ -125,8 +125,8 @@ internal fun AmbientMacroPadOverlay() {
                                 swipeProcessor.onMove(primaryChange?.position?.y ?: 0f)
                             }
                             PointerEventType.Release -> {
-                                val allPointersReleased = !event.changes.any { it.pressed }
-                                swipeProcessor.onRelease(allPointersReleased)
+                                val allPointersLifted = !event.changes.any { it.pressed }
+                                swipeProcessor.onRelease(allPointersLifted)
                             }
                             else -> {}
                         }
