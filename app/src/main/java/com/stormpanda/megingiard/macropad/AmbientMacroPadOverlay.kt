@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -76,9 +77,9 @@ internal fun AmbientMacroPadOverlay() {
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    // When any of these special modes is active, hide pad content (dim/vignette/buttons)
-    // but keep IdlePill visible so the user can always swipe out.
-    val hideContent = isTouchProjectionActive || isFrozen || isViewportEditActive
+    // When touch projection or freeze is active, hide pad content entirely.
+    // Viewport edit is handled separately: vignette stays, buttons go semi-transparent.
+    val hideContent = isTouchProjectionActive || isFrozen
     val applyTheme by SettingsManager.macropadAmbientApplyTheme.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
@@ -173,6 +174,8 @@ internal fun AmbientMacroPadOverlay() {
         }
 
         // Layer 3: Vignette overlay (shape-specific gradient darkening the edges)
+        // Shown in normal mode AND during viewport edit (intentionally retained so the
+        // user can judge where the vignette sits relative to the chosen viewport).
         if (!hideContent && vignetteEnabled && effectiveVignetteOpacity > 0f) {
             val vColor = Color(vignetteColorInt)
             Box(
@@ -188,8 +191,17 @@ internal fun AmbientMacroPadOverlay() {
             )
         }
 
-        // Layer 4: MacroPad buttons — hidden during touch projection, freeze, viewport edit
-        if (!hideContent) {
+        // Layer 4: MacroPad buttons
+        // During touch projection / freeze: fully hidden.
+        // During viewport edit: rendered at 50% alpha so the user can see button
+        //   positions while adjusting the mirror crop.
+        // Normal: fully opaque (or peek-adjusted via isPeekActive).
+        val buttonAlpha = when {
+            hideContent        -> 0f
+            isViewportEditActive -> 0.5f
+            else               -> 1f
+        }
+        if (buttonAlpha > 0f) {
             val p = profile
             val l = layout
             if (p == null || l == null) {
@@ -206,7 +218,12 @@ internal fun AmbientMacroPadOverlay() {
                     )
                 }
             } else {
-                Box(modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(AM_SCREEN_PADDING)
+                        .graphicsLayer { alpha = buttonAlpha },
+                ) {
                     PadSurface(
                         profile = p,
                         layout = l,
