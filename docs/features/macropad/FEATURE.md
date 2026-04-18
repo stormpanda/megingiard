@@ -385,7 +385,7 @@ DisposableEffect(Unit) {
 }
 ```
 
-The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. Because the flags are automatically derived from the button list (see FR-P4), adding the first `KeyboardKey` button to a profile will enable `KeyInjector` on the next mode entry without any manual user action.
+The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. The same stop/restart pattern is also used by `PillMenu` and `AmbientSettingsOverlay` — injectors are stopped while these modals are open so the Android soft IME can appear for text input fields. `AmbientMacroPadOverlay` additionally observes `isPillMenuOpen` and stops/restarts injectors when the PillMenu opens from inside the Presentation window.
 
 ### Hit Testing
 

@@ -158,8 +158,11 @@ fun MainAppScreen() {
             onDone = { AppStateManager.setAmbientSettingsActive(false) },
         )
 
-        // Idle Pill + Pill Menu overlay
-        IdlePill()
+        // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
+        // are open because those modals render their own full-screen chrome.
+        if (!isEditorActive && !isAmbientSettingsActive) {
+            IdlePill()
+        }
 
         // ── Global wrong-screen overlay ─────────────────────────────────────
         // Blocks all interaction and renders on top of everything when the app

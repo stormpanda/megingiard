@@ -235,19 +235,29 @@ class MirrorPresentation(
                 AppStateManager.isOnValidScreen,
                 SettingsManager.macropadAmbientEnabled,
                 ScreenCaptureManager.isCapturing,
-                AppStateManager.isFilePickerOpen
-            ) { isValid, ambientEnabled, capturing, filePickerOpen ->
+                AppStateManager.isFilePickerOpen,
+                AppStateManager.isEditorActive,
+                AppStateManager.isAmbientSettingsActive,
+            ) { values ->
+                val isValid = values[0] as Boolean
+                val ambientEnabled = values[1] as Boolean
+                val capturing = values[2] as Boolean
+                val filePickerOpen = values[3] as Boolean
+                val editorActive = values[4] as Boolean
+                val ambientSettingsActive = values[5] as Boolean
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
                 // pushing MainActivity to background (ON_PAUSE ~70 ms). ON_STOP then set
                 // isResumed=false → hide(), and the cycle repeated indefinitely.
                 //
-                // filePickerOpen: while the SAF file picker is active we hide the
-                // Presentation so that DocumentsUI (TYPE_APPLICATION rank) is visible
-                // to the user. Without this the Presentation window (TYPE_PRIVATE_PRESENTATION),
-                // which sits above regular Activities, would block the picker entirely.
-                capturing && isValid && !filePickerOpen && ambientEnabled
+                // filePickerOpen / editorActive / ambientSettingsActive: while any of
+                // these Activity-level modals are visible we hide the Presentation so
+                // the user can interact with them.  Without this the Presentation window
+                // (TYPE_PRIVATE_PRESENTATION), which sits above regular Activities, would
+                // block input entirely.
+                capturing && isValid && ambientEnabled &&
+                    !filePickerOpen && !editorActive && !ambientSettingsActive
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }

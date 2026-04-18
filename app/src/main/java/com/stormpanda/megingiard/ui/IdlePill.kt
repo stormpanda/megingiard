@@ -102,7 +102,6 @@ fun IdlePill(modifier: Modifier = Modifier) {
         // Pill Menu overlay — rendered as a sibling so it covers MacroPadScreen
         PillMenu(
             visible = isPillMenuOpen,
-            overlayAtBottom = overlayAtBottom,
             onDismiss = { AppStateManager.closePillMenu() },
         )
     }

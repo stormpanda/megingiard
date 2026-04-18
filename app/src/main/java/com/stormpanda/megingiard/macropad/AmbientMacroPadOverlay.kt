@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
@@ -92,6 +93,27 @@ internal fun AmbientMacroPadOverlay() {
             if (ap?.enableKeyboard != false) KeyInjector.start(context)
             if (ap?.enableGamepad != false) GamepadInjector.start(context)
             if (ap?.enableMouse != false) MouseInjector.start(context)
+        }
+    }
+
+    // Stop injectors while the Pill Menu is open so the OS soft IME can appear
+    // in text-input dialogs (New Profile / New Layout).  Restart when it closes.
+    val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
+    LaunchedEffect(isPillMenuOpen) {
+        if (isPillMenuOpen) {
+            AppLog.d(TAG, "PillMenu opened → stopping injectors")
+            KeyInjector.stop()
+            GamepadInjector.stop()
+            MouseInjector.stop()
+        } else {
+            // Menu closed → restart only the devices enabled by the active profile
+            withContext(Dispatchers.IO) {
+                val ap = MacroPadState.activeProfile.value
+                AppLog.d(TAG, "PillMenu closed → restarting injectors")
+                if (ap?.enableKeyboard != false) KeyInjector.start(context)
+                if (ap?.enableGamepad != false) GamepadInjector.start(context)
+                if (ap?.enableMouse != false) MouseInjector.start(context)
+            }
         }
     }
 

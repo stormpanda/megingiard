@@ -28,6 +28,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -43,11 +44,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.SliderSettingRow
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 private const val TAG = "AmbientSettingsOverlay"
 
@@ -76,8 +83,27 @@ private fun VignetteShape.labelResId(): Int = when (this) {
  */
 @Composable
 internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
+    val context = LocalContext.current
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
+
+    // Stop all uinput virtual devices while ambient settings are open.
+    // Restart injectors when dismissed (user returns to use mode).
+    DisposableEffect(Unit) {
+        AppLog.d(TAG, "AmbientSettingsOverlay visible → stopping injectors")
+        KeyInjector.stop()
+        GamepadInjector.stop()
+        MouseInjector.stop()
+        onDispose {
+            val ap = MacroPadState.activeProfile.value
+            AppLog.d(TAG, "AmbientSettingsOverlay dismissed → restarting injectors")
+            CoroutineScope(Dispatchers.IO).launch {
+                if (ap?.enableKeyboard != false) KeyInjector.start(context)
+                if (ap?.enableGamepad != false) GamepadInjector.start(context)
+                if (ap?.enableMouse != false) MouseInjector.start(context)
+            }
+        }
+    }
 
     val currentLayout = layout
     if (currentLayout == null) {

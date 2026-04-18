@@ -29,7 +29,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,6 +45,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,17 +56,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.keyboard.KeyInjector
+import com.stormpanda.megingiard.macropad.GamepadInjector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import java.util.UUID
 
@@ -83,34 +97,61 @@ private val PM_CHIP_H_PADDING = 12.dp
 private val PM_CHIP_V_PADDING = 6.dp
 private val PM_CHIP_SPACING = 6.dp
 private val PM_NAV_ICON_SIZE = 20.dp
+private val PM_MIRROR_ICON_SIZE = 22.dp
+private val PM_MIRROR_BUTTON_SIZE = 36.dp
+private val PM_MIRROR_CARD_V_PADDING = 10.dp
 private const val PM_SCRIM_ALPHA = 0.55f
 
 /**
  * Pill Menu overlay — appears when [AppStateManager.isPillMenuOpen] transitions to true.
  *
- * Anchored to the same [overlayAtBottom] edge as [IdlePill]. Tapping the scrim calls [onDismiss].
+ * Two-card layout:
+ * - **Bottom card** (always visible): Profile / Layout selectors + action buttons.
+ * - **Top card** (only when mirroring): Ambient Settings + mirror control icon buttons.
  *
- * Contains:
- * - Profile section: scrollable list of profile chips + "New profile" button
- * - Layout section: prev/next arrows + layout name chip + "New layout" button
- * - Action buttons: Edit Layout, Ambient Settings, Global Settings
+ * Tapping the scrim calls [onDismiss].
  */
 @Composable
 fun PillMenu(
     visible: Boolean,
-    overlayAtBottom: Boolean,
     onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
     val colors = LocalAppColors.current
     val profiles by MacroPadState.profiles.collectAsState()
     val activeProfile by MacroPadState.activeProfile.collectAsState()
     val activeLayout by MacroPadState.activeLayout.collectAsState()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+    val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val defaultProfileName = stringResource(R.string.pill_menu_new_profile)
     val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
 
     var showGlobalSettings by remember { mutableStateOf(false) }
     var showNewProfileDialog by remember { mutableStateOf(false) }
     var showNewLayoutDialog by remember { mutableStateOf(false) }
+
+    // Stop all uinput virtual devices while the menu is visible.
+    // keyinjector_arm64 registers as a hardware keyboard via uinput, which causes
+    // Android to suppress the soft IME — making text fields un-typeable.
+    if (visible) {
+        DisposableEffect(Unit) {
+            AppLog.d(TAG, "PillMenu visible → stopping injectors for soft IME")
+            KeyInjector.stop()
+            GamepadInjector.stop()
+            MouseInjector.stop()
+            onDispose {
+                val ap = MacroPadState.activeProfile.value
+                AppLog.d(TAG, "PillMenu dismissed → restarting injectors")
+                CoroutineScope(Dispatchers.IO).launch {
+                    if (ap?.enableKeyboard != false) KeyInjector.start(context)
+                    if (ap?.enableGamepad != false) GamepadInjector.start(context)
+                    if (ap?.enableMouse != false) MouseInjector.start(context)
+                }
+            }
+        }
+    }
 
     AnimatedVisibility(
         visible = visible,
@@ -128,10 +169,43 @@ fun PillMenu(
                     onClick = onDismiss,
                 ),
         ) {
-            // ── Panel ──────────────────────────────────────────────────────
+            // ── Top card — Mirror controls (only when capturing) ───────────
+            AnimatedVisibility(
+                visible = isCapturing,
+                enter = slideInVertically { -it } + fadeIn(),
+                exit  = slideOutVertically { -it } + fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter),
+            ) {
+                MirrorControlCard(
+                    colors = colors,
+                    isFrozen = isFrozen,
+                    isViewportEditActive = isViewportEditActive,
+                    isTouchProjectionActive = isTouchProjectionActive,
+                    onAmbientSettings = {
+                        AppStateManager.setAmbientSettingsActive(true)
+                        onDismiss()
+                    },
+                    onStop = {
+                        AppStateManager.requestMirrorStop()
+                        onDismiss()
+                    },
+                    onToggleFreeze = { ScreenCaptureManager.toggleFrozen() },
+                    onToggleViewportEdit = {
+                        AppStateManager.setViewportEditActive(true)
+                        onDismiss()
+                    },
+                    onToggleTouchProjection = { ScreenCaptureManager.toggleTouchProjection() },
+                )
+            }
+
+            // ── Bottom card — Profiles / Layouts / Actions ─────────────────
             Column(
                 modifier = Modifier
-                    .align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter)
+                    .align(Alignment.BottomCenter)
+                    .animateEnterExit(
+                        enter = slideInVertically { it },
+                        exit  = slideOutVertically { it },
+                    )
                     .fillMaxWidth()
                     .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
                     .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
@@ -181,14 +255,6 @@ fun PillMenu(
                     colors = colors,
                 ) {
                     AppStateManager.setEditorActive(true)
-                    onDismiss()
-                }
-                Spacer(Modifier.height(6.dp))
-                ActionButton(
-                    label = stringResource(R.string.pill_menu_ambient_settings),
-                    colors = colors,
-                ) {
-                    AppStateManager.setAmbientSettingsActive(true)
                     onDismiss()
                 }
                 Spacer(Modifier.height(6.dp))
@@ -391,6 +457,89 @@ private fun LayoutRow(
                 contentDescription = stringResource(R.string.pill_menu_new_layout),
                 tint = colors.onControlOverlay,
                 modifier = Modifier.size(PM_NAV_ICON_SIZE),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MirrorControlCard(
+    colors: AppColors,
+    isFrozen: Boolean,
+    isViewportEditActive: Boolean,
+    isTouchProjectionActive: Boolean,
+    onAmbientSettings: () -> Unit,
+    onStop: () -> Unit,
+    onToggleFreeze: () -> Unit,
+    onToggleViewportEdit: () -> Unit,
+    onToggleTouchProjection: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
+            .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
+            .clip(RoundedCornerShape(PM_PANEL_CORNER))
+            .background(colors.controlOverlay)
+            .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_PANEL_CORNER))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { } // absorb clicks — prevent scrim dismiss
+            .padding(horizontal = PM_CONTENT_PADDING, vertical = PM_MIRROR_CARD_V_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Ambient Settings button (left)
+        Text(
+            text = stringResource(R.string.pill_menu_ambient_settings),
+            color = colors.onControlOverlay,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .background(colors.navPillBody.copy(alpha = 0.35f))
+                .clickable(onClick = onAmbientSettings)
+                .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        // Mirror control icon buttons (right)
+        IconButton(onClick = onStop, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+            Icon(
+                Icons.Rounded.Stop,
+                contentDescription = stringResource(R.string.cd_stop_mirroring),
+                tint = colors.onControlOverlay,
+                modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
+            )
+        }
+        IconButton(onClick = onToggleFreeze, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+            Icon(
+                if (isFrozen) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                contentDescription = stringResource(
+                    if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze,
+                ),
+                tint = if (isFrozen) colors.accent else colors.onControlOverlay,
+                modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
+            )
+        }
+        IconButton(onClick = onToggleViewportEdit, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+            Icon(
+                Icons.Rounded.CropFree,
+                contentDescription = stringResource(R.string.cd_viewport_edit),
+                tint = if (isViewportEditActive) colors.accent else colors.onControlOverlay,
+                modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
+            )
+        }
+        IconButton(onClick = onToggleTouchProjection, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
+            Icon(
+                Icons.Rounded.TouchApp,
+                contentDescription = stringResource(
+                    if (isTouchProjectionActive) R.string.cd_touch_projection_on
+                    else R.string.cd_touch_projection_off,
+                ),
+                tint = if (isTouchProjectionActive) colors.accent else colors.onControlOverlay,
+                modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
             )
         }
     }

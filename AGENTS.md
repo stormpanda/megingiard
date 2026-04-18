@@ -103,8 +103,8 @@ com.stormpanda.megingiard
 ├── touchpad/
 │ └── FullscreenMouseOverlay.kt # Fullscreen mouse overlay for macro action dispatch
 └── ui/
-    ├── IdlePill.kt # Always-visible edge pill (swipe affordance + close label)
-    └── PillMenu.kt # Fullscreen pill menu overlay (profile/layout/mode actions)
+├── IdlePill.kt # Always-visible edge pill (swipe affordance + close label)
+└── PillMenu.kt # Fullscreen pill menu overlay (dual-card: bottom profile/layout, top mirror controls)
 \`\`\`
 
 **Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`.

@@ -169,12 +169,24 @@ Overlay controls are rendered separately from the gesture surface so gesture det
 Presentation visibility is driven by a combined `StateFlow` in `MirrorPresentation`:
 
 ```kotlin
-combine(isOnValidScreen, macropadAmbientEnabled, isCapturing) { isValid, ambientEnabled, capturing ->
-    // Gated on capturing, not isActivityResumed — using isActivityResumed caused a
-    // feedback loop where show() pushed MainActivity to background on every resume.
-    capturing && isValid && ambientEnabled
+combine(
+    isOnValidScreen, macropadAmbientEnabled, isCapturing,
+    isFilePickerOpen, isEditorActive, isAmbientSettingsActive
+) { values ->
+    val isValid = values[0] as Boolean
+    val ambientEnabled = values[1] as Boolean
+    val capturing = values[2] as Boolean
+    val filePickerOpen = values[3] as Boolean
+    val editorActive = values[4] as Boolean
+    val ambientSettingsActive = values[5] as Boolean
+    capturing && isValid && ambientEnabled &&
+        !filePickerOpen && !editorActive && !ambientSettingsActive
 }.collect { shouldShow -> if (shouldShow) show() else hide() }
 ```
+
+The Presentation hides when the MacroPad Editor or Ambient Settings overlay opens. These modals
+run in the Activity window which sits below `TYPE_PRIVATE_PRESENTATION` in the Z-order; hiding
+the Presentation ensures touch input reaches the Activity-level modals.
 
 ### Service Lifecycle
 
