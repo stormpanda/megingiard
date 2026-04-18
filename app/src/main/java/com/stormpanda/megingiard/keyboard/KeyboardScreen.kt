@@ -56,13 +56,16 @@ private val KB_IME_BOTTOM_PADDING = 56.dp
 private const val TAG = "KeyboardScreen"
 
 @Composable
-fun KeyboardScreen(modifier: Modifier = Modifier) {
+fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null) {
     val viewModel: KeyboardViewModel = viewModel()
     val context = LocalContext.current
-    val kbLayout by viewModel.kbLayout.collectAsState()
+    val kbLayoutSetting by viewModel.kbLayout.collectAsState()
+    val kbLayout = forcedLayout ?: kbLayoutSetting
     val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by viewModel.kbFullscreen.collectAsState()
+    // When a forcedLayout is set the keyboard is always shown as a fullscreen overlay.
+    val effectiveFullscreen = forcedLayout != null || kbFullscreen
     val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsState()
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val overlayVisible by viewModel.overlayVisible.collectAsState()
@@ -216,7 +219,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                         start = 4.dp,
                         end = 4.dp,
                         top = if (overlayAtBottom) 4.dp else CAROUSEL_PILL_INSET,
-                        bottom = if (kbFullscreen) (if (overlayAtBottom) CAROUSEL_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
+                        bottom = if (effectiveFullscreen) (if (overlayAtBottom) CAROUSEL_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
                     ),
                 verticalArrangement = Arrangement.SpaceEvenly
             ) {

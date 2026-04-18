@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
@@ -172,6 +173,12 @@ object AppStateManager {
     private val _isAmbientSettingsActive = MutableStateFlow(false)
     val isAmbientSettingsActive: StateFlow<Boolean> = _isAmbientSettingsActive.asStateFlow()
 
+    private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
+    val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
+
+    private val _fullscreenKeyboardLayout = MutableStateFlow(KbLayout.QWERTZ)
+    val fullscreenKeyboardLayout: StateFlow<KbLayout> = _fullscreenKeyboardLayout.asStateFlow()
+
     /**
      * True whenever a "swipe-to-close" fullscreen modal is active (Fullscreen Mouse,
      * Fullscreen Keyboard, or Ambient Peek). Triggers the "× close" label on the IdlePill.
@@ -194,13 +201,15 @@ object AppStateManager {
         _isPillMenuOpen.value = false
     }
 
-    fun setFullscreenMouseActive(active: Boolean) {
-        AppLog.i(TAG, "setFullscreenMouseActive($active)")
+    fun setFullscreenMouseActive(active: Boolean, sensitivity: Float = 1.0f) {
+        AppLog.i(TAG, "setFullscreenMouseActive($active, sensitivity=$sensitivity)")
+        if (active) _fullscreenMouseSensitivity.value = sensitivity
         _isFullscreenMouseActive.value = active
     }
 
-    fun setFullscreenKeyboardActive(active: Boolean) {
-        AppLog.i(TAG, "setFullscreenKeyboardActive($active)")
+    fun setFullscreenKeyboardActive(active: Boolean, layout: KbLayout = KbLayout.QWERTZ) {
+        AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
+        if (active) _fullscreenKeyboardLayout.value = layout
         _isFullscreenKeyboardActive.value = active
     }
 

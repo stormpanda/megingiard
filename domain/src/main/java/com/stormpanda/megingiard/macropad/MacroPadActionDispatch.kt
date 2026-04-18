@@ -48,8 +48,8 @@ fun injectActionDown(action: PadAction) {
         is PadAction.LayoutNext             -> { AppLog.d(TAG, "actionDown: LayoutNext"); MacroPadState.nextLayout() }
         is PadAction.LayoutPrevious         -> { AppLog.d(TAG, "actionDown: LayoutPrevious"); MacroPadState.previousLayout() }
         is PadAction.ProfileSwitcher        -> { AppLog.d(TAG, "actionDown: ProfileSwitcher"); AppStateManager.openPillMenu() }
-        is PadAction.FullScreenMouse        -> { AppLog.d(TAG, "actionDown: FullScreenMouse sens=${action.sensitivity}"); AppStateManager.setFullscreenMouseActive(true) }
-        is PadAction.FullScreenKeyboard     -> { AppLog.d(TAG, "actionDown: FullScreenKeyboard layout=${action.layout}"); AppStateManager.setFullscreenKeyboardActive(true) }
+        is PadAction.FullScreenMouse        -> { AppLog.d(TAG, "actionDown: FullScreenMouse sens=${action.sensitivity}"); AppStateManager.setFullscreenMouseActive(true, action.sensitivity) }
+        is PadAction.FullScreenKeyboard     -> { AppLog.d(TAG, "actionDown: FullScreenKeyboard layout=${action.layout}"); AppStateManager.setFullscreenKeyboardActive(true, action.layout) }
         is PadAction.MirrorPlayStop         -> { AppLog.d(TAG, "actionDown: MirrorPlayStop") /* wired in mirror phase */ }
         is PadAction.MirrorFreeze           -> { AppLog.d(TAG, "actionDown: MirrorFreeze") /* wired in mirror phase */ }
         is PadAction.MirrorViewportEdit     -> { AppLog.d(TAG, "actionDown: MirrorViewportEdit") /* wired in mirror phase */ }

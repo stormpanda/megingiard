@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.keyboard.KbLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -119,6 +120,12 @@ object AppStateManager {
     private val _isAmbientSettingsActive = MutableStateFlow(false)
     val isAmbientSettingsActive: StateFlow<Boolean> = _isAmbientSettingsActive.asStateFlow()
 
+    private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
+    val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
+
+    private val _fullscreenKeyboardLayout = MutableStateFlow(KbLayout.QWERTZ)
+    val fullscreenKeyboardLayout: StateFlow<KbLayout> = _fullscreenKeyboardLayout.asStateFlow()
+
     /** Whether the MacroPad layout editor is currently open. */
     private val _isEditorActive = MutableStateFlow(false)
     val isEditorActive: StateFlow<Boolean> = _isEditorActive.asStateFlow()
@@ -135,9 +142,10 @@ object AppStateManager {
     ) { kb, ms, vp, amb -> kb || ms || vp || amb }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
-    fun setFullscreenKeyboardActive(active: Boolean) {
-        AppLog.i(TAG, "setFullscreenKeyboardActive($active)")
+    fun setFullscreenKeyboardActive(active: Boolean, layout: KbLayout = KbLayout.QWERTZ) {
+        AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
+            _fullscreenKeyboardLayout.value = layout
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
             _isAmbientSettingsActive.value = false
@@ -145,9 +153,10 @@ object AppStateManager {
         _isFullscreenKeyboardActive.value = active
     }
 
-    fun setFullscreenMouseActive(active: Boolean) {
-        AppLog.i(TAG, "setFullscreenMouseActive($active)")
+    fun setFullscreenMouseActive(active: Boolean, sensitivity: Float = 1.0f) {
+        AppLog.i(TAG, "setFullscreenMouseActive($active, sensitivity=$sensitivity)")
         if (active) {
+            _fullscreenMouseSensitivity.value = sensitivity
             _isFullscreenKeyboardActive.value = false
             _isViewportEditActive.value = false
             _isAmbientSettingsActive.value = false

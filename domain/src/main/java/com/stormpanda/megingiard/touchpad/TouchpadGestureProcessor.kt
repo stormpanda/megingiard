@@ -37,6 +37,7 @@ private const val TP_CLICK_DURATION_MS = 40L
 class TouchpadGestureProcessor(
     private val useMouse: Boolean,
     private val scope: CoroutineScope,
+    private val sensitivity: Float = 1.0f,
 ) {
     // ── Touch mode state ────────────────────────────────────────────────────
     private val _touchPos = MutableStateFlow<Pair<Float, Float>?>(null)
@@ -121,8 +122,8 @@ class TouchpadGestureProcessor(
             }
             // Only primary pointer drives cursor
             if (pointerId == primaryPointer) {
-                val dx = (deltaX * TP_MOUSE_SENSITIVITY).roundToInt()
-                val dy = (deltaY * TP_MOUSE_SENSITIVITY).roundToInt()
+                val dx = (deltaX * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
+                val dy = (deltaY * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
             }
         } else {

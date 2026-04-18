@@ -45,7 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -66,6 +68,10 @@ fun MainAppScreen() {
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val isValidScreen by viewModel.isOnValidScreen.collectAsState()
     val colors = LocalAppColors.current
+
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
+    val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
 
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
@@ -134,6 +140,13 @@ fun MainAppScreen() {
     ) {
         // MacroPad is the sole content screen
         MacroPadScreen()
+
+        // Fullscreen modal overlays — rendered above MacroPad but below IdlePill
+        if (isFullscreenMouseActive) FullscreenMouseOverlay()
+        if (isFullscreenKeyboardActive) KeyboardScreen(
+            modifier = Modifier.fillMaxSize(),
+            forcedLayout = fullscreenKeyboardLayout,
+        )
 
         // Idle Pill + Pill Menu overlay
         IdlePill()
