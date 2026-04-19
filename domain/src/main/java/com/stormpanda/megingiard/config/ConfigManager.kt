@@ -314,9 +314,10 @@ object ConfigManager {
                 macro.copy(id = newId, name = importedName(macro.name))
             }
 
-            // Collect referenced legacy macros not already in the profile (v2 migration)
-            val referencedIds = profile.layouts
-                .flatMap { it.buttons }
+            // Collect referenced legacy macros not already in the profile (v2 migration).
+            // Include both layout buttons and legacy top-level buttons so that v2
+            // imports (where buttons haven't been migrated to layouts yet) are covered.
+            val referencedIds = (profile.layouts.flatMap { it.buttons } + profile.buttons)
                 .mapNotNull { (it.action as? PadAction.Macro)?.macroId }
                 .toSet()
             val adoptedLegacy = referencedIds
@@ -351,13 +352,21 @@ object ConfigManager {
                 )
             }
 
+            // Preserve the source profile's active layout selection when possible.
+            // Build a mapping from old layout IDs to new ones so we can look up the
+            // remapped ID for the imported profile's activeLayoutId.
+            val layoutIdMap = profile.layouts.zip(remappedLayouts).associate { (old, new) -> old.id to new.id }
+            val preservedActiveLayoutId = layoutIdMap[profile.activeLayoutId]
+                ?: remappedLayouts.firstOrNull()?.id
+                ?: profile.activeLayoutId
+
             val importedProfile = profile.copy(
                 id = newProfileId,
                 name = importedName(profile.name),
                 layouts = remappedLayouts,
                 buttons = remappedButtons,
                 macros = allMacros,
-                activeLayoutId = remappedLayouts.firstOrNull()?.id ?: profile.activeLayoutId,
+                activeLayoutId = preservedActiveLayoutId,
             )
             MacroPadState.addProfile(importedProfile)
             AppLog.d(TAG, "imported profile '${profile.name}' → $newProfileId (${allMacros.size} macros)")

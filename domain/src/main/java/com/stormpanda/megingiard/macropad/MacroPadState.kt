@@ -147,6 +147,17 @@ object MacroPadState {
                 )
             }
 
+            // Ensure every profile has at least one layout (guard against
+            // malformed or legacy data that has neither buttons nor layouts).
+            if (p.layouts.isEmpty()) {
+                needsSave = true
+                val layoutId = UUID.randomUUID().toString()
+                p = p.copy(
+                    layouts        = listOf(PadLayout(id = layoutId, name = p.name)),
+                    activeLayoutId = layoutId,
+                )
+            }
+
             // ── Migration 3: adopt referenced global macros ──────────────────
             if (globalMacros.isNotEmpty() && p.macros.isEmpty()) {
                 val referencedIds = p.layouts

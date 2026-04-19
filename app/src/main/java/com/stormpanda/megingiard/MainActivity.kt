@@ -26,6 +26,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
@@ -260,7 +261,7 @@ class MainActivity : ComponentActivity() {
                 if (!mirrorStopRequested) return@LaunchedEffect
                 AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
                 AppStateManager.consumeMirrorStopRequest()
-                val stopIntent = Intent(this@MainActivity, com.stormpanda.megingiard.mirror.ScreenCaptureService::class.java).apply {
+                val stopIntent = Intent(this@MainActivity, ScreenCaptureService::class.java).apply {
                     action = "STOP"
                 }
                 startService(stopIntent)

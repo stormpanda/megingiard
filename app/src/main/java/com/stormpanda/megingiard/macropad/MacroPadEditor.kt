@@ -123,9 +123,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
         onDispose {
             val ap = MacroPadState.activeProfile.value
             CoroutineScope(Dispatchers.IO).launch {
-                if (ap?.enableKeyboard != false) KeyInjector.start(context)
-                if (ap?.enableGamepad != false) GamepadInjector.start(context)
-                if (ap?.enableMouse != false) MouseInjector.start(context)
+                if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                if (ap?.enableMouse == true) MouseInjector.start(context)
             }
         }
     }

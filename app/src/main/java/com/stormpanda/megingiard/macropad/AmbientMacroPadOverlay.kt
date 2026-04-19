@@ -98,9 +98,9 @@ internal fun AmbientMacroPadOverlay() {
         withContext(Dispatchers.IO) {
             val ap = MacroPadState.activeProfile.value
             AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-            if (ap?.enableKeyboard != false) KeyInjector.start(context)
-            if (ap?.enableGamepad != false) GamepadInjector.start(context)
-            if (ap?.enableMouse != false) MouseInjector.start(context)
+            if (ap?.enableKeyboard == true) KeyInjector.start(context)
+            if (ap?.enableGamepad == true) GamepadInjector.start(context)
+            if (ap?.enableMouse == true) MouseInjector.start(context)
         }
     }
 
@@ -118,9 +118,9 @@ internal fun AmbientMacroPadOverlay() {
             withContext(Dispatchers.IO) {
                 val ap = MacroPadState.activeProfile.value
                 AppLog.d(TAG, "PillMenu closed → restarting injectors")
-                if (ap?.enableKeyboard != false) KeyInjector.start(context)
-                if (ap?.enableGamepad != false) GamepadInjector.start(context)
-                if (ap?.enableMouse != false) MouseInjector.start(context)
+                if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                if (ap?.enableMouse == true) MouseInjector.start(context)
             }
         }
     }
