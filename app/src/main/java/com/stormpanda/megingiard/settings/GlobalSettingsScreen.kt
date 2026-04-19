@@ -537,9 +537,9 @@ private fun ImportPreviewDialog(
             if ("macropad_settings" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
             }
-            if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
+            if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                 Text(
-                    text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.macros.size)}",
+                    text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.profiles.sumOf { it.macros.size })}",
                     color = colors.onSurfaceSecondary,
                     fontSize = 12.sp,
                 )

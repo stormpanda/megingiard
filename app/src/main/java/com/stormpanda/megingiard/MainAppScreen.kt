@@ -300,12 +300,12 @@ private fun IncomingImportDialog(
                     )
                 }
                 Spacer(Modifier.height(4.dp))
-                if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
+                if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                     Text(
                         stringResource(
                             R.string.config_import_section_macropad,
                             export.profiles.size,
-                            export.macros.size,
+                            export.profiles.sumOf { it.macros.size },
                         ),
                         color = colors.onSurface,
                         fontSize = 13.sp,
