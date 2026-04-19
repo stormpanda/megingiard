@@ -117,8 +117,8 @@ internal fun PadSurface(
     val context      = LocalContext.current
     val colors       = LocalAppColors.current
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
-    val overlayVisible      by viewModel.overlayVisible.collectAsState()
-    val overlayVisibleState  = rememberUpdatedState(overlayVisible)
+    val isPillMenuOpen      by viewModel.isPillMenuOpen.collectAsState()
+    val isPillMenuOpenState  = rememberUpdatedState(isPillMenuOpen)
 
     // Create hit-test engine with density-aware dp→px converter
     val engine = remember(profile, layout) {
@@ -151,7 +151,7 @@ internal fun PadSurface(
                             val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
 
                             // Block input while pill menu overlay is open
-                            if (overlayVisibleState.value && event.type != PointerEventType.Release) {
+                            if (isPillMenuOpenState.value && event.type != PointerEventType.Release) {
                                 event.changes.forEach { it.consume() }
                                 continue
                             }

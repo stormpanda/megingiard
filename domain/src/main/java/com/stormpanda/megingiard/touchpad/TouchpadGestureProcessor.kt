@@ -75,7 +75,7 @@ class TouchpadGestureProcessor(
         overlayOpen: Boolean,
     ) {
         if (overlayOpen) {
-            AppStateManager.hideOverlay()
+            AppStateManager.closePillMenu()
             return
         }
 

@@ -44,8 +44,6 @@ Each button supports one of the following actions:
 | `MouseButton`     | BTN_LEFT/RIGHT/MIDDLE/4/5 | `mouseinjector_arm64`   |
 | `ScrollWheel`     | REL_WHEEL via uinput      | `mouseinjector_arm64`   |
 | `TrackpointMove`  | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
-| `MouseLeftClick`  | BTN_LEFT (legacy alias)   | `mouseinjector_arm64`   |
-| `MouseRightClick` | BTN_RIGHT (legacy alias)  | `mouseinjector_arm64`   |
 | `AmbientPeek`     | App-level peek toggle     | _(none)_                |
 
 - `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). The `keyinjector_arm64` binary accepts keycodes in the range **1–464** (extended from the original 1–254 to include Fn).
@@ -60,7 +58,7 @@ Each button supports one of the following actions:
 - These flags are **not user-configurable** directly. They are automatically recomputed whenever the button list changes (add / edit / delete) by inspecting the action types of all buttons:
   - `enableKeyboard = true` if any button has a `KeyboardKey` action.
   - `enableGamepad = true` if any button has a `GamepadButton` action.
-  - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, `TrackpointMove`, `MouseLeftClick`, or `MouseRightClick` action.
+  - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` action.
 - Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
 - When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
@@ -162,7 +160,7 @@ Compose UI (MacroPadScreen)
       │  DOWN / UP touch events per button id
       ├──── PadAction.KeyboardKey   → KeyInjector (keyinjector_arm64)
       ├──── PadAction.GamepadButton → GamepadInjector (gamepadinjector_arm64)
-      ├──── PadAction.MouseLeftClick/ RightClick → MouseInjector (mouseinjector_arm64)
+      ├──── PadAction.MouseButton  → MouseInjector (mouseinjector_arm64)
       └──── PadAction.TrackpointMove → MouseInjector.moveMouse()
 
 MacroPadState (object singleton)
@@ -257,10 +255,7 @@ PadProfile
               MouseButton(button: MouseButton enum)
               ScrollWheel
               TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
-              MouseLeftClick / MouseRightClick  (legacy)
 ```
-
-Legacy fields `hasTrackpoint`, `trackpointPosX/Y`, `trackpointSize`, `padShape`, and `padSizePercent` are kept as `@Suppress("unused")` in `PadProfile` for JSON deserialization compatibility. Profiles loaded with `hasTrackpoint=true` are migrated to a `TrackpointMove` button in `MacroPadState.loadFrom()`. Profiles loaded without a `layouts` list are migrated: a default layout named "Layout 1" is created from the profile's legacy `buttons` list.
 
 ### Icon Rendering — Material Symbols Font
 

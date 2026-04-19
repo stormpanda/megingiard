@@ -194,9 +194,7 @@ class MacroPadHitTestEngine(
             is PadAction.GamepadButton -> !profile.enableGamepad
             is PadAction.MouseButton,
             is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove,
-            is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick -> !profile.enableMouse
+            is PadAction.TrackpointMove -> !profile.enableMouse
             is PadAction.Macro -> false
             is PadAction.AmbientPeek -> false
             is PadAction.LayoutNext,
@@ -221,9 +219,7 @@ class MacroPadHitTestEngine(
             is PadAction.GamepadButton -> if (!profile.enableGamepad) MACROPAD_DEVICE_DISABLED_GAMEPAD else null
             is PadAction.MouseButton,
             is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove,
-            is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
+            is PadAction.TrackpointMove -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
             is PadAction.Macro -> null
             is PadAction.AmbientPeek -> null
             is PadAction.LayoutNext,

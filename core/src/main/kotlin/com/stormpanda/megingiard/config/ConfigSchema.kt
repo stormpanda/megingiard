@@ -1,16 +1,8 @@
 package com.stormpanda.megingiard.config
 
-import com.stormpanda.megingiard.macropad.Macro
 import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
-
-/** @deprecated v2 legacy — folders removed. Used only for migrating old exports. */
-@Serializable
-data class LegacyMacroFolder(
-    val id: String,
-    val name: String,
-)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schema version & MIME type
@@ -18,10 +10,7 @@ data class LegacyMacroFolder(
 
 /**
  * Schema version — integer, incremented on breaking changes.
- * v1: per-section typed data classes (removed in v2).
- * v2: flat DataStore key/value map grouped by section name, separate macros/macroFolders.
- * v3: macros embedded inside PadProfile.macros; macroFolders removed.
- *     Legacy v2 fields are kept for parsing old exports (migration on import).
+ * v3: macros embedded inside PadProfile.macros; flat DataStore key/value map grouped by section.
  */
 const val SCHEMA_VERSION = 3
 
@@ -40,8 +29,6 @@ const val MGRD_MIME_TYPE = "application/vnd.megingiard.config+json"
  * setting requires zero changes to the config package — only SettingsManager.
  *
  * MacroPad profiles carry their own macros (`PadProfile.macros`).
- * The top-level [macros] and [macroFolders] fields are v2 legacy — only present
- * in older exports. On import, [ConfigManager] migrates them into profiles.
  */
 @Serializable
 data class MegingiardExport(
@@ -51,10 +38,6 @@ data class MegingiardExport(
     /** Settings grouped by section: `{"global": {"accent_color": 123, ...}, "mirror": {...}}` */
     val settings: Map<String, Map<String, JsonElement>> = emptyMap(),
     val profiles: List<PadProfile> = emptyList(),
-    /** @deprecated v2 legacy — macros now live inside PadProfile.macros. Present only in v2 imports. */
-    val macros: List<Macro> = emptyList(),
-    /** @deprecated v2 legacy — folders removed. Present only in v2 imports. */
-    val macroFolders: List<LegacyMacroFolder> = emptyList(),
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -47,7 +47,7 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val offsetY: StateFlow<Float> = MirrorViewportController.offsetY
 
     // ── Overlay/settings ────────────────────────────────────────────────────
-    val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
+    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val isTouching: StateFlow<Boolean> = AppStateManager.isTouching
     val overlayTimeoutMs: StateFlow<Long> = MutableStateFlow(MIRROR_CONTROLS_AUTO_HIDE_MS)
@@ -59,7 +59,6 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
 
     // ── UI interactions ─────────────────────────────────────────────────────
     fun setTouching(touching: Boolean) = AppStateManager.setTouching(touching)
-    fun triggerOverlay() = AppStateManager.triggerOverlay()
 
     // ── Viewport operations ─────────────────────────────────────────────────
     fun applyZoomPan(zoom: Float, panX: Float, panY: Float) {

@@ -8,8 +8,6 @@ import kotlinx.serialization.Serializable
 // Shape enums
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum class PadShape { SQUARE, CIRCLE }  // retained for JSON back-compat; no longer used in UI
-
 enum class ButtonShape { SQUARE, CIRCLE }
 
 /**
@@ -85,7 +83,6 @@ sealed class PadAction {
 
     /**
      * Injects a mouse button event via mouseinjector_arm64.
-     * Replaces the legacy MouseLeftClick / MouseRightClick data objects.
      */
     @Serializable
     @SerialName("mouse_button")
@@ -103,8 +100,7 @@ sealed class PadAction {
     /**
      * Marks this element as a relative-mouse trackpoint area.
      * No key injection; drag deltas are forwarded to MouseInjector.moveMouse().
-     * [size] controls the rendered circle diameter; defaults to MEDIUM for JSON back-compat
-     * with old profiles that stored this as a bare `data object` with no body.
+     * [size] controls the rendered circle diameter.
      */
     @Serializable
     @SerialName("trackpoint")
@@ -184,20 +180,6 @@ sealed class PadAction {
     data class FullScreenKeyboard(
         val layout: KbLayout = KbLayout.QWERTZ,
     ) : PadAction()
-
-    // ── Legacy: retained for JSON back-compat only ─────────────────────────
-    // Old profiles saved these types before MouseButton was introduced.
-    // They are deserialized normally; the app treats them as MouseButton(LEFT/RIGHT).
-
-    @Suppress("unused")
-    @Serializable
-    @SerialName("mouse_left_click")
-    data object MouseLeftClick : PadAction()
-
-    @Suppress("unused")
-    @Serializable
-    @SerialName("mouse_right_click")
-    data object MouseRightClick : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,9 +268,6 @@ data class PadLayout(
  * @param enableGamepad    Whether the gamepad virtual device is active (auto-computed).
  * @param enableMouse      Whether the mouse virtual device is active (auto-computed).
  * @param isDefault        Whether this is a restorable default profile.
- * @param buttons          Legacy: kept for JSON back-compat migration. Profiles saved before
- *                         the layouts restructure stored buttons here. [MacroPadState.loadFrom]
- *                         migrates these into [layouts] on load.
  */
 @Serializable
 data class PadProfile(
@@ -301,12 +280,4 @@ data class PadProfile(
     val enableGamepad: Boolean = false,
     val enableMouse: Boolean = false,
     val isDefault: Boolean = false,
-    // Legacy fields — kept for JSON deserialization of existing profiles; ignored at runtime.
-    @Suppress("unused") val buttons: List<PadButton> = emptyList(),
-    @Suppress("unused") val hasTrackpoint: Boolean = false,
-    @Suppress("unused") val trackpointPosX: Float = 0.5f,
-    @Suppress("unused") val trackpointPosY: Float = 0.5f,
-    @Suppress("unused") val trackpointSize: Float = 2f,
-    @Suppress("unused") val padShape: PadShape = PadShape.SQUARE,
-    @Suppress("unused") val padSizePercent: Int = 80,
 )

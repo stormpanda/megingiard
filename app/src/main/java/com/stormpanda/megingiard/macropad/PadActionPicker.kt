@@ -95,8 +95,6 @@ internal fun PadAction.categoryResId(): Int = when (this) {
     is PadAction.TrackpointMove     -> R.string.macropad_action_trackpoint
     is PadAction.Macro              -> R.string.macropad_action_macro
     is PadAction.AmbientPeek        -> R.string.macropad_action_ambient_peek
-    is PadAction.MouseLeftClick     -> R.string.macropad_action_mouse_button
-    is PadAction.MouseRightClick    -> R.string.macropad_action_mouse_button
     is PadAction.LayoutNext         -> R.string.macropad_action_layout_next
     is PadAction.LayoutPrevious     -> R.string.macropad_action_layout_previous
     is PadAction.ProfileSwitcher    -> R.string.macropad_action_profile_switcher
@@ -111,8 +109,7 @@ internal fun PadAction.categoryResId(): Int = when (this) {
 internal fun PadAction.toCategory(): ActionCategory = when (this) {
     is PadAction.KeyboardKey                                                   -> ActionCategory.KEYBOARD_KEY
     is PadAction.GamepadButton                                                 -> ActionCategory.GAMEPAD_BUTTON
-    is PadAction.MouseButton, is PadAction.MouseLeftClick,
-    is PadAction.MouseRightClick                                               -> ActionCategory.MOUSE_BUTTON
+    is PadAction.MouseButton                                                       -> ActionCategory.MOUSE_BUTTON
     is PadAction.ScrollWheel                                                   -> ActionCategory.SCROLL_WHEEL
     is PadAction.TrackpointMove                                                -> ActionCategory.TRACKPOINT
     is PadAction.Macro                                                         -> ActionCategory.MACRO
@@ -158,8 +155,6 @@ internal fun PadAction.displayLabel(): String {
             context.getString(R.string.macropad_display_macro, macroName)
         }
         is PadAction.AmbientPeek     -> context.getString(R.string.macropad_action_ambient_peek)
-        is PadAction.MouseLeftClick   -> context.getString(R.string.macropad_display_mouse_button, "Left")
-        is PadAction.MouseRightClick  -> context.getString(R.string.macropad_display_mouse_button, "Right")
         is PadAction.LayoutNext         -> context.getString(R.string.macropad_action_layout_next)
         is PadAction.LayoutPrevious     -> context.getString(R.string.macropad_action_layout_previous)
         is PadAction.ProfileSwitcher    -> context.getString(R.string.macropad_action_profile_switcher)
@@ -267,8 +262,6 @@ internal fun ActionPicker(
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
             is PadAction.AmbientPeek,
-            is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick,
             is PadAction.LayoutNext,
             is PadAction.LayoutPrevious,
             is PadAction.ProfileSwitcher,

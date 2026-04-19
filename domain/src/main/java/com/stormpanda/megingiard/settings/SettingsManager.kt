@@ -13,7 +13,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
-import com.stormpanda.megingiard.macropad.Macro
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.VignetteShape
@@ -75,7 +74,6 @@ object SettingsManager {
     // MacroPad settings
     private val KEY_MACROPAD_PROFILES           = stringPreferencesKey("macropad_profiles")
     private val KEY_MACROPAD_ACTIVE_PROFILE_ID  = stringPreferencesKey("macropad_active_profile_id")
-    private val KEY_MACROPAD_MACROS             = stringPreferencesKey("macropad_macros")
 
     // Keyboard settings
     private val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
@@ -297,17 +295,14 @@ object SettingsManager {
                 _macropadAmbientPreview.value = prefs[KEY_MACROPAD_AMBIENT_PREVIEW] ?: false
                 _macropadAmbientApplyTheme.value = prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] ?: false
 
-                // MacroPad profiles (with global macros for migration)
+                // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
-                val globalMacros = prefs[KEY_MACROPAD_MACROS]?.let { json ->
-                    runCatching { macropadJson.decodeFromString<List<Macro>>(json) }.getOrElse { emptyList() }
-                } ?: emptyList()
                 if (macropadProfilesJson != null) {
                     val profiles = runCatching {
                         macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
                     }.getOrElse { emptyList() }
                     val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
-                    MacroPadState.loadFrom(profiles, activeId, globalMacros)
+                    MacroPadState.loadFrom(profiles, activeId)
                 }
             }
         }

@@ -69,8 +69,8 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
     val effectiveFullscreen = forcedLayout != null || kbFullscreen
     val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsState()
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
-    val overlayVisible by viewModel.overlayVisible.collectAsState()
-    val overlayVisibleState = rememberUpdatedState(overlayVisible)
+    val isPillMenuOpen by viewModel.isPillMenuOpen.collectAsState()
+    val isPillMenuOpenState = rememberUpdatedState(isPillMenuOpen)
     val colors = LocalAppColors.current
     val accentColor = colors.accent
     val controller = viewModel.controller
@@ -128,11 +128,11 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Main)
                         // While the pill menu overlay is visible, block new key input.
-                        if (overlayVisibleState.value) {
+                        if (isPillMenuOpenState.value) {
                             when (event.type) {
                                 PointerEventType.Press -> {
                                     if (event.changes.none { it.isConsumed }) {
-                                        viewModel.hideOverlay()
+                                        viewModel.closePillMenu()
                                     }
                                     event.changes.forEach { it.consume() }
                                     continue

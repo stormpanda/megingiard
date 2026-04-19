@@ -76,7 +76,7 @@ fun MirrorScreen(modifier: Modifier = Modifier, viewModel: MirrorViewModel = vie
     val animOffsetX = remember { Animatable(viewModel.offsetX.value) }
     val animOffsetY = remember { Animatable(viewModel.offsetY.value) }
 
-    val showControls by viewModel.overlayVisible.collectAsState()
+    val showControls by viewModel.isPillMenuOpen.collectAsState()
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val edgeZonePx = with(density) { MR_SWIPE_EDGE_ZONE.toPx() }
 

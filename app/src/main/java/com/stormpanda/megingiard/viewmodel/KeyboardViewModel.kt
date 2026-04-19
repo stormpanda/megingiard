@@ -31,17 +31,17 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     val kbFullscreen: StateFlow<Boolean> = SettingsManager.kbFullscreen
     val kbMouseBtnPos: StateFlow<com.stormpanda.megingiard.keyboard.KbMouseBtnPos> = SettingsManager.kbMouseBtnPos
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
+    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
 
     val controller = KeyRepeatController(viewModelScope)
 
-    fun hideOverlay() = AppStateManager.hideOverlay()
+    fun closePillMenu() = AppStateManager.closePillMenu()
 
     fun startInjectors(context: Context) {
         viewModelScope.launch {
             KeyboardState.reset()
-            AppStateManager.overlayVisible.first { !it }
-            AppLog.d(TAG, "overlay closed, starting KeyInjector + MouseInjector")
+            AppStateManager.isPillMenuOpen.first { !it }
+            AppLog.d(TAG, "pill menu closed, starting KeyInjector + MouseInjector")
             withContext(Dispatchers.IO) {
                 KeyInjector.start(context)
                 MouseInjector.start(context)

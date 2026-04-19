@@ -29,20 +29,20 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
 
     val activeProfile: StateFlow<PadProfile?> = MacroPadState.activeProfile
     val activeLayout: StateFlow<PadLayout?> = MacroPadState.activeLayout
-    val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
+    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
 
     fun createHitTestEngine(buttonUnitDpToPx: (Float) -> Float) =
         MacroPadHitTestEngine(buttonUnitDpToPx)
 
     fun startInjectors(context: Context) {
         viewModelScope.launch {
-            AppStateManager.overlayVisible.first { !it }
+            AppStateManager.isPillMenuOpen.first { !it }
             withContext(Dispatchers.IO) {
                 val ap = MacroPadState.activeProfile.value
                 AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-                if (ap?.enableKeyboard != false) KeyInjector.start(context)
-                if (ap?.enableGamepad != false) GamepadInjector.start(context)
-                if (ap?.enableMouse != false) MouseInjector.start(context)
+                if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                if (ap?.enableMouse == true) MouseInjector.start(context)
             }
         }
     }

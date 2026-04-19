@@ -866,9 +866,7 @@ private fun ButtonListItem(
         is PadAction.GamepadButton               -> !enableGamepad
         is PadAction.MouseButton,
         is PadAction.ScrollWheel,
-        is PadAction.TrackpointMove,
-        is PadAction.MouseLeftClick,
-        is PadAction.MouseRightClick             -> !enableMouse
+        is PadAction.TrackpointMove              -> !enableMouse
         is PadAction.Macro                       -> !enableGamepad
         is PadAction.AmbientPeek                 -> false
         is PadAction.LayoutNext,

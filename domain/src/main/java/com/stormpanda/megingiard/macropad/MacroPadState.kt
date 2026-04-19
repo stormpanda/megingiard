@@ -33,9 +33,7 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
         it.action is PadAction.ScrollWheel    ||
         it.action is PadAction.TrackpointMove ||
         it.action is PadAction.FullScreenMouse ||
-        it.action is PadAction.MirrorTouchProjection ||
-        it.action is PadAction.MouseLeftClick ||
-        it.action is PadAction.MouseRightClick
+        it.action is PadAction.MirrorTouchProjection
     }
     return if (enableKeyboard == kb && enableGamepad == gp && enableMouse == ms) this
     else copy(enableKeyboard = kb, enableGamepad = gp, enableMouse = ms)
@@ -87,68 +85,23 @@ object MacroPadState {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Restores profiles from persistence. Handles two legacy migration paths:
-     * 1. **Trackpoint migration:** Old profiles with `hasTrackpoint=true` → TrackpointMove button.
-     * 2. **Layouts migration:** Old profiles with `buttons` but no `layouts` →
-     *    single layout wrapping the existing buttons.
+     * Restores profiles from persistence. Ensures every profile has at least
+     * one layout and syncs device flags.
      *
      * @param profiles         Deserialized profiles from DataStore.
      * @param activeProfileId  Persisted active profile ID.
-     * @param globalMacros     Global macros from the old per-app macro library (migrated into
-     *                         each profile that references them). Empty list if already migrated.
      */
     internal fun loadFrom(
         profiles: List<PadProfile>,
         activeProfileId: String?,
-        globalMacros: List<Macro> = emptyList(),
     ) {
         var needsSave = false
 
-        val migrated = profiles.map { profile ->
+        val processed = profiles.map { profile ->
             var p = profile
 
-            // ── Migration 1: trackpoint flags → TrackpointMove button ────────
-            if (p.hasTrackpoint) {
-                needsSave = true
-                val tpSize = when {
-                    p.trackpointSize <= 1.5f -> TrackpointSize.SMALL
-                    p.trackpointSize <= 2.5f -> TrackpointSize.MEDIUM
-                    else                     -> TrackpointSize.LARGE
-                }
-                val tpButton = PadButton(
-                    id          = UUID.randomUUID().toString(),
-                    label       = "",
-                    posX        = p.trackpointPosX,
-                    posY        = p.trackpointPosY,
-                    buttonSize  = ButtonSize.SIZE_1X1,
-                    buttonShape = ButtonShape.CIRCLE,
-                    action      = PadAction.TrackpointMove(tpSize),
-                )
-                // Buttons may still be in the legacy `buttons` field at this point.
-                p = p.copy(
-                    buttons       = p.buttons + tpButton,
-                    hasTrackpoint = false,
-                )
-            }
-
-            // ── Migration 2: flat buttons → single layout ────────────────────
-            if (p.layouts.isEmpty() && p.buttons.isNotEmpty()) {
-                needsSave = true
-                val layoutId = UUID.randomUUID().toString()
-                val layout = PadLayout(
-                    id      = layoutId,
-                    name    = p.name,
-                    buttons = p.buttons,
-                )
-                p = p.copy(
-                    layouts       = listOf(layout),
-                    activeLayoutId = layoutId,
-                    buttons       = emptyList(),
-                )
-            }
-
             // Ensure every profile has at least one layout (guard against
-            // malformed or legacy data that has neither buttons nor layouts).
+            // malformed data that has no layouts).
             if (p.layouts.isEmpty()) {
                 needsSave = true
                 val layoutId = UUID.randomUUID().toString()
@@ -158,23 +111,10 @@ object MacroPadState {
                 )
             }
 
-            // ── Migration 3: adopt referenced global macros ──────────────────
-            if (globalMacros.isNotEmpty() && p.macros.isEmpty()) {
-                val referencedIds = p.layouts
-                    .flatMap { it.buttons }
-                    .mapNotNull { (it.action as? PadAction.Macro)?.macroId }
-                    .toSet()
-                val adopted = globalMacros.filter { it.id in referencedIds }
-                if (adopted.isNotEmpty()) {
-                    needsSave = true
-                    p = p.copy(macros = adopted)
-                }
-            }
-
             p
         }
 
-        val withFlags = migrated.map { profile ->
+        val withFlags = processed.map { profile ->
             profile.withSyncedDeviceFlags().also { synced ->
                 if (synced != profile) needsSave = true
             }
@@ -182,7 +122,7 @@ object MacroPadState {
 
         _profiles.value = withFlags
         _activeProfileId.value = activeProfileId
-        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$activeProfileId, migrated=$needsSave")
+        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$activeProfileId, needsSave=$needsSave")
         if (needsSave) SettingsManager.saveMacroPadData()
     }
 

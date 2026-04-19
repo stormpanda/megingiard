@@ -229,11 +229,4 @@ object AppStateManager {
         }
     }
 
-    // ── Backward compat aliases ─────────────────────────────────────────────
-    // Used by KeyboardScreen, MacroPadScreen, MirrorScreen, *ViewModel,
-    // TouchpadGestureProcessor. These map the old "overlay" naming to the
-    // new Pill Menu API so callers do not all need to be renamed at once.
-    val overlayVisible: StateFlow<Boolean> = isPillMenuOpen
-    fun triggerOverlay() = openPillMenu()
-    fun hideOverlay() = closePillMenu()
 }
