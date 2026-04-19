@@ -239,6 +239,7 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_vignette_transition_hard">Hard</string>
     <string name="settings_macropad_vignette_opacity">Opacity</string>
     <string name="settings_macropad_vignette_color">Color</string>
+    <string name="ambient_preview">Preview</string>
     <string name="settings_macropad_vignette_shape">Shape</string>
     <string name="settings_macropad_vignette_shape_radial">Radial</string>
     <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
