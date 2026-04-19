@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,12 +26,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -65,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
+import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -90,7 +96,7 @@ private val ED_GRID_TOGGLE_MARGIN = 8.dp
 /**
  * Full-screen MacroPad layout editor.
  *
- * Opened from [MacroPadToolSettings]. Allows the user to:
+ * Opened from the Pill Menu. Allows the user to:
  * - Create, rename, and delete profiles
  * - Add, configure, reposition, and delete buttons
  * - Toggle the trackpoint area
@@ -117,15 +123,15 @@ fun MacroPadEditor(onDone: () -> Unit) {
         onDispose {
             val ap = MacroPadState.activeProfile.value
             CoroutineScope(Dispatchers.IO).launch {
-                if (ap?.enableKeyboard != false) KeyInjector.start(context)
-                if (ap?.enableGamepad != false) GamepadInjector.start(context)
-                if (ap?.enableMouse != false) MouseInjector.start(context)
+                if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                if (ap?.enableMouse == true) MouseInjector.start(context)
             }
         }
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
-    val macros by MacroState.macros.collectAsState()
+    val activeLayout by MacroPadState.activeLayout.collectAsState()
     var showMacroListEditor      by remember { mutableStateOf(false) }
     var showAddButton            by remember { mutableStateOf(false) }
     var showAddMacroButton       by remember { mutableStateOf(false) }
@@ -135,11 +141,14 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var showNewProfileDialog     by remember { mutableStateOf(false) }
     var showRenameProfileDialog  by remember { mutableStateOf(false) }
     var showDeleteProfileConfirm by remember { mutableStateOf(false) }
+    var showNewLayoutDialog      by remember { mutableStateOf(false) }
+    var layoutPendingDelete      by remember { mutableStateOf<PadLayout?>(null) }
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
     val anyOverlayVisible = showMacroListEditor || showAddButton || showAddMacroButton ||
         editingButtonActive || buttonPendingDelete != null ||
+        showNewLayoutDialog || layoutPendingDelete != null ||
         showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm
     BackHandler(enabled = anyOverlayVisible) {
         when {
@@ -148,6 +157,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
             showAddMacroButton       -> showAddMacroButton = false
             editingButtonActive      -> { editingButtonActive = false; editingButton = null }
             buttonPendingDelete != null -> buttonPendingDelete = null
+            showNewLayoutDialog      -> showNewLayoutDialog = false
+            layoutPendingDelete != null -> layoutPendingDelete = null
             showNewProfileDialog     -> showNewProfileDialog = false
             showRenameProfileDialog  -> showRenameProfileDialog = false
             showDeleteProfileConfirm -> showDeleteProfileConfirm = false
@@ -187,15 +198,18 @@ fun MacroPadEditor(onDone: () -> Unit) {
             }
         } else {
             EditorBody(
-                profile           = profile,
-                accentColor       = colors.accent,
-                hasMacros         = macros.isNotEmpty(),
-                onManageMacros    = { showMacroListEditor = true },
-                onAddButton       = { showAddButton = true },
-                onAddMacroButton  = { showAddMacroButton = true },
-                onEditButton      = { btn -> editingButton = btn; editingButtonActive = true },
-                onDeleteRequested = { btn -> buttonPendingDelete = btn },
-                modifier          = Modifier.padding(innerPadding),
+                profile                 = profile,
+                layout                  = activeLayout,
+                accentColor             = colors.accent,
+                hasMacros               = profile.macros.isNotEmpty(),
+                onManageMacros          = { showMacroListEditor = true },
+                onAddButton             = { showAddButton = true },
+                onAddMacroButton        = { showAddMacroButton = true },
+                onEditButton            = { btn -> editingButton = btn; editingButtonActive = true },
+                onDeleteRequested       = { btn -> buttonPendingDelete = btn },
+                onNewLayout             = { showNewLayoutDialog = true },
+                onDeleteLayoutRequested = { lay -> layoutPendingDelete = lay },
+                modifier                = Modifier.padding(innerPadding),
             )
         }
     }
@@ -213,7 +227,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
             button      = null,
             accentColor = colors.accent,
             onConfirm   = { newBtn ->
-                MacroPadState.updateProfile(profile.copy(buttons = profile.buttons + newBtn))
+                val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
+                MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
                 showAddButton = false
             },
             onDismiss      = { showAddButton = false },
@@ -222,13 +237,14 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
     // Add macro button overlay
     if (showAddMacroButton && profile != null) {
-        val firstMacroId = MacroState.macros.value.firstOrNull()?.id ?: ""
+        val firstMacroId = profile.macros.firstOrNull()?.id ?: ""
         ButtonEditDialog(
             button        = null,
             accentColor   = colors.accent,
             initialAction = PadAction.Macro(firstMacroId),
             onConfirm      = { newBtn ->
-                MacroPadState.updateProfile(profile.copy(buttons = profile.buttons + newBtn))
+                val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
+                MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
                 showAddMacroButton = false
             },
             onDismiss      = { showAddMacroButton = false },
@@ -241,8 +257,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
             button      = editingButton,
             accentColor = colors.accent,
             onConfirm   = { updated ->
-                MacroPadState.updateProfile(
-                    profile.copy(buttons = profile.buttons.map { if (it.id == updated.id) updated else it })
+                val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
+                MacroPadState.updateLayout(
+                    layout.copy(buttons = layout.buttons.map { if (it.id == updated.id) updated else it })
                 )
                 editingButtonActive = false
                 editingButton = null
@@ -261,12 +278,48 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         else
                             pendingBtn.label,
             onConfirm = {
-                MacroPadState.updateProfile(
-                    profile.copy(buttons = profile.buttons.filter { it.id != pendingBtn.id })
-                )
+                val layout = MacroPadState.activeLayout.value
+                if (layout != null) {
+                    MacroPadState.updateLayout(
+                        layout.copy(buttons = layout.buttons.filter { it.id != pendingBtn.id })
+                    )
+                }
                 buttonPendingDelete = null
             },
             onDismiss = { buttonPendingDelete = null },
+        )
+    }
+
+    // New layout (name input + template selection)
+    if (showNewLayoutDialog && profile != null) {
+        val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
+        NewLayoutOverlay(
+            profiles    = profiles,
+            accentColor = colors.accent,
+            onConfirm   = { name, templateButtons ->
+                val newLayout = PadLayout(
+                    id      = UUID.randomUUID().toString(),
+                    name    = name.ifBlank { defaultLayoutName },
+                    buttons = templateButtons,
+                )
+                MacroPadState.addLayout(newLayout)
+                showNewLayoutDialog = false
+            },
+            onDismiss = { showNewLayoutDialog = false },
+        )
+    }
+
+    // Delete layout confirmation
+    if (layoutPendingDelete != null) {
+        val pendingLayout = layoutPendingDelete!!
+        InlineConfirmDeleteOverlay(
+            title     = stringResource(R.string.macropad_editor_delete_layout),
+            body      = pendingLayout.name,
+            onConfirm = {
+                MacroPadState.deleteLayout(pendingLayout.id)
+                layoutPendingDelete = null
+            },
+            onDismiss = { layoutPendingDelete = null },
         )
     }
 
@@ -418,29 +471,36 @@ private fun EditorTopBar(
 
 @Composable
 private fun EditorBody(
-    profile:           PadProfile,
-    accentColor:       Color,
-    hasMacros:         Boolean,
-    onManageMacros:    () -> Unit,
-    onAddButton:       () -> Unit,
-    onAddMacroButton:  () -> Unit,
-    onEditButton:      (PadButton) -> Unit,
-    onDeleteRequested: (PadButton) -> Unit,
-    modifier:          Modifier = Modifier,
+    profile:                 PadProfile,
+    layout:                  PadLayout?,
+    accentColor:             Color,
+    hasMacros:               Boolean,
+    onManageMacros:          () -> Unit,
+    onAddButton:             () -> Unit,
+    onAddMacroButton:        () -> Unit,
+    onEditButton:            (PadButton) -> Unit,
+    onDeleteRequested:       (PadButton) -> Unit,
+    onNewLayout:             () -> Unit,
+    onDeleteLayoutRequested: (PadLayout) -> Unit,
+    modifier:                Modifier = Modifier,
 ) {
     val colors     = LocalAppColors.current
     var gridMode   by remember { mutableStateOf(GridMode.OFF) }
     val profileRef by rememberUpdatedState(profile)
+    val layoutRef  by rememberUpdatedState(layout)
 
     val lazyListState = rememberLazyListState()
-    // Items before buttons: toolbar(0), canvas(1), divider_1(2) → offset = 3
+    // Items before buttons: layouts(0), toolbar(1), canvas(2), divider_1(3) → offset = 4
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val offset     = 3
-        val newButtons = profileRef.buttons.toMutableList()
-        val fromIdx    = (from.index - offset).coerceIn(0, newButtons.lastIndex)
-        val toIdx      = (to.index - offset).coerceIn(0, newButtons.lastIndex)
-        newButtons.add(toIdx, newButtons.removeAt(fromIdx))
-        MacroPadState.updateProfile(profileRef.copy(buttons = newButtons))
+        val offset     = 4
+        val curLayout  = layoutRef
+        if (curLayout != null) {
+            val newButtons = curLayout.buttons.toMutableList()
+            val fromIdx    = (from.index - offset).coerceIn(0, newButtons.lastIndex)
+            val toIdx      = (to.index - offset).coerceIn(0, newButtons.lastIndex)
+            newButtons.add(toIdx, newButtons.removeAt(fromIdx))
+            MacroPadState.updateLayout(curLayout.copy(buttons = newButtons))
+        }
     }
 
     LazyColumn(
@@ -448,7 +508,23 @@ private fun EditorBody(
         modifier       = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = ED_PADDING),
     ) {
-        // 1. Action toolbar (Add Button / Macros… / Add Macro Button)
+        // 1. Layout management bar
+        item(key = "layouts") {
+            EditorLayoutBar(
+                profile                 = profile,
+                activeLayoutId          = profile.activeLayoutId ?: profile.layouts.firstOrNull()?.id,
+                accentColor             = accentColor,
+                onSelectLayout          = { id -> MacroPadState.setActiveLayoutId(id) },
+                onToggleEnabled         = { id, enabled -> MacroPadState.setLayoutEnabled(id, enabled) },
+                onDeleteLayoutRequested = onDeleteLayoutRequested,
+                onNewLayout             = onNewLayout,
+                modifier                = Modifier
+                    .padding(horizontal = ED_PADDING)
+                    .padding(bottom = ED_PADDING),
+            )
+        }
+
+        // 2. Action toolbar (Add Button / Macros… / Add Macro Button)
         item(key = "toolbar") {
             EditorToolbar(
                 profile          = profile,
@@ -463,10 +539,10 @@ private fun EditorBody(
             )
         }
 
-        // 2. Pad canvas with grid toggle overlay
+        // 3. Pad canvas with grid toggle overlay
         item(key = "canvas") {
             Box {
-                PadCanvas(profile = profile, accentColor = accentColor, gridMode = gridMode)
+                PadCanvas(profile = profile, layout = layout, accentColor = accentColor, gridMode = gridMode)
 
                 val gridIcon = when (gridMode) {
                     GridMode.OFF         -> Icons.Rounded.GridOff
@@ -503,13 +579,13 @@ private fun EditorBody(
             }
         }
 
-        // 3. Divider
+        // 4. Divider
         item(key = "divider_1") {
             HorizontalDivider(color = colors.divider, modifier = Modifier.padding(horizontal = ED_PADDING))
         }
 
-        // 4. Button list — tap to edit, drag handle to reorder
-        if (profile.buttons.isEmpty()) {
+        // 5. Button list — tap to edit, drag handle to reorder
+        if (layout?.buttons.isNullOrEmpty()) {
             item(key = "empty") {
                 Text(
                     text     = stringResource(R.string.macropad_editor_add_button),
@@ -521,7 +597,7 @@ private fun EditorBody(
                 )
             }
         } else {
-            itemsIndexed(profile.buttons, key = { _, btn -> btn.id }) { _, btn ->
+            itemsIndexed(layout?.buttons ?: emptyList(), key = { _, btn -> btn.id }) { _, btn ->
                 ReorderableItem(reorderState, key = btn.id) { isDragging ->
                     ButtonListItem(
                         btn                = btn,
@@ -532,9 +608,14 @@ private fun EditorBody(
                         isDragging         = isDragging,
                         onEdit             = { onEditButton(btn) },
                         onUpdate           = { updated ->
-                            MacroPadState.updateProfile(
-                                profile.copy(buttons = profile.buttons.map { if (it.id == btn.id) updated else it })
-                            )
+                            val curLayout = MacroPadState.activeLayout.value
+                            if (curLayout != null) {
+                                MacroPadState.updateLayout(
+                                    curLayout.copy(buttons = curLayout.buttons.map {
+                                        if (it.id == btn.id) updated else it
+                                    })
+                                )
+                            }
                         },
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
@@ -545,6 +626,144 @@ private fun EditorBody(
                         modifier = Modifier.padding(horizontal = ED_PADDING),
                     )
                 }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Layout management bar — horizontal chip row with enable toggle and delete
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun EditorLayoutBar(
+    profile:                 PadProfile,
+    activeLayoutId:          String?,
+    accentColor:             Color,
+    onSelectLayout:          (String) -> Unit,
+    onToggleEnabled:         (String, Boolean) -> Unit,
+    onDeleteLayoutRequested: (PadLayout) -> Unit,
+    onNewLayout:             () -> Unit,
+    modifier:                Modifier = Modifier,
+) {
+    val colors    = LocalAppColors.current
+    val canDelete = profile.layouts.size > 1
+    val latestLayouts by rememberUpdatedState(profile.layouts)
+
+    val lazyRowState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyListState(lazyRowState) { from, to ->
+        val fromIdx = latestLayouts.indexOfFirst { it.id == from.key as? String }
+        val toIdx   = latestLayouts.indexOfFirst { it.id == to.key as? String }
+        if (fromIdx >= 0 && toIdx >= 0) {
+            val mutable = latestLayouts.toMutableList()
+            mutable.add(toIdx, mutable.removeAt(fromIdx))
+            MacroPadState.reorderLayouts(mutable)
+        }
+    }
+
+    Row(
+        modifier              = modifier.fillMaxWidth(),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ED_ITEM_PADDING),
+    ) {
+        LazyRow(
+            state                 = lazyRowState,
+            modifier              = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding        = PaddingValues(vertical = 4.dp),
+        ) {
+            items(profile.layouts, key = { it.id }) { layout ->
+                ReorderableItem(reorderState, key = layout.id) {
+                    val isActive = layout.id == activeLayoutId ||
+                        (activeLayoutId == null && profile.layouts.firstOrNull()?.id == layout.id)
+                    LayoutChip(
+                        layout     = layout,
+                        isActive   = isActive,
+                        accentColor = accentColor,
+                        canDelete  = canDelete,
+                        colors     = colors,
+                        onSelect   = { onSelectLayout(layout.id) },
+                        onToggle   = { onToggleEnabled(layout.id, !layout.enabled) },
+                        onDelete   = { onDeleteLayoutRequested(layout) },
+                        dragModifier = Modifier.longPressDraggableHandle(),
+                    )
+                }
+            }
+        }
+
+        IconButton(
+            onClick  = onNewLayout,
+            modifier = Modifier.size(ED_GRID_TOGGLE_SIZE),
+        ) {
+            Icon(
+                Icons.Rounded.Add,
+                contentDescription = stringResource(R.string.settings_macropad_new_layout),
+                tint     = accentColor,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LayoutChip(
+    layout:       PadLayout,
+    isActive:     Boolean,
+    accentColor:  Color,
+    canDelete:    Boolean,
+    colors:       AppColors,
+    onSelect:     () -> Unit,
+    onToggle:     () -> Unit,
+    onDelete:     () -> Unit,
+    dragModifier: Modifier = Modifier,
+) {
+    val bgColor    = if (isActive) accentColor.copy(alpha = 0.85f) else colors.surface
+    val textColor  = if (isActive) Color.White else colors.onSurface
+    val chipAlpha  = if (layout.enabled) 1f else 0.45f
+
+    Row(
+        modifier = Modifier
+            .alpha(chipAlpha)
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .border(1.dp, if (isActive) accentColor else colors.divider, RoundedCornerShape(8.dp))
+            .clickable(onClick = onSelect)
+            .then(dragModifier)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text       = layout.name,
+            color      = textColor,
+            fontSize   = 12.sp,
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines   = 1,
+            overflow   = TextOverflow.Ellipsis,
+        )
+        IconButton(
+            onClick  = onToggle,
+            modifier = Modifier.size(20.dp),
+        ) {
+            Icon(
+                imageVector        = if (layout.enabled) Icons.Rounded.CheckCircle
+                                     else Icons.Rounded.RadioButtonUnchecked,
+                contentDescription = stringResource(R.string.cd_layout_enable_toggle),
+                tint               = textColor.copy(alpha = 0.75f),
+                modifier           = Modifier.size(14.dp),
+            )
+        }
+        if (canDelete) {
+            IconButton(
+                onClick  = onDelete,
+                modifier = Modifier.size(20.dp),
+            ) {
+                Icon(
+                    imageVector        = Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.macropad_editor_delete_layout),
+                    tint               = textColor.copy(alpha = 0.75f),
+                    modifier           = Modifier.size(14.dp),
+                )
             }
         }
     }
@@ -647,11 +866,18 @@ private fun ButtonListItem(
         is PadAction.GamepadButton               -> !enableGamepad
         is PadAction.MouseButton,
         is PadAction.ScrollWheel,
-        is PadAction.TrackpointMove,
-        is PadAction.MouseLeftClick,
-        is PadAction.MouseRightClick             -> !enableMouse
+        is PadAction.TrackpointMove              -> !enableMouse
         is PadAction.Macro                       -> !enableGamepad
         is PadAction.AmbientPeek                 -> false
+        is PadAction.LayoutNext,
+        is PadAction.LayoutPrevious,
+        is PadAction.ProfileSwitcher,
+        is PadAction.MirrorPlayStop,
+        is PadAction.MirrorFreeze,
+        is PadAction.MirrorViewportEdit,
+        is PadAction.MirrorTouchProjection       -> false
+        is PadAction.FullScreenMouse             -> !enableMouse
+        is PadAction.FullScreenKeyboard          -> !enableKeyboard
     }
 
     Row(
@@ -827,6 +1053,170 @@ private fun InlineNameInputOverlay(
                     )
                 }
             }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New layout overlay — name input + template selection
+// ─────────────────────────────────────────────────────────────────────────────
+
+private data class TemplateOption(
+    val profileName: String,
+    val layoutName: String,
+    val buttons: List<PadButton>,
+)
+
+@Composable
+private fun NewLayoutOverlay(
+    profiles:    List<PadProfile>,
+    accentColor: Color,
+    onConfirm:   (name: String, templateButtons: List<PadButton>) -> Unit,
+    onDismiss:   () -> Unit,
+) {
+    var text             by remember { mutableStateOf("") }
+    var selectedTemplate by remember { mutableStateOf<TemplateOption?>(null) }
+    val colors           = LocalAppColors.current
+    val blankLabel       = stringResource(R.string.macropad_layout_template_blank)
+
+    val templates = remember(profiles) {
+        profiles.flatMap { profile ->
+            profile.layouts.map { layout ->
+                TemplateOption(
+                    profileName = profile.name,
+                    layoutName  = layout.name,
+                    buttons     = layout.buttons,
+                )
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .clickable(enabled = true, onClick = {})
+                .padding(ED_PADDING),
+        ) {
+            Text(
+                stringResource(R.string.settings_macropad_new_layout),
+                color = colors.onSurface,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value         = text,
+                onValueChange = { text = it },
+                singleLine    = true,
+                modifier      = Modifier.fillMaxWidth(),
+                colors        = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor   = accentColor,
+                    unfocusedBorderColor = colors.accentBorder,
+                    focusedTextColor     = colors.onSurface,
+                    unfocusedTextColor   = colors.onSurface,
+                    cursorColor          = accentColor,
+                ),
+            )
+
+            if (templates.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.macropad_layout_template_title),
+                    color      = colors.onSurfaceSecondary,
+                    fontSize   = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+
+                // Blank option
+                TemplateRow(
+                    label       = blankLabel,
+                    subtitle    = null,
+                    isSelected  = selectedTemplate == null,
+                    accentColor = accentColor,
+                    onClick     = { selectedTemplate = null },
+                )
+
+                // Template options from all profiles
+                templates.forEach { tmpl ->
+                    TemplateRow(
+                        label       = tmpl.layoutName,
+                        subtitle    = tmpl.profileName,
+                        isSelected  = selectedTemplate == tmpl,
+                        accentColor = accentColor,
+                        onClick     = { selectedTemplate = tmpl },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+                TextButton(
+                    onClick = {
+                        val buttons = selectedTemplate?.buttons?.map {
+                            it.copy(id = UUID.randomUUID().toString())
+                        } ?: emptyList()
+                        onConfirm(text.trim(), buttons)
+                    },
+                ) {
+                    Text(
+                        stringResource(R.string.macropad_editor_done),
+                        color = accentColor,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TemplateRow(
+    label:       String,
+    subtitle:    String?,
+    isSelected:  Boolean,
+    accentColor: Color,
+    onClick:     () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text     = label,
+                color    = if (isSelected) accentColor else colors.onSurface,
+                fontSize = 14.sp,
+            )
+            if (subtitle != null) {
+                Text(
+                    text     = subtitle,
+                    color    = colors.onSurfaceSecondary,
+                    fontSize = 11.sp,
+                )
+            }
+        }
+        if (isSelected) {
+            Icon(
+                Icons.Rounded.TripOrigin,
+                contentDescription = null,
+                tint     = accentColor,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

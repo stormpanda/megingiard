@@ -17,7 +17,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,26 +38,49 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 // Action category enum
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal enum class ActionCategory { KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, AMBIENT_PEEK }
+internal enum class ActionCategory {
+    KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, AMBIENT_PEEK,
+    LAYOUT_NEXT, LAYOUT_PREVIOUS, PROFILE_SWITCHER,
+    MIRROR_PLAY_STOP, MIRROR_FREEZE, MIRROR_VIEWPORT_EDIT, MIRROR_TOUCH_PROJECTION,
+    FULLSCREEN_MOUSE, FULLSCREEN_KEYBOARD,
+}
 
 internal fun ActionCategory.labelResId(): Int = when (this) {
-    ActionCategory.KEYBOARD_KEY   -> R.string.macropad_action_keyboard_key
-    ActionCategory.GAMEPAD_BUTTON -> R.string.macropad_action_gamepad_button
-    ActionCategory.MOUSE_BUTTON   -> R.string.macropad_action_mouse_button
-    ActionCategory.SCROLL_WHEEL   -> R.string.macropad_action_scroll_wheel
-    ActionCategory.TRACKPOINT     -> R.string.macropad_action_trackpoint
-    ActionCategory.MACRO          -> R.string.macropad_action_macro
-    ActionCategory.AMBIENT_PEEK   -> R.string.macropad_action_ambient_peek
+    ActionCategory.KEYBOARD_KEY          -> R.string.macropad_action_keyboard_key
+    ActionCategory.GAMEPAD_BUTTON        -> R.string.macropad_action_gamepad_button
+    ActionCategory.MOUSE_BUTTON          -> R.string.macropad_action_mouse_button
+    ActionCategory.SCROLL_WHEEL          -> R.string.macropad_action_scroll_wheel
+    ActionCategory.TRACKPOINT            -> R.string.macropad_action_trackpoint
+    ActionCategory.MACRO                 -> R.string.macropad_action_macro
+    ActionCategory.AMBIENT_PEEK          -> R.string.macropad_action_ambient_peek
+    ActionCategory.LAYOUT_NEXT           -> R.string.macropad_action_layout_next
+    ActionCategory.LAYOUT_PREVIOUS       -> R.string.macropad_action_layout_previous
+    ActionCategory.PROFILE_SWITCHER      -> R.string.macropad_action_profile_switcher
+    ActionCategory.MIRROR_PLAY_STOP      -> R.string.macropad_action_mirror_play_stop
+    ActionCategory.MIRROR_FREEZE         -> R.string.macropad_action_mirror_freeze
+    ActionCategory.MIRROR_VIEWPORT_EDIT  -> R.string.macropad_action_mirror_viewport_edit
+    ActionCategory.MIRROR_TOUCH_PROJECTION -> R.string.macropad_action_mirror_touch_projection
+    ActionCategory.FULLSCREEN_MOUSE      -> R.string.macropad_action_fullscreen_mouse
+    ActionCategory.FULLSCREEN_KEYBOARD   -> R.string.macropad_action_fullscreen_keyboard
 }
 
 internal fun ActionCategory.defaultAction(): PadAction = when (this) {
-    ActionCategory.KEYBOARD_KEY   -> PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
-    ActionCategory.GAMEPAD_BUTTON -> PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
-    ActionCategory.MOUSE_BUTTON   -> PadAction.MouseButton(MouseButton.LEFT)
-    ActionCategory.SCROLL_WHEEL   -> PadAction.ScrollWheel
-    ActionCategory.TRACKPOINT     -> PadAction.TrackpointMove()
-    ActionCategory.MACRO          -> PadAction.Macro(MacroState.macros.value.firstOrNull()?.id ?: "")
-    ActionCategory.AMBIENT_PEEK   -> PadAction.AmbientPeek
+    ActionCategory.KEYBOARD_KEY          -> PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space")
+    ActionCategory.GAMEPAD_BUTTON        -> PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
+    ActionCategory.MOUSE_BUTTON          -> PadAction.MouseButton(MouseButton.LEFT)
+    ActionCategory.SCROLL_WHEEL          -> PadAction.ScrollWheel
+    ActionCategory.TRACKPOINT            -> PadAction.TrackpointMove()
+    ActionCategory.MACRO                 -> PadAction.Macro(MacroPadState.activeProfile.value?.macros?.firstOrNull()?.id ?: "")
+    ActionCategory.AMBIENT_PEEK          -> PadAction.AmbientPeek
+    ActionCategory.LAYOUT_NEXT           -> PadAction.LayoutNext
+    ActionCategory.LAYOUT_PREVIOUS       -> PadAction.LayoutPrevious
+    ActionCategory.PROFILE_SWITCHER      -> PadAction.ProfileSwitcher
+    ActionCategory.MIRROR_PLAY_STOP      -> PadAction.MirrorPlayStop
+    ActionCategory.MIRROR_FREEZE         -> PadAction.MirrorFreeze
+    ActionCategory.MIRROR_VIEWPORT_EDIT  -> PadAction.MirrorViewportEdit
+    ActionCategory.MIRROR_TOUCH_PROJECTION -> PadAction.MirrorTouchProjection
+    ActionCategory.FULLSCREEN_MOUSE      -> PadAction.FullScreenMouse()
+    ActionCategory.FULLSCREEN_KEYBOARD   -> PadAction.FullScreenKeyboard()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,26 +88,41 @@ internal fun ActionCategory.defaultAction(): PadAction = when (this) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 internal fun PadAction.categoryResId(): Int = when (this) {
-    is PadAction.KeyboardKey     -> R.string.macropad_action_keyboard_key
-    is PadAction.GamepadButton   -> R.string.macropad_action_gamepad_button
-    is PadAction.MouseButton     -> R.string.macropad_action_mouse_button
-    is PadAction.ScrollWheel     -> R.string.macropad_action_scroll_wheel
-    is PadAction.TrackpointMove  -> R.string.macropad_action_trackpoint
-    is PadAction.Macro           -> R.string.macropad_action_macro
-    is PadAction.AmbientPeek     -> R.string.macropad_action_ambient_peek
-    is PadAction.MouseLeftClick  -> R.string.macropad_action_mouse_button
-    is PadAction.MouseRightClick -> R.string.macropad_action_mouse_button
+    is PadAction.KeyboardKey        -> R.string.macropad_action_keyboard_key
+    is PadAction.GamepadButton      -> R.string.macropad_action_gamepad_button
+    is PadAction.MouseButton        -> R.string.macropad_action_mouse_button
+    is PadAction.ScrollWheel        -> R.string.macropad_action_scroll_wheel
+    is PadAction.TrackpointMove     -> R.string.macropad_action_trackpoint
+    is PadAction.Macro              -> R.string.macropad_action_macro
+    is PadAction.AmbientPeek        -> R.string.macropad_action_ambient_peek
+    is PadAction.LayoutNext         -> R.string.macropad_action_layout_next
+    is PadAction.LayoutPrevious     -> R.string.macropad_action_layout_previous
+    is PadAction.ProfileSwitcher    -> R.string.macropad_action_profile_switcher
+    is PadAction.MirrorPlayStop     -> R.string.macropad_action_mirror_play_stop
+    is PadAction.MirrorFreeze       -> R.string.macropad_action_mirror_freeze
+    is PadAction.MirrorViewportEdit -> R.string.macropad_action_mirror_viewport_edit
+    is PadAction.MirrorTouchProjection -> R.string.macropad_action_mirror_touch_projection
+    is PadAction.FullScreenMouse    -> R.string.macropad_action_fullscreen_mouse
+    is PadAction.FullScreenKeyboard -> R.string.macropad_action_fullscreen_keyboard
 }
 
 internal fun PadAction.toCategory(): ActionCategory = when (this) {
     is PadAction.KeyboardKey                                                   -> ActionCategory.KEYBOARD_KEY
     is PadAction.GamepadButton                                                 -> ActionCategory.GAMEPAD_BUTTON
-    is PadAction.MouseButton, is PadAction.MouseLeftClick,
-    is PadAction.MouseRightClick                                               -> ActionCategory.MOUSE_BUTTON
+    is PadAction.MouseButton                                                       -> ActionCategory.MOUSE_BUTTON
     is PadAction.ScrollWheel                                                   -> ActionCategory.SCROLL_WHEEL
     is PadAction.TrackpointMove                                                -> ActionCategory.TRACKPOINT
     is PadAction.Macro                                                         -> ActionCategory.MACRO
     is PadAction.AmbientPeek                                                   -> ActionCategory.AMBIENT_PEEK
+    is PadAction.LayoutNext                                                    -> ActionCategory.LAYOUT_NEXT
+    is PadAction.LayoutPrevious                                                -> ActionCategory.LAYOUT_PREVIOUS
+    is PadAction.ProfileSwitcher                                               -> ActionCategory.PROFILE_SWITCHER
+    is PadAction.MirrorPlayStop                                                -> ActionCategory.MIRROR_PLAY_STOP
+    is PadAction.MirrorFreeze                                                  -> ActionCategory.MIRROR_FREEZE
+    is PadAction.MirrorViewportEdit                                            -> ActionCategory.MIRROR_VIEWPORT_EDIT
+    is PadAction.MirrorTouchProjection                                         -> ActionCategory.MIRROR_TOUCH_PROJECTION
+    is PadAction.FullScreenMouse                                               -> ActionCategory.FULLSCREEN_MOUSE
+    is PadAction.FullScreenKeyboard                                            -> ActionCategory.FULLSCREEN_KEYBOARD
 }
 
 @Composable
@@ -114,12 +151,19 @@ internal fun PadAction.displayLabel(): String {
         is PadAction.ScrollWheel     -> context.getString(R.string.macropad_display_scroll_wheel)
         is PadAction.TrackpointMove  -> context.getString(R.string.macropad_display_trackpoint)
         is PadAction.Macro           -> {
-            val macroName = MacroState.macros.value.firstOrNull { it.id == macroId }?.name ?: macroId
+            val macroName = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == macroId }?.name ?: macroId
             context.getString(R.string.macropad_display_macro, macroName)
         }
         is PadAction.AmbientPeek     -> context.getString(R.string.macropad_action_ambient_peek)
-        is PadAction.MouseLeftClick  -> context.getString(R.string.macropad_display_mouse_button, "Left")
-        is PadAction.MouseRightClick -> context.getString(R.string.macropad_display_mouse_button, "Right")
+        is PadAction.LayoutNext         -> context.getString(R.string.macropad_action_layout_next)
+        is PadAction.LayoutPrevious     -> context.getString(R.string.macropad_action_layout_previous)
+        is PadAction.ProfileSwitcher    -> context.getString(R.string.macropad_action_profile_switcher)
+        is PadAction.MirrorPlayStop     -> context.getString(R.string.macropad_action_mirror_play_stop)
+        is PadAction.MirrorFreeze       -> context.getString(R.string.macropad_action_mirror_freeze)
+        is PadAction.MirrorViewportEdit -> context.getString(R.string.macropad_action_mirror_viewport_edit)
+        is PadAction.MirrorTouchProjection -> context.getString(R.string.macropad_action_mirror_touch_projection)
+        is PadAction.FullScreenMouse    -> context.getString(R.string.macropad_action_fullscreen_mouse)
+        is PadAction.FullScreenKeyboard -> context.getString(R.string.macropad_action_fullscreen_keyboard)
     }
 }
 
@@ -180,13 +224,22 @@ internal fun ActionPicker(
             ) {
                 ActionCategory.entries.forEach { cat ->
                     val catEnabled = when (cat) {
-                        ActionCategory.KEYBOARD_KEY   -> enableKeyboard
-                        ActionCategory.GAMEPAD_BUTTON -> enableGamepad
+                        ActionCategory.KEYBOARD_KEY          -> enableKeyboard
+                        ActionCategory.GAMEPAD_BUTTON        -> enableGamepad
                         ActionCategory.MOUSE_BUTTON,
                         ActionCategory.SCROLL_WHEEL,
-                        ActionCategory.TRACKPOINT     -> enableMouse
-                        ActionCategory.MACRO          -> MacroState.macros.value.isNotEmpty()
-                        ActionCategory.AMBIENT_PEEK   -> true
+                        ActionCategory.TRACKPOINT            -> enableMouse
+                        ActionCategory.MACRO                 -> MacroPadState.activeProfile.value?.macros?.isNotEmpty() == true
+                        ActionCategory.AMBIENT_PEEK,
+                        ActionCategory.LAYOUT_NEXT,
+                        ActionCategory.LAYOUT_PREVIOUS,
+                        ActionCategory.PROFILE_SWITCHER,
+                        ActionCategory.MIRROR_PLAY_STOP,
+                        ActionCategory.MIRROR_FREEZE,
+                        ActionCategory.MIRROR_VIEWPORT_EDIT,
+                        ActionCategory.MIRROR_TOUCH_PROJECTION -> true
+                        ActionCategory.FULLSCREEN_MOUSE      -> enableMouse
+                        ActionCategory.FULLSCREEN_KEYBOARD   -> enableKeyboard
                     }
                     if (catEnabled) {
                         DropdownMenuItem(
@@ -209,8 +262,15 @@ internal fun ActionPicker(
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
             is PadAction.AmbientPeek,
-            is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick -> { /* no further config needed */ }
+            is PadAction.LayoutNext,
+            is PadAction.LayoutPrevious,
+            is PadAction.ProfileSwitcher,
+            is PadAction.MirrorPlayStop,
+            is PadAction.MirrorFreeze,
+            is PadAction.MirrorViewportEdit,
+            is PadAction.MirrorTouchProjection,
+            is PadAction.FullScreenMouse,
+            is PadAction.FullScreenKeyboard -> { /* no further config needed */ }
         }
     }
 }
@@ -567,12 +627,9 @@ internal fun GamepadButtonPicker(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Two-step macro selector:
- * 1. **Folder dropdown** — "Nicht zugeordnet" first, then named folders in stored order.
- * 2. **Macro dropdown** — macros belonging to the selected folder only.
+ * Macro picker: a single dropdown of all macros in the active profile (flat list).
  *
- * Pre-selects the folder and macro that match [current.macroId] on first composition.
- * When the selected folder changes, the first macro in that folder is auto-selected.
+ * Pre-selects the macro that matches [current.macroId] on first composition.
  */
 @Composable
 internal fun MacroPicker(
@@ -580,98 +637,34 @@ internal fun MacroPicker(
     accentColor: Color,
     onChange:    (PadAction) -> Unit,
 ) {
-    val macros          by MacroState.macros.collectAsState()
-    val folders         by MacroState.folders.collectAsState()
-    val colors          = LocalAppColors.current
-    val unassignedLabel = stringResource(R.string.macropad_folder_unassigned)
+    val profile by MacroPadState.activeProfile.collectAsState()
+    val macros  = profile?.macros ?: emptyList()
+    val colors  = LocalAppColors.current
     val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
 
-    // selectedFolderId is derived from the macro's persisted folderId once macros load.
-    // A LaunchedEffect keeps it in sync when macros arrive from DataStore.
-    // Once the user explicitly picks a folder, userHasChosenFolder prevents the effect
-    // from overwriting that deliberate choice.
-    var userHasChosenFolder by remember(current.macroId) { mutableStateOf(false) }
-    var selectedFolderId    by remember(current.macroId) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(current.macroId, macros) {
-        if (!userHasChosenFolder) {
-            selectedFolderId = macros.firstOrNull { it.id == current.macroId }?.folderId
-        }
-    }
-
-    val macrosInFolder = remember(macros, selectedFolderId) {
-        macros.filter { it.folderId == selectedFolderId }
-    }
-
-    var folderExpanded by remember { mutableStateOf(false) }
-    var macroExpanded  by remember { mutableStateOf(false) }
-
-    // Folder display list: (label, folderId)
-    val folderItems = remember(folders, unassignedLabel) {
-        buildList {
-            add(unassignedLabel to null as String?)
-            folders.forEach { f -> add(f.name to f.id) }
-        }
-    }
-    val selectedFolderLabel = folderItems.firstOrNull { it.second == selectedFolderId }?.first ?: unassignedLabel
-    val selectedMacroName   = macros.firstOrNull { it.id == current.macroId }?.name
-        ?: macrosInFolder.firstOrNull()?.name
+    var macroExpanded by remember { mutableStateOf(false) }
+    val selectedMacroName = macros.firstOrNull { it.id == current.macroId }?.name
+        ?: macros.firstOrNull()?.name
         ?: ""
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // ── Folder dropdown ──────────────────────────────────────────────────
         Box {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { folderExpanded = true }
+                    .clickable(enabled = macros.isNotEmpty()) { macroExpanded = true }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(selectedFolderLabel, color = accentColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-            }
-            DropdownMenu(
-                expanded         = folderExpanded,
-                onDismissRequest = { folderExpanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                folderItems.forEach { (label, fId) ->
-                    DropdownMenuItem(
-                        text    = { Text(label, color = if (fId == selectedFolderId) accentColor else colors.onSurface, fontSize = 14.sp) },
-                        onClick = {
-                            userHasChosenFolder = true
-                            selectedFolderId    = fId
-                            folderExpanded      = false
-                            val first = macros.filter { it.folderId == fId }.firstOrNull()
-                            if (first != null) onChange(PadAction.Macro(first.id))
-                        },
-                    )
-                }
-            }
-        }
-
-        // ── Macro dropdown (filtered by selected folder) ─────────────────────
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable(enabled = macrosInFolder.isNotEmpty()) { macroExpanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val label = if (macrosInFolder.isEmpty()) folderEmptyLabel else selectedMacroName
                 Text(
-                    label,
-                    color    = if (macrosInFolder.isEmpty()) colors.onSurfaceSecondary else accentColor,
+                    selectedMacroName.ifEmpty { folderEmptyLabel },
+                    color    = if (macros.isEmpty()) colors.onSurfaceSecondary else accentColor,
                     fontSize = 14.sp,
                     modifier = Modifier.weight(1f),
                 )
-                if (macrosInFolder.isNotEmpty()) {
+                if (macros.isNotEmpty()) {
                     Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
                 }
             }
@@ -680,7 +673,7 @@ internal fun MacroPicker(
                 onDismissRequest = { macroExpanded = false },
                 modifier         = Modifier.background(colors.surface),
             ) {
-                macrosInFolder.forEach { macro ->
+                macros.forEach { macro ->
                     DropdownMenuItem(
                         text    = { Text(macro.name, color = if (macro.id == current.macroId) accentColor else colors.onSurface, fontSize = 14.sp) },
                         onClick = { onChange(PadAction.Macro(macro.id)); macroExpanded = false },

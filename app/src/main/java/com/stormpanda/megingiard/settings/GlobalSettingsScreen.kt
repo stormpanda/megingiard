@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -58,9 +55,8 @@ import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.macropad.MacroPadState
 import java.time.LocalDate
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlinx.coroutines.launch
 
 // ── In-tree dialog constants ──────────────────────────────────────────────────
@@ -76,13 +72,9 @@ private val GS_DIALOG_TITLE_SIZE = 16.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GlobalSettingsScreen(onBack: () -> Unit) {
-    val enabledTools by SettingsManager.enabledTools.collectAsState()
-    val toolOrder by SettingsManager.toolOrder.collectAsState()
-    val overlayTimeoutMs by SettingsManager.overlayTimeoutMs.collectAsState()
     val accentColorArgb by SettingsManager.accentColor.collectAsState()
     val accentColor = Color(accentColorArgb)
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val rememberLastTool by SettingsManager.rememberLastTool.collectAsState()
     val themeMode by SettingsManager.themeMode.collectAsState()
     val appLanguage by SettingsManager.appLanguage.collectAsState()
     val logLevel by SettingsManager.logLevel.collectAsState()
@@ -102,13 +94,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     var importSuccess by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    val lazyListState = rememberLazyListState()
-    val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val offset = 1 // header item before tool rows
-        val newOrder = toolOrder.toMutableList()
-        newOrder.add(to.index - offset, newOrder.removeAt(from.index - offset))
-        SettingsManager.setToolOrder(newOrder)
-    }
+    var showRestoreDefaultsConfirm by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -138,119 +124,83 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 )
             }
         ) { paddingValues ->
-            LazyColumn(
-                state = lazyListState,
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
             ) {
-                // Tools section
-                item {
-                    SettingsCategoryHeader(
-                        text = stringResource(R.string.settings_section_tools),
-                        accentColor = effectiveAccent,
-                        colors = colors
-                    )
-                }
-                itemsIndexed(toolOrder, key = { _, tool -> tool.name }) { _, tool ->
-                    val isEnabled = tool in enabledTools
-                    ReorderableItem(reorderState, key = tool.name) { isDragging ->
-                        ToolOrderRow(
-                            tool = tool,
-                            isEnabled = isEnabled,
-                            isDragging = isDragging,
-                            canDisable = enabledTools.size > 1 || !isEnabled,
-                            accentColor = effectiveAccent,
-                            colors = colors,
-                            onToggle = { checked ->
-                                val newEnabled = if (checked) enabledTools + tool else enabledTools - tool
-                                if (newEnabled.isNotEmpty()) SettingsManager.setEnabledTools(newEnabled)
-                            },
-                            dragHandleModifier = Modifier.draggableHandle()
-                        )
-                        HorizontalDivider(
-                            color = colors.divider,
-                            modifier = Modifier.padding(start = 56.dp)
-                        )
-                    }
-                }
-
                 // General section
-                item {
-                    SettingsCategoryHeader(
-                        text = stringResource(R.string.settings_section_general),
-                        accentColor = effectiveAccent,
-                        colors = colors
-                    )
-                    OverlayTimeoutRow(
-                        overlayTimeoutMs = overlayTimeoutMs,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onTimeoutChanged = { SettingsManager.setOverlayTimeoutMs(it) }
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    OverlayPositionRow(
-                        overlayAtBottom = overlayAtBottom,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onChanged = { SettingsManager.setOverlayAtBottom(it) }
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    RememberLastToolRow(
-                        rememberLastTool = rememberLastTool,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onChanged = { SettingsManager.setRememberLastTool(it) }
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    LanguagePickerRow(
-                        language = appLanguage,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onChanged = { SettingsManager.setAppLanguage(it) }
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    LogLevelPickerRow(
-                        logLevel = logLevel,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onChanged = { SettingsManager.setLogLevel(it) }
-                    )
-                    HorizontalDivider(color = colors.divider)
-                }
+                SettingsCategoryHeader(
+                    text = stringResource(R.string.settings_section_general),
+                    accentColor = effectiveAccent,
+                    colors = colors
+                )
+                OverlayPositionRow(
+                    overlayAtBottom = overlayAtBottom,
+                    accentColor = effectiveAccent,
+                    colors = colors,
+                    onChanged = { SettingsManager.setOverlayAtBottom(it) }
+                )
+                HorizontalDivider(color = colors.divider)
+                LanguagePickerRow(
+                    language = appLanguage,
+                    accentColor = effectiveAccent,
+                    colors = colors,
+                    onChanged = { SettingsManager.setAppLanguage(it) }
+                )
+                HorizontalDivider(color = colors.divider)
+                LogLevelPickerRow(
+                    logLevel = logLevel,
+                    accentColor = effectiveAccent,
+                    colors = colors,
+                    onChanged = { SettingsManager.setLogLevel(it) }
+                )
+                HorizontalDivider(color = colors.divider)
 
                 // Appearance section
-                item {
-                    SettingsCategoryHeader(
-                        text = stringResource(R.string.settings_section_appearance),
-                        accentColor = effectiveAccent,
-                        colors = colors
-                    )
-                    ThemePickerRow(
-                        themeMode = themeMode,
-                        accentColor = effectiveAccent,
+                SettingsCategoryHeader(
+                    text = stringResource(R.string.settings_section_appearance),
+                    accentColor = effectiveAccent,
+                    colors = colors
+                )
+                ThemePickerRow(
+                    themeMode = themeMode,
+                    accentColor = effectiveAccent,
+                    colors = colors,
+                    onChanged = { SettingsManager.setThemeMode(it) }
+                )
+                if (themeMode.supportsCustomAccent) {
+                    HorizontalDivider(color = colors.divider)
+                    AccentColorRow(
+                        accentColor = accentColor,
                         colors = colors,
-                        onChanged = { SettingsManager.setThemeMode(it) }
+                        onClick = { showColorPicker = true }
                     )
-                    if (themeMode.supportsCustomAccent) {
-                        HorizontalDivider(color = colors.divider)
-                        AccentColorRow(
-                            accentColor = accentColor,
-                            colors = colors,
-                            onClick = { showColorPicker = true }
-                        )
-                    }
                 }
 
-                // Configuration section
-                item {
-                    ConfigSection(
-                        colors = colors,
-                        accentColor = effectiveAccent,
-                        onShowExportDialog = { showExportMetadataDialog = true },
-                        onImportPreviewReady = { showImportPreviewDialog = it },
-                    )
-                }
+                // Data section
+                SettingsCategoryHeader(
+                    text = stringResource(R.string.settings_section_data),
+                    accentColor = effectiveAccent,
+                    colors = colors,
+                )
+                ConfigActionRow(
+                    label = stringResource(R.string.settings_restore_defaults),
+                    description = stringResource(R.string.settings_restore_defaults_desc),
+                    accentColor = effectiveAccent,
+                    colors = colors,
+                    onClick = { showRestoreDefaultsConfirm = true },
+                )
+                HorizontalDivider(color = colors.divider)
+
+                // Configuration section (export / import)
+                ConfigSection(
+                    colors = colors,
+                    accentColor = effectiveAccent,
+                    onShowExportDialog = { showExportMetadataDialog = true },
+                    onImportPreviewReady = { showImportPreviewDialog = it },
+                )
             }
         }
         // ── In-tree overlays (work in Activity and MirrorPresentation contexts) ─────
@@ -262,6 +212,21 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     showColorPicker = false
                 },
                 onDismiss = { showColorPicker = false }
+            )
+        }
+        if (showRestoreDefaultsConfirm) {
+            InTreeConfirmDialog(
+                title = stringResource(R.string.settings_restore_defaults),
+                text = stringResource(R.string.settings_restore_defaults_confirm),
+                confirmText = stringResource(R.string.settings_restore_defaults_confirm_button),
+                dismissText = stringResource(R.string.settings_cancel),
+                colors = colors,
+                accentColor = effectiveAccent,
+                onConfirm = {
+                    showRestoreDefaultsConfirm = false
+                    MacroPadState.restoreDefaults()
+                },
+                onDismiss = { showRestoreDefaultsConfirm = false },
             )
         }
         if (showExportMetadataDialog) {
@@ -572,9 +537,9 @@ private fun ImportPreviewDialog(
             if ("macropad_settings" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
             }
-            if (export.profiles.isNotEmpty() || export.macros.isNotEmpty()) {
+            if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                 Text(
-                    text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.macros.size)}",
+                    text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.profiles.sumOf { it.macros.size })}",
                     color = colors.onSurfaceSecondary,
                     fontSize = 12.sp,
                 )
@@ -636,6 +601,57 @@ private fun InTreeMessageDialog(
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(buttonText, color = accentColor)
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Filename builder
+// ─────────────────────────────────────────────────────────────────────────────
+
+// In-tree two-button confirm dialog (works inside MirrorPresentation).
+@Composable
+private fun InTreeConfirmDialog(
+    title: String,
+    text: String,
+    confirmText: String,
+    dismissText: String,
+    colors: AppColors,
+    accentColor: Color,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    BackHandler(onBack = onDismiss)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = GS_DIALOG_SCRIM_ALPHA))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(GS_DIALOG_WIDTH_FRACTION)
+                .background(colors.surface, RoundedCornerShape(GS_DIALOG_CORNER))
+                .clickable(enabled = true, onClick = {})
+                .padding(GS_DIALOG_PADDING),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(title, color = colors.onSurface, fontSize = GS_DIALOG_TITLE_SIZE)
+            if (text.isNotBlank()) {
+                Text(text, color = colors.onSurfaceSecondary, fontSize = 13.sp)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(dismissText, color = colors.onSurfaceSecondary)
+                }
+                TextButton(onClick = onConfirm) {
+                    Text(confirmText, color = accentColor)
                 }
             }
         }

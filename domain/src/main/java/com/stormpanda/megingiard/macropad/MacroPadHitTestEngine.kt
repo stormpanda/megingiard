@@ -45,7 +45,8 @@ class MacroPadHitTestEngine(
      * @param py            pointer Y in canvas pixels
      * @param canvasW       canvas width in pixels
      * @param canvasH       canvas height in pixels
-     * @param profile       active pad profile
+     * @param buttons       buttons of the currently visible layout
+     * @param profile       active pad profile (for device-enabled checks)
      * @param isPeekActive  true if ambient-peek mode is active
      * @return the button that was hit (for device-disabled toast), or null
      */
@@ -55,13 +56,14 @@ class MacroPadHitTestEngine(
         py: Float,
         canvasW: Float,
         canvasH: Float,
+        buttons: List<PadButton>,
         profile: PadProfile,
         isPeekActive: Boolean,
     ): PadButton? {
         val hitList = if (isPeekActive) {
-            profile.buttons.filter { it.action is PadAction.AmbientPeek }
+            buttons.filter { it.action is PadAction.AmbientPeek }
         } else {
-            profile.buttons
+            buttons
         }
 
         val hitButton = hitList.firstOrNull { btn ->
@@ -109,7 +111,8 @@ class MacroPadHitTestEngine(
      * @param py         current pointer Y
      * @param deltaX     position change X since last event
      * @param deltaY     position change Y since last event
-     * @param profile    active pad profile
+     * @param buttons    buttons of the currently visible layout
+     * @param profile    active pad profile (unused here, kept for API symmetry)
      */
     fun onMove(
         pointerId: Long,
@@ -117,10 +120,11 @@ class MacroPadHitTestEngine(
         py: Float,
         deltaX: Float,
         deltaY: Float,
+        buttons: List<PadButton>,
         profile: PadProfile,
     ) {
         val mappedId = pointerMap[pointerId] ?: return
-        val mappedBtn = profile.buttons.firstOrNull { it.id == mappedId } ?: return
+        val mappedBtn = buttons.firstOrNull { it.id == mappedId } ?: return
 
         when {
             mappedBtn.action is PadAction.TrackpointMove -> {
@@ -147,14 +151,16 @@ class MacroPadHitTestEngine(
      * Handle a Release event.
      *
      * @param pointerId  the pointer that released
-     * @param profile    active pad profile
+     * @param buttons    buttons of the currently visible layout
+     * @param profile    active pad profile (unused here, kept for API symmetry)
      */
     fun onRelease(
         pointerId: Long,
+        buttons: List<PadButton>,
         profile: PadProfile,
     ) {
         val mapped = pointerMap.remove(pointerId) ?: return
-        val btn = profile.buttons.firstOrNull { it.id == mapped } ?: return
+        val btn = buttons.firstOrNull { it.id == mapped } ?: return
 
         when {
             btn.action is PadAction.TrackpointMove -> {
@@ -188,11 +194,18 @@ class MacroPadHitTestEngine(
             is PadAction.GamepadButton -> !profile.enableGamepad
             is PadAction.MouseButton,
             is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove,
-            is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick -> !profile.enableMouse
+            is PadAction.TrackpointMove -> !profile.enableMouse
             is PadAction.Macro -> false
             is PadAction.AmbientPeek -> false
+            is PadAction.LayoutNext,
+            is PadAction.LayoutPrevious,
+            is PadAction.ProfileSwitcher,
+            is PadAction.MirrorPlayStop,
+            is PadAction.MirrorFreeze,
+            is PadAction.MirrorViewportEdit,
+            is PadAction.MirrorTouchProjection -> false
+            is PadAction.FullScreenMouse -> !profile.enableMouse
+            is PadAction.FullScreenKeyboard -> !profile.enableKeyboard
         }
 
         /**
@@ -206,11 +219,18 @@ class MacroPadHitTestEngine(
             is PadAction.GamepadButton -> if (!profile.enableGamepad) MACROPAD_DEVICE_DISABLED_GAMEPAD else null
             is PadAction.MouseButton,
             is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove,
-            is PadAction.MouseLeftClick,
-            is PadAction.MouseRightClick -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
+            is PadAction.TrackpointMove -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
             is PadAction.Macro -> null
             is PadAction.AmbientPeek -> null
+            is PadAction.LayoutNext,
+            is PadAction.LayoutPrevious,
+            is PadAction.ProfileSwitcher,
+            is PadAction.MirrorPlayStop,
+            is PadAction.MirrorFreeze,
+            is PadAction.MirrorViewportEdit,
+            is PadAction.MirrorTouchProjection -> null
+            is PadAction.FullScreenMouse -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
+            is PadAction.FullScreenKeyboard -> if (!profile.enableKeyboard) MACROPAD_DEVICE_DISABLED_KEYBOARD else null
         }
 
         // These will be set by the app module at init time to match R.string values.

@@ -79,6 +79,8 @@ import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_X
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_Y
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_Z
 
+import kotlinx.serialization.Serializable
+
 /**
  * Defines the logical layout of the virtual keyboard.
  *
@@ -102,6 +104,7 @@ data class KeyDef(
 
 enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
 
+@Serializable
 enum class KbLayout { QWERTZ, QWERTY, AZERTY }
 
 enum class KbMouseBtnPos { LEFT, RIGHT, BOTH }

@@ -1,8 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppMode
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -117,7 +115,7 @@ object MirrorViewportController {
                 }
                 .debounce(VIEWPORT_SAVE_DEBOUNCE_MS)
                 .collectLatest {
-                    if (AppStateManager.currentMode.value == AppMode.MIRROR &&
+                    if (ScreenCaptureManager.isCapturing.value &&
                         SettingsManager.rememberViewport.value
                     ) {
                         SettingsManager.saveMirrorSessionState()
@@ -134,8 +132,7 @@ object MirrorViewportController {
                 .distinctUntilChanged()
                 .drop(1)
                 .collectLatest {
-                    if (AppStateManager.currentMode.value == AppMode.MIRROR &&
-                        ScreenCaptureManager.isCapturing.value &&
+                    if (ScreenCaptureManager.isCapturing.value &&
                         (SettingsManager.rememberLock.value || SettingsManager.rememberProjection.value)
                     ) {
                         SettingsManager.saveMirrorSessionState()

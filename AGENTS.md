@@ -41,71 +41,123 @@
 
 ## 3 Package Structure
 
+The project is split into three Gradle modules:
+
+- **`:app`** — Android UI layer (Activities, Composables, ViewModels, Service)
+- **`:domain`** — Business logic & state management (no Android UI dependencies)
+- **`:core`** — Pure data models, serializable types, constants (no Android dependencies)
+
+### app module (`app/src/main/java/com/stormpanda/megingiard`)
+
 \`\`\`
-com.stormpanda.megingiard
-├── AppLog.kt # Unified logging facade (level-gated, tag-prefixed)\n├── AppStateManager.kt # Global app-level state (mode, lifecycle flags)
+com.stormpanda.megingiard [app module]
+├── AppStateManager.kt # Stub — migrated to :domain module
 ├── CaptureRequestActivity.kt # MediaProjection consent dialog (transparent Activity)
-├── MainActivity.kt # Entry point, permission checks, display detection
-├── MainAppScreen.kt # Top-level Composable (Crossfade + carousel overlay)
+├── MainActivity.kt # Entry point: permission checks, display detection, file pickers
+├── MainAppScreen.kt # Top-level Composable (MacroPad content + fullscreen overlays)
 ├── mirror/
 │ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
 │ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
-│ ├── MirrorScreen.kt # Mirror Composable (pan/zoom/freeze/lock/touch-projection + carousel nav)
-│ ├── MirrorControlPanel.kt # Animated control pill (Stop/Freeze/Lock/TouchProjection buttons)
-│ ├── MirrorCoordinateTransform.kt # Pure projectCoordinates() geometry helper
-│ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, lock, projection, etc.)
-│ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection
-├── input/
-│ ├── ShellInputInjector.kt # Native binary lifecycle, writer thread, MOVE coalescing (shared)
-│ ├── TouchAction.kt # Shared DOWN/MOVE/UP enum
-│ ├── TouchInjector.kt # Normalised → physical coordinate transform facade (shared)
-│ ├── MouseInjector.kt # Public facade over ShellMouseInjector (shared)
-│ └── ShellMouseInjector.kt # Native binary lifecycle + MOVE-coalescing writer thread (shared)
+│ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection + VirtualDisplay
 ├── keyboard/
 │ ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
-│ ├── KeyboardKeyCap.kt # KeyBounds data class, KeyCap Composable
-│ ├── KeyboardMouseOverlay.kt # Mouse button overlay (MouseButtonColumn, ScrollWheelButton, etc.)
-│ ├── KeyboardState.kt # Modifier key state machine (INACTIVE/STICKY/HELD)
-│ ├── KeyboardLayout.kt # Layout definitions, KeyDef data class, findKeyInLayout()
-│ ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
-│ ├── ShellKeyInjector.kt # Native binary lifecycle for key injection via /dev/uinput
-│ ├── KeyAction.kt # Shared DOWN/UP enum
-│ └── LinuxKeycodes.kt # Linux input-event-codes constants
+│ ├── KeyboardKeyCap.kt # KeyCap Composable, key bounds tracking
+│ └── KeyboardMouseOverlay.kt # Mouse button overlay (LMB/MMB/RMB/scroll)
 ├── settings/
-│ ├── ColorWheelPicker.kt # HSV color picker Dialog (hue wheel + brightness slider)
-│ ├── GlobalSettingsScreen.kt # Full-screen global settings Composable (scaffold + state only)
+│ ├── ColorWheelPicker.kt # HSV color picker (hue wheel + brightness slider)
+│ ├── GlobalSettingsScreen.kt # Full-screen settings Composable (scaffold + state only)
 │ ├── GlobalSettingsComponents.kt # Extracted setting row Composables for GlobalSettingsScreen
-│ ├── SettingsManager.kt # App-wide settings persistence via DataStore
-│ ├── ToolSettingsPanel.kt # Per-tool settings Dialog orchestrator (mode dispatch only)
-│ ├── ToolSettingsComponents.kt # Reusable row Composables (RememberSettingRow, SliderSettingRow, dropdowns, etc.)
-│ ├── MirrorToolSettings.kt # Mirror-mode settings Composable
-│ ├── KeyboardToolSettings.kt # Keyboard-mode settings Composable
-│ └── TouchpadToolSettings.kt # Touchpad-mode settings Composable
-├── config/
-│ ├── ConfigSchema.kt # @Serializable data classes: MegingiardExport, ExportMetadata
-│ └── ConfigManager.kt # Unified export/import: coordinator StateFlows, SAF I/O, UUID remap, checksum
+│ └── ToolSettingsComponents.kt # Reusable row Composables (SliderSettingRow, dropdowns, etc.)
 ├── macropad/
-│ ├── MacroPadScreen.kt # Use-mode Composable (pad render, multi-touch, injector lifecycle)
-│ ├── MacroPadButton.kt # PadButton & ScrollWheelFace Composables + button constants
-│ ├── MacroPadActionDispatch.kt # injectActionDown/Up helpers (delegates to injectors)
-│ ├── MacroPadEditor.kt # Full-screen layout editor (profile CRUD, drag-repositioning)
+│ ├── MacroPadScreen.kt # Main pad Composable (button grid, multi-touch, injector lifecycle)
+│ ├── MacroPadButton.kt # PadButton, ScrollWheelFace, AmbientPeekFace Composables
+│ ├── MacroPadEditor.kt # Full-screen layout editor (profile/layout CRUD, drag-repositioning)
 │ ├── PadCanvas.kt # Draggable editor canvas (DraggableButton, PadCanvas)
-│ ├── PadButtonEditDialog.kt # Button create/edit dialog (ButtonEditDialog, SectionLabel)
-│ ├── PadActionPicker.kt # Action-selection UI (ActionPicker, sub-pickers, KEYBOARD_KEY_PRESETS)
-│ ├── MacroPadToolSettings.kt # Tool-settings panel (profile picker, shape/size, Edit Layout)
-│ ├── AmbientMacroPadOverlay.kt # Ambient Display overlay (mirror background + blur/dim + MacroPad)
-│ ├── MacroPadState.kt # Singleton state: profiles + active profile, CRUD, persistence
-│ ├── MacroPadLayout.kt # Serializable data model: PadProfile, PadButton, PadAction
-│ ├── GamepadInjector.kt # Public facade over ShellGamepadInjector
-│ ├── ShellGamepadInjector.kt # Native binary lifecycle + writer thread for gamepad injection
-│ └── GamepadKeycodes.kt # Linux BTN\_ constants + preset list
+│ ├── PadButtonEditDialog.kt # Button create/edit dialog
+│ ├── PadActionPicker.kt # Action-selection UI with category tabs
+│ ├── AmbientMacroPadOverlay.kt # Ambient overlay (dim + vignette + buttons on secondary display)
+│ ├── AmbientSettingsOverlay.kt # Per-layout ambient settings editor
+│ ├── MacroListEditor.kt # In-editor macro list (add/edit/delete/reorder)
+│ ├── MacroStepEditDialog.kt # Macro step timing/action editor dialog
+│ ├── MacroTimelineEditor.kt # Visual macro timeline editor
+│ ├── IconPickerDialog.kt # Material Symbols icon grid picker
+│ ├── MaterialSymbols.kt # Material Symbols typeface integration
+│ ├── MaterialIconRegistry.kt # Icon name → Material Symbols lookup
+│ └── RoundedIconNames.kt # Rounded variant icon name list
 ├── touchpad/
-│ └── TouchpadScreen.kt # Touchpad Composable (16:9 touch surface)
+│ └── FullscreenMouseOverlay.kt # Fullscreen relative-mouse overlay (triggered by FullScreenMouse action)
+├── viewmodel/
+│ ├── MainViewModel.kt # Facade ViewModel: SwipeGestureProcessor, config import helpers
+│ ├── MirrorViewModel.kt # Mirror state exposure, viewport/touch-injector lifecycle
+│ ├── MacroPadViewModel.kt # Multi-injector lifecycle, MacroPadHitTestEngine factory
+│ └── KeyboardViewModel.kt # Key/mouse injector lifecycle, KeyRepeatController
 └── ui/
-└── CarouselOverlay.kt # Shared overlay components (auto-hide, chevron nav)
+├── AppTheme.kt # AppColors token system, palette factory (Dark/Light/Cyberpunk)
+├── IdlePill.kt # Always-visible edge pill (swipe affordance + close label)
+└── PillMenu.kt # Pill overlay (profile/layout card + mirror controls card)
 \`\`\`
 
-**Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`.
+### domain module (`domain/src/main/java/com/stormpanda/megingiard`)
+
+\`\`\`
+com.stormpanda.megingiard [domain module]
+├── AppLog.kt # Unified logging facade (level-gated, tag-prefixed)
+├── AppStateManager.kt # Global app-level state (lifecycle + modal overlay flags)
+├── SwipeGestureProcessor.kt # Edge-swipe gesture detection (shared by pill + mirror)
+├── mirror/
+│ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, lock, projection, bitmap)
+│ ├── MirrorViewportController.kt # Zoom/pan business logic + debounced DataStore persistence
+│ ├── TouchProjectionController.kt # Gesture state machine for touch-projection (DOWN→MOVE\*→UP)
+│ └── DisplayDetector.kt # Multi-display detection via DisplayManager
+├── input/
+│ ├── TouchInjector.kt # Normalised → physical coordinate transform facade
+│ ├── ShellInputInjector.kt # Native touchinjector_arm64 lifecycle + MOVE coalescing
+│ ├── MouseInjector.kt # Public facade over ShellMouseInjector
+│ └── ShellMouseInjector.kt # Native mouseinjector_arm64 lifecycle + MOVE coalescing
+├── keyboard/
+│ ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
+│ ├── ShellKeyInjector.kt # Native keyinjector_arm64 lifecycle (1–255 keycodes only)
+│ ├── KeyboardState.kt # Modifier state machine (INACTIVE/STICKY/HELD)
+│ └── KeyRepeatController.kt # Key repeat + trackpoint tracking per keyboard session
+├── settings/
+│ └── SettingsManager.kt # App-wide settings persistence via DataStore
+├── config/
+│ └── ConfigManager.kt # Export/import coordinator: SAF I/O, UUID remap, checksum
+├── touchpad/
+│ └── TouchpadGestureProcessor.kt # Mouse/touch mode gesture processing (tap-to-click, two-finger-tap)
+└── macropad/
+├── MacroPadState.kt # Singleton: profiles + layouts + macros CRUD, persistence
+├── MacroPadActionDispatch.kt # injectActionDown/Up — routes PadAction types to injectors
+├── MacroPadHitTestEngine.kt # Button lookup, per-pointer tracking, scroll/trackpoint dispatch
+├── MacroExecutor.kt # Timed macro playback (compiles steps → flat event list)
+├── GamepadInjector.kt # Public facade over ShellGamepadInjector
+└── ShellGamepadInjector.kt # Native gamepadinjector_arm64 lifecycle + writer thread
+\`\`\`
+
+### core module (`core/src/main/kotlin/com/stormpanda/megingiard`)
+
+\`\`\`
+com.stormpanda.megingiard [core module]
+├── mirror/
+│ ├── MirrorCoordinateTransform.kt # Pure projectCoordinates() geometry helper
+│ └── ViewportMath.kt # fitAspectRatio() helper
+├── input/
+│ └── TouchAction.kt # DOWN/MOVE/UP enum
+├── keyboard/
+│ ├── KeyboardLayout.kt # KeyDef, KbLayout enum, KbMouseBtnPos, layout factories
+│ ├── KeyAction.kt # DOWN/UP enum
+│ └── LinuxKeycodes.kt # Linux input-event-codes constants (KEY*\*)
+├── settings/
+│ └── ThemeMode.kt # DARK/LIGHT/CYBERPUNK enum
+├── config/
+│ └── ConfigSchema.kt # MegingiardExport, ExportMetadata, SCHEMA_VERSION (v3)
+└── macropad/
+├── MacroPadLayout.kt # PadProfile, PadLayout, PadButton, PadAction (sealed)
+├── MacroData.kt # Macro, MacroStep (sealed), JoystickStick
+└── GamepadKeycodes.kt # Linux BTN*\* constants + preset list
+\`\`\`
+
+**Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`. Business logic with no Android UI dependency belongs in `:domain`. Pure data types and constants belong in `:core`.
 
 ---
 
@@ -165,7 +217,7 @@ bitmap.recycle() // manager never got it, local cleanup required
 
 ### 5.1 Language Level
 
-- Use `AppMode.entries` (Kotlin 1.9+), never `AppMode.values()`.
+- Use `enum.entries` (Kotlin 1.9+), never `enum.values()`.
 - Use `kotlin.math.min` / `kotlin.math.max`, never `java.lang.Math.*`.
 - Use `data class` destructuring or named access (`triple.first`) — avoid
   anonymous destructuring of non-data-class types like `Triple` in lambdas
@@ -298,8 +350,8 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 ### 6.4 Shared UI Components
 
 - Reusable Composables (overlay controls, auto-hide timers) belong in `ui/`.
-- Do not duplicate overlay or carousel code across screens. Use
-  `CarouselOverlay` and `AppStateManager.overlayVisible` / `triggerOverlay()`.
+- Do not duplicate overlay code across screens. Use
+  shared overlay tools and `AppStateManager.overlayVisible` / `triggerOverlay()`.
 
 ### 6.5 Collecting StateFlows
 
@@ -349,11 +401,10 @@ When logic depends on **two or more independent `StateFlow`s**, use `combine()` 
 // ✅ Correct – single derived signal
 scope.launch {
     combine(
-        AppStateManager.currentMode,
         AppStateManager.isActivityResumed,
         AppStateManager.isOnValidScreen
-    ) { mode, resumed, valid ->
-        mode == AppMode.MIRROR && resumed && valid
+    ) { resumed, valid ->
+        resumed && valid
     }.collect { shouldShow ->
         if (shouldShow) show() else hide()
     }
@@ -474,8 +525,8 @@ setOnDismissListener {
 - `TouchInjector.injectTouch()` converts normalised Compose coordinates to
   the sensor's physical portrait space:
   `sensor_x = (1 − normalizedY) * 1080`, `sensor_y = normalizedX * 1920`.
-- `ShellInputInjector.stop()` **must** be called when leaving `TOUCHPAD` mode.
-  In `TouchpadScreen` this is done via `DisposableEffect(Unit) { onDispose { TouchInjector.stop() } }`.
+- `ShellInputInjector.stop()` **must** be called when leaving fullscreen mouse mode.
+  In `FullscreenMouseOverlay` this is done via `DisposableEffect(Unit) { onDispose { TouchInjector.stop() } }`.
 - The device node `/dev/input/event6` is `crw-rw-rw-` on the AYN Thor —
   no root or special permission required beyond the standard shell UID (2000).
   See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
@@ -601,7 +652,7 @@ Before marking a task as done, verify:
 - [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
 - [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] `MirrorPresentation` show/hide uses `mode == AppMode.MIRROR`
+- [ ] `MirrorPresentation` show/hide reacts to presentation visibility conditions
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)

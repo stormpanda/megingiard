@@ -11,34 +11,40 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 private const val TAG = "MacroPadState"
 
 /**
  * Recomputes [PadProfile.enableKeyboard], [PadProfile.enableGamepad], and [PadProfile.enableMouse]
- * from the actual set of button actions so the injectors are started only when needed.
+ * from button actions across **all layouts** so the injectors are started only when needed.
  */
 private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
-    // Macro buttons can inject any event type — treat them as requiring all three devices.
-    val hasMacro = buttons.any { it.action is PadAction.Macro }
-    val kb = hasMacro || buttons.any { it.action is PadAction.KeyboardKey }
-    val gp = hasMacro || buttons.any { it.action is PadAction.GamepadButton }
-    val ms = hasMacro || buttons.any {
+    val allButtons = layouts.flatMap { it.buttons }
+    val hasMacro = allButtons.any { it.action is PadAction.Macro }
+    val kb = hasMacro || allButtons.any {
+        it.action is PadAction.KeyboardKey ||
+        it.action is PadAction.FullScreenKeyboard
+    }
+    val gp = hasMacro || allButtons.any { it.action is PadAction.GamepadButton }
+    val ms = hasMacro || allButtons.any {
         it.action is PadAction.MouseButton    ||
         it.action is PadAction.ScrollWheel    ||
         it.action is PadAction.TrackpointMove ||
-        it.action is PadAction.MouseLeftClick ||
-        it.action is PadAction.MouseRightClick
+        it.action is PadAction.FullScreenMouse ||
+        it.action is PadAction.MirrorTouchProjection
     }
     return if (enableKeyboard == kb && enableGamepad == gp && enableMouse == ms) this
     else copy(enableKeyboard = kb, enableGamepad = gp, enableMouse = ms)
 }
 
 /**
- * Runtime state holder for the MacroPad tool.
+ * Runtime state holder for the MacroPad-centric UI.
  *
- * Manages the list of [PadProfile]s and the currently active profile.
+ * Manages profiles (each containing multiple [PadLayout]s and [Macro]s)
+ * and the currently active profile + layout.
+ *
  * Persistence is delegated to [SettingsManager] — all mutators trigger
  * [SettingsManager.saveMacroPadData] after updating the in-memory state.
  *
@@ -47,13 +53,11 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
  */
 object MacroPadState {
 
-    // App-lifetime scope: intentionally never cancelled — this singleton lives for the
-    // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
     // State
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
 
     private val _profiles = MutableStateFlow<List<PadProfile>>(emptyList())
     val profiles: StateFlow<List<PadProfile>> = _profiles.asStateFlow()
@@ -61,60 +65,70 @@ object MacroPadState {
     private val _activeProfileId = MutableStateFlow<String?>(null)
     val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
 
-    /**
-     * Derived read-only view of the currently active profile.
-     * Falls back to the first profile if the stored ID is not found.
-     */
+    /** Derived: the currently active profile (falls back to first if ID not found). */
     val activeProfile: StateFlow<PadProfile?> =
         combine(_profiles, _activeProfileId) { ps, id ->
             ps.firstOrNull { it.id == id } ?: ps.firstOrNull()
         }.stateIn(scope, SharingStarted.Eagerly, null)
 
-    // -------------------------------------------------------------------------
-    // Internal load hook (called by SettingsManager.init)
-    // -------------------------------------------------------------------------
+    /** Derived: the currently active layout within the active profile. */
+    val activeLayout: StateFlow<PadLayout?> =
+        activeProfile.map { profile ->
+            if (profile == null) return@map null
+            val layoutId = profile.activeLayoutId
+            profile.layouts.firstOrNull { it.id == layoutId }
+                ?: profile.layouts.firstOrNull()
+        }.stateIn(scope, SharingStarted.Eagerly, null)
 
-    internal fun loadFrom(profiles: List<PadProfile>, activeProfileId: String?) {
-        // One-time migration: profiles saved before the Trackpoint-as-button change stored the
-        // trackpoint as profile-level flags (hasTrackpoint, trackpointPosX/Y, trackpointSize).
-        // Convert any such profile to a TrackpointMove PadButton and persist immediately.
+    // ─────────────────────────────────────────────────────────────────────────
+    // Load hook (called by SettingsManager.init)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Restores profiles from persistence. Ensures every profile has at least
+     * one layout and syncs device flags.
+     *
+     * @param profiles         Deserialized profiles from DataStore.
+     * @param activeProfileId  Persisted active profile ID.
+     */
+    internal fun loadFrom(
+        profiles: List<PadProfile>,
+        activeProfileId: String?,
+    ) {
         var needsSave = false
-        val migrated = profiles.map { profile ->
-            if (!profile.hasTrackpoint) return@map profile
-            needsSave = true
-            val tpSize = when {
-                profile.trackpointSize <= 1.5f -> TrackpointSize.SMALL
-                profile.trackpointSize <= 2.5f -> TrackpointSize.MEDIUM
-                else                           -> TrackpointSize.LARGE
+
+        val processed = profiles.map { profile ->
+            var p = profile
+
+            // Ensure every profile has at least one layout (guard against
+            // malformed data that has no layouts).
+            if (p.layouts.isEmpty()) {
+                needsSave = true
+                val layoutId = UUID.randomUUID().toString()
+                p = p.copy(
+                    layouts        = listOf(PadLayout(id = layoutId, name = p.name)),
+                    activeLayoutId = layoutId,
+                )
             }
-            val tpButton = PadButton(
-                id          = UUID.randomUUID().toString(),
-                label       = "",
-                posX        = profile.trackpointPosX,
-                posY        = profile.trackpointPosY,
-                buttonSize  = ButtonSize.SIZE_1X1,
-                buttonShape = ButtonShape.CIRCLE,
-                action      = PadAction.TrackpointMove(tpSize),
-            )
-            profile.copy(
-                buttons      = profile.buttons + tpButton,
-                hasTrackpoint = false,
-            )
+
+            p
         }
-        val withFlags = migrated.map { profile ->
+
+        val withFlags = processed.map { profile ->
             profile.withSyncedDeviceFlags().also { synced ->
                 if (synced != profile) needsSave = true
             }
         }
+
         _profiles.value = withFlags
         _activeProfileId.value = activeProfileId
-        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$activeProfileId, migrated=$needsSave")
+        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$activeProfileId, needsSave=$needsSave")
         if (needsSave) SettingsManager.saveMacroPadData()
     }
 
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
     // Profile CRUD
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
 
     fun addProfile(profile: PadProfile) {
         AppLog.d(TAG, "addProfile id=${profile.id} name='${profile.name}'")
@@ -154,9 +168,154 @@ object MacroPadState {
         SettingsManager.saveMacroPadData()
     }
 
-    // -------------------------------------------------------------------------
+    /** Deletes all profiles and creates a single blank default profile. */
+    fun restoreDefaults() {
+        val defaultId = UUID.randomUUID().toString()
+        val defaultLayoutId = UUID.randomUUID().toString()
+        val defaultProfile = PadProfile(
+            id = defaultId,
+            name = "Default",
+            layouts = listOf(PadLayout(id = defaultLayoutId, name = "Default")),
+            activeLayoutId = defaultLayoutId,
+        )
+        _profiles.value = listOf(defaultProfile)
+        _activeProfileId.value = defaultId
+        AppLog.i(TAG, "restoreDefaults: created default profile $defaultId")
+        SettingsManager.saveMacroPadData()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Layout CRUD (within the active profile)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun setActiveLayoutId(layoutId: String) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "setActiveLayoutId: profileId=${profile.id} layoutId=$layoutId")
+        updateProfile(profile.copy(activeLayoutId = layoutId))
+    }
+
+    fun addLayout(layout: PadLayout) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "addLayout id=${layout.id} name='${layout.name}' to profile=${profile.id}")
+        updateProfile(profile.copy(
+            layouts = profile.layouts + layout,
+            activeLayoutId = layout.id,
+        ))
+    }
+
+    fun updateLayout(layout: PadLayout) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "updateLayout id=${layout.id} name='${layout.name}'")
+        updateProfile(profile.copy(
+            layouts = profile.layouts.map { if (it.id == layout.id) layout else it },
+        ))
+    }
+
+    fun deleteLayout(layoutId: String) {
+        val profile = activeProfile.value ?: return
+        val remaining = profile.layouts.filter { it.id != layoutId }
+        if (remaining.isEmpty()) return // must keep at least one layout
+        val newActiveId = if (profile.activeLayoutId == layoutId) {
+            remaining.firstOrNull()?.id
+        } else {
+            profile.activeLayoutId
+        }
+        AppLog.d(TAG, "deleteLayout id=$layoutId → activeLayoutId=$newActiveId")
+        updateProfile(profile.copy(layouts = remaining, activeLayoutId = newActiveId))
+    }
+
+    fun setLayoutEnabled(layoutId: String, enabled: Boolean) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "setLayoutEnabled id=$layoutId enabled=$enabled")
+        updateProfile(profile.copy(
+            layouts = profile.layouts.map {
+                if (it.id == layoutId) it.copy(enabled = enabled) else it
+            },
+        ))
+    }
+
+    fun reorderLayouts(newOrder: List<PadLayout>) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "reorderLayouts count=${newOrder.size}")
+        updateProfile(profile.copy(layouts = newOrder))
+    }
+
+    /** Switch to the next enabled layout, wrapping around. */
+    fun nextLayout() {
+        val profile = activeProfile.value ?: return
+        val enabled = profile.layouts.filter { it.enabled }
+        if (enabled.size <= 1) return
+        val currentIndex = enabled.indexOfFirst { it.id == profile.activeLayoutId }
+        val nextIndex = (currentIndex + 1) % enabled.size
+        AppLog.d(TAG, "nextLayout: ${enabled[nextIndex].name}")
+        setActiveLayoutId(enabled[nextIndex].id)
+    }
+
+    /** Switch to the previous enabled layout, wrapping around. */
+    fun previousLayout() {
+        val profile = activeProfile.value ?: return
+        val enabled = profile.layouts.filter { it.enabled }
+        if (enabled.size <= 1) return
+        val currentIndex = enabled.indexOfFirst { it.id == profile.activeLayoutId }
+        val prevIndex = if (currentIndex <= 0) enabled.size - 1 else currentIndex - 1
+        AppLog.d(TAG, "previousLayout: ${enabled[prevIndex].name}")
+        setActiveLayoutId(enabled[prevIndex].id)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Per-profile Macro CRUD
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun addMacro(macro: Macro) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "addMacro id=${macro.id} name='${macro.name}' to profile=${profile.id}")
+        updateProfile(profile.copy(macros = profile.macros + macro))
+    }
+
+    fun updateMacro(macro: Macro) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "updateMacro id=${macro.id} name='${macro.name}'")
+        updateProfile(profile.copy(
+            macros = profile.macros.map { if (it.id == macro.id) macro else it },
+        ))
+    }
+
+    fun deleteMacro(macroId: String) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "deleteMacro id=$macroId from profile=${profile.id}")
+        updateProfile(profile.copy(macros = profile.macros.filter { it.id != macroId }))
+    }
+
+    fun renameMacro(macroId: String, newName: String) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "renameMacro id=$macroId name='$newName'")
+        updateProfile(profile.copy(
+            macros = profile.macros.map {
+                if (it.id == macroId) it.copy(name = newName) else it
+            },
+        ))
+    }
+
+    fun reorderMacros(newOrder: List<Macro>) {
+        val profile = activeProfile.value ?: return
+        AppLog.d(TAG, "reorderMacros count=${newOrder.size}")
+        updateProfile(profile.copy(macros = newOrder))
+    }
+
+    /** Copy a macro from any profile into the active profile with a new UUID. */
+    fun copyMacroToActiveProfile(macro: Macro) {
+        val profile = activeProfile.value ?: return
+        val copied = macro.copy(
+            id = UUID.randomUUID().toString(),
+            name = "${macro.name} (Copy)",
+        )
+        AppLog.d(TAG, "copyMacroToActiveProfile originalId=${macro.id} newId=${copied.id}")
+        updateProfile(profile.copy(macros = profile.macros + copied))
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Ambient Peek state
-    // -------------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────
 
     private val _isPeekActive = MutableStateFlow(false)
     val isPeekActive: StateFlow<Boolean> = _isPeekActive.asStateFlow()

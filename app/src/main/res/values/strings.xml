@@ -7,6 +7,7 @@
     <string name="cd_previous_tool">Previous tool</string>
     <string name="cd_next_tool">Next tool</string>
     <string name="cd_stop_mirroring">Stop Mirroring</string>
+    <string name="cd_start_mirroring">Start Mirroring</string>
     <string name="cd_freeze">Freeze</string>
     <string name="cd_unfreeze">Unfreeze</string>
     <string name="cd_lock_view">Lock view</string>
@@ -15,17 +16,6 @@
     <string name="cd_touch_projection_off">Touch Projection off</string>
     <string name="cd_frozen_image">Frozen Stream Image</string>
     <string name="notification_mirroring_active">Mirroring active</string>
-    <string name="touchpad_hint">Touch here to control the top screen</string>
-    <string name="touchpad_hint_mouse">Slide to move cursor · Tap to click</string>
-
-    <!-- Tool display names -->
-    <string name="tool_name_mirror">Mirror</string>
-    <string name="tool_name_touchpad">Touchpad</string>
-    <string name="tool_name_keyboard">Keyboard</string>
-    <string name="tool_name_macropad">MacroPad</string>
-    <string name="keyboard_placeholder">Keyboard coming soon…</string>
-    <string name="cd_keyboard_key">Key %s</string>
-    <string name="cd_keyboard_trackpoint">Trackpoint</string>
 
     <!-- Settings screen -->
     <string name="settings_close">Close</string>
@@ -37,8 +27,6 @@
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_auto_start_capture">Auto-start mirroring</string>
     <string name="settings_auto_start_capture_desc">Automatically request screen capture permission when the app opens</string>
-    <string name="settings_overlay_timeout">Controls hide after: %ds</string>
-    <string name="settings_no_tool_settings">No settings available for this tool.</string>
     <string name="settings_global_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_accent_color">Accent color</string>
@@ -53,6 +41,7 @@
     <string name="settings_color_apply">Apply</string>
 
     <!-- Keyboard settings -->
+    <string name="cd_keyboard_trackpoint">Trackpoint</string>
     <string name="settings_kb_layout">Keyboard layout</string>
     <string name="settings_kb_layout_desc">Key arrangement for letters</string>
     <string name="settings_kb_layout_qwertz">QWERTZ</string>
@@ -83,12 +72,6 @@
     <string name="settings_remember_lock">Remember lock</string>
     <string name="settings_remember_lock_desc">Restore view lock state when mirroring restarts</string>
     <string name="settings_remember_projection">Remember touch projection</string>
-    <string name="settings_remember_projection_desc">Restore touch projection state when mirroring restarts</string>
-
-    <!-- General session -->
-    <string name="settings_remember_last_tool">Remember last used tool</string>
-    <string name="settings_remember_last_tool_desc">Restore the active tool when the app restarts</string>
-
     <!-- MacroPad tool -->
     <string name="macropad_no_profile">No profile configured.
 Open Settings to create a layout.</string>
@@ -147,6 +130,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_rename">Rename</string>
     <string name="macropad_editor_delete_profile">Delete Profile</string>
     <string name="macropad_editor_confirm_delete">Delete this profile?</string>
+    <string name="macropad_editor_delete_layout">Delete Layout</string>
+    <string name="cd_layout_enable_toggle">Toggle layout enabled</string>
     <string name="macropad_editor_cancel">Cancel</string>
     <string name="macropad_editor_confirm">Delete</string>
 
@@ -159,6 +144,12 @@ Open Settings to create a layout.</string>
 
     <!-- Configuration export/import -->
     <string name="settings_section_config">Configuration</string>
+    <string name="settings_section_data">Data</string>
+    <string name="settings_restore_defaults">Restore default profiles</string>
+    <string name="settings_restore_defaults_desc">Deletes all profiles and creates a blank default profile</string>
+    <string name="settings_restore_defaults_confirm">This will delete all existing profiles and macros and create a single blank profile. This action cannot be undone.</string>
+    <string name="settings_restore_defaults_confirm_button">Restore</string>
+    <string name="settings_cancel">Cancel</string>
     <string name="settings_config_export">Export configuration</string>
     <string name="settings_config_export_desc">Save all settings, MacroPad profiles, and macros as a .mgrd file</string>
     <string name="settings_config_import">Import configuration</string>
@@ -209,8 +200,17 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
     <string name="macropad_action_ambient_peek">Ambient Peek</string>
+    <string name="macropad_action_layout_next">Next Layout</string>
+    <string name="macropad_action_layout_previous">Previous Layout</string>
+    <string name="macropad_action_profile_switcher">Profile Switcher</string>
+    <string name="macropad_action_mirror_play_stop">Mirror Start/Stop</string>
+    <string name="macropad_action_mirror_freeze">Mirror Freeze</string>
+    <string name="macropad_action_mirror_viewport_edit">Mirror Viewport</string>
+    <string name="macropad_action_mirror_touch_projection">Touch Projection</string>
+    <string name="macropad_action_fullscreen_mouse">Fullscreen Mouse</string>
+    <string name="macropad_action_fullscreen_keyboard">Fullscreen Keyboard</string>
 
-    <!-- MacroPad settings (ToolSettingsPanel) -->
+    <!-- MacroPad profile / layout strings -->
     <string name="settings_macropad_profile">Active Profile</string>
     <string name="settings_macropad_new_profile">New Profile…</string>
     <string name="settings_macropad_pad_shape">Pad shape</string>
@@ -221,14 +221,16 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_new_layout">New Layout</string>
     <string name="settings_macropad_edit">Edit</string>
     <string name="settings_macropad_new">New</string>
+    <string name="macropad_layout_template_title">Template</string>
+    <string name="macropad_layout_template_blank">Blank</string>
 
     <!-- MacroPad ambient display settings -->
     <string name="settings_macropad_ambient">Ambient Display</string>
     <string name="settings_macropad_ambient_hint">Starts Screen Mirror automatically (permission required on first use)</string>
     <string name="settings_macropad_ambient_preview">Preview for display</string>
     <string name="settings_macropad_ambient_preview_hint">Transparent window while display is being adjusted</string>
-    <string name="settings_macropad_ambient_apply_theme">Theme auch bei Spiegelung im Hintergrund anwenden</string>
-    <string name="settings_macropad_ambient_apply_theme_hint">Wenn deaktiviert, erscheinen alle Buttons im neutralen Grau-Stil</string>
+    <string name="settings_macropad_ambient_apply_theme">Apply theme to ambient display</string>
+    <string name="settings_macropad_ambient_apply_theme_hint">When disabled, all buttons appear in neutral grey style</string>
     <string name="settings_macropad_dim">Dimming</string>
     <string name="settings_macropad_vignette">Vignette</string>
     <string name="settings_macropad_vignette_visible_area">Visible Area</string>
@@ -237,6 +239,7 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_vignette_transition_hard">Hard</string>
     <string name="settings_macropad_vignette_opacity">Opacity</string>
     <string name="settings_macropad_vignette_color">Color</string>
+    <string name="ambient_preview">Preview</string>
     <string name="settings_macropad_vignette_shape">Shape</string>
     <string name="settings_macropad_vignette_shape_radial">Radial</string>
     <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
@@ -267,6 +270,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_display_macro">Macro: %s</string>
 
     <!-- MacroPad macro picker (PadActionPicker) -->
+    <string name="macropad_picker_folder_empty">No macros available</string>
     <string name="macropad_macro_picker_no_macros">No macros available</string>
     <string name="macropad_macro_picker_unknown">Unknown Macro</string>
 
@@ -317,17 +321,22 @@ Open Settings to create a layout.</string>
     <!-- %1$d = start time ms, %2$d = duration ms -->
     <string name="macropad_macro_step_timing">@%1$dms  ⟶  %2$dms</string>
 
-    <!-- MacroPad macro folders -->
-    <string name="macropad_folder_unassigned">Unassigned</string>
-    <string name="macropad_folder_new">New Folder</string>
-    <string name="macropad_folder_rename">Rename Folder</string>
-    <string name="macropad_folder_delete">Delete Folder</string>
-    <string name="macropad_folder_delete_confirm">All macros in this folder will be moved to &#8220;Unassigned&#8221;.</string>
-    <string name="macropad_folder_name_hint">Folder name</string>
-    <string name="macropad_folder_move_title">Move to Folder</string>
-    <string name="macropad_folder_move_up">Move Up</string>
-    <string name="macropad_folder_move_down">Move Down</string>
-    <string name="macropad_move_to_folder">Move to Folder…</string>
-    <string name="macropad_picker_folder_empty">No macros in this folder</string>
     <string name="cd_more_options">More options</string>
+
+    <!-- Idle Pill -->
+    <string name="pill_x_close">× close</string>
+
+    <!-- Pill Menu -->
+    <string name="pill_menu_profile_label">Profile</string>
+    <string name="pill_menu_layout_label">Layout</string>
+    <string name="pill_menu_new_profile">New Profile</string>
+    <string name="pill_menu_new_layout">New Layout</string>
+    <string name="pill_menu_edit_layout">Edit Profile/Layout</string>
+    <string name="pill_menu_ambient_settings">Ambient Settings</string>
+    <string name="pill_menu_global_settings">Global Settings</string>
+    <string name="pill_menu_profile_name_hint">Profile name</string>
+    <string name="pill_menu_layout_name_hint">Layout name</string>
+    <string name="cd_layout_prev">Previous layout</string>
+    <string name="cd_layout_next">Next layout</string>
+    <string name="cd_viewport_edit">Edit viewport</string>
 </resources>

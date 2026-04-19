@@ -6,16 +6,18 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.mirror.MirrorViewportController
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "MirrorViewModel"
+private const val MIRROR_CONTROLS_AUTO_HIDE_MS = 5000L
 
 /**
  * ViewModel for [MirrorScreen] — bridges viewport controller, touch projection,
@@ -46,11 +48,11 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val offsetY: StateFlow<Float> = MirrorViewportController.offsetY
 
     // ── Overlay/settings ────────────────────────────────────────────────────
-    val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
+    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val currentMode: StateFlow<AppMode> = AppStateManager.currentMode
     val isTouching: StateFlow<Boolean> = AppStateManager.isTouching
-    val overlayTimeoutMs: StateFlow<Long> = SettingsManager.overlayTimeoutMs
+    private val _overlayTimeoutMs = MutableStateFlow(MIRROR_CONTROLS_AUTO_HIDE_MS)
+    val overlayTimeoutMs: StateFlow<Long> = _overlayTimeoutMs.asStateFlow()
 
     init {
         MirrorViewportController.startPersistence(viewModelScope)
@@ -59,8 +61,6 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
 
     // ── UI interactions ─────────────────────────────────────────────────────
     fun setTouching(touching: Boolean) = AppStateManager.setTouching(touching)
-    fun setPillExpanded(expanded: Boolean) = AppStateManager.setPillExpanded(expanded)
-    fun triggerOverlay() = AppStateManager.triggerOverlay()
 
     // ── Viewport operations ─────────────────────────────────────────────────
     fun applyZoomPan(zoom: Float, panX: Float, panY: Float) {
@@ -82,18 +82,18 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
         TouchProjectionController(edgeZonePx, overlayAtBottom)
 
     fun startTouchInjector(context: Context) {
-        AppLog.d(TAG, "TouchInjector starting")
+        AppLog.i(TAG, "TouchInjector starting")
         TouchInjector.start(context)
     }
 
     fun stopTouchInjector() {
-        AppLog.d(TAG, "TouchInjector stopping")
+        AppLog.i(TAG, "TouchInjector stopping")
         TouchInjector.stop()
     }
 
     override fun onCleared() {
         super.onCleared()
-        AppLog.d(TAG, "onCleared → TouchInjector stop (safety net)")
+        AppLog.i(TAG, "onCleared → TouchInjector stop (safety net)")
         TouchInjector.stop()
     }
 }

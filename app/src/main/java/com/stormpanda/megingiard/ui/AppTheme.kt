@@ -29,7 +29,7 @@ data class AppColors(
     val onSurfaceSecondary: Color,
     /** Subtle divider lines. */
     val divider: Color,
-    /** Semi-transparent floating control pill (mirror, carousel). */
+    /** Semi-transparent floating control pill (mirror, pill menu). */
     val controlOverlay: Color,
     /** Text / icons on the control overlay. */
     val onControlOverlay: Color,
@@ -65,7 +65,7 @@ data class AppColors(
     val navPillBody: Color,
     /** Background of mirror control buttons. */
     val buttonBody: Color,
-    /** Border/outline of the carousel control overlay container. */
+    /** Border/outline of the pill menu control overlay container. */
     val controlOverlayBorder: Color,
     /** Border/outline of the navigation pill. */
     val navPillBorder: Color,

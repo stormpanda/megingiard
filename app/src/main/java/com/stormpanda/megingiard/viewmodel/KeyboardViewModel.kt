@@ -31,27 +31,27 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     val kbFullscreen: StateFlow<Boolean> = SettingsManager.kbFullscreen
     val kbMouseBtnPos: StateFlow<com.stormpanda.megingiard.keyboard.KbMouseBtnPos> = SettingsManager.kbMouseBtnPos
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val overlayVisible: StateFlow<Boolean> = AppStateManager.overlayVisible
+    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
 
     val controller = KeyRepeatController(viewModelScope)
 
-    fun hideOverlay() = AppStateManager.hideOverlay()
+    fun closePillMenu() = AppStateManager.closePillMenu()
 
     fun startInjectors(context: Context) {
         viewModelScope.launch {
             KeyboardState.reset()
-            AppStateManager.overlayVisible.first { !it }
-            AppLog.d(TAG, "overlay closed, starting KeyInjector + MouseInjector")
+            AppStateManager.isPillMenuOpen.first { !it }
+            AppLog.i(TAG, "pill menu closed, starting KeyInjector + MouseInjector")
             withContext(Dispatchers.IO) {
                 KeyInjector.start(context)
                 MouseInjector.start(context)
             }
-            AppLog.d(TAG, "KeyInjector + MouseInjector started")
+            AppLog.i(TAG, "KeyInjector + MouseInjector started")
         }
     }
 
     fun stopAndReset() {
-        AppLog.d(TAG, "stopAndReset called")
+        AppLog.i(TAG, "stopAndReset called")
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()
@@ -60,7 +60,7 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
-        AppLog.d(TAG, "onCleared → KeyInjector + MouseInjector stopped, KeyboardState reset")
+        AppLog.i(TAG, "onCleared → KeyInjector + MouseInjector stopped, KeyboardState reset")
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()

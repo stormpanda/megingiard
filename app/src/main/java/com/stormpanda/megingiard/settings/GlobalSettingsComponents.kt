@@ -14,20 +14,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,20 +33,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
 import java.util.Locale
-import kotlin.math.roundToInt
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-private val GS_TOOL_ROW_PADDING = 4.dp
-private const val GS_TIMEOUT_SLIDER_MIN_MS = 1000f
-private const val GS_TIMEOUT_SLIDER_MAX_MS = 15000f
-private const val GS_TIMEOUT_SNAP_MIN_S = 1L
-private const val GS_TIMEOUT_SNAP_MAX_S = 15L
 private val GS_DROPDOWN_ICON_SIZE = 20.dp
 private val GS_COLOR_PREVIEW_SIZE = 28.dp
 private val GS_COLOR_ICON_SPACER = 8.dp
@@ -79,91 +66,6 @@ internal fun SettingsCategoryHeader(
             .background(colors.appBackground)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     )
-}
-
-@Composable
-internal fun ToolOrderRow(
-    tool: AppMode,
-    isEnabled: Boolean,
-    isDragging: Boolean,
-    canDisable: Boolean,
-    accentColor: Color,
-    colors: AppColors,
-    onToggle: (Boolean) -> Unit,
-    dragHandleModifier: Modifier,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (isDragging) colors.surfaceVariant else colors.surface)
-            .padding(horizontal = GS_TOOL_ROW_PADDING, vertical = GS_TOOL_ROW_PADDING),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(
-            checked = isEnabled,
-            onCheckedChange = { if (canDisable || it) onToggle(it) },
-            enabled = canDisable,
-            colors = CheckboxDefaults.colors(
-                checkedColor = accentColor,
-                checkmarkColor = Color.White,
-                uncheckedColor = colors.onSurfaceSecondary,
-                disabledCheckedColor = accentColor
-            )
-        )
-        Text(
-            text = stringResource(tool.displayNameResId()),
-            color = colors.onSurface,
-            fontSize = 14.sp,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 4.dp)
-        )
-        Icon(
-            imageVector = Icons.Rounded.DragHandle,
-            contentDescription = stringResource(R.string.cd_drag_reorder),
-            tint = colors.onSurfaceSecondary,
-            modifier = Modifier
-                .padding(12.dp)
-                .then(dragHandleModifier)
-        )
-    }
-}
-
-@Composable
-internal fun OverlayTimeoutRow(
-    overlayTimeoutMs: Long,
-    accentColor: Color,
-    colors: AppColors,
-    onTimeoutChanged: (Long) -> Unit,
-) {
-    var sliderValue by remember { mutableFloatStateOf(overlayTimeoutMs.toFloat()) }
-    val seconds = (sliderValue / 1000f).roundToInt()
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.settings_overlay_timeout, seconds),
-            color = colors.onSurface,
-            fontSize = 14.sp
-        )
-        Slider(
-            value = sliderValue,
-            onValueChange = { sliderValue = it },
-            onValueChangeFinished = {
-                val snapped = (sliderValue / 1000f).roundToInt().toLong().coerceIn(GS_TIMEOUT_SNAP_MIN_S, GS_TIMEOUT_SNAP_MAX_S) * 1000L
-                onTimeoutChanged(snapped)
-            },
-            valueRange = GS_TIMEOUT_SLIDER_MIN_MS..GS_TIMEOUT_SLIDER_MAX_MS,
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = accentColor
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
 }
 
 @Composable
@@ -195,50 +97,6 @@ internal fun OverlayPositionRow(
             )
         )
     }
-}
-
-@Composable
-internal fun RememberLastToolRow(
-    rememberLastTool: Boolean,
-    accentColor: Color,
-    colors: AppColors,
-    onChanged: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_remember_last_tool),
-                color = colors.onSurface,
-                fontSize = 14.sp
-            )
-            Text(
-                text = stringResource(R.string.settings_remember_last_tool_desc),
-                color = colors.onSurfaceSecondary,
-                fontSize = 12.sp
-            )
-        }
-        Switch(
-            checked = rememberLastTool,
-            onCheckedChange = onChanged,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = accentColor
-            )
-        )
-    }
-}
-
-internal fun AppMode.displayNameResId(): Int = when (this) {
-    AppMode.MIRROR -> R.string.tool_name_mirror
-    AppMode.TOUCHPAD -> R.string.tool_name_touchpad
-    AppMode.KEYBOARD -> R.string.tool_name_keyboard
-    AppMode.MACROPAD -> R.string.tool_name_macropad
 }
 
 internal fun ThemeMode.displayNameResId(): Int = when (this) {

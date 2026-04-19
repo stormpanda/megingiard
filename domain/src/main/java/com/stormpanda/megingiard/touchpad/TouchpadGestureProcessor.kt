@@ -19,6 +19,8 @@ private const val TP_MOUSE_SENSITIVITY = 2f
 private const val TP_TAP_TIMEOUT_MS = 200L
 private const val TP_TAP_SLOP_PX = 20f
 private const val TP_CLICK_DURATION_MS = 40L
+private const val TP_SENSITIVITY_MIN = 0.1f
+private const val TP_SENSITIVITY_MAX = 10f
 
 /**
  * Gesture processor for the virtual touchpad, supporting two input modes:
@@ -37,7 +39,11 @@ private const val TP_CLICK_DURATION_MS = 40L
 class TouchpadGestureProcessor(
     private val useMouse: Boolean,
     private val scope: CoroutineScope,
+    sensitivity: Float = 1.0f,
 ) {
+    // Clamp sensitivity to a safe range to prevent inverted, NaN, or extreme cursor movement.
+    private val sensitivity: Float = if (sensitivity.isFinite() && sensitivity > 0f)
+        sensitivity.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX) else 1.0f
     // ── Touch mode state ────────────────────────────────────────────────────
     private val _touchPos = MutableStateFlow<Pair<Float, Float>?>(null)
     /** Current finger position (touch mode only), null when not touching. */
@@ -58,7 +64,7 @@ class TouchpadGestureProcessor(
      * @param y            pointer Y in surface pixels
      * @param surfaceW     width of the touch surface in pixels
      * @param surfaceH     height of the touch surface in pixels
-     * @param overlayOpen  true if the carousel overlay is currently visible
+     * @param overlayOpen  true if the pill menu overlay is currently visible
      */
     fun onPress(
         pointerId: Long,
@@ -69,7 +75,7 @@ class TouchpadGestureProcessor(
         overlayOpen: Boolean,
     ) {
         if (overlayOpen) {
-            AppStateManager.hideOverlay()
+            AppStateManager.closePillMenu()
             return
         }
 
@@ -95,7 +101,7 @@ class TouchpadGestureProcessor(
      * @param deltaY     position change Y since last event
      * @param surfaceW   width of the touch surface in pixels
      * @param surfaceH   height of the touch surface in pixels
-     * @param overlayOpen  true if the carousel overlay is currently visible
+     * @param overlayOpen  true if the pill menu overlay is currently visible
      */
     fun onMove(
         pointerId: Long,
@@ -121,8 +127,8 @@ class TouchpadGestureProcessor(
             }
             // Only primary pointer drives cursor
             if (pointerId == primaryPointer) {
-                val dx = (deltaX * TP_MOUSE_SENSITIVITY).roundToInt()
-                val dy = (deltaY * TP_MOUSE_SENSITIVITY).roundToInt()
+                val dx = (deltaX * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
+                val dy = (deltaY * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
             }
         } else {

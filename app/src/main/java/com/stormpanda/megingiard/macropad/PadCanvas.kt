@@ -95,7 +95,7 @@ internal enum class GridMode { OFF, RECTANGULAR, RADIAL }
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun PadCanvas(profile: PadProfile, accentColor: Color, gridMode: GridMode) {
+internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Color, gridMode: GridMode) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val colors     = LocalAppColors.current
     val density    = LocalDensity.current
@@ -123,7 +123,8 @@ internal fun PadCanvas(profile: PadProfile, accentColor: Color, gridMode: GridMo
         }
 
         // Render each button as a draggable chip
-        profile.buttons.forEach { btn ->
+        (layout?.buttons ?: emptyList()).forEach { btn ->
+            val targetLayoutId = layout?.id
             DraggableButton(
                 btn            = btn,
                 canvasSize     = canvasSize,
@@ -134,13 +135,20 @@ internal fun PadCanvas(profile: PadProfile, accentColor: Color, gridMode: GridMo
                 gridMode       = gridMode,
                 gridStepPx     = gridStepPx,
                 onPositionChanged = { nx, ny ->
-                    MacroPadState.updateProfile(
-                        profile.copy(
-                            buttons = profile.buttons.map { b ->
-                                if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
-                            }
-                        )
-                    )
+                    val layoutId = targetLayoutId
+                    val activeProfile = MacroPadState.activeProfile.value
+                    if (layoutId != null && activeProfile != null) {
+                        val currentLayout = activeProfile.layouts.firstOrNull { it.id == layoutId }
+                        if (currentLayout != null) {
+                            MacroPadState.updateLayout(
+                                currentLayout.copy(
+                                    buttons = currentLayout.buttons.map { b ->
+                                        if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
+                                    },
+                                ),
+                            )
+                        }
+                    }
                 },
             )
         }
@@ -182,11 +190,18 @@ private fun DraggableButton(
         is PadAction.GamepadButton               -> !enableGamepad
         is PadAction.MouseButton,
         is PadAction.ScrollWheel,
-        is PadAction.TrackpointMove,
-        is PadAction.MouseLeftClick,
-        is PadAction.MouseRightClick             -> !enableMouse
+        is PadAction.TrackpointMove              -> !enableMouse
         is PadAction.Macro                       -> !enableGamepad
         is PadAction.AmbientPeek                 -> false
+        is PadAction.LayoutNext,
+        is PadAction.LayoutPrevious,
+        is PadAction.ProfileSwitcher,
+        is PadAction.MirrorPlayStop,
+        is PadAction.MirrorFreeze,
+        is PadAction.MirrorViewportEdit,
+        is PadAction.MirrorTouchProjection       -> false
+        is PadAction.FullScreenMouse             -> !enableMouse
+        is PadAction.FullScreenKeyboard          -> !enableKeyboard
     }
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val chipWidthPx  = with(density) {

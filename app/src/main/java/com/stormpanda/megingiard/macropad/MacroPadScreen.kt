@@ -37,8 +37,6 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
 
 private val MP_CORNER_RADIUS = 8.dp
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
@@ -61,9 +59,10 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val viewModel: MacroPadViewModel = viewModel()
     val context     = LocalContext.current
     val profile     by viewModel.activeProfile.collectAsState()
+    val layout      by viewModel.activeLayout.collectAsState()
     val colors      = LocalAppColors.current
 
-    // Start injectors after the carousel overlay has closed
+    // Start injectors after the pill menu has closed
     LaunchedEffect(Unit) {
         viewModel.startInjectors(context)
     }
@@ -80,7 +79,8 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         contentAlignment   = Alignment.Center,
     ) {
         val p = profile
-        if (p == null) {
+        val l = layout
+        if (p == null || l == null) {
             // No profile yet
             Text(
                 text      = stringResource(R.string.macropad_no_profile),
@@ -92,6 +92,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         } else {
             PadSurface(
                 profile     = p,
+                layout      = l,
                 accentColor = colors.accent,
             )
         }
@@ -105,6 +106,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 @Composable
 internal fun PadSurface(
     profile: PadProfile,
+    layout: PadLayout,
     accentColor: Color,
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
@@ -115,11 +117,11 @@ internal fun PadSurface(
     val context      = LocalContext.current
     val colors       = LocalAppColors.current
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
-    val overlayVisible      by viewModel.overlayVisible.collectAsState()
-    val overlayVisibleState  = rememberUpdatedState(overlayVisible)
+    val isPillMenuOpen      by viewModel.isPillMenuOpen.collectAsState()
+    val isPillMenuOpenState  = rememberUpdatedState(isPillMenuOpen)
 
     // Create hit-test engine with density-aware dp→px converter
-    val engine = remember(profile) {
+    val engine = remember(profile, layout) {
         viewModel.createHitTestEngine { dpValue -> with(density) { dpValue.dp.toPx() } }
     }
 
@@ -140,7 +142,7 @@ internal fun PadSurface(
                     else Modifier.border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
                 )
                 .onSizeChanged { canvasSizeState.value = it }
-                .pointerInput(profile, canvasSizeState.value) {
+                .pointerInput(profile, layout, canvasSizeState.value) {
                     awaitPointerEventScope {
                         while (true) {
                             val event   = awaitPointerEvent(PointerEventPass.Main)
@@ -148,8 +150,8 @@ internal fun PadSurface(
                             val w       = canvasSize.width.toFloat().coerceAtLeast(1f)
                             val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
 
-                            // Block input while carousel overlay is open
-                            if (overlayVisibleState.value && event.type != PointerEventType.Release) {
+                            // Block input while pill menu overlay is open
+                            if (isPillMenuOpenState.value && event.type != PointerEventType.Release) {
                                 event.changes.forEach { it.consume() }
                                 continue
                             }
@@ -162,7 +164,7 @@ internal fun PadSurface(
                                         if (!change.previousPressed) {
                                             val disabledBtn = engine.onPress(
                                                 id, change.position.x, change.position.y,
-                                                w, h, profile, isPeekActive
+                                                w, h, layout.buttons, profile, isPeekActive
                                             )
                                             if (disabledBtn != null) {
                                                 val msgRes = MacroPadHitTestEngine.deviceDisabledMessageRes(
@@ -178,13 +180,13 @@ internal fun PadSurface(
 
                                     PointerEventType.Move -> {
                                         val delta = change.positionChange()
-                                        engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, profile)
+                                        engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, layout.buttons, profile)
                                         change.consume()
                                     }
 
                                     PointerEventType.Release -> {
                                         if (!change.pressed) {
-                                            engine.onRelease(id, profile)
+                                            engine.onRelease(id, layout.buttons, profile)
                                         }
                                         change.consume()
                                     }
@@ -198,9 +200,9 @@ internal fun PadSurface(
         ) {
             // Render buttons (filtered by peek state)
             val visibleButtons = if (isPeekActive) {
-                profile.buttons.filter { it.action is PadAction.AmbientPeek }
+                layout.buttons.filter { it.action is PadAction.AmbientPeek }
             } else {
-                profile.buttons
+                layout.buttons
             }
             visibleButtons.forEach { btn ->
                 val isDeviceDisabled = MacroPadHitTestEngine.isDeviceDisabled(btn.action, profile)

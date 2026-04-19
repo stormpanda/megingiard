@@ -17,7 +17,6 @@ import android.view.Display
 import android.view.Surface
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppMode
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -83,11 +82,11 @@ class ScreenCaptureService : Service() {
             val dpi = windowContext.resources.configuration.densityDpi
 
             var currentSurface: Surface? = null
-            scope.launch {
-                ScreenCaptureManager.isFrozen.collect { frozen ->
-                    virtualDisplay?.surface = if (frozen) null else currentSurface
-                }
-            }
+            // NOTE: freeze is handled entirely by MirrorPresentation.bindStateFlows:
+            // PixelCopy captures the last frame, then sv.visibility = INVISIBLE hides the
+            // SurfaceView overlay so the ComposeView frozen-bitmap Image is visible.
+            // Setting virtualDisplay.surface = null *before* PixelCopy completes would
+            // make the SurfaceView go black before the bitmap is captured.
 
             val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
             mirrorPresentation = presentation
@@ -100,11 +99,8 @@ class ScreenCaptureService : Service() {
             presentation.onSurfaceReady = { surface ->
                 currentSurface = surface
                 virtualDisplay?.release()
-                val mode = AppStateManager.currentMode.value
                 val ambientEnabled = SettingsManager.macropadAmbientEnabled.value
-                val shouldCreateVd = mode == AppMode.MIRROR ||
-                    (mode == AppMode.MACROPAD && ambientEnabled)
-                if (shouldCreateVd) {
+                if (ambientEnabled) {
                     try {
                         val isFrozen = ScreenCaptureManager.isFrozen.value
                         virtualDisplay = mediaProjection?.createVirtualDisplay(
@@ -158,6 +154,9 @@ class ScreenCaptureService : Service() {
         // the UI state is cleaned up so the app doesn't get stuck.
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         AppStateManager.setPromptInFlight(false)
+        // Prevent the auto-start LaunchedEffect in MainActivity from re-triggering capture
+        // as soon as isCapturing transitions to false. The user must explicitly press Start again.
+        AppStateManager.setUserDeclinedCapture(true)
         virtualDisplay?.release()
         mediaProjection?.stop()
         mirrorPresentation?.dismiss()

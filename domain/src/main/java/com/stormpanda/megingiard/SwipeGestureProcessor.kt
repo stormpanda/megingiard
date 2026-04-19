@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard
 
 /**
- * Reusable edge-zone swipe detector for revealing the carousel overlay.
+ * Reusable edge-zone swipe detector for revealing the pill menu overlay.
  *
  * The same swipe logic is used in [MainAppScreen] and [MirrorScreen].
  * This processor is Compose-free: it accepts raw coordinates and dimensions
@@ -41,7 +41,7 @@ class SwipeGestureProcessor(
                 pointerY - swipeStartY
             }
             if (delta >= swipeThresholdPx) {
-                AppStateManager.triggerOverlay()
+                AppStateManager.handleEdgeSwipe()
                 swipeTriggered = true
             }
         }
@@ -51,7 +51,6 @@ class SwipeGestureProcessor(
     fun onRelease(allPointersUp: Boolean) {
         if (allPointersUp) {
             AppStateManager.setTouching(false)
-            AppStateManager.setPillExpanded(false)
         }
         swipeStartY = Float.NaN
         swipeTriggered = false

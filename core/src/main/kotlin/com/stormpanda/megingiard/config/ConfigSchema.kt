@@ -1,7 +1,5 @@
 package com.stormpanda.megingiard.config
 
-import com.stormpanda.megingiard.macropad.Macro
-import com.stormpanda.megingiard.macropad.MacroFolder
 import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -12,10 +10,9 @@ import kotlinx.serialization.json.JsonElement
 
 /**
  * Schema version — integer, incremented on breaking changes.
- * v1: per-section typed data classes (removed in v2).
- * v2: flat DataStore key/value map grouped by section name.
+ * v3: macros embedded inside PadProfile.macros; flat DataStore key/value map grouped by section.
  */
-const val SCHEMA_VERSION = 2
+const val SCHEMA_VERSION = 3
 
 /** MIME type registered in AndroidManifest for `.mgrd` config files. */
 const val MGRD_MIME_TYPE = "application/vnd.megingiard.config+json"
@@ -31,19 +28,16 @@ const val MGRD_MIME_TYPE = "application/vnd.megingiard.config+json"
  * where keys match the DataStore preference key names. This means adding a new
  * setting requires zero changes to the config package — only SettingsManager.
  *
- * MacroPad data (profiles, macros, folders) uses typed lists because import
- * requires UUID remapping and conflict resolution (\"(Imported)\" suffix).
+ * MacroPad profiles carry their own macros (`PadProfile.macros`).
  */
 @Serializable
 data class MegingiardExport(
     val schemaVersion: Int,
     val metadata: ExportMetadata,
     val checksum: String,
-    /** Settings grouped by section: `{\"global\": {\"accent_color\": 123, ...}, \"mirror\": {...}}` */
+    /** Settings grouped by section: `{"global": {"accent_color": 123, ...}, "mirror": {...}}` */
     val settings: Map<String, Map<String, JsonElement>> = emptyMap(),
     val profiles: List<PadProfile> = emptyList(),
-    val macros: List<Macro> = emptyList(),
-    val macroFolders: List<MacroFolder> = emptyList(),
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

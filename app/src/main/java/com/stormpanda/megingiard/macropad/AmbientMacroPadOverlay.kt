@@ -10,6 +10,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -17,6 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -26,17 +28,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.settings.VignetteShape
-import com.stormpanda.megingiard.ui.CarouselOverlay
+import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
 
@@ -44,8 +47,11 @@ import kotlin.math.sqrt
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val AMO_SWIPE_EDGE_ZONE = 40.dp
-private val AMO_SWIPE_THRESHOLD = 25.dp
+private const val AM_SCREEN_PADDING_DP = 8
+private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
+private val AM_SWIPE_EDGE_ZONE = 40.dp
+private val AM_SWIPE_THRESHOLD = 25.dp
+private const val AM_PERCENT_DIVISOR = 100f
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
 
@@ -59,37 +65,66 @@ private const val TAG = "AmbientMacroPadOverlay"
 internal fun AmbientMacroPadOverlay() {
     val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsState()
+    val layout by MacroPadState.activeLayout.collectAsState()
     val colors = LocalAppColors.current
 
-    val dimAlpha by SettingsManager.macropadAmbientDim.collectAsState()
-    val vignetteEnabled by SettingsManager.macropadAmbientVignetteEnabled.collectAsState()
-    val vignetteVisibleArea by SettingsManager.macropadAmbientVignetteVisibleArea.collectAsState()
-    val vignetteTransition by SettingsManager.macropadAmbientVignetteTransition.collectAsState()
-    val vignetteOpacity by SettingsManager.macropadAmbientVignetteOpacity.collectAsState()
-    val vignetteColorInt by SettingsManager.macropadAmbientVignetteColor.collectAsState()
-    val vignetteShape by SettingsManager.macropadAmbientVignetteShape.collectAsState()
+    val dimAlpha = layout?.ambientDim ?: 0f
+    val vignetteEnabled = layout?.ambientVignetteEnabled ?: false
+    val vignetteVisibleArea = layout?.ambientVignetteVisibleArea ?: 0.7f
+    val vignetteTransition = layout?.ambientVignetteTransition ?: 0.5f
+    val vignetteOpacity = layout?.ambientVignetteOpacity ?: 0.6f
+    val vignetteColorInt = layout?.ambientVignetteColor ?: 0xFF000000.toInt()
+    val vignetteShape = layout?.ambientVignetteShape ?: VignetteShape.RADIAL
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
+    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    // When touch projection or freeze is active, hide pad content entirely.
+    // Viewport edit is handled separately: vignette stays, buttons go semi-transparent.
+    val hideContent = isTouchProjectionActive || isFrozen
     val applyTheme by SettingsManager.macropadAmbientApplyTheme.collectAsState()
-
-    val showControls by AppStateManager.overlayVisible.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
-    val edgeZonePx = with(density) { AMO_SWIPE_EDGE_ZONE.toPx() }
-    val swipeThresholdPx = with(density) { AMO_SWIPE_THRESHOLD.toPx() }
+    val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
+    val swipeProcessor = remember(overlayAtBottom, edgeZonePx, swipeThresholdPx) {
+        SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+    }
 
     // Effective dim/vignette: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
     val effectiveVignetteOpacity = if (isPeekActive) 0f else vignetteOpacity
 
-    // Start injectors after the carousel overlay has closed (same pattern as MacroPadScreen)
+    // Start injectors immediately
     LaunchedEffect(Unit) {
-        AppStateManager.overlayVisible.first { !it }
         withContext(Dispatchers.IO) {
             val ap = MacroPadState.activeProfile.value
             AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-            if (ap?.enableKeyboard != false) KeyInjector.start(context)
-            if (ap?.enableGamepad != false) GamepadInjector.start(context)
-            if (ap?.enableMouse != false) MouseInjector.start(context)
+            if (ap?.enableKeyboard == true) KeyInjector.start(context)
+            if (ap?.enableGamepad == true) GamepadInjector.start(context)
+            if (ap?.enableMouse == true) MouseInjector.start(context)
+        }
+    }
+
+    // Stop injectors while the Pill Menu is open so the OS soft IME can appear
+    // in text-input dialogs (New Profile / New Layout).  Restart when it closes.
+    val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
+    LaunchedEffect(isPillMenuOpen) {
+        if (isPillMenuOpen) {
+            AppLog.d(TAG, "PillMenu opened → stopping injectors")
+            KeyInjector.stop()
+            GamepadInjector.stop()
+            MouseInjector.stop()
+        } else {
+            // Menu closed → restart only the devices enabled by the active profile
+            withContext(Dispatchers.IO) {
+                val ap = MacroPadState.activeProfile.value
+                AppLog.d(TAG, "PillMenu closed → restarting injectors")
+                if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                if (ap?.enableMouse == true) MouseInjector.start(context)
+            }
         }
     }
 
@@ -107,42 +142,24 @@ internal fun AmbientMacroPadOverlay() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Initial pass: detect swipe from the pill edge to trigger carousel overlay,
-            // without consuming events so MacroPad button presses still work.
-            .pointerInput(overlayAtBottom) {
+            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx) {
                 awaitPointerEventScope {
-                    var swipeStartY = Float.NaN
-                    var swipeTriggered = false
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val primaryChange = event.changes.firstOrNull()
                         when (event.type) {
                             PointerEventType.Press -> {
-                                val y = event.changes.firstOrNull()?.position?.y ?: 0f
-                                val nearEdge = if (overlayAtBottom) {
-                                    y >= size.height - edgeZonePx
-                                } else {
-                                    y <= edgeZonePx
-                                }
-                                swipeStartY = if (nearEdge) y else Float.NaN
-                                swipeTriggered = false
+                                swipeProcessor.onPress(
+                                    primaryChange?.position?.y ?: 0f,
+                                    size.height.toFloat(),
+                                )
                             }
                             PointerEventType.Move -> {
-                                if (!swipeStartY.isNaN() && !swipeTriggered) {
-                                    val y = event.changes.firstOrNull()?.position?.y ?: 0f
-                                    val delta = if (overlayAtBottom) {
-                                        swipeStartY - y
-                                    } else {
-                                        y - swipeStartY
-                                    }
-                                    if (delta >= swipeThresholdPx) {
-                                        AppStateManager.triggerOverlay()
-                                        swipeTriggered = true
-                                    }
-                                }
+                                swipeProcessor.onMove(primaryChange?.position?.y ?: 0f)
                             }
                             PointerEventType.Release -> {
-                                swipeStartY = Float.NaN
-                                swipeTriggered = false
+                                val allPointersLifted = !event.changes.any { it.pressed }
+                                swipeProcessor.onRelease(allPointersLifted)
                             }
                             else -> {}
                         }
@@ -151,7 +168,7 @@ internal fun AmbientMacroPadOverlay() {
             }
     ) {
         // Layer 1: Dim overlay
-        if (effectiveDim > 0f) {
+        if (!hideContent && effectiveDim > 0f) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -160,7 +177,9 @@ internal fun AmbientMacroPadOverlay() {
         }
 
         // Layer 3: Vignette overlay (shape-specific gradient darkening the edges)
-        if (vignetteEnabled && effectiveVignetteOpacity > 0f) {
+        // Shown in normal mode AND during viewport edit (intentionally retained so the
+        // user can judge where the vignette sits relative to the chosen viewport).
+        if (!hideContent && vignetteEnabled && effectiveVignetteOpacity > 0f) {
             val vColor = Color(vignetteColorInt)
             Box(
                 modifier = Modifier
@@ -176,37 +195,110 @@ internal fun AmbientMacroPadOverlay() {
         }
 
         // Layer 4: MacroPad buttons
-        val p = profile
-        if (p == null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(MP_SCREEN_PADDING),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.macropad_no_profile),
-                    color = colors.onSurfaceSecondary,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(32.dp),
-                )
+        // During touch projection / freeze: fully hidden.
+        // During viewport edit: rendered at 50% alpha so the user can see button
+        //   positions while adjusting the mirror crop.
+        // Normal: fully opaque (or peek-adjusted via isPeekActive).
+        val buttonAlpha = when {
+            hideContent                                   -> 0f
+            isViewportEditActive || previewConfig != null -> 0.5f
+            else                                          -> 1f
+        }
+        if (buttonAlpha > 0f) {
+            val p = profile
+            val l = layout
+            if (p == null || l == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(AM_SCREEN_PADDING),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_no_profile),
+                        color = colors.onSurfaceSecondary,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(32.dp),
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(AM_SCREEN_PADDING)
+                        .graphicsLayer { alpha = buttonAlpha },
+                ) {
+                    PadSurface(
+                        profile = p,
+                        layout = l,
+                        accentColor = colors.accent,
+                        isPeekActive = isPeekActive,
+                        transparentBackground = true,
+                        neutralStyle = !applyTheme,
+                    )
+                }
             }
-        } else {
-            Box(modifier = Modifier.fillMaxSize().padding(MP_SCREEN_PADDING)) {
-                PadSurface(
-                    profile = p,
+        }
+
+        // ── Ambient preview bar (secondary screen) ──────────────────────────────────
+        // The slider renders on the same screen as the live ambient effect so the
+        // user can see and adjust the value while watching the result in real time.
+        val pc = previewConfig
+        val pl = layout
+        if (pc != null && pl != null) {
+            val labelSoft = stringResource(R.string.settings_macropad_vignette_transition_soft)
+            val labelHard = stringResource(R.string.settings_macropad_vignette_transition_hard)
+            val previewValue = when (pc.type) {
+                AmbientPreviewType.DIM                 -> pl.ambientDim
+                AmbientPreviewType.VIGNETTE_AREA       -> pl.ambientVignetteVisibleArea
+                AmbientPreviewType.VIGNETTE_TRANSITION -> pl.ambientVignetteTransition
+                AmbientPreviewType.VIGNETTE_OPACITY    -> pl.ambientVignetteOpacity
+            }
+            val formatPreviewLabel: (Float) -> String = when (pc.type) {
+                AmbientPreviewType.VIGNETTE_TRANSITION -> { v ->
+                    when {
+                        v <= 0f -> labelSoft
+                        v >= 1f -> labelHard
+                        else    -> "${(v * AM_PERCENT_DIVISOR).toInt()}%"
+                    }
+                }
+                else -> { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
+            }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                AsoPreviewBar(
+                    label = pc.label,
+                    value = previewValue,
+                    valueRange = pc.valueRange,
+                    formatLabel = formatPreviewLabel,
                     accentColor = colors.accent,
-                    isPeekActive = isPeekActive,
-                    transparentBackground = true,
-                    neutralStyle = !applyTheme,
+                    onValueChange = { v ->
+                        val updated = when (pc.type) {
+                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = v)
+                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = v)
+                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = v)
+                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = v)
+                        }
+                        MacroPadState.updateLayout(updated)
+                    },
+                    onCancel = {
+                        AppLog.d(TAG, "ambient preview ${pc.type} cancelled")
+                        val restored = when (pc.type) {
+                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = pc.originalValue)
+                        }
+                        MacroPadState.updateLayout(restored)
+                        AppStateManager.setAmbientPreviewConfig(null)
+                    },
+                    onConfirm = {
+                        AppLog.d(TAG, "ambient preview ${pc.type} confirmed")
+                        AppStateManager.setAmbientPreviewConfig(null)
+                    },
                 )
             }
         }
 
-        // Layer 5: Carousel overlay for mode switching
-        CarouselOverlay(
-            visible = showControls,
-            onInteraction = { AppStateManager.triggerOverlay() },
-        )
+        IdlePill()
     }
 }
 

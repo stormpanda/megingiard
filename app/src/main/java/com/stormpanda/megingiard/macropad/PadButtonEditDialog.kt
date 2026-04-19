@@ -65,7 +65,7 @@ internal fun ButtonEditDialog(
         ?: initialAction
         ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
     val initLabel = button?.label ?: when (val ia = initialAction) {
-        is PadAction.Macro -> MacroState.macros.value.firstOrNull { it.id == ia.macroId }?.name ?: ""
+        is PadAction.Macro -> MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == ia.macroId }?.name ?: ""
         else               -> ""
     }
     var label            by remember { mutableStateOf(initLabel) }
@@ -97,7 +97,7 @@ internal fun ButtonEditDialog(
             buttonSize = ButtonSize.SIZE_1X1
         }
         if (newAction is PadAction.Macro && label.isBlank()) {
-            val macroName = MacroState.macros.value.firstOrNull { it.id == newAction.macroId }?.name
+            val macroName = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == newAction.macroId }?.name
             if (macroName != null) label = macroName
         }
     }
@@ -105,7 +105,7 @@ internal fun ButtonEditDialog(
     val isConfirmEnabled = when {
         action is PadAction.ScrollWheel || action is PadAction.TrackpointMove || action is PadAction.AmbientPeek -> true
         action is PadAction.Macro -> label.isNotBlank() &&
-            MacroState.macros.value.any { it.id == (action as PadAction.Macro).macroId }
+            MacroPadState.activeProfile.value?.macros?.any { it.id == (action as PadAction.Macro).macroId } == true
         else -> label.isNotBlank()
     }
 

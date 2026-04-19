@@ -8,6 +8,7 @@
     <string name="cd_previous_tool">Vorheriges Werkzeug</string>
     <string name="cd_next_tool">Nächstes Werkzeug</string>
     <string name="cd_stop_mirroring">Spiegelung stoppen</string>
+    <string name="cd_start_mirroring">Spiegelung starten</string>
     <string name="cd_freeze">Einfrieren</string>
     <string name="cd_unfreeze">Einfrieren aufheben</string>
     <string name="cd_lock_view">Ansicht sperren</string>
@@ -15,28 +16,10 @@
     <string name="cd_touch_projection_on">Touch-Projektion aktiv</string>
     <string name="cd_touch_projection_off">Touch-Projektion inaktiv</string>
     <string name="cd_frozen_image">Eingefrorenes Standbild</string>
-    <string name="media_no_media">Kein Medium</string>
-    <string name="media_unknown_title">Unbekannter Titel</string>
-    <string name="media_scrubbing_to">Spulen zu: %s</string>
-    <string name="notification_listener_required">Benachrichtigungszugriff für Mediensteuerung erforderlich</string>
-    <string name="grant_permission">Berechtigung erteilen</string>
     <string name="notification_mirroring_active">Spiegelung aktiv</string>
-    <string name="cd_skip_previous">Vorheriger Titel</string>
-    <string name="cd_replay_10">10 Sekunden zurückspulen</string>
-    <string name="cd_play_pause">Wiedergabe / Pause</string>
-    <string name="cd_forward_10">10 Sekunden vorspulen</string>
-    <string name="cd_skip_next">Nächster Titel</string>
     <string name="touchpad_hint">Hier tippen, um den oberen Bildschirm zu steuern</string>
     <string name="touchpad_hint_mouse">Ziehen zum Bewegen · Tippen zum Klicken</string>
 
-    <!-- Tool display names -->
-    <string name="tool_name_mirror">Spiegel</string>
-    <string name="tool_name_media">Medien</string>
-    <string name="tool_name_touchpad">Touchpad</string>
-    <string name="tool_name_keyboard">Tastatur</string>
-    <string name="tool_name_macropad">MacroPad</string>
-    <string name="keyboard_placeholder">Tastatur kommt bald\u2026</string>
-    <string name="cd_keyboard_key">Taste %s</string>
     <string name="cd_keyboard_trackpoint">Trackpoint</string>
 
     <!-- Settings screen -->
@@ -49,8 +32,6 @@
     <string name="settings_section_appearance">Erscheinungsbild</string>
     <string name="settings_auto_start_capture">Spiegelung automatisch starten</string>
     <string name="settings_auto_start_capture_desc">Beim App-Start automatisch die Bildschirmaufnahme anfragen</string>
-    <string name="settings_overlay_timeout">Steuerung ausblenden nach: %ds</string>
-    <string name="settings_no_tool_settings">Keine Einstellungen für dieses Werkzeug verfügbar.</string>
     <string name="settings_global_title">Einstellungen</string>
     <string name="settings_back">Zurück</string>
     <string name="settings_accent_color">Akzentfarbe</string>
@@ -95,13 +76,6 @@
     <string name="settings_remember_lock">Sperre merken</string>
     <string name="settings_remember_lock_desc">Gesperrten Zustand beim Neustart der Spiegelung wiederherstellen</string>
     <string name="settings_remember_projection">Touch-Projektion merken</string>
-    <string name="settings_remember_projection_desc">Touch-Projektion-Status beim Neustart der Spiegelung wiederherstellen</string>
-    <string name="settings_remember_freeze">Standbild merken</string>
-    <string name="settings_remember_freeze_desc">Standbild-Zustand beim Neustart der Spiegelung wiederherstellen</string>
-
-    <!-- General session -->
-    <string name="settings_remember_last_tool">Letztes Werkzeug merken</string>
-    <string name="settings_remember_last_tool_desc">Aktives Werkzeug beim App-Neustart wiederherstellen</string>
 
     <!-- MacroPad tool -->
     <string name="macropad_no_profile">Kein Profil konfiguriert.
@@ -161,6 +135,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_rename">Umbenennen</string>
     <string name="macropad_editor_delete_profile">Profil löschen</string>
     <string name="macropad_editor_confirm_delete">Dieses Profil löschen?</string>
+    <string name="macropad_editor_delete_layout">Layout löschen</string>
+    <string name="cd_layout_enable_toggle">Layout aktivieren/deaktivieren</string>
     <string name="macropad_editor_cancel">Abbrechen</string>
     <string name="macropad_editor_confirm">Löschen</string>
 
@@ -168,6 +144,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_icon_picker_title">Icon auswählen</string>
     <string name="macropad_icon_picker_search">Icons suchen\u2026</string>
     <string name="macropad_icon_picker_no_results">Keine Icons gefunden</string>
+    <string name="macropad_icon_picker_filled">Ausgefüllt</string>
     <string name="macropad_icon_picker_currently_selected">Aktuell gewählt</string>
     <string name="cd_icon_picker_button">Icon für Button auswählen</string>
     <string name="cd_icon_picker_confirm">Icon-Auswahl übernehmen</string>
@@ -185,6 +162,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_scroll_wheel">Scrollrad</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative Maus)</string>
     <string name="macropad_action_ambient_peek">Vorschau-Taste</string>
+    <string name="macropad_action_layout_next">Nächstes Layout</string>
+    <string name="macropad_action_layout_previous">Vorheriges Layout</string>
+    <string name="macropad_action_profile_switcher">Profil wechseln</string>
+    <string name="macropad_action_mirror_play_stop">Spiegel Start/Stop</string>
+    <string name="macropad_action_mirror_freeze">Spiegel einfrieren</string>
+    <string name="macropad_action_mirror_viewport_edit">Spiegel Viewport</string>
+    <string name="macropad_action_mirror_touch_projection">Touch-Projektion</string>
+    <string name="macropad_action_fullscreen_mouse">Vollbild-Maus</string>
+    <string name="macropad_action_fullscreen_keyboard">Vollbild-Tastatur</string>
 
     <!-- MacroPad settings (ToolSettingsPanel) -->
     <string name="settings_macropad_profile">Aktives Profil</string>
@@ -197,13 +183,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
     <string name="settings_macropad_edit">Bearbeiten</string>
     <string name="settings_macropad_new">Neu</string>
+    <string name="macropad_layout_template_title">Vorlage</string>
+    <string name="macropad_layout_template_blank">Leer</string>
 
     <!-- MacroPad-Ambient-Display-Einstellungen -->
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
     <string name="settings_macropad_ambient_hint">Startet Bildschirmspiegelung automatisch (einmalige Berechtigung erforderlich)</string>
     <string name="settings_macropad_ambient_preview">Vorschau für Darstellung</string>
     <string name="settings_macropad_ambient_preview_hint">Transparentes Fenster während Darstellung angepasst wird</string>
-    <string name="settings_macropad_blur">Unschärfe</string>
+    <string name="settings_macropad_ambient_apply_theme">Theme auch bei Spiegelung im Hintergrund anwenden</string>
+    <string name="settings_macropad_ambient_apply_theme_hint">Wenn deaktiviert, erscheinen alle Buttons im neutralen Grau-Stil</string>
     <string name="settings_macropad_dim">Abdunkelung</string>
     <string name="settings_macropad_vignette">Vignette</string>
     <string name="settings_macropad_vignette_visible_area">Sichtbarer Bereich</string>
@@ -236,9 +225,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="exit_dialog_message">Möchtest du die App schließen?</string>
     <string name="exit_dialog_confirm">Schließen</string>
     <string name="exit_dialog_cancel">Abbrechen</string>
-
-    <!-- Abschlusstext in der Medienleerszene -->
-    <string name="media_no_media_hint">Starte eine Medienwiedergabe auf dem oberen Bildschirm, um sie hier zu steuern.</string>
 
     <!-- MacroPad-Aktionstyp und Anzeigetext -->
     <string name="macropad_action_macro">Makro</string>
@@ -292,17 +278,73 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Schritt-Timing: %1$d = Startzeit ms, %2$d = Dauer ms -->
     <string name="macropad_macro_step_timing">@%1$d ms  ⟶  %2$d ms</string>
 
-    <!-- MacroPad-Makro-Ordner -->
-    <string name="macropad_folder_unassigned">Nicht zugeordnet</string>
-    <string name="macropad_folder_new">Neuer Ordner</string>
-    <string name="macropad_folder_rename">Ordner umbenennen</string>
-    <string name="macropad_folder_delete">Ordner löschen</string>
-    <string name="macropad_folder_delete_confirm">Alle Makros in diesem Ordner werden dem Bereich &#8222;Nicht zugeordnet&#8220; zugeordnet.</string>
-    <string name="macropad_folder_name_hint">Ordnername</string>
-    <string name="macropad_folder_move_title">In Ordner verschieben</string>
-    <string name="macropad_folder_move_up">Nach oben</string>
-    <string name="macropad_folder_move_down">Nach unten</string>
-    <string name="macropad_move_to_folder">In Ordner verschieben…</string>
-    <string name="macropad_picker_folder_empty">Keine Makros in diesem Ordner</string>
+    <string name="macropad_picker_folder_empty">Keine Makros verfügbar</string>
     <string name="cd_more_options">Weitere Optionen</string>
+
+    <!-- Data / restore -->
+    <string name="settings_section_data">Daten</string>
+    <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
+    <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
+    <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="settings_restore_defaults_confirm_button">Wiederherstellen</string>
+    <string name="settings_cancel">Abbrechen</string>
+
+    <!-- Configuration export/import -->
+    <string name="settings_section_config">Konfiguration</string>
+    <string name="settings_config_export">Konfiguration exportieren</string>
+    <string name="settings_config_export_desc">Alle Einstellungen, MacroPad-Profile und Makros als .mgrd-Datei speichern</string>
+    <string name="settings_config_import">Konfiguration importieren</string>
+    <string name="settings_config_import_desc">Einstellungen, MacroPad-Profile und Makros aus einer .mgrd-Datei laden</string>
+    <string name="config_export_default_filename">megingiard_%s.mgrd</string>
+
+    <!-- Export metadata dialog -->
+    <string name="config_export_dialog_title">Export-Info (optional)</string>
+    <string name="config_export_author">Autor</string>
+    <string name="config_export_description">Beschreibung</string>
+    <string name="config_export_tags">Tags (kommagetrennt)</string>
+    <string name="config_export_confirm">Exportieren</string>
+    <string name="config_export_cancel">Abbrechen</string>
+
+    <!-- Import preview dialog -->
+    <string name="config_import_title">Konfiguration importieren</string>
+    <string name="config_import_author_label">Autor</string>
+    <string name="config_import_description_label">Beschreibung</string>
+    <string name="config_import_tags_label">Tags</string>
+    <string name="config_import_sections_label">Enthält</string>
+    <string name="config_import_section_global">Globale Einstellungen</string>
+    <string name="config_import_section_mirror">Spiegel-Einstellungen</string>
+    <string name="config_import_section_touchpad">Touchpad-Einstellungen</string>
+    <string name="config_import_section_keyboard">Tastatur-Einstellungen</string>
+    <string name="config_import_section_macropad">MacroPad (%1$d Profile, %2$d Makros)</string>
+    <string name="config_import_section_macropad_settings">MacroPad-Einstellungen</string>
+    <string name="config_import_section_settings">Einstellungen (global / werkzeugspezifisch)</string>
+    <string name="config_import_meta_author">Autor: %1$s</string>
+    <string name="config_import_warning">Neue Profile und Makros werden zu den vorhandenen hinzugefügt.</string>
+    <string name="config_import_confirm">Importieren</string>
+    <string name="config_import_cancel">Abbrechen</string>
+
+    <!-- Export/import results -->
+    <string name="config_export_success">Konfiguration erfolgreich exportiert.</string>
+    <string name="config_import_success">Konfiguration erfolgreich importiert.</string>
+    <string name="config_error_title">Fehler</string>
+    <string name="config_success_title">Fertig</string>
+    <string name="config_error_unknown">Ein unerwarteter Fehler ist aufgetreten.</string>
+    <string name="config_ok">OK</string>
+
+    <!-- Idle Pill -->
+    <string name="pill_x_close">× schließen</string>
+
+    <!-- Pill Menu -->
+    <string name="pill_menu_profile_label">Profil</string>
+    <string name="pill_menu_layout_label">Layout</string>
+    <string name="pill_menu_new_profile">Neues Profil</string>
+    <string name="pill_menu_new_layout">Neues Layout</string>
+    <string name="pill_menu_edit_layout">Profil/Layout bearbeiten</string>
+    <string name="pill_menu_ambient_settings">Hintergrund-Einstellungen</string>
+    <string name="pill_menu_global_settings">Globale Einstellungen</string>
+    <string name="pill_menu_profile_name_hint">Profilname</string>
+    <string name="pill_menu_layout_name_hint">Layoutname</string>
+    <string name="cd_layout_prev">Vorheriges Layout</string>
+    <string name="cd_layout_next">Nächstes Layout</string>
+    <string name="cd_viewport_edit">Viewport bearbeiten</string>
 </resources>

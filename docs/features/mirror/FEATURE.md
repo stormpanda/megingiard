@@ -37,13 +37,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M4: Controls Overlay (Auto-Hide)
 
-- All mirror controls (Stop, Freeze/Unfreeze, carousel navigation) MUST be hidden by default.
-- An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on pill position) over the idle pill indicator MUST show the **carousel overlay** (title, pill, gear icon).
-- A **tap anywhere** on the mirror surface MUST show the **Stop and Freeze/Unfreeze buttons**, independent of the carousel overlay.
+- All mirror controls (Stop, Freeze/Unfreeze, mirror start/stop, touch projection) MUST be hidden by default.
+- An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on pill position) over the idle pill indicator MUST show the **Pill Menu** (profile/layout card + mirror controls card).
+- A **tap anywhere** on the mirror surface MUST show the **Stop and Freeze/Unfreeze buttons**, independent of the Pill Menu.
 - The overlay and buttons MUST auto-hide after the configured timeout (default: configurable in Settings).
 - Any interaction during the timeout MUST reset the timer.
 - The auto-hide timer MUST be paused while a finger is touching the screen, even if the finger is held still.
-- Stop and Freeze/Unfreeze buttons MUST be centered on the screen (not corner-aligned) to avoid being obscured by the carousel overlay.
+- Stop and Freeze/Unfreeze buttons MUST be centered on the screen (not corner-aligned) to avoid being obscured by the Pill Menu.
 
 ### FR-M5: Stop Mirroring
 
@@ -143,7 +143,7 @@ animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
 
 **State sync via `snapshotFlow`:** A single `LaunchedEffect(Unit)` uses `snapshotFlow { Triple(scale, offsetX, offsetY) }.collectLatest { }` to sync animated values to `ScreenCaptureManager` — avoiding a `LaunchedEffect` that restarts on every animation frame (see AGENTS.md §6.1).
 
-CarouselOverlay is rendered as a sibling of the gesture `Box` (not nested inside it) so its chevron `IconButton` click events are not intercepted by the gesture detectors.
+Overlay controls are rendered separately from the gesture surface so gesture detectors do not intercept menu interactions.
 
 ### Freeze Frame
 
@@ -166,15 +166,27 @@ CarouselOverlay is rendered as a sibling of the gesture `Box` (not nested inside
 | `Presentation.hide()`    | Leaving MIRROR mode (in-session) | Removes window from Z-order; VirtualDisplay retained |
 | `Presentation.dismiss()` | `Service.onDestroy()` only       | Destroys the window permanently                      |
 
-Mode switching is driven by a combined `StateFlow` in `MirrorPresentation`:
+Presentation visibility is driven by a combined `StateFlow` in `MirrorPresentation`:
 
 ```kotlin
-combine(currentMode, isOnValidScreen, macropadAmbientEnabled, isCapturing) { mode, isValid, ambientEnabled, capturing ->
-    // Gated on capturing, not isActivityResumed — using isActivityResumed caused a
-    // feedback loop where show() pushed MainActivity to background on every resume.
-    capturing && isValid && (mode == AppMode.MIRROR || (mode == AppMode.MACROPAD && ambientEnabled))
+combine(
+    isOnValidScreen, macropadAmbientEnabled, isCapturing,
+    isFilePickerOpen, isEditorActive, isAmbientSettingsActive
+) { values ->
+    val isValid = values[0] as Boolean
+    val ambientEnabled = values[1] as Boolean
+    val capturing = values[2] as Boolean
+    val filePickerOpen = values[3] as Boolean
+    val editorActive = values[4] as Boolean
+    val ambientSettingsActive = values[5] as Boolean
+    capturing && isValid && ambientEnabled &&
+        !filePickerOpen && !editorActive && !ambientSettingsActive
 }.collect { shouldShow -> if (shouldShow) show() else hide() }
 ```
+
+The Presentation hides when the MacroPad Editor or Ambient Settings overlay opens. These modals
+run in the Activity window which sits below `TYPE_PRIVATE_PRESENTATION` in the Z-order; hiding
+the Presentation ensures touch input reaches the Activity-level modals.
 
 ### Service Lifecycle
 
@@ -274,6 +286,6 @@ An optional setting ("Pinch-to-zoom while projecting", default off) allows the u
 | `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic                    |
 | `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` + `ViewModelStoreOwner` for Compose-in-Presentation |
 | `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap                        |
-| `MirrorScreen.kt`                     | Compose UI: gesture handling, 4 control buttons, touch projection, `CarouselOverlay`                       |
+| `MirrorScreen.kt`                     | Compose UI: gesture handling, control buttons, touch projection                                            |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
 | `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

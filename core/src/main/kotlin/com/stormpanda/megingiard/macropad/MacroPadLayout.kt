@@ -1,13 +1,12 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.keyboard.KbLayout
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shape enums
 // ─────────────────────────────────────────────────────────────────────────────
-
-enum class PadShape { SQUARE, CIRCLE }  // retained for JSON back-compat; no longer used in UI
 
 enum class ButtonShape { SQUARE, CIRCLE }
 
@@ -38,6 +37,13 @@ enum class TrackpointSize(val multiplier: Float) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vignette shape — used by PadLayout ambient settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Serializable
+enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
@@ -77,7 +83,6 @@ sealed class PadAction {
 
     /**
      * Injects a mouse button event via mouseinjector_arm64.
-     * Replaces the legacy MouseLeftClick / MouseRightClick data objects.
      */
     @Serializable
     @SerialName("mouse_button")
@@ -95,8 +100,7 @@ sealed class PadAction {
     /**
      * Marks this element as a relative-mouse trackpoint area.
      * No key injection; drag deltas are forwarded to MouseInjector.moveMouse().
-     * [size] controls the rendered circle diameter; defaults to MEDIUM for JSON back-compat
-     * with old profiles that stored this as a bare `data object` with no body.
+     * [size] controls the rendered circle diameter.
      */
     @Serializable
     @SerialName("trackpoint")
@@ -105,7 +109,7 @@ sealed class PadAction {
     ) : PadAction()
 
     /**
-     * Executes a [Macro] from the global [MacroState] library when this button is pressed.
+     * Executes a [Macro] from the active [PadProfile] when this button is pressed.
      * The macro is identified by [macroId] (UUID string). If the referenced macro has been
      * deleted, the button press is silently ignored.
      */
@@ -122,19 +126,60 @@ sealed class PadAction {
     @SerialName("ambient_peek")
     data object AmbientPeek : PadAction()
 
-    // ── Legacy: retained for JSON back-compat only ─────────────────────────
-    // Old profiles saved these types before MouseButton was introduced.
-    // They are deserialized normally; the app treats them as MouseButton(LEFT/RIGHT).
+    // ── Screen Mirroring ───────────────────────────────────────────────────
 
-    @Suppress("unused")
+    /** Toggles screen mirroring on/off (starts/stops MediaProjection capture). */
     @Serializable
-    @SerialName("mouse_left_click")
-    data object MouseLeftClick : PadAction()
+    @SerialName("mirror_play_stop")
+    data object MirrorPlayStop : PadAction()
 
-    @Suppress("unused")
+    /** Toggles freeze frame (captures current mirror frame as a static bitmap). */
     @Serializable
-    @SerialName("mouse_right_click")
-    data object MouseRightClick : PadAction()
+    @SerialName("mirror_freeze")
+    data object MirrorFreeze : PadAction()
+
+    /** Activates the viewport-edit overlay (fullscreen pan/zoom on the mirror image). */
+    @Serializable
+    @SerialName("mirror_viewport_edit")
+    data object MirrorViewportEdit : PadAction()
+
+    /** Toggles touch projection (forwards touch events to the primary display). */
+    @Serializable
+    @SerialName("mirror_touch_projection")
+    data object MirrorTouchProjection : PadAction()
+
+    // ── Profile / Navigation ──────────────────────────────────────────────
+
+    /** Switches to the next enabled layout within the active profile. */
+    @Serializable
+    @SerialName("layout_next")
+    data object LayoutNext : PadAction()
+
+    /** Switches to the previous enabled layout within the active profile. */
+    @Serializable
+    @SerialName("layout_previous")
+    data object LayoutPrevious : PadAction()
+
+    /** Opens the profile-switcher dialog to select a different profile. */
+    @Serializable
+    @SerialName("profile_switcher")
+    data object ProfileSwitcher : PadAction()
+
+    // ── Special ────────────────────────────────────────────────────────────
+
+    /** Opens the fullscreen relative-mouse overlay. */
+    @Serializable
+    @SerialName("full_screen_mouse")
+    data class FullScreenMouse(
+        val sensitivity: Float = 1.0f,
+    ) : PadAction()
+
+    /** Opens the fullscreen keyboard overlay with the specified layout. */
+    @Serializable
+    @SerialName("full_screen_keyboard")
+    data class FullScreenKeyboard(
+        val layout: KbLayout = KbLayout.QWERTZ,
+    ) : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,31 +214,70 @@ data class PadButton(
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PadProfile — a complete layout that can be selected and stored
+// PadLayout — a single button arrangement within a profile
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A named button arrangement within a [PadProfile]. Each profile can contain
+ * multiple layouts; the user switches between them at runtime.
+ *
+ * @param id                          Stable unique identifier (UUID string).
+ * @param name                        User-visible layout name.
+ * @param enabled                     Whether this layout participates in next/previous navigation.
+ * @param buttons                     All buttons placed on this layout.
+ * @param ambientDim                  Dim overlay alpha [0.0, 0.9] when screen mirror is active.
+ * @param ambientVignetteEnabled      Whether the vignette effect is active.
+ * @param ambientVignetteShape        Vignette shape (RADIAL, LETTERBOX, PILLARBOX).
+ * @param ambientVignetteVisibleArea  Vignette inner transparent zone size [0.0, 1.0].
+ * @param ambientVignetteTransition   Vignette gradient softness [0.0, 1.0].
+ * @param ambientVignetteOpacity      Vignette alpha [0.0, 1.0].
+ * @param ambientVignetteColor        Vignette color (ARGB int).
+ * @param mirrorSavedScale            Persisted mirror zoom level.
+ * @param mirrorSavedOffsetX          Persisted mirror pan X offset.
+ * @param mirrorSavedOffsetY          Persisted mirror pan Y offset.
+ */
+@Serializable
+data class PadLayout(
+    val id: String,
+    val name: String,
+    val enabled: Boolean = true,
+    val buttons: List<PadButton> = emptyList(),
+    val ambientDim: Float = 0f,
+    val ambientVignetteEnabled: Boolean = false,
+    val ambientVignetteShape: VignetteShape = VignetteShape.RADIAL,
+    val ambientVignetteVisibleArea: Float = 0.7f,
+    val ambientVignetteTransition: Float = 0.5f,
+    val ambientVignetteOpacity: Float = 0.6f,
+    val ambientVignetteColor: Int = 0xFF000000.toInt(),
+    val mirrorSavedScale: Float = 1f,
+    val mirrorSavedOffsetX: Float = 0f,
+    val mirrorSavedOffsetY: Float = 0f,
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PadProfile — a named collection of layouts, macros, and device settings
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * @param id               Stable unique identifier (UUID string).
  * @param name             User-visible profile name.
- * @param buttons          All buttons placed on this pad.
- * @param enableKeyboard   Whether the keyboard virtual device (keyinjector_arm64) is active for this profile.
- * @param enableGamepad    Whether the gamepad virtual device (gamepadinjector_arm64) is active for this profile.
- * @param enableMouse      Whether the mouse virtual device (mouseinjector_arm64) is active for this profile.
+ * @param layouts          All layouts in this profile (at least one).
+ * @param activeLayoutId   ID of the currently displayed layout. Null means first layout.
+ * @param macros           Macros belonging to this profile (flat list, no folders).
+ * @param enableKeyboard   Whether the keyboard virtual device is active (auto-computed).
+ * @param enableGamepad    Whether the gamepad virtual device is active (auto-computed).
+ * @param enableMouse      Whether the mouse virtual device is active (auto-computed).
+ * @param isDefault        Whether this is a restorable default profile.
  */
 @Serializable
 data class PadProfile(
     val id: String,
     val name: String,
-    val buttons: List<PadButton> = emptyList(),
+    val layouts: List<PadLayout> = emptyList(),
+    val activeLayoutId: String? = null,
+    val macros: List<Macro> = emptyList(),
     val enableKeyboard: Boolean = false,
     val enableGamepad: Boolean = false,
     val enableMouse: Boolean = false,
-    // Legacy fields — kept for JSON deserialization of existing profiles; ignored at runtime.
-    // Profiles with hasTrackpoint=true are migrated to a TrackpointMove button in MacroPadState.loadFrom().
-    @Suppress("unused") val hasTrackpoint: Boolean = false,
-    @Suppress("unused") val trackpointPosX: Float = 0.5f,
-    @Suppress("unused") val trackpointPosY: Float = 0.5f,
-    @Suppress("unused") val trackpointSize: Float = 2f,
-    @Suppress("unused") val padShape: PadShape = PadShape.SQUARE,
-    @Suppress("unused") val padSizePercent: Int = 80,
+    val isDefault: Boolean = false,
 )
