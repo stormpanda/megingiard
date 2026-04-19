@@ -39,7 +39,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
             AppStateManager.isPillMenuOpen.first { !it }
             withContext(Dispatchers.IO) {
                 val ap = MacroPadState.activeProfile.value
-                AppLog.d(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
+                AppLog.i(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
                 if (ap?.enableKeyboard == true) KeyInjector.start(context)
                 if (ap?.enableGamepad == true) GamepadInjector.start(context)
                 if (ap?.enableMouse == true) MouseInjector.start(context)
@@ -48,7 +48,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun stopInjectors() {
-        AppLog.d(TAG, "stopInjectors called")
+        AppLog.i(TAG, "stopInjectors called")
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
@@ -57,7 +57,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
-        AppLog.d(TAG, "onCleared → all injectors stopped")
+        AppLog.i(TAG, "onCleared → all injectors stopped")
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()

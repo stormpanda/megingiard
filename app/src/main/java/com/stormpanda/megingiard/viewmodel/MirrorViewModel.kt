@@ -14,6 +14,7 @@ import com.stormpanda.megingiard.mirror.TouchProjectionController
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "MirrorViewModel"
 private const val MIRROR_CONTROLS_AUTO_HIDE_MS = 5000L
@@ -50,7 +51,8 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val isTouching: StateFlow<Boolean> = AppStateManager.isTouching
-    val overlayTimeoutMs: StateFlow<Long> = MutableStateFlow(MIRROR_CONTROLS_AUTO_HIDE_MS)
+    private val _overlayTimeoutMs = MutableStateFlow(MIRROR_CONTROLS_AUTO_HIDE_MS)
+    val overlayTimeoutMs: StateFlow<Long> = _overlayTimeoutMs.asStateFlow()
 
     init {
         MirrorViewportController.startPersistence(viewModelScope)
@@ -80,18 +82,18 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
         TouchProjectionController(edgeZonePx, overlayAtBottom)
 
     fun startTouchInjector(context: Context) {
-        AppLog.d(TAG, "TouchInjector starting")
+        AppLog.i(TAG, "TouchInjector starting")
         TouchInjector.start(context)
     }
 
     fun stopTouchInjector() {
-        AppLog.d(TAG, "TouchInjector stopping")
+        AppLog.i(TAG, "TouchInjector stopping")
         TouchInjector.stop()
     }
 
     override fun onCleared() {
         super.onCleared()
-        AppLog.d(TAG, "onCleared → TouchInjector stop (safety net)")
+        AppLog.i(TAG, "onCleared → TouchInjector stop (safety net)")
         TouchInjector.stop()
     }
 }

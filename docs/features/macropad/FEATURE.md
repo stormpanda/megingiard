@@ -37,14 +37,14 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 Each button supports one of the following actions:
 
-| Action type       | Injection target          | Native binary           |
-| ----------------- | ------------------------- | ----------------------- |
-| `KeyboardKey`     | Linux keycode via uinput  | `keyinjector_arm64`     |
-| `GamepadButton`   | Linux BTN\_\* via uinput  | `gamepadinjector_arm64` |
-| `MouseButton`     | BTN_LEFT/RIGHT/MIDDLE/4/5 | `mouseinjector_arm64`   |
-| `ScrollWheel`     | REL_WHEEL via uinput      | `mouseinjector_arm64`   |
-| `TrackpointMove`  | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
-| `AmbientPeek`     | App-level peek toggle     | _(none)_                |
+| Action type      | Injection target          | Native binary           |
+| ---------------- | ------------------------- | ----------------------- |
+| `KeyboardKey`    | Linux keycode via uinput  | `keyinjector_arm64`     |
+| `GamepadButton`  | Linux BTN\_\* via uinput  | `gamepadinjector_arm64` |
+| `MouseButton`    | BTN_LEFT/RIGHT/MIDDLE/4/5 | `mouseinjector_arm64`   |
+| `ScrollWheel`    | REL_WHEEL via uinput      | `mouseinjector_arm64`   |
+| `TrackpointMove` | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
+| `AmbientPeek`    | App-level peek toggle     | _(none)_                |
 
 - `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). The `keyinjector_arm64` binary accepts keycodes in the range **1–464** (extended from the original 1–254 to include Fn).
 - `GamepadButton` actions use `GamepadInjector` / `ShellGamepadInjector`. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
@@ -99,7 +99,7 @@ Each button supports one of the following actions:
 - Each profile MUST support **multiple named layouts** (`PadLayout`). Each layout has its own button list, enabled/disabled state, and ambient display settings.
 - Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
 - Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable **layout bar** with chips for each layout. Long-press drag reorders layouts within the profile.
-- Each layout chip has a **visibility toggle** (eye icon) to enable/disable the layout. Disabled layouts are skipped during carousel navigation in use mode.
+- Each layout chip has a **visibility toggle** (eye icon) to enable/disable the layout. Disabled layouts are skipped in the Pill Menu layout list in use mode.
 - **At least one layout must remain enabled** — disabling the last enabled layout is prevented.
 - A new layout can be created as **blank** or from a **template**. The template picker (`NewLayoutOverlay`) lists all layouts from all profiles; selecting one deep-copies its buttons with new UUIDs.
 - Quick layout creation from the **PillMenu** creates a blank layout with a user-provided name (no template selection).
@@ -233,7 +233,7 @@ PadProfile
         PadLayout
         ├── id: String          (UUID)
         ├── name: String
-        ├── enabled: Boolean    (default true — disabled layouts skipped in carousel)
+        ├── enabled: Boolean    (default true — disabled layouts hidden in Pill Menu)
         ├── buttons: List<PadButton>
         ├── ambientDim: Float              (0–0.9, default 0)
         ├── ambientVignetteEnabled: Boolean (default false)

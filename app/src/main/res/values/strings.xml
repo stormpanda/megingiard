@@ -210,7 +210,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_fullscreen_mouse">Fullscreen Mouse</string>
     <string name="macropad_action_fullscreen_keyboard">Fullscreen Keyboard</string>
 
-    <!-- MacroPad settings (ToolSettingsPanel) -->
+    <!-- MacroPad profile / layout strings -->
     <string name="settings_macropad_profile">Active Profile</string>
     <string name="settings_macropad_new_profile">New Profile…</string>
     <string name="settings_macropad_pad_shape">Pad shape</string>

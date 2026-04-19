@@ -54,9 +54,11 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MainViewModel
+import com.stormpanda.megingiard.AppLog
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
+private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
 private val MAS_ARROW_SIZE = 56.dp
@@ -91,10 +93,13 @@ fun MainAppScreen() {
 
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
+        AppLog.d(TAG, "Parsing SAF import URI")
         viewModel.parseImportUri(context, uri)
             .onSuccess { export ->
+                AppLog.i(TAG, "SAF import parsed: ${export.profiles.size} profile(s)")
                 viewModel.setParsedImport(export)
             }.onFailure { err ->
+                AppLog.e(TAG, "SAF import parse failed: ${err.message}")
                 viewModel.clearPendingImport()
                 importError = err.message ?: context.getString(R.string.config_error_unknown)
             }
@@ -102,10 +107,13 @@ fun MainAppScreen() {
 
     LaunchedEffect(pendingInAppUri) {
         val uri = pendingInAppUri ?: return@LaunchedEffect
+        AppLog.d(TAG, "Parsing in-app import URI")
         viewModel.parseImportUri(context, uri)
             .onSuccess { export ->
+                AppLog.i(TAG, "In-app import parsed: ${export.profiles.size} profile(s)")
                 viewModel.setInAppParsedImport(export)
             }.onFailure { err ->
+                AppLog.e(TAG, "In-app import parse failed: ${err.message}")
                 viewModel.clearInAppPendingImport()
                 importError = err.message ?: context.getString(R.string.config_error_unknown)
             }

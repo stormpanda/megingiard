@@ -16,7 +16,7 @@ The app offers a set of tools, each of which occupies the entire secondary scree
 - **Live mirroring** of the entire primary screen in real-time, DRM-free and without latency.
 - **Viewport control:** Pinch-to-Zoom (1×–5×), free panning with gallery-style edge clamping and automatic snap-back.
 - **Freeze Frame:** Freeze the current frame as an interactively zoomable and pannable reference screenshot.
-- **Controls Overlay:** A tap reveals semi-transparent controls (Freeze, Stop, carousel navigation) that auto-hide after a short period of inactivity.
+- **Controls Overlay:** A tap reveals semi-transparent controls (Freeze, Stop, mirror start/stop) that auto-hide after a short period of inactivity.
 
 ### 2.2 Virtual Touchpad → [docs/features/touchpad/FEATURE.md](docs/features/touchpad/FEATURE.md)
 
@@ -31,15 +31,17 @@ The app offers a set of tools, each of which occupies the entire secondary scree
 - **Trackpoint:** Analoger Zeiger-Cursor, der Mausbewegungen auf dem primären Display simuliert – steuerbar direkt über die Tastatur.
 - **Key Repeat:** Konfigurierbare Wiederholungsrate für gehaltene Tasten; bei deaktiviertem Repeat wird Key-Up sofort gesendet, um das Kernel-Repeat zu unterdrücken.
 - Eingaben werden in Echtzeit via nativem Binary direkt in `/dev/uinput` injiziert (< 1 ms Latenz).
+
 ### 2.4 MacroPad → [docs/features/macropad/FEATURE.md](docs/features/macropad/FEATURE.md)
 
 - Frei konfigurierbares Button-Pad mit mehreren benannten Profilen und freier Positionierung.
 - Unterstützte Aktionstypen: Tastatur-Taste, Gamepad-Button (via virtuellem uinput-Gamepad), Maus-Links-/Rechtsklick, Scroll-Wheel und Trackpoint (relative Mausbewegung).
 - Layouts werden im integrierten Editor (Drag & Drop, Größenauswahl, Beschriftung) erstellt und als JSON in DataStore persistiert.
+
 ## 3. User Interface & User Experience (UX)
 
 - **Launch behaviour:** On opening the app, it starts immediately in Mirror mode to provide instant value without any configuration.
-- **Navigation:** Switching between the available tools is done via **carousel navigation** (tap the screen to reveal left/right chevron arrows).
+- **Navigation:** Switching between tools and profiles is done via the **Pill Menu** (swipe the idle pill edge affordance to open the menu with profile/layout selection, mirror controls, and settings access).
 - **Layout & Design:**
   - The app runs in borderless Immersive Fullscreen mode (no status bar or navigation buttons).
   - All surfaces are optimised for **4:3** and **16:9** aspect ratios in landscape orientation.

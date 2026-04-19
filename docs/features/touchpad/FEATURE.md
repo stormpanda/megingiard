@@ -41,7 +41,7 @@ The Virtual Touchpad feature turns the secondary display into a touch surface th
 - **Tap-to-click:** When enabled, a single short tap (below a configurable slop and time threshold) MUST send a left-button click (down + up) via `MouseInjector`.
 - **Two-finger tap:** When enabled, a two-finger short tap MUST send a right-button click via `MouseInjector`.
 - Only the **primary pointer** (first finger down) drives cursor movement; additional fingers are tracked solely for two-finger tap detection.
-- When the carousel overlay is visible, all pointer changes MUST be consumed (not just the first) before skipping the event loop iteration.
+- When the Pill Menu is visible, all pointer changes MUST be consumed (not just the first) before skipping the event loop iteration.
 
 ---
 
@@ -63,7 +63,7 @@ The pre-built `touchinjector_arm64` binary is bundled in `app/src/main/assets/`.
 
 The binary signals readiness by writing `"R\n"` to stdout. `start()` blocks waiting for this signal with a 500 ms timeout; startup fails if the signal does not arrive or the process exits prematurely.
 
-The binary remains alive for the entire Touchpad session. It is terminated when `ShellInputInjector.stop()` is called, which happens in `TouchpadScreen` via:
+The binary remains alive for the entire Touchpad session. It is terminated when `ShellInputInjector.stop()` is called, which happens in `FullscreenMouseOverlay` via:
 
 ```kotlin
 DisposableEffect(Unit) {
@@ -110,13 +110,13 @@ sensorY =  normalizedX        * 1920
 
 The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY = 0`) to the sensor's **maximum X** (`sensorX = 1080`), correcting for the 270° rotation offset. The axis swap (`X ← Y`, `Y ← X`) reflects the portrait-to-landscape re-orientation.
 
-> **Note:** The coordinate transformation and injection pipeline (`ShellInputInjector`, `TouchInjector`, `TouchAction`) have been extracted to the shared `input/` package (`com.stormpanda.megingiard.input`) so that both the Virtual Touchpad and Mirror Touch Projection can reuse the same infrastructure. `TouchpadScreen` calls `TouchInjector` from the shared package in **touch mode**.
+> **Note:** The coordinate transformation and injection pipeline (`ShellInputInjector`, `TouchInjector`, `TouchAction`) have been extracted to the shared `input/` package (`com.stormpanda.megingiard.input`) so that both the Virtual Touchpad and Mirror Touch Projection can reuse the same infrastructure. `FullscreenMouseOverlay` calls `TouchInjector` from the shared package in **touch mode**.
 >
-> In **mouse mode** `TouchpadScreen` starts `MouseInjector` instead. Relative delta values from Compose pointer events are scaled by `TP_MOUSE_SENSITIVITY` and forwarded to `MouseInjector.moveMouse(dx, dy)`. Tap gestures (single-finger and two-finger) are detected via slop + time thresholds and mapped to LMB / RMB clicks.
+> In **mouse mode** `FullscreenMouseOverlay` uses `MouseInjector` instead. Relative delta values from Compose pointer events are scaled by `TP_MOUSE_SENSITIVITY` and forwarded to `MouseInjector.moveMouse(dx, dy)`. Tap gestures (single-finger and two-finger) are detected via slop + time thresholds and mapped to LMB / RMB clicks.
 
-### Pointer Event Handling in TouchpadScreen
+### Pointer Event Handling in FullscreenMouseOverlay
 
-`TouchpadScreen` uses a raw `awaitPointerEvent()` loop on `PointerEventPass.Main`:
+`FullscreenMouseOverlay` uses a raw `awaitPointerEvent()` loop on `PointerEventPass.Main`:
 
 | Event type                 | Action                                       |
 | -------------------------- | -------------------------------------------- |
@@ -124,15 +124,15 @@ The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY 
 | `PointerEventType.Move`    | Send MOVE command; update indicator position |
 | `PointerEventType.Release` | Send UP command; clear indicator position    |
 
-All events are `consume()`d to prevent parent gesture detectors from interfering. When the carousel overlay is visible, Press and Move events are blocked (a Press on the surface dismisses the overlay), but **Release always falls through** so that touches already in flight receive a proper UP event. The actual touch area pixel size is measured via `onGloballyPositioned` after layout, and coordinates are normalized as `(position / surfaceSize).coerceIn(0f, 1f)`.
+All events are `consume()`d to prevent parent gesture detectors from interfering. When the Pill Menu is visible, Press and Move events are blocked (a Press on the surface dismisses the menu), but **Release always falls through** so that touches already in flight receive a proper UP event. The actual touch area pixel size is measured via `onGloballyPositioned` after layout, and coordinates are normalized as `(position / surfaceSize).coerceIn(0f, 1f)`.
 
 ### Source Files
 
-| File                             | Responsibility                                                                  |
-| -------------------------------- | ------------------------------------------------------------------------------- |
-| `../input/ShellInputInjector.kt` | Native binary lifecycle; writer thread; MOVE coalescing; stdin protocol         |
-| `../input/TouchInjector.kt`      | Coordinate transformation; public `start()` / `stop()` / `injectTouch()` API    |
-| `../input/TouchAction.kt`        | Shared `DOWN / MOVE / UP` enum                                                  |
-| `TouchpadScreen.kt`              | Compose UI: 16:9 touch surface, visual indicator, hint text, pointer event loop |
-| `touchinjector.c`                | C source for the native binary (see `docs/BUILD_NATIVE.md`)                     |
-| `touchinjector_arm64`            | Pre-built ARM64 binary asset (`app/src/main/assets/`)                           |
+| File                             | Responsibility                                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `../input/ShellInputInjector.kt` | Native binary lifecycle; writer thread; MOVE coalescing; stdin protocol                        |
+| `../input/TouchInjector.kt`      | Coordinate transformation; public `start()` / `stop()` / `injectTouch()` API                   |
+| `../input/TouchAction.kt`        | Shared `DOWN / MOVE / UP` enum                                                                 |
+| `FullscreenMouseOverlay.kt`      | Compose UI: fullscreen relative-mouse overlay, visual indicator, hint text, pointer event loop |
+| `touchinjector.c`                | C source for the native binary (see `docs/BUILD_NATIVE.md`)                                    |
+| `touchinjector_arm64`            | Pre-built ARM64 binary asset (`app/src/main/assets/`)                                          |

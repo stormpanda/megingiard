@@ -41,17 +41,17 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             KeyboardState.reset()
             AppStateManager.isPillMenuOpen.first { !it }
-            AppLog.d(TAG, "pill menu closed, starting KeyInjector + MouseInjector")
+            AppLog.i(TAG, "pill menu closed, starting KeyInjector + MouseInjector")
             withContext(Dispatchers.IO) {
                 KeyInjector.start(context)
                 MouseInjector.start(context)
             }
-            AppLog.d(TAG, "KeyInjector + MouseInjector started")
+            AppLog.i(TAG, "KeyInjector + MouseInjector started")
         }
     }
 
     fun stopAndReset() {
-        AppLog.d(TAG, "stopAndReset called")
+        AppLog.i(TAG, "stopAndReset called")
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()
@@ -60,7 +60,7 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
 
     override fun onCleared() {
         super.onCleared()
-        AppLog.d(TAG, "onCleared → KeyInjector + MouseInjector stopped, KeyboardState reset")
+        AppLog.i(TAG, "onCleared → KeyInjector + MouseInjector stopped, KeyboardState reset")
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()

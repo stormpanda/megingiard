@@ -268,7 +268,7 @@ fun PillMenu(
                     icon = {
                         Icon(
                             Icons.Rounded.Settings,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.pill_menu_global_settings),
                             tint = colors.onControlOverlay,
                             modifier = Modifier.size(PM_NAV_ICON_SIZE),
                         )
