@@ -27,7 +27,7 @@ private const val TAG = "ConfigManager"
 /** Safety cap — reject files larger than 10 MB to prevent OOM. */
 private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
-/** Only schema v3 is supported. */
+/** Minimum schema version accepted on import. Currently only v3 is supported. */
 private const val MIN_SUPPORTED_SCHEMA = 3
 
 private val exportJson = Json {
