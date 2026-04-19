@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -50,6 +51,7 @@ private const val AM_SCREEN_PADDING_DP = 8
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
 private val AM_SWIPE_EDGE_ZONE = 40.dp
 private val AM_SWIPE_THRESHOLD = 25.dp
+private const val AM_PERCENT_DIVISOR = 100f
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
 
@@ -77,7 +79,7 @@ internal fun AmbientMacroPadOverlay() {
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val isAmbientPreviewActive by AppStateManager.isAmbientPreviewActive.collectAsState()
+    val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
     // When touch projection or freeze is active, hide pad content entirely.
     // Viewport edit is handled separately: vignette stays, buttons go semi-transparent.
     val hideContent = isTouchProjectionActive || isFrozen
@@ -198,9 +200,9 @@ internal fun AmbientMacroPadOverlay() {
         //   positions while adjusting the mirror crop.
         // Normal: fully opaque (or peek-adjusted via isPeekActive).
         val buttonAlpha = when {
-            hideContent                                      -> 0f
-            isViewportEditActive || isAmbientPreviewActive  -> 0.5f
-            else                                            -> 1f
+            hideContent                                   -> 0f
+            isViewportEditActive || previewConfig != null -> 0.5f
+            else                                          -> 1f
         }
         if (buttonAlpha > 0f) {
             val p = profile
@@ -234,6 +236,65 @@ internal fun AmbientMacroPadOverlay() {
                         neutralStyle = !applyTheme,
                     )
                 }
+            }
+        }
+
+        // ── Ambient preview bar (secondary screen) ──────────────────────────────────
+        // The slider renders on the same screen as the live ambient effect so the
+        // user can see and adjust the value while watching the result in real time.
+        val pc = previewConfig
+        val pl = layout
+        if (pc != null && pl != null) {
+            val labelSoft = stringResource(R.string.settings_macropad_vignette_transition_soft)
+            val labelHard = stringResource(R.string.settings_macropad_vignette_transition_hard)
+            val previewValue = when (pc.type) {
+                AmbientPreviewType.DIM                 -> pl.ambientDim
+                AmbientPreviewType.VIGNETTE_AREA       -> pl.ambientVignetteVisibleArea
+                AmbientPreviewType.VIGNETTE_TRANSITION -> pl.ambientVignetteTransition
+                AmbientPreviewType.VIGNETTE_OPACITY    -> pl.ambientVignetteOpacity
+            }
+            val formatPreviewLabel: (Float) -> String = when (pc.type) {
+                AmbientPreviewType.VIGNETTE_TRANSITION -> { v ->
+                    when {
+                        v <= 0f -> labelSoft
+                        v >= 1f -> labelHard
+                        else    -> "${(v * AM_PERCENT_DIVISOR).toInt()}%"
+                    }
+                }
+                else -> { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
+            }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                AsoPreviewBar(
+                    label = pc.label,
+                    value = previewValue,
+                    valueRange = pc.valueRange,
+                    formatLabel = formatPreviewLabel,
+                    accentColor = colors.accent,
+                    onValueChange = { v ->
+                        val updated = when (pc.type) {
+                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = v)
+                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = v)
+                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = v)
+                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = v)
+                        }
+                        MacroPadState.updateLayout(updated)
+                    },
+                    onCancel = {
+                        AppLog.d(TAG, "ambient preview ${pc.type} cancelled")
+                        val restored = when (pc.type) {
+                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = pc.originalValue)
+                        }
+                        MacroPadState.updateLayout(restored)
+                        AppStateManager.setAmbientPreviewConfig(null)
+                    },
+                    onConfirm = {
+                        AppLog.d(TAG, "ambient preview ${pc.type} confirmed")
+                        AppStateManager.setAmbientPreviewConfig(null)
+                    },
+                )
             }
         }
 

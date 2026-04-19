@@ -51,6 +51,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AmbientPreviewConfig
+import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -75,16 +77,6 @@ private val ASO_DROPDOWN_CORNER = 6.dp
 private val ASO_PREVIEW_ICON_SIZE = 36.dp
 private val ASO_PREVIEW_BAR_CORNER = 16.dp
 private val ASO_PREVIEW_BAR_H_PADDING = 16.dp
-
-// ── Preview parameter type ──────────────────────────────────────────────────
-private enum class AsoPreviewType { DIM, VIGNETTE_AREA, VIGNETTE_TRANSITION, VIGNETTE_OPACITY }
-
-private data class AsoPreviewParam(
-    val type: AsoPreviewType,
-    val label: String,
-    val originalValue: Float,
-    val valueRange: ClosedFloatingPointRange<Float>,
-)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -114,7 +106,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
-            AppStateManager.setAmbientPreviewActive(false)
+            AppStateManager.setAmbientPreviewConfig(null)
             val ap = MacroPadState.activeProfile.value
             AppLog.d(TAG, "AmbientSettingsOverlay dismissed → restarting injectors")
             CoroutineScope(Dispatchers.IO).launch {
@@ -140,8 +132,10 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     var vignetteOpacity by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteOpacity) }
     var vignetteColorInt by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteColor) }
 
-    // Preview mode: which slider is currently being previewed (null = not in preview).
-    var previewParam: AsoPreviewParam? by remember { mutableStateOf(null) }
+    // Preview mode: driven by AppStateManager so the secondary screen (AmbientMacroPadOverlay)
+    // can also render the preview slider.
+    val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    val isInPreview = previewConfig != null
     // Color picker state hoisted to top level so ColorWheelPicker renders as a
     // full-screen sibling of the main settings Box (not nested inside the scroll column).
     var showColorPicker by remember { mutableStateOf(false) }
@@ -160,45 +154,41 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     val labelVignetteOpacity  = stringResource(R.string.settings_macropad_vignette_opacity)
 
     // Back: exit preview / color picker first; the system Back then closes ambient settings.
-    BackHandler(enabled = previewParam != null || showColorPicker) {
+    BackHandler(enabled = isInPreview || showColorPicker) {
         when {
-            previewParam != null -> {
-                val p = previewParam!!
-                AppLog.d(TAG, "preview ${p.type} cancelled → restoring ${p.originalValue}")
-                when (p.type) {
-                    AsoPreviewType.DIM -> {
-                        dimAlpha = p.originalValue
-                        commitLayout { copy(ambientDim = p.originalValue) }
-                    }
-                    AsoPreviewType.VIGNETTE_AREA -> {
-                        vignetteVisibleArea = p.originalValue
-                        commitLayout { copy(ambientVignetteVisibleArea = p.originalValue) }
-                    }
-                    AsoPreviewType.VIGNETTE_TRANSITION -> {
-                        vignetteTransition = p.originalValue
-                        commitLayout { copy(ambientVignetteTransition = p.originalValue) }
-                    }
-                    AsoPreviewType.VIGNETTE_OPACITY -> {
-                        vignetteOpacity = p.originalValue
-                        commitLayout { copy(ambientVignetteOpacity = p.originalValue) }
+            isInPreview -> {
+                val config = previewConfig!!
+                AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
+                commitLayout {
+                    when (config.type) {
+                        AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
+                        AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
+                        AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
+                        AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
                     }
                 }
-                previewParam = null
+                AppStateManager.setAmbientPreviewConfig(null)
             }
             showColorPicker -> showColorPicker = false
         }
     }
 
-    // Mirror the preview state to AppStateManager so MirrorPresentation keeps
-    // the secondary screen visible and AmbientMacroPadOverlay dims its buttons.
-    LaunchedEffect(previewParam) {
-        AppStateManager.setAmbientPreviewActive(previewParam != null)
+    // Re-sync local slider vars when preview ends, so the main panel reflects
+    // whatever value was confirmed / cancelled from the secondary screen.
+    LaunchedEffect(isInPreview) {
+        if (!isInPreview) {
+            val l = MacroPadState.activeLayout.value ?: return@LaunchedEffect
+            dimAlpha = l.ambientDim
+            vignetteVisibleArea = l.ambientVignetteVisibleArea
+            vignetteTransition = l.ambientVignetteTransition
+            vignetteOpacity = l.ambientVignetteOpacity
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
         // ── Main settings panel — hidden while previewing or picking a color ──
-        if (previewParam == null && !showColorPicker) {
+        if (!isInPreview && !showColorPicker) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -249,12 +239,12 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                             commitLayout { copy(ambientDim = dimAlpha) }
                         },
                         onPreviewClick = {
-                            previewParam = AsoPreviewParam(
-                                type = AsoPreviewType.DIM,
+                            AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                type = AmbientPreviewType.DIM,
                                 label = labelDim,
                                 originalValue = dimAlpha,
                                 valueRange = 0f..ASO_DIM_MAX,
-                            )
+                            ))
                         },
                     )
 
@@ -310,12 +300,12 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(ambientVignetteVisibleArea = vignetteVisibleArea) }
                             },
                             onPreviewClick = {
-                                previewParam = AsoPreviewParam(
-                                    type = AsoPreviewType.VIGNETTE_AREA,
+                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                    type = AmbientPreviewType.VIGNETTE_AREA,
                                     label = labelVignetteArea,
                                     originalValue = vignetteVisibleArea,
                                     valueRange = 0f..1f,
-                                )
+                                ))
                             },
                         )
 
@@ -338,12 +328,12 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(ambientVignetteTransition = vignetteTransition) }
                             },
                             onPreviewClick = {
-                                previewParam = AsoPreviewParam(
-                                    type = AsoPreviewType.VIGNETTE_TRANSITION,
+                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                    type = AmbientPreviewType.VIGNETTE_TRANSITION,
                                     label = labelVignetteTransition,
                                     originalValue = vignetteTransition,
                                     valueRange = 0f..1f,
-                                )
+                                ))
                             },
                         )
 
@@ -360,12 +350,12 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(ambientVignetteOpacity = vignetteOpacity) }
                             },
                             onPreviewClick = {
-                                previewParam = AsoPreviewParam(
-                                    type = AsoPreviewType.VIGNETTE_OPACITY,
+                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                    type = AmbientPreviewType.VIGNETTE_OPACITY,
                                     label = labelVignetteOpacity,
                                     originalValue = vignetteOpacity,
                                     valueRange = 0f..1f,
-                                )
+                                ))
                             },
                         )
 
@@ -377,89 +367,6 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         )
                     }
                 }
-            }
-        }
-
-        // ── Preview overlay ───────────────────────────────────────────────────
-        // When previewParam != null the main panel hides and AmbientMacroPadOverlay
-        // (rendered below this composable in MirrorPresentation) shows through.
-        // The slider at the bottom writes live to MacroPadState so the overlay
-        // below updates in real time. Cancel restores the original value.
-        previewParam?.let { preview ->
-            val currentValue = when (preview.type) {
-                AsoPreviewType.DIM                 -> dimAlpha
-                AsoPreviewType.VIGNETTE_AREA       -> vignetteVisibleArea
-                AsoPreviewType.VIGNETTE_TRANSITION -> vignetteTransition
-                AsoPreviewType.VIGNETTE_OPACITY    -> vignetteOpacity
-            }
-            val formatLabel: (Float) -> String = when (preview.type) {
-                AsoPreviewType.VIGNETTE_TRANSITION -> { v ->
-                    when {
-                        v <= 0f -> labelSoft
-                        v >= 1f -> labelHard
-                        else    -> "${(v * ASO_PERCENT_DIVISOR).toInt()}%"
-                    }
-                }
-                else -> { v -> "${(v * ASO_PERCENT_DIVISOR).toInt()}%" }
-            }
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                AsoPreviewBar(
-                    label = preview.label,
-                    value = currentValue,
-                    valueRange = preview.valueRange,
-                    formatLabel = formatLabel,
-                    accentColor = colors.accent,
-                    onValueChange = { v ->
-                        AppLog.d(TAG, "preview ${preview.type} live → $v")
-                        when (preview.type) {
-                            AsoPreviewType.DIM -> {
-                                dimAlpha = v
-                                commitLayout { copy(ambientDim = v) }
-                            }
-                            AsoPreviewType.VIGNETTE_AREA -> {
-                                vignetteVisibleArea = v
-                                commitLayout { copy(ambientVignetteVisibleArea = v) }
-                            }
-                            AsoPreviewType.VIGNETTE_TRANSITION -> {
-                                vignetteTransition = v
-                                commitLayout { copy(ambientVignetteTransition = v) }
-                            }
-                            AsoPreviewType.VIGNETTE_OPACITY -> {
-                                vignetteOpacity = v
-                                commitLayout { copy(ambientVignetteOpacity = v) }
-                            }
-                        }
-                    },
-                    onCancel = {
-                        AppLog.d(TAG, "preview ${preview.type} cancelled → restoring ${preview.originalValue}")
-                        when (preview.type) {
-                            AsoPreviewType.DIM -> {
-                                dimAlpha = preview.originalValue
-                                commitLayout { copy(ambientDim = preview.originalValue) }
-                            }
-                            AsoPreviewType.VIGNETTE_AREA -> {
-                                vignetteVisibleArea = preview.originalValue
-                                commitLayout { copy(ambientVignetteVisibleArea = preview.originalValue) }
-                            }
-                            AsoPreviewType.VIGNETTE_TRANSITION -> {
-                                vignetteTransition = preview.originalValue
-                                commitLayout { copy(ambientVignetteTransition = preview.originalValue) }
-                            }
-                            AsoPreviewType.VIGNETTE_OPACITY -> {
-                                vignetteOpacity = preview.originalValue
-                                commitLayout { copy(ambientVignetteOpacity = preview.originalValue) }
-                            }
-                        }
-                        previewParam = null
-                    },
-                    onConfirm = {
-                        AppLog.d(TAG, "preview ${preview.type} confirmed")
-                        previewParam = null
-                    },
-                )
             }
         }
 
@@ -534,7 +441,7 @@ private fun AsoSliderRow(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun AsoPreviewBar(
+internal fun AsoPreviewBar(
     label: String,
     value: Float,
     valueRange: ClosedFloatingPointRange<Float>,

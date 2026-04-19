@@ -14,6 +14,20 @@ import kotlinx.coroutines.flow.stateIn
 
 private const val TAG = "AppStateManager"
 
+/** Type of value being live-previewed in ambient settings preview mode. */
+enum class AmbientPreviewType { DIM, VIGNETTE_AREA, VIGNETTE_TRANSITION, VIGNETTE_OPACITY }
+
+/**
+ * Shared between [AmbientSettingsOverlay] (primary screen) and [AmbientMacroPadOverlay]
+ * (secondary screen). Non-null while a preview slider is active.
+ */
+data class AmbientPreviewConfig(
+    val type: AmbientPreviewType,
+    val label: String,
+    val originalValue: Float,
+    val valueRange: ClosedFloatingPointRange<Float>,
+)
+
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
@@ -137,17 +151,24 @@ object AppStateManager {
     val isAmbientSettingsActive: StateFlow<Boolean> = _isAmbientSettingsActive.asStateFlow()
 
     /**
-     * True while the user has tapped the preview eye-button in [AmbientSettingsOverlay].
-     * Unlike the other modal flags this does NOT participate in mutual exclusion —
-     * it coexists with [isAmbientSettingsActive] so the Presentation can be made
-     * visible again while the settings screen remains logically "open".
+     * Configuration for the ambient preview slider, shared between [AmbientSettingsOverlay]
+     * on the primary screen and [AmbientMacroPadOverlay] on the secondary screen.
+     * Non-null while a preview is active. Does NOT participate in mutual exclusion.
+     */
+    private val _ambientPreviewConfig = MutableStateFlow<AmbientPreviewConfig?>(null)
+    val ambientPreviewConfig: StateFlow<AmbientPreviewConfig?> = _ambientPreviewConfig.asStateFlow()
+
+    /**
+     * Derived from [ambientPreviewConfig]. Kept as a separate StateFlow so callers that
+     * only need the boolean (e.g. [MirrorPresentation] visibility) avoid a generic cast.
      */
     private val _isAmbientPreviewActive = MutableStateFlow(false)
     val isAmbientPreviewActive: StateFlow<Boolean> = _isAmbientPreviewActive.asStateFlow()
 
-    fun setAmbientPreviewActive(active: Boolean) {
-        AppLog.d(TAG, "setAmbientPreviewActive($active)")
-        _isAmbientPreviewActive.value = active
+    fun setAmbientPreviewConfig(config: AmbientPreviewConfig?) {
+        AppLog.d(TAG, "setAmbientPreviewConfig(${config?.type})")
+        _ambientPreviewConfig.value = config
+        _isAmbientPreviewActive.value = config != null
     }
 
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
@@ -228,6 +249,7 @@ object AppStateManager {
         _isViewportEditActive.value = false
         _isAmbientSettingsActive.value = false
         _isAmbientPreviewActive.value = false
+        _ambientPreviewConfig.value = null
         MacroPadState.resetPeek()
     }
 
