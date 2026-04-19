@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -112,6 +114,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
+            AppStateManager.setAmbientPreviewActive(false)
             val ap = MacroPadState.activeProfile.value
             AppLog.d(TAG, "AmbientSettingsOverlay dismissed → restarting injectors")
             CoroutineScope(Dispatchers.IO).launch {
@@ -184,6 +187,12 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
             }
             showColorPicker -> showColorPicker = false
         }
+    }
+
+    // Mirror the preview state to AppStateManager so MirrorPresentation keeps
+    // the secondary screen visible and AmbientMacroPadOverlay dims its buttons.
+    LaunchedEffect(previewParam) {
+        AppStateManager.setAmbientPreviewActive(previewParam != null)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

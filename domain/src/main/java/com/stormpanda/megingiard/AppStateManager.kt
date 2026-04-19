@@ -136,6 +136,20 @@ object AppStateManager {
     private val _isAmbientSettingsActive = MutableStateFlow(false)
     val isAmbientSettingsActive: StateFlow<Boolean> = _isAmbientSettingsActive.asStateFlow()
 
+    /**
+     * True while the user has tapped the preview eye-button in [AmbientSettingsOverlay].
+     * Unlike the other modal flags this does NOT participate in mutual exclusion —
+     * it coexists with [isAmbientSettingsActive] so the Presentation can be made
+     * visible again while the settings screen remains logically "open".
+     */
+    private val _isAmbientPreviewActive = MutableStateFlow(false)
+    val isAmbientPreviewActive: StateFlow<Boolean> = _isAmbientPreviewActive.asStateFlow()
+
+    fun setAmbientPreviewActive(active: Boolean) {
+        AppLog.d(TAG, "setAmbientPreviewActive($active)")
+        _isAmbientPreviewActive.value = active
+    }
+
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
@@ -213,6 +227,7 @@ object AppStateManager {
         _isFullscreenMouseActive.value = false
         _isViewportEditActive.value = false
         _isAmbientSettingsActive.value = false
+        _isAmbientPreviewActive.value = false
         MacroPadState.resetPeek()
     }
 

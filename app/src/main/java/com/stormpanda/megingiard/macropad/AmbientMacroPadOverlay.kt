@@ -77,6 +77,7 @@ internal fun AmbientMacroPadOverlay() {
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val isAmbientPreviewActive by AppStateManager.isAmbientPreviewActive.collectAsState()
     // When touch projection or freeze is active, hide pad content entirely.
     // Viewport edit is handled separately: vignette stays, buttons go semi-transparent.
     val hideContent = isTouchProjectionActive || isFrozen
@@ -197,9 +198,9 @@ internal fun AmbientMacroPadOverlay() {
         //   positions while adjusting the mirror crop.
         // Normal: fully opaque (or peek-adjusted via isPeekActive).
         val buttonAlpha = when {
-            hideContent        -> 0f
-            isViewportEditActive -> 0.5f
-            else               -> 1f
+            hideContent                                      -> 0f
+            isViewportEditActive || isAmbientPreviewActive  -> 0.5f
+            else                                            -> 1f
         }
         if (buttonAlpha > 0f) {
             val p = profile

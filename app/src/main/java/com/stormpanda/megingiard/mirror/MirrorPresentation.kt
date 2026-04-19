@@ -432,6 +432,7 @@ class MirrorPresentation(
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isAmbientSettingsActive,
+                AppStateManager.isAmbientPreviewActive,
             ) { values ->
                 val isValid = values[0] as Boolean
                 val ambientEnabled = values[1] as Boolean
@@ -439,6 +440,7 @@ class MirrorPresentation(
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
+                val ambientPreviewActive = values[6] as Boolean
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
@@ -452,8 +454,15 @@ class MirrorPresentation(
                 // block input entirely.
                 // NOTE: isPillMenuOpen intentionally excluded — PillMenu renders inside
                 // the Presentation's own ComposeView; hiding would pause mirroring.
+                //
+                // ambientPreviewActive: during preview mode the Presentation stays visible
+                // so the user can see the live mirror + dimmed buttons behind the
+                // transparent AmbientSettingsOverlay on the primary screen (same visual
+                // as viewport edit mode). Primary-screen input is unaffected because the
+                // Presentation sits on the secondary display.
                 capturing && isValid && ambientEnabled &&
-                    !filePickerOpen && !editorActive && !ambientSettingsActive
+                    !filePickerOpen && !editorActive &&
+                    (!ambientSettingsActive || ambientPreviewActive)
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }
