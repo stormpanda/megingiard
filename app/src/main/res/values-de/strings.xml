@@ -283,6 +283,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Data / restore -->
     <string name="settings_section_data">Daten</string>
+    <string name="settings_jump_all">Alle</string>
+    <string name="settings_jump_general">Allgemein</string>
+    <string name="settings_jump_appearance">Darstellung</string>
+    <string name="settings_jump_data">Daten</string>
+    <string name="settings_jump_config">Konfiguration</string>
     <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
     <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
     <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>

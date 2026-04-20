@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -77,8 +78,14 @@ private val GS_SECTION_CHIP_CORNER = 14.dp
 private val GS_SECTION_CHIP_H_PADDING = 12.dp
 private val GS_SECTION_CHIP_V_PADDING = 8.dp
 private val GS_SECTION_CHIP_SPACING = 8.dp
+private val GS_SECTION_CHIP_BORDER = 1.dp
+private const val GS_SECTION_CHIP_SELECTED_ALPHA = 0.85f
 private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
+
+private enum class SettingsSectionFilter {
+    GENERAL, APPEARANCE, DATA, CONFIGURATION
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +116,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     var showRestoreDefaultsConfirm by remember { mutableStateOf(false) }
+    var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
     var generalExpanded by remember { mutableStateOf(true) }
     var appearanceExpanded by remember { mutableStateOf(false) }
     var dataExpanded by remember { mutableStateOf(false) }
@@ -151,136 +159,126 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 SectionJumpRow(
                     colors = colors,
                     accentColor = effectiveAccent,
-                    onJumpGeneral = {
-                        generalExpanded = true
-                        appearanceExpanded = false
-                        dataExpanded = false
-                        configExpanded = false
-                    },
-                    onJumpAppearance = {
-                        generalExpanded = false
-                        appearanceExpanded = true
-                        dataExpanded = false
-                        configExpanded = false
-                    },
-                    onJumpData = {
-                        generalExpanded = false
-                        appearanceExpanded = false
-                        dataExpanded = true
-                        configExpanded = false
-                    },
-                    onJumpConfig = {
-                        generalExpanded = false
-                        appearanceExpanded = false
-                        dataExpanded = false
-                        configExpanded = true
-                    },
+                    selectedSectionFilter = selectedSectionFilter,
+                    onSelectAll = { selectedSectionFilter = null },
+                    onSelectGeneral = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
+                    onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
+                    onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
+                    onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
                 )
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_general),
-                    expanded = generalExpanded,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onToggle = { generalExpanded = !generalExpanded },
-                ) {
-                    OverlayPositionRow(
-                        overlayAtBottom = overlayAtBottom,
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_general),
+                        expanded = if (selectedSectionFilter == null) generalExpanded else true,
                         accentColor = effectiveAccent,
                         colors = colors,
-                        onChanged = { SettingsManager.setOverlayAtBottom(it) }
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_show_navigation_coach_marks),
-                        description = stringResource(R.string.settings_show_navigation_coach_marks_desc),
-                        checked = showNavigationCoachMarks,
-                        accentColor = effectiveAccent,
-                        onCheckedChange = { SettingsManager.setShowNavigationCoachMarks(it) },
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_show_mirror_control_labels),
-                        description = stringResource(R.string.settings_show_mirror_control_labels_desc),
-                        checked = showMirrorControlLabels,
-                        accentColor = effectiveAccent,
-                        onCheckedChange = { SettingsManager.setShowMirrorControlLabels(it) },
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_show_fullscreen_exit_hints),
-                        description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
-                        checked = showFullscreenExitHints,
-                        accentColor = effectiveAccent,
-                        onCheckedChange = { SettingsManager.setShowFullscreenExitHints(it) },
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    LanguagePickerRow(
-                        language = appLanguage,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onChanged = { SettingsManager.setAppLanguage(it) }
-                    )
-                    HorizontalDivider(color = colors.divider)
-                    LogLevelPickerRow(
-                        logLevel = logLevel,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onChanged = { SettingsManager.setLogLevel(it) }
-                    )
-                }
-
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_appearance),
-                    expanded = appearanceExpanded,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onToggle = { appearanceExpanded = !appearanceExpanded },
-                ) {
-                    ThemePickerRow(
-                        themeMode = themeMode,
-                        accentColor = effectiveAccent,
-                        colors = colors,
-                        onChanged = { SettingsManager.setThemeMode(it) }
-                    )
-                    if (themeMode.supportsCustomAccent) {
-                        HorizontalDivider(color = colors.divider)
-                        AccentColorRow(
-                            accentColor = accentColor,
+                        onToggle = { if (selectedSectionFilter == null) generalExpanded = !generalExpanded },
+                    ) {
+                        OverlayPositionRow(
+                            overlayAtBottom = overlayAtBottom,
+                            accentColor = effectiveAccent,
                             colors = colors,
-                            onClick = { showColorPicker = true }
+                            onChanged = { SettingsManager.setOverlayAtBottom(it) }
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_show_navigation_coach_marks),
+                            description = stringResource(R.string.settings_show_navigation_coach_marks_desc),
+                            checked = showNavigationCoachMarks,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { SettingsManager.setShowNavigationCoachMarks(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_show_mirror_control_labels),
+                            description = stringResource(R.string.settings_show_mirror_control_labels_desc),
+                            checked = showMirrorControlLabels,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { SettingsManager.setShowMirrorControlLabels(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_show_fullscreen_exit_hints),
+                            description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
+                            checked = showFullscreenExitHints,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { SettingsManager.setShowFullscreenExitHints(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        LanguagePickerRow(
+                            language = appLanguage,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { SettingsManager.setAppLanguage(it) }
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        LogLevelPickerRow(
+                            logLevel = logLevel,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { SettingsManager.setLogLevel(it) }
                         )
                     }
                 }
 
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_data),
-                    expanded = dataExpanded,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onToggle = { dataExpanded = !dataExpanded },
-                ) {
-                    ConfigActionRow(
-                        label = stringResource(R.string.settings_restore_defaults),
-                        description = stringResource(R.string.settings_restore_defaults_desc),
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_appearance),
+                        expanded = if (selectedSectionFilter == null) appearanceExpanded else true,
                         accentColor = effectiveAccent,
                         colors = colors,
-                        onClick = { showRestoreDefaultsConfirm = true },
-                    )
+                        onToggle = { if (selectedSectionFilter == null) appearanceExpanded = !appearanceExpanded },
+                    ) {
+                        ThemePickerRow(
+                            themeMode = themeMode,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { SettingsManager.setThemeMode(it) }
+                        )
+                        if (themeMode.supportsCustomAccent) {
+                            HorizontalDivider(color = colors.divider)
+                            AccentColorRow(
+                                accentColor = accentColor,
+                                colors = colors,
+                                onClick = { showColorPicker = true }
+                            )
+                        }
+                    }
                 }
 
-                CollapsibleSection(
-                    title = stringResource(R.string.settings_section_config),
-                    expanded = configExpanded,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onToggle = { configExpanded = !configExpanded },
-                ) {
-                    ConfigSection(
-                        colors = colors,
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DATA) {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_data),
+                        expanded = if (selectedSectionFilter == null) dataExpanded else true,
                         accentColor = effectiveAccent,
-                        onShowExportDialog = { showExportMetadataDialog = true },
-                        onImportPreviewReady = { showImportPreviewDialog = it },
-                    )
+                        colors = colors,
+                        onToggle = { if (selectedSectionFilter == null) dataExpanded = !dataExpanded },
+                    ) {
+                        ConfigActionRow(
+                            label = stringResource(R.string.settings_restore_defaults),
+                            description = stringResource(R.string.settings_restore_defaults_desc),
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onClick = { showRestoreDefaultsConfirm = true },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
+                    CollapsibleSection(
+                        title = stringResource(R.string.settings_section_config),
+                        expanded = if (selectedSectionFilter == null) configExpanded else true,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onToggle = { if (selectedSectionFilter == null) configExpanded = !configExpanded },
+                    ) {
+                        ConfigSection(
+                            colors = colors,
+                            accentColor = effectiveAccent,
+                            onShowExportDialog = { showExportMetadataDialog = true },
+                            onImportPreviewReady = { showImportPreviewDialog = it },
+                        )
+                    }
                 }
             }
         }
@@ -395,23 +393,56 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
 private fun SectionJumpRow(
     colors: AppColors,
     accentColor: Color,
-    onJumpGeneral: () -> Unit,
-    onJumpAppearance: () -> Unit,
-    onJumpData: () -> Unit,
-    onJumpConfig: () -> Unit,
+    selectedSectionFilter: SettingsSectionFilter?,
+    onSelectAll: () -> Unit,
+    onSelectGeneral: () -> Unit,
+    onSelectAppearance: () -> Unit,
+    onSelectData: () -> Unit,
+    onSelectConfig: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.appBackground)
+            .background(colors.surface)
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(GS_SECTION_CHIP_SPACING),
     ) {
-        SectionJumpChip(stringResource(R.string.settings_jump_general), colors, accentColor, onJumpGeneral)
-        SectionJumpChip(stringResource(R.string.settings_jump_appearance), colors, accentColor, onJumpAppearance)
-        SectionJumpChip(stringResource(R.string.settings_jump_data), colors, accentColor, onJumpData)
-        SectionJumpChip(stringResource(R.string.settings_jump_config), colors, accentColor, onJumpConfig)
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_all),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == null,
+            onClick = onSelectAll,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_general),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.GENERAL,
+            onClick = onSelectGeneral,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_appearance),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.APPEARANCE,
+            onClick = onSelectAppearance,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_data),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.DATA,
+            onClick = onSelectData,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_config),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
+            onClick = onSelectConfig,
+        )
     }
 }
 
@@ -420,14 +451,23 @@ private fun SectionJumpChip(
     label: String,
     colors: AppColors,
     accentColor: Color,
+    selected: Boolean,
     onClick: () -> Unit,
 ) {
     Text(
         text = label,
-        color = accentColor,
+        color = if (selected) Color.White else colors.onSurface,
         fontSize = 12.sp,
         modifier = Modifier
-            .background(colors.surface, RoundedCornerShape(GS_SECTION_CHIP_CORNER))
+            .background(
+                color = if (selected) accentColor.copy(alpha = GS_SECTION_CHIP_SELECTED_ALPHA) else colors.appBackground,
+                shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
+            )
+            .border(
+                width = GS_SECTION_CHIP_BORDER,
+                color = if (selected) accentColor else colors.divider,
+                shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = GS_SECTION_CHIP_H_PADDING, vertical = GS_SECTION_CHIP_V_PADDING),
     )
@@ -445,7 +485,7 @@ private fun CollapsibleSection(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.appBackground)
+            .background(colors.surface)
             .clickable(onClick = onToggle)
             .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
         verticalAlignment = Alignment.CenterVertically,

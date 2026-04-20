@@ -51,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import com.stormpanda.megingiard.AmbientPreviewConfig
 import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
@@ -77,6 +78,10 @@ private val ASO_DROPDOWN_CORNER = 6.dp
 private val ASO_PREVIEW_ICON_SIZE = 36.dp
 private val ASO_PREVIEW_BAR_CORNER = 16.dp
 private val ASO_PREVIEW_BAR_H_PADDING = 16.dp
+private val ASO_SECTION_HEADER_PADDING_H = 16.dp
+private val ASO_SECTION_HEADER_PADDING_V = 10.dp
+private val ASO_ROW_PADDING_H = 16.dp
+private val ASO_ROW_PADDING_V = 12.dp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -208,7 +213,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                     ) {
                         Text(
                             text = stringResource(R.string.pill_menu_ambient_settings),
-                            color = colors.onSurface,
+                            color = colors.accent,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f),
@@ -224,7 +229,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
 
                     Text(text = currentLayout.name, color = colors.onSurfaceSecondary, fontSize = 13.sp)
 
-                    HorizontalDivider(color = colors.divider)
+                    AsoSectionHeader(text = stringResource(R.string.settings_section_general))
 
                     // ── Dim slider ────────────────────────────────────────────
                     AsoSliderRow(
@@ -252,7 +257,10 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
 
                     // ── Vignette toggle ───────────────────────────────────────
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.surface)
+                            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -276,6 +284,8 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                     }
 
                     if (vignetteEnabled) {
+                        HorizontalDivider(color = colors.divider)
+                        AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))
                         // Shape dropdown
                         AsoShapeRow(
                             currentShape = vignetteShape,
@@ -387,6 +397,26 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     }
 }
 
+/**
+ * Section header used in ambient settings to match the shared settings visual language.
+ *
+ * @param text Header text displayed in uppercase styling.
+ */
+@Composable
+private fun AsoSectionHeader(text: String) {
+    val colors = LocalAppColors.current
+    Text(
+        text = text.uppercase(Locale.ROOT),
+        color = colors.accent,
+        fontSize = 11.sp,
+        letterSpacing = 1.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = ASO_SECTION_HEADER_PADDING_H, vertical = ASO_SECTION_HEADER_PADDING_V),
+    )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Slider row with preview eye-button
 // ─────────────────────────────────────────────────────────────────────────────
@@ -404,7 +434,10 @@ private fun AsoSliderRow(
 ) {
     val colors = LocalAppColors.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -517,7 +550,10 @@ private fun AsoShapeRow(
     val colors = LocalAppColors.current
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -584,8 +620,9 @@ private fun AsoColorRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(colors.surface)
             .clickable { onShowPicker() }
-            .padding(vertical = 8.dp),
+            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
