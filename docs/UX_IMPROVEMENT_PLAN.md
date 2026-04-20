@@ -24,14 +24,14 @@ Reviewed the currently active UX-critical surfaces:
 
 | ID | Finding | Evidence | UX Impact | Proposed Change |
 | --- | --- | --- | --- | --- |
-| UX-01 | Core navigation discoverability is weak for first-time users. | `IdlePill` is a very minimal visual affordance (`72dp x 4dp`) and is swipe-only (`app/src/main/java/com/stormpanda/megingiard/ui/IdlePill.kt`). | New users may not discover how to open Pill Menu quickly. | Add first-run coach marks (dismissible) for edge-swipe and pill behavior. |
-| UX-02 | Mirror controls rely heavily on icon-only actions. | `MirrorControlCard` uses icon-only controls for start/stop/freeze/viewport/touch projection (`ui/PillMenu.kt`). | Learnability cost and higher error risk for less-frequent controls. | Add optional compact labels/tooltips for mirror controls (setting-controlled if needed). |
-| UX-03 | Mirror control touch targets are smaller than recommended ergonomic size. | `PM_MIRROR_BUTTON_SIZE = 36.dp` (`ui/PillMenu.kt`). | Reduced hit accuracy during fast interaction. | Increase touch target to at least 44–48dp while keeping visual icon size compact. |
-| UX-04 | Profile/layout naming flow has no inline validation. | `NameInputDialog` confirms raw text, and state layer does not enforce uniqueness (`ui/PillMenu.kt`, `domain/.../MacroPadState.kt`). | Duplicate or blank-like names reduce manageability for larger setups. | Add validation and conflict handling (empty, duplicate, whitespace-only). |
-| UX-05 | Disabled-device feedback during MacroPad usage is noisy and transient. | Pressing disabled buttons triggers repeated Toasts (`macropad/MacroPadScreen.kt`). | Repeated toasts interrupt flow; context is lost quickly. | Replace with rate-limited inline status banner/snackbar in the pad surface. |
-| UX-06 | Fullscreen overlays have no persistent "how to exit" hint. | `FullscreenMouseOverlay` and fullscreen keyboard exit via edge swipe only, but no visible instructional affordance in overlay content. | Users can get temporarily stuck/confused in fullscreen modes. | Add subtle one-line contextual hint (auto-fade, re-showable via setting). |
-| UX-07 | Global settings information architecture scales poorly as options grow. | Single long `Column` with vertical scroll in `GlobalSettingsScreen.kt`. | Increased scan time and missed settings in extended sessions. | Introduce grouped collapsible sections and quick-jump chips at top. |
-| UX-08 | Wrong-screen blocking overlay informs but does not assist recovery. | `WrongScreenOverlay` only shows message + arrow (`MainAppScreen.kt`). | Recovery can feel unclear on first encounter. | Add explicit recovery actions (e.g. "Retry detection", "Open help"). |
+| UX-01 | Core navigation discoverability is weak for first-time users. | `IdlePill` is a minimal visual affordance (`72dp x 4dp`), while edge-swipe detection is implemented separately in `SwipeGestureProcessor` (`app/src/main/java/com/stormpanda/megingiard/ui/IdlePill.kt`, `domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt`). | New users may not discover how to open Pill Menu quickly. | Add first-run coach marks (dismissible) for edge-swipe and pill behavior. |
+| UX-02 | Mirror controls rely heavily on icon-only actions. | `MirrorControlCard` uses icon-only controls for start/stop/freeze/viewport/touch projection (`app/src/main/java/com/stormpanda/megingiard/ui/PillMenu.kt`). | Learnability cost and higher error risk for less-frequent controls. | Add optional compact labels/tooltips for mirror controls (setting-controlled if needed). |
+| UX-03 | Mirror control touch targets are smaller than recommended ergonomic size. | `PM_MIRROR_BUTTON_SIZE = 36.dp` (`app/src/main/java/com/stormpanda/megingiard/ui/PillMenu.kt`). | Reduced hit accuracy during fast interaction. | Increase touch target to at least 44–48dp while keeping visual icon size compact. |
+| UX-04 | Profile/layout naming flow has no inline validation. | `NameInputDialog` confirms raw text, and state layer does not enforce uniqueness (`app/src/main/java/com/stormpanda/megingiard/ui/PillMenu.kt`, `domain/src/main/java/com/stormpanda/megingiard/macropad/MacroPadState.kt`). | Duplicate or blank-like names reduce manageability for larger setups. | Add validation and conflict handling (empty, duplicate, whitespace-only). |
+| UX-05 | Disabled-device feedback during MacroPad usage is noisy and transient. | Pressing disabled buttons triggers repeated Toasts (`app/src/main/java/com/stormpanda/megingiard/macropad/MacroPadScreen.kt`). | Repeated toasts interrupt flow; context is lost quickly. | Replace with rate-limited inline status banner/Snackbar in the pad surface. |
+| UX-06 | Fullscreen overlays have no persistent "how to exit" hint. | `FullscreenMouseOverlay` and fullscreen keyboard exit via edge swipe only, but no visible instructional affordance in overlay content (`app/src/main/java/com/stormpanda/megingiard/touchpad/FullscreenMouseOverlay.kt`, `app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardScreen.kt`). | Users can get temporarily stuck/confused in fullscreen modes. | Add subtle one-line contextual hint that auto-fades; visibility can be globally enabled/disabled via a persistent setting. |
+| UX-07 | Global settings information architecture scales poorly as options grow. | Single long `Column` with vertical scroll in `app/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt`. | Increased scan time and missed settings in extended sessions. | Introduce grouped collapsible sections and quick-jump chips at top. |
+| UX-08 | Wrong-screen blocking overlay informs but does not assist recovery. | `WrongScreenOverlay` only shows message + arrow (`app/src/main/java/com/stormpanda/megingiard/MainAppScreen.kt`). | Recovery can feel unclear on first encounter. | Add explicit recovery actions (e.g. "Retry detection", "Open help"). |
 
 ---
 
@@ -59,7 +59,10 @@ Reviewed the currently active UX-critical surfaces:
 ## Implementation Notes
 
 - Keep changes surgical and feature-local (avoid cross-module state churn unless required).
-- Use existing state managers (`AppStateManager`, `SettingsManager`, `MacroPadState`) for persistence and toggles.
+- Use existing state managers (`AppStateManager`, `MacroPadState`) for runtime UI state and interaction toggles.
+- Example runtime state: whether an overlay/hint is currently visible during a session.
+- Persist any new UX preferences through `SettingsManager` (DataStore) rather than in-memory-only flags.
+- Example persisted preference: user opt-in/out for showing helper hints across app restarts.
 - All new user-visible copy must be added to `app/src/main/res/values/strings.xml`.
 - Preserve current gesture architecture (edge swipe + pill menu) and existing service/input lifecycles.
 
