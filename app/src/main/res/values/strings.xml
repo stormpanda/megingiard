@@ -265,6 +265,7 @@ Open Settings to create a layout.</string>
     <string name="settings_language_de">Deutsch</string>
     <string name="settings_log_level">Log Level</string>
     <string name="settings_jump_all">All</string>
+    <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">General</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>

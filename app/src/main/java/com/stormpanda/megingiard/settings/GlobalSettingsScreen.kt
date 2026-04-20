@@ -20,8 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -117,10 +115,6 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
 
     var showRestoreDefaultsConfirm by remember { mutableStateOf(false) }
     var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
-    var generalExpanded by remember { mutableStateOf(true) }
-    var appearanceExpanded by remember { mutableStateOf(false) }
-    var dataExpanded by remember { mutableStateOf(false) }
-    var configExpanded by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -167,12 +161,10 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_general),
-                        expanded = if (selectedSectionFilter == null) generalExpanded else true,
                         accentColor = effectiveAccent,
                         colors = colors,
-                        onToggle = { if (selectedSectionFilter == null) generalExpanded = !generalExpanded },
                     ) {
                         OverlayPositionRow(
                             overlayAtBottom = overlayAtBottom,
@@ -222,12 +214,10 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 }
 
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_appearance),
-                        expanded = if (selectedSectionFilter == null) appearanceExpanded else true,
                         accentColor = effectiveAccent,
                         colors = colors,
-                        onToggle = { if (selectedSectionFilter == null) appearanceExpanded = !appearanceExpanded },
                     ) {
                         ThemePickerRow(
                             themeMode = themeMode,
@@ -247,12 +237,10 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 }
 
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DATA) {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_data),
-                        expanded = if (selectedSectionFilter == null) dataExpanded else true,
                         accentColor = effectiveAccent,
                         colors = colors,
-                        onToggle = { if (selectedSectionFilter == null) dataExpanded = !dataExpanded },
                     ) {
                         ConfigActionRow(
                             label = stringResource(R.string.settings_restore_defaults),
@@ -265,12 +253,10 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                 }
 
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
-                    CollapsibleSection(
+                    SettingsSection(
                         title = stringResource(R.string.settings_section_config),
-                        expanded = if (selectedSectionFilter == null) configExpanded else true,
                         accentColor = effectiveAccent,
                         colors = colors,
-                        onToggle = { if (selectedSectionFilter == null) configExpanded = !configExpanded },
                     ) {
                         ConfigSection(
                             colors = colors,
@@ -406,8 +392,14 @@ private fun SectionJumpRow(
             .background(colors.surface)
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GS_SECTION_CHIP_SPACING),
     ) {
+        Text(
+            text = stringResource(R.string.settings_filter_label),
+            color = colors.onSurfaceSecondary,
+            fontSize = 12.sp,
+        )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_all),
             colors = colors,
@@ -474,40 +466,23 @@ private fun SectionJumpChip(
 }
 
 @Composable
-private fun CollapsibleSection(
+private fun SettingsSection(
     title: String,
-    expanded: Boolean,
     accentColor: Color,
     colors: AppColors,
-    onToggle: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Row(
+    Text(
+        text = title.uppercase(Locale.ROOT),
+        color = accentColor,
+        fontSize = 11.sp,
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surface)
-            .clickable(onClick = onToggle)
             .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = title.uppercase(Locale.ROOT),
-            color = accentColor,
-            fontSize = 11.sp,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-            contentDescription = stringResource(
-                if (expanded) R.string.settings_section_collapse else R.string.settings_section_expand,
-            ),
-            tint = accentColor,
-        )
-    }
-    if (expanded) {
-        Column { content() }
-        HorizontalDivider(color = colors.divider)
-    }
+    )
+    Column { content() }
+    HorizontalDivider(color = colors.divider)
 }
 
 /**

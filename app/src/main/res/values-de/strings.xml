@@ -284,6 +284,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Data / restore -->
     <string name="settings_section_data">Daten</string>
     <string name="settings_jump_all">Alle</string>
+    <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">Allgemein</string>
     <string name="settings_jump_appearance">Darstellung</string>
     <string name="settings_jump_data">Daten</string>
