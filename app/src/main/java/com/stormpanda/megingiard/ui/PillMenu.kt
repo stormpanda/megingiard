@@ -35,7 +35,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,15 +56,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -78,7 +80,11 @@ import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
+import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 private const val TAG = "PillMenu"
 
@@ -101,8 +107,11 @@ private val PM_CHIP_SPACING = 6.dp
 private val PM_NAV_ICON_SIZE = 20.dp
 private val PM_MIRROR_ICON_SIZE = 22.dp
 private val PM_MIRROR_BUTTON_SIZE = 48.dp
+private val PM_MIRROR_LABELED_BUTTON_WIDTH = 72.dp
 private val PM_MIRROR_CARD_V_PADDING = 10.dp
 private const val PM_SCRIM_ALPHA = 0.55f
+private const val PM_NAME_DIALOG_SCRIM_ALPHA = 0.5f
+private const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
 
 /**
  * Pill Menu overlay — appears when [AppStateManager.isPillMenuOpen] transitions to true.
@@ -296,7 +305,7 @@ fun PillMenu(
 
     // ── New Profile dialog ─────────────────────────────────────────────────
     if (showNewProfileDialog) {
-        NameInputDialog(
+        InTreeNameInputDialog(
             title = stringResource(R.string.pill_menu_new_profile),
             hint = stringResource(R.string.pill_menu_profile_name_hint),
             colors = colors,
@@ -326,7 +335,7 @@ fun PillMenu(
 
     // ── New Layout dialog ──────────────────────────────────────────────────
     if (showNewLayoutDialog) {
-        NameInputDialog(
+        InTreeNameInputDialog(
             title = stringResource(R.string.pill_menu_new_layout),
             hint = stringResource(R.string.pill_menu_layout_name_hint),
             colors = colors,
@@ -353,7 +362,7 @@ fun PillMenu(
 @Composable
 private fun SectionLabel(text: String, colors: AppColors) {
     Text(
-        text = text.uppercase(),
+        text = text.uppercase(Locale.ROOT),
         color = colors.onControlOverlay.copy(alpha = 0.55f),
         fontSize = PM_LABEL_SIZE,
         fontWeight = FontWeight.SemiBold,
@@ -595,7 +604,7 @@ private fun MirrorControlIconButton(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(PM_MIRROR_BUTTON_SIZE),
+        modifier = Modifier.width(if (showLabel) PM_MIRROR_LABELED_BUTTON_WIDTH else PM_MIRROR_BUTTON_SIZE),
     ) {
         IconButton(
             onClick = onClick,
@@ -615,6 +624,9 @@ private fun MirrorControlIconButton(
                 color = if (enabled) colors.onControlOverlay else colors.onControlOverlay.copy(alpha = 0.4f),
                 fontSize = 10.sp,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -679,7 +691,7 @@ private fun ActionButton(
 }
 
 @Composable
-private fun NameInputDialog(
+private fun InTreeNameInputDialog(
     title: String,
     hint: String,
     colors: AppColors,
@@ -695,11 +707,42 @@ private fun NameInputDialog(
             existing.equals(normalizedName, ignoreCase = true)
     }
     val hasError = normalizedName.isEmpty() || isDuplicate
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        title = { Text(title, color = colors.onSurface) },
-        text = {
+    val dismissContentDescription = stringResource(R.string.pill_menu_dismiss_dialog)
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(Color.Black.copy(alpha = PM_NAME_DIALOG_SCRIM_ALPHA))
+                .semantics { contentDescription = dismissContentDescription }
+                .clickable(onClick = onDismiss),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(PM_NAME_DIALOG_WIDTH_FRACTION)
+                .background(colors.surface, RoundedCornerShape(PM_PANEL_CORNER))
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Final)
+                            event.changes.forEach { change ->
+                                if (!change.isConsumed) change.consume()
+                            }
+                        }
+                    }
+                }
+                .padding(PM_CONTENT_PADDING),
+        ) {
+            Text(
+                text = title,
+                color = colors.onSurface,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -721,16 +764,18 @@ private fun NameInputDialog(
                     unfocusedBorderColor = colors.controlOverlayBorder,
                 ),
             )
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(normalizedName) }, enabled = !hasError) {
-                Text(stringResource(R.string.config_ok), color = colors.accent)
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.settings_close), color = colors.onSurface)
+                }
+                TextButton(onClick = { onConfirm(normalizedName) }, enabled = !hasError) {
+                    Text(stringResource(R.string.config_ok), color = colors.accent)
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_close), color = colors.onSurface)
-            }
-        },
-    )
+        }
+    }
 }

@@ -61,6 +61,7 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.macropad.MacroPadState
 import java.time.LocalDate
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 // ── In-tree dialog constants ──────────────────────────────────────────────────
@@ -450,7 +451,7 @@ private fun CollapsibleSection(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = title.uppercase(),
+            text = title.uppercase(Locale.ROOT),
             color = accentColor,
             fontSize = 11.sp,
             modifier = Modifier.weight(1f),

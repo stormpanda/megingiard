@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -106,7 +107,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 layout      = l,
                 accentColor = colors.accent,
                 onDisabledActionFeedback = { resId ->
-                    val now = System.currentTimeMillis()
+                    val now = SystemClock.elapsedRealtime()
                     if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
                     lastFeedbackAtMs = now
                     disabledFeedbackResId = resId

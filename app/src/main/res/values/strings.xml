@@ -360,6 +360,7 @@ Open Settings to create a layout.</string>
     <string name="pill_menu_edit_layout">Edit Profile/Layout</string>
     <string name="pill_menu_ambient_settings">Ambient Settings</string>
     <string name="pill_menu_global_settings">Global Settings</string>
+    <string name="pill_menu_dismiss_dialog">Dismiss dialog</string>
     <string name="pill_menu_profile_name_hint">Profile name</string>
     <string name="pill_menu_layout_name_hint">Layout name</string>
     <string name="cd_layout_prev">Previous layout</string>

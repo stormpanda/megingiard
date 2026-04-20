@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.RepeatMode
@@ -8,8 +9,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +19,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -48,6 +47,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientSettingsOverlay
@@ -60,8 +60,6 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MainViewModel
-import com.stormpanda.megingiard.AppLog
-import android.view.Display
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -133,11 +131,14 @@ fun MainAppScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(overlayAtBottom) {
+            .pointerInput(overlayAtBottom, isValidScreen) {
                 val swipe = viewModel.createSwipeProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (!isValidScreen) {
+                            continue
+                        }
                         when (event.type) {
                             PointerEventType.Press -> {
                                 swipe.onPress(
@@ -267,10 +268,16 @@ private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(colors.appBackground)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { },
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        event.changes.forEach { change ->
+                            if (!change.isConsumed) change.consume()
+                        }
+                    }
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
