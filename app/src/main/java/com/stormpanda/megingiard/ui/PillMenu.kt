@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +77,7 @@ import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
+import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.UUID
 
 private const val TAG = "PillMenu"
@@ -98,7 +100,7 @@ private val PM_CHIP_V_PADDING = 6.dp
 private val PM_CHIP_SPACING = 6.dp
 private val PM_NAV_ICON_SIZE = 20.dp
 private val PM_MIRROR_ICON_SIZE = 22.dp
-private val PM_MIRROR_BUTTON_SIZE = 36.dp
+private val PM_MIRROR_BUTTON_SIZE = 48.dp
 private val PM_MIRROR_CARD_V_PADDING = 10.dp
 private const val PM_SCRIM_ALPHA = 0.55f
 
@@ -125,6 +127,7 @@ fun PillMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     val defaultProfileName = stringResource(R.string.pill_menu_new_profile)
     val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
 
@@ -200,6 +203,7 @@ fun PillMenu(
                     onDismiss()
                 },
                 onToggleTouchProjection = { ScreenCaptureManager.toggleTouchProjection() },
+                showLabels = showMirrorControlLabels,
             )
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
@@ -316,6 +320,7 @@ fun PillMenu(
                 onDismiss()
             },
             onDismiss = { showNewProfileDialog = false },
+            existingNames = profiles.map { it.name },
         )
     }
 
@@ -336,6 +341,7 @@ fun PillMenu(
                 onDismiss()
             },
             onDismiss = { showNewLayoutDialog = false },
+            existingNames = activeProfile?.layouts?.map { it.name } ?: emptyList(),
         )
     }
 }
@@ -480,6 +486,7 @@ private fun MirrorControlCard(
     onToggleFreeze: () -> Unit,
     onToggleViewportEdit: () -> Unit,
     onToggleTouchProjection: () -> Unit,
+    showLabels: Boolean,
 ) {
     Row(
         modifier = modifier
@@ -513,63 +520,101 @@ private fun MirrorControlCard(
 
         // Mirror control icon buttons (right)
         if (isCapturing) {
-            IconButton(onClick = onStop, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
-                Icon(
-                    Icons.Rounded.Stop,
-                    contentDescription = stringResource(R.string.cd_stop_mirroring),
-                    tint = colors.onControlOverlay,
-                    modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
-                )
-            }
+            MirrorControlIconButton(
+                icon = Icons.Rounded.Stop,
+                contentDescription = stringResource(R.string.cd_stop_mirroring),
+                label = stringResource(R.string.mirror_control_label_stop),
+                tint = colors.onControlOverlay,
+                enabled = true,
+                showLabel = showLabels,
+                colors = colors,
+                onClick = onStop,
+            )
         } else {
-            IconButton(onClick = onStart, modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE)) {
-                Icon(
-                    Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(R.string.cd_start_mirroring),
-                    tint = colors.onControlOverlay,
-                    modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
-                )
-            }
+            MirrorControlIconButton(
+                icon = Icons.Rounded.PlayArrow,
+                contentDescription = stringResource(R.string.cd_start_mirroring),
+                label = stringResource(R.string.mirror_control_label_start),
+                tint = colors.onControlOverlay,
+                enabled = true,
+                showLabel = showLabels,
+                colors = colors,
+                onClick = onStart,
+            )
         }
-        IconButton(
+        MirrorControlIconButton(
+            icon = if (isFrozen) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+            contentDescription = stringResource(
+                if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze,
+            ),
+            label = stringResource(
+                if (isFrozen) R.string.mirror_control_label_unfreeze else R.string.mirror_control_label_freeze,
+            ),
+            tint = if (isFrozen) colors.accent else colors.onControlOverlay,
+            enabled = isCapturing,
+            showLabel = showLabels,
+            colors = colors,
             onClick = onToggleFreeze,
+        )
+        MirrorControlIconButton(
+            icon = Icons.Rounded.CropFree,
+            contentDescription = stringResource(R.string.cd_viewport_edit),
+            label = stringResource(R.string.mirror_control_label_viewport),
+            tint = if (isViewportEditActive) colors.accent else colors.onControlOverlay,
             enabled = isCapturing,
-            modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE),
-        ) {
-            Icon(
-                if (isFrozen) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                contentDescription = stringResource(
-                    if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze,
-                ),
-                tint = if (isFrozen) colors.accent else colors.onControlOverlay,
-                modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
-            )
-        }
-        IconButton(
+            showLabel = showLabels,
+            colors = colors,
             onClick = onToggleViewportEdit,
+        )
+        MirrorControlIconButton(
+            icon = Icons.Rounded.TouchApp,
+            contentDescription = stringResource(
+                if (isTouchProjectionActive) R.string.cd_touch_projection_on
+                else R.string.cd_touch_projection_off,
+            ),
+            label = stringResource(R.string.mirror_control_label_projection),
+            tint = if (isTouchProjectionActive) colors.accent else colors.onControlOverlay,
             enabled = isCapturing,
+            showLabel = showLabels,
+            colors = colors,
+            onClick = onToggleTouchProjection,
+        )
+    }
+}
+
+@Composable
+private fun MirrorControlIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    label: String,
+    tint: Color,
+    enabled: Boolean,
+    showLabel: Boolean,
+    colors: AppColors,
+    onClick: () -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(PM_MIRROR_BUTTON_SIZE),
+    ) {
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
             modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE),
         ) {
             Icon(
-                Icons.Rounded.CropFree,
-                contentDescription = stringResource(R.string.cd_viewport_edit),
-                tint = if (isViewportEditActive) colors.accent else colors.onControlOverlay,
+                icon,
+                contentDescription = contentDescription,
+                tint = if (enabled) tint else colors.onControlOverlay.copy(alpha = 0.3f),
                 modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
             )
         }
-        IconButton(
-            onClick = onToggleTouchProjection,
-            enabled = isCapturing,
-            modifier = Modifier.size(PM_MIRROR_BUTTON_SIZE),
-        ) {
-            Icon(
-                Icons.Rounded.TouchApp,
-                contentDescription = stringResource(
-                    if (isTouchProjectionActive) R.string.cd_touch_projection_on
-                    else R.string.cd_touch_projection_off,
-                ),
-                tint = if (isTouchProjectionActive) colors.accent else colors.onControlOverlay,
-                modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
+        if (showLabel) {
+            Text(
+                text = label,
+                color = if (enabled) colors.onControlOverlay else colors.onControlOverlay.copy(alpha = 0.4f),
+                fontSize = 10.sp,
+                maxLines = 1,
             )
         }
     }
@@ -640,8 +685,16 @@ private fun NameInputDialog(
     colors: AppColors,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
+    existingNames: List<String>,
+    currentName: String? = null,
 ) {
     var name by remember { mutableStateOf("") }
+    val normalizedName = name.trim()
+    val isDuplicate = existingNames.any { existing ->
+        !existing.equals(currentName?.trim(), ignoreCase = true) &&
+            existing.equals(normalizedName, ignoreCase = true)
+    }
+    val hasError = normalizedName.isEmpty() || isDuplicate
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = colors.surface,
@@ -653,7 +706,14 @@ private fun NameInputDialog(
                 placeholder = { Text(hint, color = colors.onSurface.copy(alpha = 0.4f)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { onConfirm(name) }),
+                keyboardActions = KeyboardActions(onDone = { if (!hasError) onConfirm(normalizedName) }),
+                isError = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                    }
+                },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = colors.onSurface,
                     unfocusedTextColor = colors.onSurface,
@@ -663,7 +723,7 @@ private fun NameInputDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name) }) {
+            TextButton(onClick = { onConfirm(normalizedName) }, enabled = !hasError) {
                 Text(stringResource(R.string.config_ok), color = colors.accent)
             }
         },

@@ -295,6 +295,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
         val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
         NewLayoutOverlay(
             profiles    = profiles,
+            existingLayoutNames = profile.layouts.map { it.name },
             accentColor = colors.accent,
             onConfirm   = { name, templateButtons ->
                 val newLayout = PadLayout(
@@ -329,6 +330,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             title        = stringResource(R.string.settings_macropad_new_profile),
             initialValue = "",
             accentColor  = colors.accent,
+            existingNames = profiles.map { it.name },
             onConfirm    = { name ->
                 val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name)
                 MacroPadState.addProfile(newProfile)
@@ -344,6 +346,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             title        = stringResource(R.string.macropad_editor_rename),
             initialValue = profile.name,
             accentColor  = colors.accent,
+            existingNames = profiles.filter { it.id != profile.id }.map { it.name },
             onConfirm    = { name ->
                 MacroPadState.renameProfile(profile.id, name)
                 showRenameProfileDialog = false
@@ -1004,10 +1007,14 @@ private fun InlineNameInputOverlay(
     title:        String,
     initialValue: String,
     accentColor:  Color,
+    existingNames: List<String>,
     onConfirm:    (String) -> Unit,
     onDismiss:    () -> Unit,
 ) {
     var text by remember { mutableStateOf(initialValue) }
+    val normalizedName = text.trim()
+    val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
+    val hasError = normalizedName.isEmpty() || isDuplicate
     val colors = LocalAppColors.current
     Box(
         modifier = Modifier
@@ -1030,6 +1037,13 @@ private fun InlineNameInputOverlay(
                 onValueChange = { text = it },
                 singleLine    = true,
                 modifier      = Modifier.fillMaxWidth(),
+                isError       = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                    }
+                },
                 colors        = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = accentColor,
                     unfocusedBorderColor = colors.accentBorder,
@@ -1044,12 +1058,12 @@ private fun InlineNameInputOverlay(
                     Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                 }
                 TextButton(
-                    onClick = { if (text.isNotBlank()) onConfirm(text.trim()) },
-                    enabled = text.isNotBlank(),
+                    onClick = { if (!hasError) onConfirm(normalizedName) },
+                    enabled = !hasError,
                 ) {
                     Text(
                         stringResource(R.string.macropad_editor_done),
-                        color = if (text.isNotBlank()) accentColor else colors.onSurfaceSecondary,
+                        color = if (!hasError) accentColor else colors.onSurfaceSecondary,
                     )
                 }
             }
@@ -1070,12 +1084,16 @@ private data class TemplateOption(
 @Composable
 private fun NewLayoutOverlay(
     profiles:    List<PadProfile>,
+    existingLayoutNames: List<String>,
     accentColor: Color,
     onConfirm:   (name: String, templateButtons: List<PadButton>) -> Unit,
     onDismiss:   () -> Unit,
 ) {
     var text             by remember { mutableStateOf("") }
     var selectedTemplate by remember { mutableStateOf<TemplateOption?>(null) }
+    val normalizedName = text.trim()
+    val isDuplicate = existingLayoutNames.any { it.equals(normalizedName, ignoreCase = true) }
+    val hasError = normalizedName.isEmpty() || isDuplicate
     val colors           = LocalAppColors.current
     val blankLabel       = stringResource(R.string.macropad_layout_template_blank)
 
@@ -1117,6 +1135,13 @@ private fun NewLayoutOverlay(
                 onValueChange = { text = it },
                 singleLine    = true,
                 modifier      = Modifier.fillMaxWidth(),
+                isError       = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                    }
+                },
                 colors        = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor   = accentColor,
                     unfocusedBorderColor = colors.accentBorder,
@@ -1167,12 +1192,13 @@ private fun NewLayoutOverlay(
                         val buttons = selectedTemplate?.buttons?.map {
                             it.copy(id = UUID.randomUUID().toString())
                         } ?: emptyList()
-                        onConfirm(text.trim(), buttons)
+                        onConfirm(normalizedName, buttons)
                     },
+                    enabled = !hasError,
                 ) {
                     Text(
                         stringResource(R.string.macropad_editor_done),
-                        color = accentColor,
+                        color = if (!hasError) accentColor else colors.onSurfaceSecondary,
                     )
                 }
             }
@@ -1220,4 +1246,3 @@ private fun TemplateRow(
         }
     }
 }
-

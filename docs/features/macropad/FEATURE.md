@@ -76,6 +76,7 @@ Each button supports one of the following actions:
 
 - The MacroPad MUST support **simultaneous presses** of multiple buttons via multi-touch.
 - Each finger is independently tracked by `PointerId`; down and up events are matched per pointer so no button is accidentally stuck in the pressed state.
+- Attempting to press a button whose required injector type is disabled MUST show a temporary inline feedback message in the MacroPad surface.
 
 ### FR-P6: No Special Permissions Required
 

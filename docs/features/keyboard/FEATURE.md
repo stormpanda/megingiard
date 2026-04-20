@@ -47,6 +47,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - The horizontal placement of the button column (left edge, right edge, or both) MUST be configurable via a **Button Position** setting.
 - When placed on the **right** side, the layout is mirrored so LMB/MMB/RMB remain at the outer edge and the scroll column (M4/ScrollWheel/M5) is inward.
 - Button events MUST be consumed at `PointerEventPass.Initial` so they do not accidentally close the overlay.
+- In fullscreen keyboard mode, an auto-fading exit hint MUST be shown when enabled in global settings.
 
 ### FR-K4: Key Repeat
 

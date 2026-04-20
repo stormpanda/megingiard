@@ -56,6 +56,9 @@ object SettingsManager {
     private val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
     private val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
     private val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
+    private val KEY_SHOW_NAVIGATION_COACH_MARKS = booleanPreferencesKey("show_navigation_coach_marks")
+    private val KEY_SHOW_MIRROR_CONTROL_LABELS = booleanPreferencesKey("show_mirror_control_labels")
+    private val KEY_SHOW_FULLSCREEN_EXIT_HINTS = booleanPreferencesKey("show_fullscreen_exit_hints")
 
     // Mirror touch projection settings
     private val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
@@ -113,6 +116,7 @@ object SettingsManager {
     private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
         KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_THEME_MODE,
         KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
+        KEY_SHOW_NAVIGATION_COACH_MARKS, KEY_SHOW_MIRROR_CONTROL_LABELS, KEY_SHOW_FULLSCREEN_EXIT_HINTS,
     )
     private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
         KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,
@@ -170,6 +174,15 @@ object SettingsManager {
 
     private val _overlayAtBottom = MutableStateFlow(false)
     val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
+
+    private val _showNavigationCoachMarks = MutableStateFlow(true)
+    val showNavigationCoachMarks: StateFlow<Boolean> = _showNavigationCoachMarks.asStateFlow()
+
+    private val _showMirrorControlLabels = MutableStateFlow(false)
+    val showMirrorControlLabels: StateFlow<Boolean> = _showMirrorControlLabels.asStateFlow()
+
+    private val _showFullscreenExitHints = MutableStateFlow(true)
+    val showFullscreenExitHints: StateFlow<Boolean> = _showFullscreenExitHints.asStateFlow()
 
     // Mirror touch projection — pinch-to-zoom while projecting
     private val _pinchWhileProjecting = MutableStateFlow(false)
@@ -269,6 +282,9 @@ object SettingsManager {
                 _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                 _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                 _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
+                _showNavigationCoachMarks.value = prefs[KEY_SHOW_NAVIGATION_COACH_MARKS] ?: true
+                _showMirrorControlLabels.value = prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] ?: false
+                _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
                 _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
@@ -340,6 +356,36 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs ->
                 prefs[KEY_OVERLAY_AT_BOTTOM] = value
+            }
+        }
+    }
+
+    fun setShowNavigationCoachMarks(value: Boolean) {
+        AppLog.d(TAG, "setShowNavigationCoachMarks($value)")
+        _showNavigationCoachMarks.value = value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_SHOW_NAVIGATION_COACH_MARKS] = value
+            }
+        }
+    }
+
+    fun setShowMirrorControlLabels(value: Boolean) {
+        AppLog.d(TAG, "setShowMirrorControlLabels($value)")
+        _showMirrorControlLabels.value = value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] = value
+            }
+        }
+    }
+
+    fun setShowFullscreenExitHints(value: Boolean) {
+        AppLog.d(TAG, "setShowFullscreenExitHints($value)")
+        _showFullscreenExitHints.value = value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] = value
             }
         }
     }
@@ -689,4 +735,3 @@ object SettingsManager {
             }
         }
     }
-

@@ -8,9 +8,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -49,12 +53,15 @@ import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.mirror.DisplayDetector
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MainViewModel
 import com.stormpanda.megingiard.AppLog
+import android.view.Display
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -78,6 +85,8 @@ fun MainAppScreen() {
     val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isAmbientSettingsActive by AppStateManager.isAmbientSettingsActive.collectAsState()
+    val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
+    val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
 
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
@@ -170,13 +179,27 @@ fun MainAppScreen() {
         // are open because those modals render their own full-screen chrome.
         if (!isEditorActive && !isAmbientSettingsActive) {
             IdlePill()
+            if (showNavigationCoachMarks && !isPillMenuOpen) {
+                NavigationCoachMark(
+                    overlayAtBottom = overlayAtBottom,
+                    colors = colors,
+                    onDismiss = { SettingsManager.setShowNavigationCoachMarks(false) },
+                )
+            }
         }
 
         // ── Global wrong-screen overlay ─────────────────────────────────────
         // Blocks all interaction and renders on top of everything when the app
         // is running on the primary display instead of the secondary screen.
         if (!isValidScreen) {
-            WrongScreenOverlay(colors = colors)
+            WrongScreenOverlay(
+                colors = colors,
+                onRetry = {
+                    val displayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
+                    DisplayDetector.updateDisplayValidity(displayId)
+                    AppLog.i(TAG, "wrong-screen retry tapped: displayId=$displayId")
+                },
+            )
         }
     }
 
@@ -228,7 +251,8 @@ fun MainAppScreen() {
 }
 
 @Composable
-private fun WrongScreenOverlay(colors: AppColors) {
+private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
+    var showHelpDialog by remember { mutableStateOf(false) }
     val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
     val bounceOffset by bounceTransition.animateFloat(
         initialValue = 0f,
@@ -243,14 +267,10 @@ private fun WrongScreenOverlay(colors: AppColors) {
         modifier = Modifier
             .fillMaxSize()
             .background(colors.appBackground)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        event.changes.forEach { it.consume() }
-                    }
-                }
-            },
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { },
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -270,6 +290,62 @@ private fun WrongScreenOverlay(colors: AppColors) {
                     .size(MAS_ARROW_SIZE)
                     .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) }
             )
+            Spacer(Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                TextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.wrong_screen_retry), color = colors.accent)
+                }
+                TextButton(onClick = { showHelpDialog = true }) {
+                    Text(stringResource(R.string.wrong_screen_help), color = colors.accent)
+                }
+            }
+            if (showHelpDialog) {
+                AlertDialog(
+                    onDismissRequest = { showHelpDialog = false },
+                    title = { Text(stringResource(R.string.wrong_screen_help), color = colors.onSurface) },
+                    text = { Text(stringResource(R.string.wrong_screen_help_message), color = colors.onSurface) },
+                    confirmButton = {
+                        TextButton(onClick = { showHelpDialog = false }) {
+                            Text(stringResource(R.string.config_ok), color = colors.accent)
+                        }
+                    },
+                    containerColor = colors.surface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavigationCoachMark(
+    overlayAtBottom: Boolean,
+    colors: AppColors,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                top = if (overlayAtBottom) 0.dp else 24.dp,
+                bottom = if (overlayAtBottom) 24.dp else 0.dp,
+            ),
+        contentAlignment = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .background(colors.surface.copy(alpha = 0.92f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.pill_coach_mark_text),
+                color = colors.onSurface,
+                fontSize = 12.sp,
+            )
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.pill_coach_mark_dismiss), color = colors.accent)
+            }
         }
     }
 }
@@ -352,4 +428,3 @@ private fun IncomingImportDialog(
         },
     )
 }
-

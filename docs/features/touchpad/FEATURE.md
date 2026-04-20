@@ -28,6 +28,7 @@ The Virtual Touchpad feature turns the secondary display into a touch surface th
 
 - When no touch is active, a **hint text** MUST be displayed centrally to indicate the surface's purpose.
 - The hint text MUST disappear while a touch is in progress.
+- In fullscreen mouse mode, an auto-fading exit hint MUST be shown when enabled in global settings.
 
 ### FR-T4: No Special Permissions Required
 

@@ -3,9 +3,11 @@ package com.stormpanda.megingiard.settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -68,6 +72,12 @@ private val GS_DIALOG_WIDTH_FRACTION = 0.85f
 private val GS_DIALOG_CORNER = 16.dp
 private val GS_DIALOG_PADDING = 20.dp
 private val GS_DIALOG_TITLE_SIZE = 16.sp
+private val GS_SECTION_CHIP_CORNER = 14.dp
+private val GS_SECTION_CHIP_H_PADDING = 12.dp
+private val GS_SECTION_CHIP_V_PADDING = 8.dp
+private val GS_SECTION_CHIP_SPACING = 8.dp
+private val GS_SECTION_HEADER_PADDING_H = 16.dp
+private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +88,9 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val themeMode by SettingsManager.themeMode.collectAsState()
     val appLanguage by SettingsManager.appLanguage.collectAsState()
     val logLevel by SettingsManager.logLevel.collectAsState()
+    val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
+    val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
+    val showFullscreenExitHints by SettingsManager.showFullscreenExitHints.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
@@ -95,6 +108,10 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     var showRestoreDefaultsConfirm by remember { mutableStateOf(false) }
+    var generalExpanded by remember { mutableStateOf(true) }
+    var appearanceExpanded by remember { mutableStateOf(false) }
+    var dataExpanded by remember { mutableStateOf(false) }
+    var configExpanded by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -130,77 +147,140 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
-                // General section
-                SettingsCategoryHeader(
-                    text = stringResource(R.string.settings_section_general),
+                SectionJumpRow(
+                    colors = colors,
                     accentColor = effectiveAccent,
-                    colors = colors
+                    onJumpGeneral = {
+                        generalExpanded = true
+                        appearanceExpanded = false
+                        dataExpanded = false
+                        configExpanded = false
+                    },
+                    onJumpAppearance = {
+                        generalExpanded = false
+                        appearanceExpanded = true
+                        dataExpanded = false
+                        configExpanded = false
+                    },
+                    onJumpData = {
+                        generalExpanded = false
+                        appearanceExpanded = false
+                        dataExpanded = true
+                        configExpanded = false
+                    },
+                    onJumpConfig = {
+                        generalExpanded = false
+                        appearanceExpanded = false
+                        dataExpanded = false
+                        configExpanded = true
+                    },
                 )
-                OverlayPositionRow(
-                    overlayAtBottom = overlayAtBottom,
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_general),
+                    expanded = generalExpanded,
                     accentColor = effectiveAccent,
                     colors = colors,
-                    onChanged = { SettingsManager.setOverlayAtBottom(it) }
-                )
-                HorizontalDivider(color = colors.divider)
-                LanguagePickerRow(
-                    language = appLanguage,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onChanged = { SettingsManager.setAppLanguage(it) }
-                )
-                HorizontalDivider(color = colors.divider)
-                LogLevelPickerRow(
-                    logLevel = logLevel,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onChanged = { SettingsManager.setLogLevel(it) }
-                )
-                HorizontalDivider(color = colors.divider)
-
-                // Appearance section
-                SettingsCategoryHeader(
-                    text = stringResource(R.string.settings_section_appearance),
-                    accentColor = effectiveAccent,
-                    colors = colors
-                )
-                ThemePickerRow(
-                    themeMode = themeMode,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onChanged = { SettingsManager.setThemeMode(it) }
-                )
-                if (themeMode.supportsCustomAccent) {
-                    HorizontalDivider(color = colors.divider)
-                    AccentColorRow(
-                        accentColor = accentColor,
+                    onToggle = { generalExpanded = !generalExpanded },
+                ) {
+                    OverlayPositionRow(
+                        overlayAtBottom = overlayAtBottom,
+                        accentColor = effectiveAccent,
                         colors = colors,
-                        onClick = { showColorPicker = true }
+                        onChanged = { SettingsManager.setOverlayAtBottom(it) }
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_show_navigation_coach_marks),
+                        description = stringResource(R.string.settings_show_navigation_coach_marks_desc),
+                        checked = showNavigationCoachMarks,
+                        accentColor = effectiveAccent,
+                        onCheckedChange = { SettingsManager.setShowNavigationCoachMarks(it) },
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_show_mirror_control_labels),
+                        description = stringResource(R.string.settings_show_mirror_control_labels_desc),
+                        checked = showMirrorControlLabels,
+                        accentColor = effectiveAccent,
+                        onCheckedChange = { SettingsManager.setShowMirrorControlLabels(it) },
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_show_fullscreen_exit_hints),
+                        description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
+                        checked = showFullscreenExitHints,
+                        accentColor = effectiveAccent,
+                        onCheckedChange = { SettingsManager.setShowFullscreenExitHints(it) },
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    LanguagePickerRow(
+                        language = appLanguage,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onChanged = { SettingsManager.setAppLanguage(it) }
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    LogLevelPickerRow(
+                        logLevel = logLevel,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onChanged = { SettingsManager.setLogLevel(it) }
                     )
                 }
 
-                // Data section
-                SettingsCategoryHeader(
-                    text = stringResource(R.string.settings_section_data),
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_appearance),
+                    expanded = appearanceExpanded,
                     accentColor = effectiveAccent,
                     colors = colors,
-                )
-                ConfigActionRow(
-                    label = stringResource(R.string.settings_restore_defaults),
-                    description = stringResource(R.string.settings_restore_defaults_desc),
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onClick = { showRestoreDefaultsConfirm = true },
-                )
-                HorizontalDivider(color = colors.divider)
+                    onToggle = { appearanceExpanded = !appearanceExpanded },
+                ) {
+                    ThemePickerRow(
+                        themeMode = themeMode,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onChanged = { SettingsManager.setThemeMode(it) }
+                    )
+                    if (themeMode.supportsCustomAccent) {
+                        HorizontalDivider(color = colors.divider)
+                        AccentColorRow(
+                            accentColor = accentColor,
+                            colors = colors,
+                            onClick = { showColorPicker = true }
+                        )
+                    }
+                }
 
-                // Configuration section (export / import)
-                ConfigSection(
-                    colors = colors,
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_data),
+                    expanded = dataExpanded,
                     accentColor = effectiveAccent,
-                    onShowExportDialog = { showExportMetadataDialog = true },
-                    onImportPreviewReady = { showImportPreviewDialog = it },
-                )
+                    colors = colors,
+                    onToggle = { dataExpanded = !dataExpanded },
+                ) {
+                    ConfigActionRow(
+                        label = stringResource(R.string.settings_restore_defaults),
+                        description = stringResource(R.string.settings_restore_defaults_desc),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onClick = { showRestoreDefaultsConfirm = true },
+                    )
+                }
+
+                CollapsibleSection(
+                    title = stringResource(R.string.settings_section_config),
+                    expanded = configExpanded,
+                    accentColor = effectiveAccent,
+                    colors = colors,
+                    onToggle = { configExpanded = !configExpanded },
+                ) {
+                    ConfigSection(
+                        colors = colors,
+                        accentColor = effectiveAccent,
+                        onShowExportDialog = { showExportMetadataDialog = true },
+                        onImportPreviewReady = { showImportPreviewDialog = it },
+                    )
+                }
             }
         }
         // ── In-tree overlays (work in Activity and MirrorPresentation contexts) ─────
@@ -310,6 +390,85 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     }
 }
 
+@Composable
+private fun SectionJumpRow(
+    colors: AppColors,
+    accentColor: Color,
+    onJumpGeneral: () -> Unit,
+    onJumpAppearance: () -> Unit,
+    onJumpData: () -> Unit,
+    onJumpConfig: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.appBackground)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(GS_SECTION_CHIP_SPACING),
+    ) {
+        SectionJumpChip(stringResource(R.string.settings_jump_general), colors, accentColor, onJumpGeneral)
+        SectionJumpChip(stringResource(R.string.settings_jump_appearance), colors, accentColor, onJumpAppearance)
+        SectionJumpChip(stringResource(R.string.settings_jump_data), colors, accentColor, onJumpData)
+        SectionJumpChip(stringResource(R.string.settings_jump_config), colors, accentColor, onJumpConfig)
+    }
+}
+
+@Composable
+private fun SectionJumpChip(
+    label: String,
+    colors: AppColors,
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
+    Text(
+        text = label,
+        color = accentColor,
+        fontSize = 12.sp,
+        modifier = Modifier
+            .background(colors.surface, RoundedCornerShape(GS_SECTION_CHIP_CORNER))
+            .clickable(onClick = onClick)
+            .padding(horizontal = GS_SECTION_CHIP_H_PADDING, vertical = GS_SECTION_CHIP_V_PADDING),
+    )
+}
+
+@Composable
+private fun CollapsibleSection(
+    title: String,
+    expanded: Boolean,
+    accentColor: Color,
+    colors: AppColors,
+    onToggle: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.appBackground)
+            .clickable(onClick = onToggle)
+            .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title.uppercase(),
+            color = accentColor,
+            fontSize = 11.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+            contentDescription = stringResource(
+                if (expanded) R.string.settings_section_collapse else R.string.settings_section_expand,
+            ),
+            tint = accentColor,
+        )
+    }
+    if (expanded) {
+        Column { content() }
+        HorizontalDivider(color = colors.divider)
+    }
+}
+
 /**
  * Configuration export / import section.
  *
@@ -336,11 +495,6 @@ private fun ConfigSection(
         if (pendingImport != null) onImportPreviewReady(pendingImport!!)
     }
 
-    SettingsCategoryHeader(
-        text = stringResource(R.string.settings_section_config),
-        accentColor = accentColor,
-        colors = colors,
-    )
     ConfigActionRow(
         label = stringResource(R.string.settings_config_export),
         description = stringResource(R.string.settings_config_export_desc),

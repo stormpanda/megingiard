@@ -35,6 +35,12 @@
     <string name="theme_light">Light</string>
     <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Place controls at bottom</string>
+    <string name="settings_show_navigation_coach_marks">Show navigation coach marks</string>
+    <string name="settings_show_navigation_coach_marks_desc">Display the first-run hint for opening the Pill Menu</string>
+    <string name="settings_show_mirror_control_labels">Show mirror control labels</string>
+    <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
+    <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
+    <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
@@ -258,6 +264,26 @@ Open Settings to create a layout.</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_de">Deutsch</string>
     <string name="settings_log_level">Log Level</string>
+    <string name="settings_jump_general">General</string>
+    <string name="settings_jump_appearance">Appearance</string>
+    <string name="settings_jump_data">Data</string>
+    <string name="settings_jump_config">Config</string>
+    <string name="settings_section_expand">Expand section</string>
+    <string name="settings_section_collapse">Collapse section</string>
+    <string name="settings_name_error_empty">Name cannot be empty.</string>
+    <string name="settings_name_error_duplicate">This name already exists.</string>
+    <string name="overlay_exit_hint_swipe">Swipe from the pill edge to close this fullscreen overlay.</string>
+    <string name="pill_coach_mark_text">Swipe from the edge pill to open the menu.</string>
+    <string name="pill_coach_mark_dismiss">Got it</string>
+    <string name="wrong_screen_retry">Retry detection</string>
+    <string name="wrong_screen_help">Help</string>
+    <string name="wrong_screen_help_message">Open Recent Apps, drag Megingiard to the bottom display, then tap Retry.</string>
+    <string name="mirror_control_label_start">Start</string>
+    <string name="mirror_control_label_stop">Stop</string>
+    <string name="mirror_control_label_freeze">Freeze</string>
+    <string name="mirror_control_label_unfreeze">Unfreeze</string>
+    <string name="mirror_control_label_viewport">Viewport</string>
+    <string name="mirror_control_label_projection">Project</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Exit Megingiard</string>

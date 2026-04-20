@@ -31,6 +31,7 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     val kbFullscreen: StateFlow<Boolean> = SettingsManager.kbFullscreen
     val kbMouseBtnPos: StateFlow<com.stormpanda.megingiard.keyboard.KbMouseBtnPos> = SettingsManager.kbMouseBtnPos
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
+    val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
 
     val controller = KeyRepeatController(viewModelScope)
