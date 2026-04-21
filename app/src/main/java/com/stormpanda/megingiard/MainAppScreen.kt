@@ -173,7 +173,7 @@ fun MainAppScreen() {
             modifier = Modifier.fillMaxSize(),
             forcedLayout = fullscreenKeyboardLayout,
         )
-        if (isEditorActive) AnimatedVisibility(
+        AnimatedVisibility(
             visible  = isEditorActive,
             enter    = slideInVertically { it } + fadeIn(),
             exit     = slideOutVertically { it } + fadeOut(),
@@ -183,7 +183,7 @@ fun MainAppScreen() {
                 onDone = { AppStateManager.setEditorActive(false) },
             )
         }
-        if (isAmbientSettingsActive) AnimatedVisibility(
+        AnimatedVisibility(
             visible  = isAmbientSettingsActive,
             enter    = slideInVertically { it } + fadeIn(),
             exit     = slideOutVertically { it } + fadeOut(),

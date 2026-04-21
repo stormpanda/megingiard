@@ -514,7 +514,7 @@ private fun EditorBody(
     LazyColumn(
         state          = lazyListState,
         modifier       = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = ED_PADDING),
+        contentPadding = PaddingValues(bottom = ED_PADDING),
     ) {
         // 1. Layout section header
         item(key = "section_layout") {
@@ -900,7 +900,7 @@ private fun ButtonListItem(
         modifier = modifier
             .fillMaxWidth()
             .alpha(if (isDeviceDisabled) 0.38f else 1f)
-            .background(if (isDragging) colors.surfaceVariant else Color.Transparent)
+            .background(if (isDragging) colors.surfaceVariant else colors.surface)
             .clickable { onEdit() }
             .padding(horizontal = 4.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
