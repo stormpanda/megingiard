@@ -260,6 +260,7 @@ fun PillMenu(
                     activeLayout = activeLayout,
                     colors = colors,
                     onLayoutSelected = { layoutId ->
+                        AppLog.d(TAG, "layout selected: $layoutId")
                         MacroPadState.setActiveLayoutId(layoutId)
                         onDismiss()
                     },
@@ -275,11 +276,10 @@ fun PillMenu(
                     label = stringResource(R.string.pill_menu_edit_layout),
                     colors = colors,
                     icon = {
-                        Icon(
-                            Icons.Rounded.Edit,
+                        ActionButtonIcon(
+                            icon = Icons.Rounded.Edit,
                             contentDescription = stringResource(R.string.pill_menu_edit_layout),
-                            tint = colors.onControlOverlay,
-                            modifier = Modifier.size(PM_NAV_ICON_SIZE),
+                            colors = colors,
                         )
                     },
                 ) {
@@ -291,11 +291,10 @@ fun PillMenu(
                     label = stringResource(R.string.pill_menu_global_settings),
                     colors = colors,
                     icon = {
-                        Icon(
-                            Icons.Rounded.Settings,
+                        ActionButtonIcon(
+                            icon = Icons.Rounded.Settings,
                             contentDescription = stringResource(R.string.pill_menu_global_settings),
-                            tint = colors.onControlOverlay,
-                            modifier = Modifier.size(PM_NAV_ICON_SIZE),
+                            colors = colors,
                         )
                     },
                 ) {
@@ -680,6 +679,20 @@ private fun ActionButton(
         )
         if (icon != null) icon()
     }
+}
+
+@Composable
+private fun ActionButtonIcon(
+    icon: ImageVector,
+    contentDescription: String,
+    colors: AppColors,
+) {
+    Icon(
+        imageVector = icon,
+        contentDescription = contentDescription,
+        tint = colors.onControlOverlay,
+        modifier = Modifier.size(PM_NAV_ICON_SIZE),
+    )
 }
 
 @Composable
