@@ -203,17 +203,19 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    // Title + Done button
+                    // Title + Done button — styled like GlobalSettingsScreen TopAppBar
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.surface)
+                            .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = stringResource(R.string.pill_menu_ambient_settings),
-                            color = colors.accent,
+                            color = colors.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f),
@@ -228,7 +230,12 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                     }
 
                     Spacer(Modifier.height(6.dp))
-                    Text(text = currentLayout.name, color = colors.onSurfaceSecondary, fontSize = 13.sp)
+                    Text(
+                        text = currentLayout.name,
+                        color = colors.onSurfaceSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
                     Spacer(Modifier.height(12.dp))
 
                     AsoSectionHeader(text = stringResource(R.string.settings_section_general))
