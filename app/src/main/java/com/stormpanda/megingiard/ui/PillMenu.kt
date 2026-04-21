@@ -154,11 +154,18 @@ fun PillMenu(
             MouseInjector.stop()
             onDispose {
                 val ap = MacroPadState.activeProfile.value
-                AppLog.d(TAG, "PillMenu dismissed → restarting injectors")
-                CoroutineScope(Dispatchers.IO).launch {
-                    if (ap?.enableKeyboard != false) KeyInjector.start(context)
-                    if (ap?.enableGamepad != false) GamepadInjector.start(context)
-                    if (ap?.enableMouse != false) MouseInjector.start(context)
+                // Only restart if no other modal that manages injector lifecycle is open.
+                // Editor and AmbientSettings each have their own stop/restart logic;
+                // restarting here while they are open would race against their stop.
+                if (AppStateManager.isEditorActive.value || AppStateManager.isAmbientSettingsActive.value) {
+                    AppLog.d(TAG, "PillMenu dismissed → skipping injector restart (modal open)")
+                } else {
+                    AppLog.d(TAG, "PillMenu dismissed → restarting injectors")
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (ap?.enableKeyboard != false) KeyInjector.start(context)
+                        if (ap?.enableGamepad != false) GamepadInjector.start(context)
+                        if (ap?.enableMouse != false) MouseInjector.start(context)
+                    }
                 }
             }
         }

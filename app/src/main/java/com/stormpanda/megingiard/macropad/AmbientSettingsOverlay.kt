@@ -115,11 +115,16 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
         onDispose {
             AppStateManager.setAmbientPreviewConfig(null)
             val ap = MacroPadState.activeProfile.value
-            AppLog.d(TAG, "AmbientSettingsOverlay dismissed → restarting injectors")
-            CoroutineScope(Dispatchers.IO).launch {
-                if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                if (ap?.enableMouse == true) MouseInjector.start(context)
+            // Only restart if the editor has not taken over injector management.
+            if (AppStateManager.isEditorActive.value) {
+                AppLog.d(TAG, "AmbientSettingsOverlay dismissed → skipping injector restart (editor open)")
+            } else {
+                AppLog.d(TAG, "AmbientSettingsOverlay dismissed → restarting injectors")
+                CoroutineScope(Dispatchers.IO).launch {
+                    if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                    if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                    if (ap?.enableMouse == true) MouseInjector.start(context)
+                }
             }
         }
     }
