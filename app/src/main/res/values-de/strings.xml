@@ -40,6 +40,12 @@
     <string name="theme_light">Hell</string>
     <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
+    <string name="settings_show_navigation_coach_marks">Navigationshinweise anzeigen</string>
+    <string name="settings_show_navigation_coach_marks_desc">Erstnutzer-Hinweis zum Öffnen des Pill-Menüs anzeigen</string>
+    <string name="settings_show_mirror_control_labels">Spiegelsteuerungsbeschriftungen anzeigen</string>
+    <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
+    <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
+    <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
     <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>
@@ -205,6 +211,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_vignette_shape_radial">Radial</string>
     <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
     <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
+    <string name="ambient_preview">Vorschau</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Taste: %s</string>
@@ -237,6 +244,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- MacroPad-Editor-Toolbar -->
     <string name="macropad_editor_manage_macros">Makros…</string>
     <string name="macropad_editor_add_macro_button">Makro-Taste hinzufügen</string>
+
+    <!-- MacroPad editor section headers -->
+    <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_buttons">Tasten</string>
+    <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
+    <string name="macropad_macro_section_list">Liste</string>
 
     <!-- Makro-Listenverwaltung -->
     <string name="macropad_macro_list_title">Makros</string>
@@ -289,6 +302,22 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_jump_appearance">Darstellung</string>
     <string name="settings_jump_data">Daten</string>
     <string name="settings_jump_config">Konfiguration</string>
+    <string name="settings_section_expand">Abschnitt aufklappen</string>
+    <string name="settings_section_collapse">Abschnitt zuklappen</string>
+    <string name="settings_name_error_empty">Name darf nicht leer sein.</string>
+    <string name="settings_name_error_duplicate">Dieser Name existiert bereits.</string>
+    <string name="overlay_exit_hint_swipe">Vom Rand-Pill wischen, um dieses Vollbild-Overlay zu schließen.</string>
+    <string name="pill_coach_mark_text">Wische vom Rand-Pill, um das Menü zu öffnen.</string>
+    <string name="pill_coach_mark_dismiss">Verstanden</string>
+    <string name="wrong_screen_retry">Erkennung wiederholen</string>
+    <string name="wrong_screen_help">Hilfe</string>
+    <string name="wrong_screen_help_message">Öffne die Letzte Apps-Ansicht, ziehe Megingiard auf das untere Display, dann tippe Erkennung wiederholen.</string>
+    <string name="mirror_control_label_start">Start</string>
+    <string name="mirror_control_label_stop">Stop</string>
+    <string name="mirror_control_label_freeze">Einfrieren</string>
+    <string name="mirror_control_label_unfreeze">Auftauen</string>
+    <string name="mirror_control_label_viewport">Viewport</string>
+    <string name="mirror_control_label_projection">Projektion</string>
     <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
     <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
     <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>
@@ -348,6 +377,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="pill_menu_edit_layout">Profil/Layout bearbeiten</string>
     <string name="pill_menu_ambient_settings">Hintergrund-Einstellungen</string>
     <string name="pill_menu_global_settings">Globale Einstellungen</string>
+    <string name="pill_menu_dismiss_dialog">Dialog schließen</string>
     <string name="pill_menu_profile_name_hint">Profilname</string>
     <string name="pill_menu_layout_name_hint">Layoutname</string>
     <string name="cd_layout_prev">Vorheriges Layout</string>

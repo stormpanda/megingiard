@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -32,7 +33,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +49,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AmbientPreviewConfig
 import com.stormpanda.megingiard.AmbientPreviewType
@@ -204,37 +206,34 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    // Title + Done button — styled like GlobalSettingsScreen TopAppBar
+                    // Title + Back button — styled like GlobalSettingsScreen TopAppBar
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(colors.surface)
-                            .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                            .padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.pill_menu_ambient_settings),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(onClick = onDone) {
-                            Text(
-                                stringResource(R.string.macropad_editor_done),
-                                color = colors.accent,
-                                fontWeight = FontWeight.SemiBold,
+                        IconButton(onClick = onDone) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = stringResource(R.string.settings_back),
+                                tint = colors.onSurface,
                             )
                         }
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(SpanStyle(color = colors.onSurface)) {
+                                    append(stringResource(R.string.pill_menu_ambient_settings))
+                                }
+                                withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
+                                    append(" (${currentLayout.name})")
+                                }
+                            },
+                            style    = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
-
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = currentLayout.name,
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                    Spacer(Modifier.height(12.dp))
 
                     AsoSectionHeader(text = stringResource(R.string.settings_section_general))
 

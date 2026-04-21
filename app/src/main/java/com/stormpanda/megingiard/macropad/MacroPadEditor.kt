@@ -1,6 +1,11 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +29,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -33,7 +39,6 @@ import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Grid4x4
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.DropdownMenu
@@ -62,7 +67,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
+import java.util.Locale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,11 +90,12 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val ED_TOP_BAR_HEIGHT = 56.dp
-private val ED_PADDING        = 16.dp
-private val ED_ITEM_PADDING   = 12.dp
-private val ED_GRID_TOGGLE_SIZE = 36.dp
-private val ED_GRID_TOGGLE_MARGIN = 8.dp
+private val ED_TOP_BAR_HEIGHT          = 56.dp
+private val ED_PADDING                 = 16.dp
+private val ED_ITEM_PADDING            = 12.dp
+private val ED_GRID_TOGGLE_SIZE        = 36.dp
+private val ED_GRID_TOGGLE_MARGIN      = 8.dp
+private val ED_SECTION_HEADER_V_PADDING = 10.dp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -134,7 +142,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     var showMacroListEditor      by remember { mutableStateOf(false) }
     var showAddButton            by remember { mutableStateOf(false) }
-    var showAddMacroButton       by remember { mutableStateOf(false) }
     var editingButton            by remember { mutableStateOf<PadButton?>(null) }
     var editingButtonActive      by remember { mutableStateOf(false) }
     var buttonPendingDelete      by remember { mutableStateOf<PadButton?>(null) }
@@ -146,7 +153,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
-    val anyOverlayVisible = showMacroListEditor || showAddButton || showAddMacroButton ||
+    val anyOverlayVisible = showMacroListEditor || showAddButton ||
         editingButtonActive || buttonPendingDelete != null ||
         showNewLayoutDialog || layoutPendingDelete != null ||
         showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm
@@ -154,7 +161,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
         when {
             showMacroListEditor      -> showMacroListEditor = false
             showAddButton            -> showAddButton = false
-            showAddMacroButton       -> showAddMacroButton = false
             editingButtonActive      -> { editingButtonActive = false; editingButton = null }
             buttonPendingDelete != null -> buttonPendingDelete = null
             showNewLayoutDialog      -> showNewLayoutDialog = false
@@ -201,10 +207,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 profile                 = profile,
                 layout                  = activeLayout,
                 accentColor             = colors.accent,
-                hasMacros               = profile.macros.isNotEmpty(),
                 onManageMacros          = { showMacroListEditor = true },
                 onAddButton             = { showAddButton = true },
-                onAddMacroButton        = { showAddMacroButton = true },
                 onEditButton            = { btn -> editingButton = btn; editingButtonActive = true },
                 onDeleteRequested       = { btn -> buttonPendingDelete = btn },
                 onNewLayout             = { showNewLayoutDialog = true },
@@ -215,57 +219,60 @@ fun MacroPadEditor(onDone: () -> Unit) {
     }
 
     // Render MacroListEditor as a full-screen inline overlay (same window — no nested Dialog)
-    if (showMacroListEditor) {
+    AnimatedVisibility(
+        visible  = showMacroListEditor,
+        enter    = slideInVertically { it } + fadeIn(),
+        exit     = slideOutVertically { it } + fadeOut(),
+        modifier = Modifier.fillMaxSize(),
+    ) {
         MacroListEditor(
             onDone = { showMacroListEditor = false },
         )
     }
 
     // Add button overlay
-    if (showAddButton && profile != null) {
-        ButtonEditDialog(
-            button      = null,
-            accentColor = colors.accent,
-            onConfirm   = { newBtn ->
-                val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
-                MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
-                showAddButton = false
-            },
-            onDismiss      = { showAddButton = false },
-        )
-    }
-
-    // Add macro button overlay
-    if (showAddMacroButton && profile != null) {
-        val firstMacroId = profile.macros.firstOrNull()?.id ?: ""
-        ButtonEditDialog(
-            button        = null,
-            accentColor   = colors.accent,
-            initialAction = PadAction.Macro(firstMacroId),
-            onConfirm      = { newBtn ->
-                val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
-                MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
-                showAddMacroButton = false
-            },
-            onDismiss      = { showAddMacroButton = false },
-        )
+    AnimatedVisibility(
+        visible  = showAddButton && profile != null,
+        enter    = slideInVertically { it } + fadeIn(),
+        exit     = slideOutVertically { it } + fadeOut(),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (profile != null) {
+            ButtonEditDialog(
+                button      = null,
+                accentColor = colors.accent,
+                onConfirm   = { newBtn ->
+                    val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
+                    MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
+                    showAddButton = false
+                },
+                onDismiss      = { showAddButton = false },
+            )
+        }
     }
 
     // Edit existing button overlay
-    if (editingButtonActive && editingButton != null && profile != null) {
-        ButtonEditDialog(
-            button      = editingButton,
-            accentColor = colors.accent,
-            onConfirm   = { updated ->
-                val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
-                MacroPadState.updateLayout(
-                    layout.copy(buttons = layout.buttons.map { if (it.id == updated.id) updated else it })
-                )
-                editingButtonActive = false
-                editingButton = null
-            },
-            onDismiss      = { editingButtonActive = false; editingButton = null },
-        )
+    AnimatedVisibility(
+        visible  = editingButtonActive && editingButton != null && profile != null,
+        enter    = slideInVertically { it } + fadeIn(),
+        exit     = slideOutVertically { it } + fadeOut(),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (editingButton != null && profile != null) {
+            ButtonEditDialog(
+                button      = editingButton,
+                accentColor = colors.accent,
+                onConfirm   = { updated ->
+                    val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
+                    MacroPadState.updateLayout(
+                        layout.copy(buttons = layout.buttons.map { if (it.id == updated.id) updated else it })
+                    )
+                    editingButtonActive = false
+                    editingButton = null
+                },
+                onDismiss      = { editingButtonActive = false; editingButton = null },
+            )
+        }
     }
 
     // Delete button confirmation (in-tree — no Dialog window, works in Presentation)
@@ -396,9 +403,17 @@ private fun EditorTopBar(
             .fillMaxWidth()
             .height(ED_TOP_BAR_HEIGHT)
             .background(colors.surface)
-            .padding(horizontal = ED_PADDING),
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        IconButton(onClick = onDone) {
+            Icon(
+                Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = stringResource(R.string.settings_back),
+                tint = colors.onSurface,
+            )
+        }
+
         // Profile selector
         Box(modifier = Modifier.weight(1f)) {
             Row(
@@ -456,13 +471,6 @@ private fun EditorTopBar(
                 Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_profile), tint = colors.onSurfaceSecondary)
             }
         }
-
-        Spacer(Modifier.width(4.dp))
-
-        // Done
-        TextButton(onClick = onDone) {
-            Text(stringResource(R.string.macropad_editor_done), color = accentColor, fontWeight = FontWeight.SemiBold)
-        }
     }
 
 }
@@ -476,10 +484,8 @@ private fun EditorBody(
     profile:                 PadProfile,
     layout:                  PadLayout?,
     accentColor:             Color,
-    hasMacros:               Boolean,
     onManageMacros:          () -> Unit,
     onAddButton:             () -> Unit,
-    onAddMacroButton:        () -> Unit,
     onEditButton:            (PadButton) -> Unit,
     onDeleteRequested:       (PadButton) -> Unit,
     onNewLayout:             () -> Unit,
@@ -492,9 +498,9 @@ private fun EditorBody(
     val layoutRef  by rememberUpdatedState(layout)
 
     val lazyListState = rememberLazyListState()
-    // Items before buttons: layouts(0), toolbar(1), canvas(2), divider_1(3) → offset = 4
+    // Items before buttons: section_layout(0), layouts(1), canvas(2), toolbar(3), section_buttons(4) → offset = 5
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val offset     = 4
+        val offset     = 5
         val curLayout  = layoutRef
         if (curLayout != null) {
             val newButtons = curLayout.buttons.toMutableList()
@@ -510,7 +516,12 @@ private fun EditorBody(
         modifier       = modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = ED_PADDING),
     ) {
-        // 1. Layout management bar
+        // 1. Layout section header
+        item(key = "section_layout") {
+            EditorSectionHeader(R.string.macropad_editor_section_layout)
+        }
+
+        // 2. Layout management bar
         item(key = "layouts") {
             EditorLayoutBar(
                 profile                 = profile,
@@ -521,23 +532,9 @@ private fun EditorBody(
                 onDeleteLayoutRequested = onDeleteLayoutRequested,
                 onNewLayout             = onNewLayout,
                 modifier                = Modifier
+                    .background(colors.surface)
                     .padding(horizontal = ED_PADDING)
-                    .padding(bottom = ED_PADDING),
-            )
-        }
-
-        // 2. Action toolbar (Add Button / Macros… / Add Macro Button)
-        item(key = "toolbar") {
-            EditorToolbar(
-                profile          = profile,
-                accentColor      = accentColor,
-                hasMacros        = hasMacros,
-                onManageMacros   = onManageMacros,
-                onAddButton      = onAddButton,
-                onAddMacroButton = onAddMacroButton,
-                modifier         = Modifier
-                    .padding(horizontal = ED_PADDING)
-                    .padding(bottom = ED_PADDING),
+                    .padding(vertical = ED_PADDING),
             )
         }
 
@@ -581,12 +578,26 @@ private fun EditorBody(
             }
         }
 
-        // 4. Divider
-        item(key = "divider_1") {
-            HorizontalDivider(color = colors.divider, modifier = Modifier.padding(horizontal = ED_PADDING))
+        // 4. Action toolbar (Add Button / Macros…)
+        item(key = "toolbar") {
+            EditorToolbar(
+                profile        = profile,
+                accentColor    = accentColor,
+                onManageMacros = onManageMacros,
+                onAddButton    = onAddButton,
+                modifier       = Modifier
+                    .background(colors.surface)
+                    .padding(horizontal = ED_PADDING)
+                    .padding(vertical = ED_PADDING),
+            )
         }
 
-        // 5. Button list — tap to edit, drag handle to reorder
+        // 5. Buttons section header
+        item(key = "section_buttons") {
+            EditorSectionHeader(R.string.macropad_editor_section_buttons)
+        }
+
+        // 6. Button list — tap to edit, drag handle to reorder
         if (layout?.buttons.isNullOrEmpty()) {
             item(key = "empty") {
                 Text(
@@ -779,10 +790,8 @@ private fun LayoutChip(
 private fun EditorToolbar(
     profile:         PadProfile,
     accentColor:     Color,
-    hasMacros:       Boolean,
     onManageMacros:  () -> Unit,
     onAddButton:     () -> Unit,
-    onAddMacroButton: () -> Unit,
     modifier:        Modifier = Modifier,
 ) {
     Row(
@@ -805,16 +814,21 @@ private fun EditorToolbar(
             onClick     = onManageMacros,
             modifier    = Modifier.weight(1f),
         )
-        // Add Macro Button
-        EditorActionChip(
-            label       = stringResource(R.string.macropad_editor_add_macro_button),
-            icon        = Icons.Rounded.PlayArrow,
-            accentColor = accentColor,
-            enabled     = hasMacros,
-            onClick     = onAddMacroButton,
-            modifier    = Modifier.weight(1f),
-        )
     }
+}
+
+@Composable
+private fun EditorSectionHeader(@StringRes textRes: Int) {
+    val colors = LocalAppColors.current
+    Text(
+        text     = stringResource(textRes).uppercase(Locale.ROOT),
+        color    = colors.accent,
+        style    = MaterialTheme.typography.labelSmall,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surfaceVariant)
+            .padding(horizontal = ED_PADDING, vertical = ED_SECTION_HEADER_V_PADDING),
+    )
 }
 
 @Composable

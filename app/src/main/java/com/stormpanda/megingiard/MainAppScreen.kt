@@ -3,6 +3,11 @@ package com.stormpanda.megingiard
 import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -168,12 +173,26 @@ fun MainAppScreen() {
             modifier = Modifier.fillMaxSize(),
             forcedLayout = fullscreenKeyboardLayout,
         )
-        if (isEditorActive) MacroPadEditor(
-            onDone = { AppStateManager.setEditorActive(false) },
-        )
-        if (isAmbientSettingsActive) AmbientSettingsOverlay(
-            onDone = { AppStateManager.setAmbientSettingsActive(false) },
-        )
+        if (isEditorActive) AnimatedVisibility(
+            visible  = isEditorActive,
+            enter    = slideInVertically { it } + fadeIn(),
+            exit     = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            MacroPadEditor(
+                onDone = { AppStateManager.setEditorActive(false) },
+            )
+        }
+        if (isAmbientSettingsActive) AnimatedVisibility(
+            visible  = isAmbientSettingsActive,
+            enter    = slideInVertically { it } + fadeIn(),
+            exit     = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            AmbientSettingsOverlay(
+                onDone = { AppStateManager.setAmbientSettingsActive(false) },
+            )
+        }
 
         // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
         // are open because those modals render their own full-screen chrome.

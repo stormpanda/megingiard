@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import java.util.Locale
 import java.util.UUID
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,7 +114,7 @@ internal fun ButtonEditDialog(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.appBackground),
+            .background(colors.surface),
     ) {
         // ── Top bar ────────────────────────────────────────────────────────────────
         Row(
@@ -172,6 +173,16 @@ internal fun ButtonEditDialog(
         }
 
         // ── Scrollable form body ──────────────────────────────────────────────────────────
+        // ── Section header ───────────────────────────────────────────────────────────────
+        Text(
+            text     = stringResource(R.string.macropad_editor_section_button_settings).uppercase(Locale.ROOT),
+            color    = accentColor,
+            style    = MaterialTheme.typography.labelSmall,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.surfaceVariant)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()

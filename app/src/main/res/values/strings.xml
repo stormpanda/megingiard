@@ -311,6 +311,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_grid_rectangular">Rectangular grid</string>
     <string name="macropad_editor_grid_radial">Radial grid</string>
 
+    <!-- MacroPad editor section headers -->
+    <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_buttons">Buttons</string>
+    <string name="macropad_editor_section_button_settings">Button Settings</string>
+    <string name="macropad_macro_section_list">List</string>
+
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>
     <string name="macropad_macro_list_new">New Macro</string>
@@ -368,4 +374,8 @@ Open Settings to create a layout.</string>
     <string name="cd_layout_prev">Previous layout</string>
     <string name="cd_layout_next">Next layout</string>
     <string name="cd_viewport_edit">Edit viewport</string>
+
+    <!-- Touchpad hints -->
+    <string name="touchpad_hint">Tap here to control the top screen</string>
+    <string name="touchpad_hint_mouse">Drag to move · Tap to click</string>
 </resources>

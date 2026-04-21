@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.MoreVert
@@ -42,9 +43,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -159,25 +163,41 @@ private fun MacroListView(
             .background(colors.appBackground),
     ) {
         // ── Top bar ──────────────────────────────────────────────────────────
+        val profile by MacroPadState.activeProfile.collectAsState()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(ML_TOP_BAR_HEIGHT.dp)
-                .background(colors.surface)
-                .padding(horizontal = ML_PADDING.dp),
+                .background(colors.surface),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(onClick = onDone) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.settings_back),
+                    tint = colors.onSurface,
+                )
+            }
             Text(
-                stringResource(R.string.macropad_macro_list_title),
-                color      = colors.onSurface,
-                style      = MaterialTheme.typography.titleMedium,
-                modifier   = Modifier.weight(1f),
+                text = buildAnnotatedString {
+                    withStyle(SpanStyle(color = colors.onSurface)) {
+                        append(stringResource(R.string.macropad_macro_list_title))
+                    }
+                    val name = profile?.name
+                    if (name != null) {
+                        withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
+                            append(" ($name)")
+                        }
+                    }
+                },
+                style    = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onDone) {
-                Text(
-                    stringResource(R.string.macropad_editor_done),
-                    color      = accentColor,
-                    fontWeight = FontWeight.SemiBold,
+            IconButton(onClick = onNewMacro) {
+                Icon(
+                    Icons.Rounded.Add,
+                    contentDescription = stringResource(R.string.macropad_macro_list_new),
+                    tint = accentColor,
                 )
             }
         }
@@ -189,6 +209,17 @@ private fun MacroListView(
             state    = lazyListState,
             modifier = Modifier.fillMaxSize(),
         ) {
+            item(key = "section_list") {
+                Text(
+                    text     = stringResource(R.string.macropad_macro_section_list).uppercase(Locale.ROOT),
+                    color    = accentColor,
+                    style    = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.surfaceVariant)
+                        .padding(horizontal = ML_PADDING.dp, vertical = 10.dp),
+                )
+            }
             itemsIndexed(macros, key = { _, m -> m.id }) { _, macro ->
                 ReorderableItem(reorderState, key = macro.id) { isDragging ->
                     MacroRow(
@@ -202,9 +233,6 @@ private fun MacroListView(
                     )
                     HorizontalDivider(color = colors.divider)
                 }
-            }
-            item(key = "new_macro") {
-                NewMacroChip(accentColor = accentColor, onClick = onNewMacro)
             }
         }
     }
