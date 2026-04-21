@@ -74,9 +74,9 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     var disabledFeedbackTrigger by remember { mutableIntStateOf(0) }
     var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
 
-    // Start injectors after the pill menu has closed
+    // Single watcher that starts/stops injectors reactively based on all modal flags
     LaunchedEffect(Unit) {
-        viewModel.startInjectors(context)
+        viewModel.watchInjectorLifecycle(context)
     }
 
     // Stop all injectors and reset peek state when leaving MACROPAD mode

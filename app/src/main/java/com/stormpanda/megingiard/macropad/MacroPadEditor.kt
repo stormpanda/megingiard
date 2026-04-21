@@ -80,9 +80,6 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -123,19 +120,13 @@ fun MacroPadEditor(onDone: () -> Unit) {
     // Stop all uinput virtual devices while the editor is open.
     // keyinjector_arm64 registers as a hardware keyboard via uinput, which causes
     // Android to suppress the soft IME — making text fields un-typeable.
-    // We restart all injectors when the editor is dismissed (user returns to use mode).
+    // MacroPadViewModel.watchInjectorLifecycle() detects isEditorActive=false and
+    // restarts injectors automatically when this screen is dismissed.
     DisposableEffect(Unit) {
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
-        onDispose {
-            val ap = MacroPadState.activeProfile.value
-            CoroutineScope(Dispatchers.IO).launch {
-                if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                if (ap?.enableMouse == true) MouseInjector.start(context)
-            }
-        }
+        onDispose { /* restart handled by MacroPadViewModel watcher */ }
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()

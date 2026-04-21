@@ -63,9 +63,6 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 private const val TAG = "AmbientSettingsOverlay"
 
@@ -106,7 +103,8 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     val layout by MacroPadState.activeLayout.collectAsState()
 
     // Stop all uinput virtual devices while ambient settings are open.
-    // Restart injectors when dismissed (user returns to use mode).
+    // MacroPadViewModel.watchInjectorLifecycle() detects isAmbientSettingsActive=false
+    // and restarts injectors automatically when this screen is dismissed.
     DisposableEffect(Unit) {
         AppLog.d(TAG, "AmbientSettingsOverlay visible → stopping injectors")
         KeyInjector.stop()
@@ -114,18 +112,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
         MouseInjector.stop()
         onDispose {
             AppStateManager.setAmbientPreviewConfig(null)
-            val ap = MacroPadState.activeProfile.value
-            // Only restart if the editor has not taken over injector management.
-            if (AppStateManager.isEditorActive.value) {
-                AppLog.d(TAG, "AmbientSettingsOverlay dismissed → skipping injector restart (editor open)")
-            } else {
-                AppLog.d(TAG, "AmbientSettingsOverlay dismissed → restarting injectors")
-                CoroutineScope(Dispatchers.IO).launch {
-                    if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                    if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                    if (ap?.enableMouse == true) MouseInjector.start(context)
-                }
-            }
+            AppLog.d(TAG, "AmbientSettingsOverlay dismissed → injector restart handled by MacroPadViewModel watcher")
         }
     }
 

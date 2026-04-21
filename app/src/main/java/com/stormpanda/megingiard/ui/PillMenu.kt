@@ -82,9 +82,6 @@ import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 private const val TAG = "PillMenu"
 
@@ -153,20 +150,9 @@ fun PillMenu(
             GamepadInjector.stop()
             MouseInjector.stop()
             onDispose {
-                val ap = MacroPadState.activeProfile.value
-                // Only restart if no other modal that manages injector lifecycle is open.
-                // Editor and AmbientSettings each have their own stop/restart logic;
-                // restarting here while they are open would race against their stop.
-                if (AppStateManager.isEditorActive.value || AppStateManager.isAmbientSettingsActive.value) {
-                    AppLog.d(TAG, "PillMenu dismissed → skipping injector restart (modal open)")
-                } else {
-                    AppLog.d(TAG, "PillMenu dismissed → restarting injectors")
-                    CoroutineScope(Dispatchers.IO).launch {
-                        if (ap?.enableKeyboard != false) KeyInjector.start(context)
-                        if (ap?.enableGamepad != false) GamepadInjector.start(context)
-                        if (ap?.enableMouse != false) MouseInjector.start(context)
-                    }
-                }
+                // Injector restart is handled by MacroPadViewModel.watchInjectorLifecycle(),
+                // which reacts to isPillMenuOpen becoming false. No restart needed here.
+                AppLog.d(TAG, "PillMenu dismissed → injector restart handled by MacroPadViewModel watcher")
             }
         }
     }

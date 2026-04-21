@@ -15,7 +15,7 @@ import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -24,6 +24,14 @@ private const val TAG = "MacroPadViewModel"
 /**
  * ViewModel for [MacroPadScreen] — manages multi-injector lifecycle
  * and hit-test engine.
+ *
+ * Injector lifecycle rule:
+ *   - Stop immediately whenever any blocking modal opens (Pill Menu, Editor, Ambient Settings).
+ *   - Restart as soon as ALL three are closed simultaneously.
+ *
+ * [watchInjectorLifecycle] is the single authoritative restart path.
+ * [MacroPadEditor] and [AmbientSettingsOverlay] only stop injectors on entry;
+ * they do NOT restart on exit — this watcher handles that.
  */
 class MacroPadViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -34,15 +42,36 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
     fun createHitTestEngine(buttonUnitDpToPx: (Float) -> Float) =
         MacroPadHitTestEngine(buttonUnitDpToPx)
 
-    fun startInjectors(context: Context) {
+    /**
+     * Starts a long-lived watcher that reacts to all three blocking-modal flags.
+     * Called once from [MacroPadScreen]'s LaunchedEffect(Unit).
+     *
+     * When any modal is open  → stop all injectors immediately.
+     * When all modals closed  → restart injectors for the active profile.
+     */
+    fun watchInjectorLifecycle(context: Context) {
         viewModelScope.launch {
-            AppStateManager.isPillMenuOpen.first { !it }
-            withContext(Dispatchers.IO) {
-                val ap = MacroPadState.activeProfile.value
-                AppLog.i(TAG, "starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-                if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                if (ap?.enableMouse == true) MouseInjector.start(context)
+            combine(
+                AppStateManager.isPillMenuOpen,
+                AppStateManager.isEditorActive,
+                AppStateManager.isAmbientSettingsActive,
+            ) { pillMenu, editor, ambient ->
+                pillMenu || editor || ambient
+            }.collect { anyOpen ->
+                if (anyOpen) {
+                    AppLog.d(TAG, "modal open \u2192 stopping injectors")
+                    KeyInjector.stop()
+                    GamepadInjector.stop()
+                    MouseInjector.stop()
+                } else {
+                    withContext(Dispatchers.IO) {
+                        val ap = MacroPadState.activeProfile.value
+                        AppLog.i(TAG, "all modals closed \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
+                        if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                        if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                        if (ap?.enableMouse == true) MouseInjector.start(context)
+                    }
+                }
             }
         }
     }
