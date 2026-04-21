@@ -60,7 +60,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -401,7 +401,7 @@ private fun ProfileRow(
                 val isActive = profile.id == activeProfile?.id
                 SelectableChip(
                     text = profile.name,
-                    selected = isActive,
+                    isSelected = isActive,
                     colors = colors,
                     contentDescription = profile.name,
                     onClick = { onProfileSelected(profile) },
@@ -443,7 +443,7 @@ private fun LayoutRow(
             items(enabledLayouts, key = { it.id }) { layout ->
                 SelectableChip(
                     text = layout.name,
-                    selected = layout.id == activeLayout?.id,
+                    isSelected = layout.id == activeLayout?.id,
                     colors = colors,
                     contentDescription = stringResource(R.string.pill_menu_layout_chip_cd, layout.name),
                     onClick = { onLayoutSelected(layout.id) },
@@ -619,7 +619,7 @@ private fun MirrorControlIconButton(
 @Composable
 private fun SelectableChip(
     text: String,
-    selected: Boolean,
+    isSelected: Boolean,
     colors: AppColors,
     contentDescription: String? = null,
     onClick: () -> Unit,
@@ -627,19 +627,19 @@ private fun SelectableChip(
     Box(
         modifier = Modifier
             .semantics {
-                this.selected = selected
+                this[SemanticsProperties.Selected] = isSelected
                 if (contentDescription != null) {
                     this.contentDescription = contentDescription
                 }
             }
             .clip(RoundedCornerShape(PM_CHIP_CORNER))
             .background(
-                if (selected) colors.accent.copy(alpha = 0.85f)
+                if (isSelected) colors.accent.copy(alpha = 0.85f)
                 else colors.navPillBody.copy(alpha = 0.5f),
             )
             .border(
                 PM_BORDER_WIDTH,
-                if (selected) colors.accent else colors.controlOverlayBorder,
+                if (isSelected) colors.accent else colors.controlOverlayBorder,
                 RoundedCornerShape(PM_CHIP_CORNER),
             )
             .clickable(onClick = onClick)
@@ -647,9 +647,9 @@ private fun SelectableChip(
     ) {
         Text(
             text = text,
-            color = if (selected) colors.onAccent else colors.onControlOverlay,
+            color = if (isSelected) colors.onAccent else colors.onControlOverlay,
             fontSize = 13.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
 }
