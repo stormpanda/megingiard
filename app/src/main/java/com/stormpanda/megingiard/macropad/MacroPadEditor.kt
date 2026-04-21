@@ -44,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,7 +67,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -411,8 +411,7 @@ private fun EditorTopBar(
                 Text(
                     text     = activeProfile?.name ?: stringResource(R.string.macropad_editor_new_profile_name),
                     color    = colors.onSurface,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    style    = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
@@ -431,7 +430,7 @@ private fun EditorTopBar(
                             Text(
                                 text  = p.name,
                                 color = if (p.id == activeId) accentColor else colors.onSurface,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         },
                         onClick = {
@@ -442,7 +441,7 @@ private fun EditorTopBar(
                 }
                 HorizontalDivider(color = colors.divider)
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, fontSize = 14.sp) },
+                    text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { profileMenuExpanded = false; onNewProfileRequested() },
                 )
             }
@@ -593,7 +592,7 @@ private fun EditorBody(
                 Text(
                     text     = stringResource(R.string.macropad_editor_add_button),
                     color    = colors.onSurfaceSecondary,
-                    fontSize = 13.sp,
+                    style    = MaterialTheme.typography.labelMedium,
                     modifier = Modifier
                         .padding(horizontal = ED_PADDING)
                         .padding(vertical = 8.dp),
@@ -739,7 +738,7 @@ private fun LayoutChip(
         Text(
             text       = layout.name,
             color      = textColor,
-            fontSize   = 12.sp,
+            style      = MaterialTheme.typography.bodySmall,
             fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
             maxLines   = 1,
             overflow   = TextOverflow.Ellipsis,
@@ -839,7 +838,7 @@ private fun EditorActionChip(
     ) {
         Icon(icon, contentDescription = null, tint = effectiveColor, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, color = effectiveColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, color = effectiveColor, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -903,7 +902,7 @@ private fun ButtonListItem(
             contentAlignment = Alignment.Center,
         ) {
             if (isTrackpoint) {
-                Text("●", color = colors.onSurface, fontSize = 10.sp)
+                Text("●", color = colors.onSurface, style = MaterialTheme.typography.labelSmall)
             } else {
                 val iconName = btn.iconName
                 if (iconName != null) {
@@ -914,7 +913,7 @@ private fun ButtonListItem(
                         filled = btn.iconFilled,
                     )
                 } else {
-                    Text(btn.label.take(2), color = colors.onSurface, fontSize = 10.sp)
+                    Text(btn.label.take(2), color = colors.onSurface, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -928,11 +927,11 @@ private fun ButtonListItem(
                     TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
                     TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
                 }
-                Text(stringResource(R.string.macropad_action_trackpoint), color = colors.onSurface, fontSize = 14.sp, maxLines = 1)
-                Text(sizeLabel, color = colors.onSurfaceSecondary, fontSize = 12.sp, maxLines = 1)
+                Text(stringResource(R.string.macropad_action_trackpoint), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                Text(sizeLabel, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
             } else {
-                Text(btn.label, color = colors.onSurface, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(btn.action.displayLabel(), color = colors.onSurfaceSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.action.displayLabel(), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
 
@@ -940,7 +939,7 @@ private fun ButtonListItem(
             Text(
                 text = "${btn.buttonSize.cols}×${btn.buttonSize.rows}",
                 color = colors.onSurfaceSecondary,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(end = 4.dp),
             )
         }
@@ -986,7 +985,7 @@ private fun InlineConfirmDeleteOverlay(
                 .clickable(enabled = true, onClick = {})
                 .padding(ED_PADDING),
         ) {
-            Text(title, color = colors.onSurface, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
             Text(body, color = colors.onSurfaceSecondary)
             Spacer(Modifier.height(16.dp))
@@ -995,7 +994,7 @@ private fun InlineConfirmDeleteOverlay(
                     Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                 }
                 TextButton(onClick = onConfirm) {
-                    Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
+                    Text(stringResource(R.string.macropad_editor_confirm), color = LocalAppColors.current.error)
                 }
             }
         }
@@ -1030,7 +1029,7 @@ private fun InlineNameInputOverlay(
                 .clickable(enabled = true, onClick = {})
                 .padding(ED_PADDING),
         ) {
-            Text(title, color = colors.onSurface, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value         = text,
@@ -1126,8 +1125,7 @@ private fun NewLayoutOverlay(
             Text(
                 stringResource(R.string.settings_macropad_new_layout),
                 color = colors.onSurface,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -1156,7 +1154,7 @@ private fun NewLayoutOverlay(
                 Text(
                     stringResource(R.string.macropad_layout_template_title),
                     color      = colors.onSurfaceSecondary,
-                    fontSize   = 12.sp,
+                    style      = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(4.dp))
@@ -1226,13 +1224,13 @@ private fun TemplateRow(
             Text(
                 text     = label,
                 color    = if (isSelected) accentColor else colors.onSurface,
-                fontSize = 14.sp,
+                style    = MaterialTheme.typography.bodyMedium,
             )
             if (subtitle != null) {
                 Text(
                     text     = subtitle,
                     color    = colors.onSurfaceSecondary,
-                    fontSize = 11.sp,
+                    style    = MaterialTheme.typography.labelSmall,
                 )
             }
         }

@@ -32,6 +32,7 @@
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
 | `docs/features/keyboard/FEATURE.md` | Virtual Keyboard — functional requirements & technical implementation |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                |
+| `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge  |
 
 > **Convention:** Every feature has its own subfolder under `docs/features/<feature>/` containing a single `FEATURE.md`. This file is the **authoritative source of truth** for that feature's requirements and technical implementation. When adding a new feature, create a new subfolder and `FEATURE.md`.
 > | `docs/BUILD_NATIVE.md` | How to rebuild the native touch-injector binary |
@@ -622,6 +623,83 @@ After implementing any change that affects a feature's behaviour, interface, or 
 4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant, also review `docs/ARCHITECTURE.md` and `PRD.md`.
 
 This rule applies to all changes, including bug fixes, refactors, and dependency updates that affect runtime behaviour.
+
+---
+
+## 16 Design System Rules
+
+These rules encode the unified design system introduced in the typography/theming refactor.
+Every agent **must** follow them when writing or editing any Composable.
+
+### 16.1 Typography — NEVER inline `fontSize`
+
+All text sizing **must** use `MaterialTheme.typography.*`. Inline `fontSize = XX.sp`
+in Composables (outside `AppTheme.kt`) is **forbidden**.
+
+| Use case                       | Token                                                  |
+| ------------------------------ | ------------------------------------------------------ |
+| Dialog titles, section headers | `MaterialTheme.typography.titleLarge` (18sp SemiBold)  |
+| Section titles                 | `MaterialTheme.typography.titleMedium` (16sp SemiBold) |
+| Subsection titles              | `MaterialTheme.typography.titleSmall` (14sp Medium)    |
+| Macro names, list items        | `MaterialTheme.typography.bodyLarge` (15sp Normal)     |
+| Standard row labels (default)  | `MaterialTheme.typography.bodyMedium` (14sp Normal)    |
+| Secondary descriptions, hints  | `MaterialTheme.typography.bodySmall` (12sp Normal)     |
+| Button labels                  | `MaterialTheme.typography.labelLarge` (14sp Medium)    |
+| Dialog subtitles               | `MaterialTheme.typography.labelMedium` (13sp Medium)   |
+| Category headers, pill labels  | `MaterialTheme.typography.labelSmall` (11sp Normal)    |
+
+**Allowed exceptions** (must be commented):
+
+- Computed/data-driven sizes: `(11 * btn.buttonSize.cols).sp` (button label scaled by size)
+- Conditional key sizes: `if (widthWeight >= 1.5f) 11.sp else 12.sp` (keyboard key cap)
+- Internal renderers: `MaterialSymbols` size→sp conversion
+- Intentionally tiny labels below 11sp (e.g. icon name under icon picker grid at 8sp)
+
+### 16.2 Colors — NEVER hardcode `Color(0xFF...)`
+
+All colors in Composables must come from:
+
+- `LocalAppColors.current.<token>` — for app-defined semantic colors (accent, surface, error, etc.)
+- `MaterialTheme.colorScheme.<token>` — for M3 semantic colors (primary, onPrimary, etc.)
+
+**Hardcoded `Color(0xFF...)` literals in screen/composable code are forbidden.**
+
+Key token mapping:
+| Value | Token |
+|---|---|
+| `Color(0xFFCF6679)` / `Color(0xFFB00020)` | `LocalAppColors.current.error` |
+| `Color(0xFFFF9800)` (gamepad orange) | `LocalAppColors.current.actionColorGamepad` |
+| `Color(0xFF2196F3)` (system blue) | `LocalAppColors.current.actionColorSystem` |
+
+### 16.3 Spacing — Prefer named constants over bare `XX.dp`
+
+All dimension values must be extracted to `private val` constants at file scope using
+SCREAMING_SNAKE_CASE with a 2-3 letter feature prefix (e.g. `GS_SECTION_PADDING = 16.dp`).
+Bare magic `XX.dp` inline in Composable code is a code smell.
+
+### 16.4 M3 Component Colors — do NOT override what the ColorScheme provides
+
+Do **not** pass manual `colors =` overrides to M3 components when the `ColorScheme`
+already handles them correctly:
+
+```kotlin
+// ❌ WRONG — override defeats the design system
+Switch(
+    colors = SwitchDefaults.colors(checkedTrackColor = accentColor)
+)
+
+// ✅ CORRECT — let MaterialTheme.colorScheme.primary drive it
+Switch(checked = ..., onCheckedChange = ...)
+```
+
+This applies to: `Switch`, `Slider`, `Checkbox`, `RadioButton`, `OutlinedTextField`
+(border colors are OK to override via `colors =` for contextual accent).
+
+### 16.5 New Composable Parameters — no `accentColor: Color` proliferation
+
+Do **not** add `accentColor: Color` as a new Composable parameter.
+Read accent from `LocalAppColors.current.accent` or `MaterialTheme.colorScheme.primary` directly.
+Existing `accentColor` parameters in older Composables may remain until a future refactor.
 
 ---
 

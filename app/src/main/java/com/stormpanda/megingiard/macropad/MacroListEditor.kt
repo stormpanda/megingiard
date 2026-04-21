@@ -27,6 +27,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,7 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -170,8 +170,7 @@ private fun MacroListView(
             Text(
                 stringResource(R.string.macropad_macro_list_title),
                 color      = colors.onSurface,
-                fontSize   = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                style      = MaterialTheme.typography.titleMedium,
                 modifier   = Modifier.weight(1f),
             )
             TextButton(onClick = onDone) {
@@ -235,7 +234,7 @@ private fun MacroListView(
                     MacroPadState.deleteMacro(macroId)
                     deletingMacroId = null
                 }) {
-                    Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
+                    Text(stringResource(R.string.macropad_editor_confirm), color = LocalAppColors.current.error)
                 }
             },
             dismissButton = {
@@ -279,11 +278,11 @@ private fun MacroRow(
             Text(
                 macro.name,
                 color    = colors.onSurface,
-                fontSize = 15.sp,
+                style    = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(summaryLabel, color = colors.onSurfaceSecondary, fontSize = 12.sp)
+            Text(summaryLabel, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
         }
 
         Box {
@@ -296,15 +295,15 @@ private fun MacroRow(
                 modifier         = Modifier.background(colors.surface),
             ) {
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macropad_editor_rename), color = colors.onSurface, fontSize = 14.sp) },
+                    text    = { Text(stringResource(R.string.macropad_editor_rename), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { menuExpanded = false; onEdit() },
                 )
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macropad_macro_duplicate), color = colors.onSurface, fontSize = 14.sp) },
+                    text    = { Text(stringResource(R.string.macropad_macro_duplicate), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { menuExpanded = false; onDuplicate() },
                 )
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macropad_macro_delete_title), color = Color(0xFFCF6679), fontSize = 14.sp) },
+                    text    = { Text(stringResource(R.string.macropad_macro_delete_title), color = LocalAppColors.current.error, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { menuExpanded = false; onDelete() },
                 )
             }
@@ -342,7 +341,7 @@ private fun NewMacroChip(accentColor: Color, onClick: () -> Unit) {
         ) {
             Icon(Icons.Rounded.Add, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.macropad_macro_list_new), color = accentColor, fontSize = 13.sp)
+            Text(stringResource(R.string.macropad_macro_list_new), color = accentColor, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

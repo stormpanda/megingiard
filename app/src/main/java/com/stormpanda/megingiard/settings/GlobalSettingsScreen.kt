@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -52,7 +53,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
@@ -72,7 +72,6 @@ private const val GS_DIALOG_SCRIM_ALPHA = 0.5f
 private val GS_DIALOG_WIDTH_FRACTION = 0.85f
 private val GS_DIALOG_CORNER = 16.dp
 private val GS_DIALOG_PADDING = 20.dp
-private val GS_DIALOG_TITLE_SIZE = 16.sp
 private val GS_SECTION_CHIP_CORNER = 20.dp
 private val GS_SECTION_CHIP_H_PADDING = 12.dp
 private val GS_SECTION_CHIP_V_PADDING = 6.dp
@@ -399,7 +398,7 @@ private fun SectionJumpRow(
         Text(
             text = stringResource(R.string.settings_filter_label),
             color = colors.onSurfaceSecondary,
-            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_all),
@@ -450,7 +449,7 @@ private fun SectionJumpChip(
     Text(
         text = label,
         color = if (selected) colors.onAccent else colors.onControlOverlay,
-        fontSize = 13.sp,
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         modifier = Modifier
             .background(
@@ -477,7 +476,8 @@ private fun SettingsSection(
     Text(
         text = title.uppercase(Locale.ROOT),
         color = accentColor,
-        fontSize = 11.sp,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surfaceVariant)
@@ -547,11 +547,11 @@ private fun ExportMetadataDialog(
     var description by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf("") }
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = accentColor,
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
         unfocusedBorderColor = colors.divider,
-        focusedLabelColor = accentColor,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
         unfocusedLabelColor = colors.onSurfaceSecondary,
-        cursorColor = accentColor,
+        cursorColor = MaterialTheme.colorScheme.primary,
         focusedTextColor = colors.onSurface,
         unfocusedTextColor = colors.onSurface,
     )
@@ -586,12 +586,12 @@ private fun ExportMetadataDialog(
             Text(
                 text = stringResource(R.string.config_export_dialog_title),
                 color = colors.onSurface,
-                fontSize = GS_DIALOG_TITLE_SIZE,
+                style = MaterialTheme.typography.titleMedium,
             )
             OutlinedTextField(
                 value = author,
                 onValueChange = { author = it },
-                label = { Text(stringResource(R.string.config_export_author), fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.config_export_author), style = MaterialTheme.typography.bodySmall) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
@@ -601,7 +601,7 @@ private fun ExportMetadataDialog(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text(stringResource(R.string.config_export_description), fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.config_export_description), style = MaterialTheme.typography.bodySmall) },
                 maxLines = 3,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
@@ -611,7 +611,7 @@ private fun ExportMetadataDialog(
             OutlinedTextField(
                 value = tags,
                 onValueChange = { tags = it },
-                label = { Text(stringResource(R.string.config_export_tags), fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.config_export_tags), style = MaterialTheme.typography.bodySmall) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
@@ -663,14 +663,14 @@ private fun ImportPreviewDialog(
             Text(
                 text = stringResource(R.string.config_import_title),
                 color = colors.onSurface,
-                fontSize = GS_DIALOG_TITLE_SIZE,
+                style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(4.dp))
             if (!metadata.author.isNullOrBlank()) {
                 Text(
                     text = stringResource(R.string.config_import_meta_author, metadata.author!!),
                     color = colors.onSurface,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
             val description = metadata.description
@@ -678,49 +678,49 @@ private fun ImportPreviewDialog(
                 Text(
                     text = description,
                     color = colors.onSurfaceSecondary,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             if (metadata.tags.isNotEmpty()) {
                 Text(
                     text = "${stringResource(R.string.config_import_tags_label)}: ${metadata.tags.joinToString(", ")}",
                     color = colors.onSurfaceSecondary,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.config_import_sections_label),
                 color = colors.onSurface,
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.labelMedium,
             )
             if ("global" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("mirror" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("touchpad" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("keyboard" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("macropad_settings" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                 Text(
                     text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.profiles.sumOf { it.macros.size })}",
                     color = colors.onSurfaceSecondary,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.config_import_warning),
                 color = colors.onSurfaceSecondary,
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -763,9 +763,9 @@ private fun InTreeMessageDialog(
                 .padding(GS_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(title, color = colors.onSurface, fontSize = GS_DIALOG_TITLE_SIZE)
+            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
             if (text.isNotBlank()) {
-                Text(text, color = colors.onSurfaceSecondary, fontSize = 13.sp)
+                Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -811,9 +811,9 @@ private fun InTreeConfirmDialog(
                 .padding(GS_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(title, color = colors.onSurface, fontSize = GS_DIALOG_TITLE_SIZE)
+            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
             if (text.isNotBlank()) {
-                Text(text, color = colors.onSurfaceSecondary, fontSize = 13.sp)
+                Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),

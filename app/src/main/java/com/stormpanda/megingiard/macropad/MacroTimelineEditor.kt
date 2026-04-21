@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,8 +71,8 @@ private const val MT_TICK_INTERVAL_MS          = 500L   // vertical grid line in
 private const val MT_STEP_BAR_PADDING          = 2f     // px padding inside each bar
 private const val MT_AXIS_TEXT_SIZE_SP          = 11    // sp — scaled at runtime via density/fontScale
 private const val MT_BAR_CORNER_RADIUS         = 4      // dp
-private val MT_COLOR_JOYSTICK                  = Color(0xFFFF9800) // orange
-private val MT_COLOR_DPAD                      = Color(0xFF2196F3) // blue
+private val MT_COLOR_JOYSTICK                  = Color(0xFFFF9800) // orange — fallback, overridden at call sites via AppColors
+private val MT_COLOR_DPAD                      = Color(0xFF2196F3) // blue — fallback, overridden at call sites via AppColors
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lane assignment — greedy; assigns each step (sorted by startTimeMs) to the
@@ -220,7 +221,7 @@ internal fun MacroTimelineEditor(
                     Text(
                         stringResource(R.string.macropad_macro_no_steps),
                         color    = colors.onSurfaceSecondary,
-                        fontSize = 13.sp,
+                        style    = MaterialTheme.typography.labelMedium,
                     )
                 }
             } else {
@@ -266,7 +267,7 @@ internal fun MacroTimelineEditor(
                     Text(
                         stringResource(R.string.macropad_macro_add_step),
                         color    = accentColor,
-                        fontSize = 13.sp,
+                        style    = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
@@ -337,6 +338,8 @@ private fun MacroTimeline(
     val pxPerMs        = with(density) { MT_DP_PER_MS.dp.toPx() }
     val laneHeightPx   = with(density) { MT_LANE_HEIGHT_DP.dp.toPx() }
     val colors         = LocalAppColors.current
+    val joystickColor  = colors.actionColorGamepad
+    val dpadColor      = colors.actionColorSystem
 
     val textPaint = remember(density) {
         NativePaint().apply {
@@ -364,7 +367,7 @@ private fun MacroTimeline(
                 val startX   = step.startTimeMs * pxPerMs
                 val barWidth = (step.durationMs * pxPerMs).coerceAtLeast(2f)
                 val laneY    = lane * laneHeightPx
-                val barColor = stepColor(step, accentColor)
+                val barColor = stepColor(step, accentColor, joystickColor, dpadColor)
                 drawRoundRect(
                     color       = barColor.copy(alpha = 0.85f),
                     topLeft     = Offset(startX, laneY + MT_STEP_BAR_PADDING),
@@ -387,10 +390,10 @@ private fun MacroTimeline(
     }
 }
 
-private fun stepColor(step: MacroStep, accentColor: Color): Color = when (step) {
+private fun stepColor(step: MacroStep, accentColor: Color, joystickColor: Color, dpadColor: Color): Color = when (step) {
     is MacroStep.GamepadButtonTap -> accentColor
-    is MacroStep.JoystickMove     -> MT_COLOR_JOYSTICK
-    is MacroStep.DPadTap          -> MT_COLOR_DPAD
+    is MacroStep.JoystickMove     -> joystickColor
+    is MacroStep.DPadTap          -> dpadColor
 }
 
 private fun DrawScope.drawTimeTicks(
@@ -431,6 +434,8 @@ private fun StepListItem(
     onDelete:    () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val joystickColor = colors.actionColorGamepad
+    val dpadColor     = colors.actionColorSystem
     val typeLabel = stringResource(when (step) {
         is MacroStep.GamepadButtonTap -> R.string.macropad_macro_step_type_gamepad
         is MacroStep.JoystickMove     -> R.string.macropad_macro_step_type_joystick
@@ -444,7 +449,7 @@ private fun StepListItem(
         }
         is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
     }
-    val indicatorColor = stepColor(step, accentColor)
+    val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor)
 
     Row(
         modifier = Modifier
@@ -466,14 +471,14 @@ private fun StepListItem(
             Text(
                 "${index + 1}. $typeLabel: $description",
                 color    = colors.onSurface,
-                fontSize = 14.sp,
+                style    = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 stringResource(R.string.macropad_macro_step_timing, step.startTimeMs, step.durationMs),
                 color    = colors.onSurfaceSecondary,
-                fontSize = 12.sp,
+                style    = MaterialTheme.typography.bodySmall,
             )
         }
 

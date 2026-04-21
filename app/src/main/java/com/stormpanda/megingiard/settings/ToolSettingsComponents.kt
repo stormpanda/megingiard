@@ -11,14 +11,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
@@ -68,22 +65,17 @@ internal fun RememberSettingRow(
             Text(
                 text = label,
                 color = colors.onSurface,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = description,
                 color = colors.onSurfaceSecondary,
-                fontSize = 12.sp
+                style = MaterialTheme.typography.bodySmall
             )
         }
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = CheckboxDefaults.colors(
-                checkedColor = accentColor,
-                checkmarkColor = Color.White,
-                uncheckedColor = colors.onSurfaceSecondary
-            )
         )
     }
 }
@@ -104,12 +96,12 @@ internal fun LayoutDropdownRow(
             Text(
                 text = stringResource(R.string.settings_kb_layout),
                 color = colors.onSurface,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = stringResource(R.string.settings_kb_layout_desc),
                 color = colors.onSurfaceSecondary,
-                fontSize = 12.sp
+                style = MaterialTheme.typography.bodySmall
             )
         }
         Box {
@@ -123,7 +115,7 @@ internal fun LayoutDropdownRow(
                 Text(
                     text = stringResource(currentLayout.labelResId()),
                     color = colors.onSurface,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Icon(
                     imageVector = Icons.Rounded.ArrowDropDown,
@@ -142,7 +134,7 @@ internal fun LayoutDropdownRow(
                             Text(
                                 text = stringResource(layout.labelResId()),
                                 color = if (layout == currentLayout) accentColor else colors.onSurface,
-                                fontSize = 14.sp
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         },
                         onClick = { onLayoutSelected(layout); expanded = false }
@@ -169,12 +161,12 @@ internal fun MouseBtnPosDropdownRow(
             Text(
                 text = stringResource(R.string.settings_kb_mouse_btn_pos),
                 color = colors.onSurface,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.bodyMedium
             )
             Text(
                 text = stringResource(R.string.settings_kb_mouse_btn_pos_desc),
                 color = colors.onSurfaceSecondary,
-                fontSize = 12.sp
+                style = MaterialTheme.typography.bodySmall
             )
         }
         Box {
@@ -188,7 +180,7 @@ internal fun MouseBtnPosDropdownRow(
                 Text(
                     text = stringResource(currentPos.labelResId()),
                     color = colors.onSurface,
-                    fontSize = 14.sp
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Icon(
                     imageVector = Icons.Rounded.ArrowDropDown,
@@ -207,7 +199,7 @@ internal fun MouseBtnPosDropdownRow(
                             Text(
                                 text = stringResource(pos.labelResId()),
                                 color = if (pos == currentPos) accentColor else colors.onSurface,
-                                fontSize = 14.sp
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         },
                         onClick = { onPosSelected(pos); expanded = false }
@@ -232,16 +224,12 @@ internal fun InputMethodRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.onSurface, fontSize = 14.sp)
-            Text(text = description, color = colors.onSurfaceSecondary, fontSize = 12.sp)
+            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
+            Text(text = description, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
         }
         Switch(
             checked = useMouse,
             onCheckedChange = onUseMouseChanged,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = accentColor
-            )
         )
     }
 }
@@ -265,12 +253,12 @@ internal fun SliderSettingRow(
             Text(
                 text = label,
                 color = colors.onSurface,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 text = formatLabel(value),
                 color = colors.onSurfaceSecondary,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
         Slider(
@@ -279,11 +267,6 @@ internal fun SliderSettingRow(
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = accentColor,
-                inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f)
-            )
         )
     }
 }

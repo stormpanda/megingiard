@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,7 +48,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -290,7 +290,7 @@ private fun DraggableButton(
             }
     ) {
         if (btn.action is PadAction.TrackpointMove) {
-            Text("●", color = accentColor, fontSize = 14.sp)
+            Text("●", color = accentColor, style = MaterialTheme.typography.bodyMedium)
         } else if (btn.action is PadAction.ScrollWheel) {
             // Show mini scroll icon in editor chip
             Column(
@@ -314,7 +314,7 @@ private fun DraggableButton(
                     filled = btn.iconFilled,
                 )
             } else {
-                Text(btn.label, color = colors.onSurface, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.label, color = colors.onSurface, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

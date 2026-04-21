@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -43,7 +44,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.PI
@@ -52,8 +52,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private val TITLE_FONT_SIZE = 18.sp
-private val SUBTITLE_FONT_SIZE = 12.sp
 private val PICKER_CORNER = 16.dp
 private val WHEEL_SIZE = 240.dp
 
@@ -109,7 +107,7 @@ fun ColorWheelPicker(
             Text(
                 text = stringResource(R.string.settings_accent_color_picker_title),
                 color = colors.onSurface,
-                fontSize = TITLE_FONT_SIZE
+                style = MaterialTheme.typography.titleLarge
             )
 
             // HSV color wheel canvas
@@ -175,7 +173,7 @@ fun ColorWheelPicker(
                 Text(
                     text = stringResource(R.string.settings_color_brightness),
                     color = colors.onSurfaceSecondary,
-                    fontSize = SUBTITLE_FONT_SIZE
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Slider(
                     value = bri,

@@ -17,8 +17,8 @@ import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +31,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
@@ -59,8 +58,8 @@ internal fun SettingsCategoryHeader(
     Text(
         text = text.uppercase(Locale.ROOT),
         color = accentColor,
-        fontSize = 11.sp,
-        letterSpacing = 1.sp,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.appBackground)
@@ -85,16 +84,12 @@ internal fun OverlayPositionRow(
         Text(
             text = stringResource(R.string.settings_overlay_position),
             color = colors.onSurface,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
         Switch(
             checked = overlayAtBottom,
             onCheckedChange = onChanged,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = accentColor
-            )
         )
     }
 }
@@ -126,12 +121,12 @@ internal fun ThemePickerRow(
             Text(
                 text = stringResource(R.string.settings_theme),
                 color = colors.onSurface,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 text = stringResource(themeMode.displayNameResId()),
                 color = accentColor,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
         Box {
@@ -152,7 +147,7 @@ internal fun ThemePickerRow(
                             Text(
                                 text = stringResource(option.displayNameResId()),
                                 color = if (option == themeMode) accentColor else colors.onSurface,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         },
                         onClick = {
@@ -183,7 +178,7 @@ internal fun AccentColorRow(
         Text(
             text = stringResource(R.string.settings_accent_color),
             color = colors.onSurface,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
         Box(
@@ -231,12 +226,12 @@ internal fun LogLevelPickerRow(
             Text(
                 text = stringResource(R.string.settings_log_level),
                 color = colors.onSurface,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 text = logLevel.displayName(),
                 color = accentColor,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
         Box {
@@ -257,7 +252,7 @@ internal fun LogLevelPickerRow(
                             Text(
                                 text = option.displayName(),
                                 color = if (option == logLevel) accentColor else colors.onSurface,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         },
                         onClick = {
@@ -291,12 +286,12 @@ internal fun LanguagePickerRow(
             Text(
                 text = stringResource(R.string.settings_language),
                 color = colors.onSurface,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 text = stringResource(language.displayNameResId()),
                 color = accentColor,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
         Box {
@@ -317,7 +312,7 @@ internal fun LanguagePickerRow(
                             Text(
                                 text = stringResource(option.displayNameResId()),
                                 color = if (option == language) accentColor else colors.onSurface,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         },
                         onClick = {
@@ -359,12 +354,12 @@ internal fun ConfigActionRow(
             Text(
                 text = label,
                 color = colors.onSurface,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 text = description,
                 color = colors.onSurfaceSecondary,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
         Icon(

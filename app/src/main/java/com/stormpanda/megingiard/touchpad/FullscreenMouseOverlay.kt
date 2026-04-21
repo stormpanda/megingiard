@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -25,7 +26,6 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.AppStateManager
@@ -42,7 +42,6 @@ private const val FMO_HINT_AUTO_HIDE_MS = 2800L
 private val FMO_HINT_PADDING = 12.dp
 private val FMO_HINT_CORNER = 12.dp
 private const val FMO_HINT_BG_ALPHA = 0.9f
-private val FMO_HINT_TEXT_SIZE = 12.sp
 
 /**
  * Full-screen transparent overlay that captures all touch as relative mouse input.
@@ -152,7 +151,7 @@ fun FullscreenMouseOverlay() {
             Text(
                 text = stringResource(R.string.overlay_exit_hint_swipe),
                 color = colors.onSurface,
-                fontSize = FMO_HINT_TEXT_SIZE,
+                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier
                     .align(if (overlayAtBottom) Alignment.TopCenter else Alignment.BottomCenter)
                     .padding(FMO_HINT_PADDING)

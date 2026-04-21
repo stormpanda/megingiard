@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
@@ -58,7 +58,6 @@ private val KB_PILL_INSET = PILL_INSET
 private const val KB_EXIT_HINT_AUTO_HIDE_MS = 2800L
 private const val KB_EXIT_HINT_BG_ALPHA = 0.9f
 private val KB_EXIT_HINT_PADDING = 12.dp
-private val KB_EXIT_HINT_TEXT_SIZE = 12.sp
 
 private const val TAG = "KeyboardScreen"
 
@@ -284,7 +283,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                 Text(
                     text = stringResource(R.string.cd_keyboard_trackpoint),
                     color = colors.onAccent.copy(alpha = 0.25f),
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     textAlign = TextAlign.Center,
                 )
                 // Virtual mouse buttons: only rendered while trackpoint is actively touched
@@ -324,7 +323,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
             Text(
                 text = stringResource(R.string.overlay_exit_hint_swipe),
                 color = colors.onSurface,
-                fontSize = KB_EXIT_HINT_TEXT_SIZE,
+                style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(if (overlayAtBottom) Alignment.TopCenter else Alignment.BottomCenter)

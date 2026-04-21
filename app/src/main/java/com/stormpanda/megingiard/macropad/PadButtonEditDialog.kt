@@ -25,6 +25,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,7 +41,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
@@ -258,7 +258,7 @@ internal fun ButtonEditDialog(
                                             else
                                                 stringResource(R.string.macropad_editor_shape_square),
                                             color = if (selected) accentColor else colors.onSurfaceSecondary,
-                                            fontSize = 10.sp,
+                                            style = MaterialTheme.typography.labelSmall,
                                             textAlign = TextAlign.Center,
                                         )
                                     }
@@ -278,7 +278,7 @@ internal fun ButtonEditDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    Text(buttonSize.displayLabel(), color = colors.onSurface, fontSize = 14.sp)
+                                    Text(buttonSize.displayLabel(), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
                                     Icon(
                                         imageVector = Icons.Rounded.ArrowDropDown,
                                         contentDescription = null,
@@ -326,7 +326,7 @@ internal fun ButtonEditDialog(
                                     .clickable { action = PadAction.TrackpointMove(sz) }
                                     .padding(vertical = 10.dp),
                             ) {
-                                Text(szLabel, color = if (selected) accentColor else colors.onSurfaceSecondary, fontSize = 12.sp)
+                                Text(szLabel, color = if (selected) accentColor else colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -336,7 +336,7 @@ internal fun ButtonEditDialog(
                     Text(
                         text     = ButtonSize.SIZE_1X2.displayLabel(),
                         color    = colors.onSurfaceSecondary,
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 } else {
                     // ── AmbientPeek: size dropdown ──────────────────────────────────────────
@@ -352,7 +352,7 @@ internal fun ButtonEditDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text(buttonSize.displayLabel(), color = colors.onSurface, fontSize = 14.sp)
+                            Text(buttonSize.displayLabel(), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
                             Icon(
                                 imageVector = Icons.Rounded.ArrowDropDown,
                                 contentDescription = null,
@@ -406,5 +406,5 @@ internal fun ButtonEditDialog(
 
 @Composable
 internal fun SectionLabel(text: String, accentColor: Color) {
-    Text(text, color = accentColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    Text(text, color = accentColor, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
 }

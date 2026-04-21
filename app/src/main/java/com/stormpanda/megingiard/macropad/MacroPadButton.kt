@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -159,7 +160,7 @@ internal fun PadButton(
             .border(1.dp, effectiveBorder, chipShape),
     ) {
         if (isTrackpoint) {
-            Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), fontSize = 18.sp)
+            Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
         } else if (btn.action is PadAction.ScrollWheel) {
             ScrollWheelFace(accentColor = effectiveContentAccent)
         } else if (btn.action is PadAction.AmbientPeek) {

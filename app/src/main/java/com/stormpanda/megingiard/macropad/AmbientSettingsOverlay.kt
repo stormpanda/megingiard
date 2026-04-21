@@ -27,10 +27,10 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,7 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AmbientPreviewConfig
 import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
@@ -216,8 +215,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         Text(
                             text = stringResource(R.string.pill_menu_ambient_settings),
                             color = colors.onSurface,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.weight(1f),
                         )
                         TextButton(onClick = onDone) {
@@ -233,7 +231,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                     Text(
                         text = currentLayout.name,
                         color = colors.onSurfaceSecondary,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     Spacer(Modifier.height(12.dp))
@@ -275,7 +273,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         Text(
                             text = stringResource(R.string.settings_macropad_vignette),
                             color = colors.onSurface,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
                         Switch(
@@ -285,10 +283,6 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                 AppLog.d(TAG, "vignette enabled → $it")
                                 commitLayout { copy(ambientVignetteEnabled = it) }
                             },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = colors.accent,
-                            ),
                         )
                     }
 
@@ -415,8 +409,7 @@ private fun AsoSectionHeader(text: String) {
     Text(
         text = text.uppercase(Locale.ROOT),
         color = colors.accent,
-        fontSize = 11.sp,
-        letterSpacing = 1.sp,
+        style = MaterialTheme.typography.labelSmall,
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surfaceVariant)
@@ -448,8 +441,8 @@ private fun AsoSliderRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.onSurface, fontSize = 14.sp)
-            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, fontSize = 12.sp)
+            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
+            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
         }
         Slider(
             modifier = Modifier.weight(2f),
@@ -507,8 +500,8 @@ internal fun AsoPreviewBar(
                 .padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(text = label, color = colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, fontSize = 13.sp)
+            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.labelMedium)
+            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -566,7 +559,7 @@ private fun AsoShapeRow(
         Text(
             text = stringResource(R.string.settings_macropad_vignette_shape),
             color = colors.onSurface,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
         Box {
@@ -583,7 +576,7 @@ private fun AsoShapeRow(
                 Text(
                     text = stringResource(currentShape.labelResId()),
                     color = colors.onSurface,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Icon(
                     imageVector = Icons.Rounded.ArrowDropDown,
@@ -602,7 +595,7 @@ private fun AsoShapeRow(
                             Text(
                                 text = stringResource(shape.labelResId()),
                                 color = if (shape == currentShape) accentColor else colors.onSurface,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         },
                         onClick = { onShapeSelected(shape); expanded = false },
@@ -635,7 +628,7 @@ private fun AsoColorRow(
         Text(
             text = stringResource(R.string.settings_macropad_vignette_color),
             color = colors.onSurface,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
         Box(

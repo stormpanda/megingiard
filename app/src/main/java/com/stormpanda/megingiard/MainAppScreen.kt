@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,7 +46,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.config.MegingiardExport
@@ -69,7 +69,6 @@ private val MAS_SWIPE_THRESHOLD = 25.dp
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
-private val MAS_WRONG_SCREEN_TEXT_SIZE = 18.sp
 
 @Composable
 fun MainAppScreen() {
@@ -222,7 +221,7 @@ fun MainAppScreen() {
             onDismissRequest = { importError = null },
             containerColor = colors.surface,
             title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
-            text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, fontSize = 13.sp) },
+            text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, style = MaterialTheme.typography.labelMedium) },
             confirmButton = {
                 TextButton(onClick = { importError = null }) {
                     Text(stringResource(R.string.config_ok), color = colors.accent)
@@ -284,7 +283,7 @@ private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
             Text(
                 text = stringResource(R.string.wrong_screen_message),
                 color = colors.onSurface,
-                fontSize = MAS_WRONG_SCREEN_TEXT_SIZE,
+                style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
@@ -348,7 +347,7 @@ private fun NavigationCoachMark(
             Text(
                 text = stringResource(R.string.pill_coach_mark_text),
                 color = colors.onSurface,
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.bodySmall,
             )
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.pill_coach_mark_dismiss), color = colors.accent)
@@ -380,14 +379,14 @@ private fun IncomingImportDialog(
                     Text(
                         stringResource(R.string.config_import_meta_author, meta.author ?: ""),
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 if (meta.description?.isNotBlank() == true) {
                     Text(
                         meta.description ?: "",
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -399,21 +398,21 @@ private fun IncomingImportDialog(
                             export.profiles.sumOf { it.macros.size },
                         ),
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 if (export.settings.isNotEmpty()) {
                     Text(
                         stringResource(R.string.config_import_section_settings),
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.config_import_warning),
                     color = colors.onSurface,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         },

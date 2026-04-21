@@ -43,8 +43,11 @@ import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
+import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.colorSchemeFor
+import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -218,9 +221,13 @@ class MirrorPresentation(
                 CompositionLocalProvider(
                     LocalContext provides localeContext,
                     LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
-                    LocalAppColors provides appColors
+                    LocalAppColors provides appColors,
+                    LocalAppDimens provides AppDimens()
                 ) {
-                    MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
+                    MaterialTheme(
+                        colorScheme = colorSchemeFor(appColors, themeMode),
+                        typography = megingiardTypography
+                    ) {
                         val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
                         val capturing by ScreenCaptureManager.isCapturing.collectAsState()
                         val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()

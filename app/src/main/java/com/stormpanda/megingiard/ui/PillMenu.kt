@@ -96,7 +96,6 @@ private val PM_BORDER_WIDTH = 1.dp
 private val PM_ELEVATION = 8.dp
 private val PM_CONTENT_PADDING = 16.dp
 private val PM_SECTION_SPACING = 10.dp
-private val PM_LABEL_SIZE = 11.sp
 private val PM_ACTION_BUTTON_CORNER = 10.dp
 private val PM_ACTION_BUTTON_H_PADDING = 12.dp
 private val PM_ACTION_BUTTON_V_PADDING = 8.dp
@@ -375,7 +374,7 @@ private fun SectionLabel(text: String, colors: AppColors) {
     Text(
         text = text.uppercase(Locale.ROOT),
         color = colors.onControlOverlay.copy(alpha = 0.55f),
-        fontSize = PM_LABEL_SIZE,
+        style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 0.8.sp,
     )
@@ -500,8 +499,7 @@ private fun MirrorControlCard(
         Text(
             text = stringResource(R.string.pill_menu_ambient_settings),
             color = colors.onControlOverlay,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.titleSmall,
             modifier = Modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .background(colors.navPillBody.copy(alpha = 0.35f))
@@ -606,7 +604,7 @@ private fun MirrorControlIconButton(
             Text(
                 text = label,
                 color = if (enabled) colors.onControlOverlay else colors.onControlOverlay.copy(alpha = 0.4f),
-                fontSize = 10.sp,
+                style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -646,7 +644,7 @@ private fun SelectableChip(
         Text(
             text = text,
             color = if (isSelected) colors.onAccent else colors.onControlOverlay,
-            fontSize = 13.sp,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
@@ -672,7 +670,6 @@ private fun ActionButton(
         Text(
             text = label,
             color = colors.onControlOverlay,
-            fontSize = 14.sp,
             style = MaterialTheme.typography.bodyMedium,
         )
         if (icon != null) icon()
@@ -742,8 +739,7 @@ private fun InTreeNameInputDialog(
             Text(
                 text = title,
                 color = colors.onSurface,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(

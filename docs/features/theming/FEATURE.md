@@ -115,8 +115,14 @@ For accent-driven UI, screens read `colors.accent` rather than subscribing direc
 `MainActivity` collects both `SettingsManager.themeMode` and `SettingsManager.accentColor`, then wraps the entire app tree:
 
 ```kotlin
-MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
-  CompositionLocalProvider(LocalAppColors provides paletteFor(themeMode, userAccent)) {
+MaterialTheme(
+    colorScheme = colorSchemeFor(appColors, themeMode),
+    typography  = megingiardTypography,
+) {
+    CompositionLocalProvider(
+        LocalAppColors provides appColors,
+        LocalAppDimens  provides AppDimens(),
+    ) {
         // app content …
     }
 }
@@ -200,3 +206,80 @@ app/src/main/res/
   mipmap-xxhdpi/  ic_launcher{,_round}.webp   (144 px)
   mipmap-xxxhdpi/ ic_launcher{,_round}.webp   (192 px)
 ```
+
+---
+
+## Typography Scale (`megingiardTypography`)
+
+All font sizes in the app are controlled by the `megingiardTypography` object defined in `AppTheme.kt`.
+
+| Token         | Size | Weight   | Primary Use                                                |
+| ------------- | ---- | -------- | ---------------------------------------------------------- |
+| `titleLarge`  | 18sp | SemiBold | Dialog titles, section headers                             |
+| `titleMedium` | 16sp | SemiBold | Section titles                                             |
+| `titleSmall`  | 14sp | Medium   | Subsection titles                                          |
+| `bodyLarge`   | 15sp | Normal   | Macro names, list items                                    |
+| `bodyMedium`  | 14sp | Normal   | Standard row labels (most common)                          |
+| `bodySmall`   | 12sp | Normal   | Secondary descriptions, hints                              |
+| `labelLarge`  | 14sp | Medium   | Button labels                                              |
+| `labelMedium` | 13sp | Medium   | Dialog subtitles, chips                                    |
+| `labelSmall`  | 11sp | Normal   | Category headers, pill labels (letterSpacing 1sp built-in) |
+
+Access in Composables:
+
+```kotlin
+Text("Title", style = MaterialTheme.typography.titleMedium)
+Text("Hint", style = MaterialTheme.typography.bodySmall)
+```
+
+**Inline `fontSize = XX.sp` is forbidden** outside `AppTheme.kt`. The only exceptions are programmatic sizes that cannot map to a semantic token (see AGENTS.md §16.1).
+
+---
+
+## Dimension Tokens (`AppDimens`)
+
+| Token             | Default | Usage                      |
+| ----------------- | ------- | -------------------------- |
+| `paddingSmall`    | 4.dp    | Tight internal padding     |
+| `paddingMedium`   | 8.dp    | Standard component padding |
+| `paddingLarge`    | 16.dp   | Screen/card padding        |
+| `paddingXLarge`   | 24.dp   | Dialog/section padding     |
+| `cornerSmall`     | 4.dp    | Tags, small badges         |
+| `cornerMedium`    | 8.dp    | Buttons, list items        |
+| `cornerLarge`     | 12.dp   | Cards, dialogs             |
+| `cornerXLarge`    | 16.dp   | Bottom sheets, large cards |
+| `elevationCard`   | 2.dp    | Card shadow                |
+| `elevationDialog` | 8.dp    | Dialog shadow              |
+| `iconSizeSmall`   | 16.dp   | Inline / secondary icons   |
+| `iconSizeMedium`  | 24.dp   | Standard icons             |
+| `iconSizeLarge`   | 32.dp   | Primary action icons       |
+
+Access in Composables:
+
+```kotlin
+val dimens = LocalAppDimens.current
+Modifier.padding(dimens.paddingLarge)
+```
+
+---
+
+## ColorScheme Bridge (`colorSchemeFor`)
+
+`colorSchemeFor(colors: AppColors, mode: ThemeMode): ColorScheme` maps app tokens to M3 `ColorScheme` so all M3 components (Switch, Slider, Checkbox, etc.) auto-theme without manual `colors =` overrides.
+
+**Key mappings:** `primary`→`accent`, `onPrimary`→`onAccent`, `surface`→`surface`, `background`→`appBackground`, `error`→`error`.
+
+**M3 component color overrides are forbidden** when the ColorScheme handles them. Do not pass `SwitchDefaults.colors(...)` or `SliderDefaults.colors(...)` unless the component has a contextual color need (e.g., `OutlinedTextField` border accent).
+
+---
+
+## Additional AppColors Tokens (added in design-system refactor)
+
+| Token                | Dark          | Light         | Cyberpunk     | Usage                                 |
+| -------------------- | ------------- | ------------- | ------------- | ------------------------------------- |
+| `error`              | `0xFFCF6679`  | `0xFFB00020`  | `CP_ACCENT`   | Destructive action text, error states |
+| `onError`            | `Color.White` | `Color.White` | `Color.Black` | Text on error-colored surfaces        |
+| `actionColorGamepad` | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`  | Gamepad button step indicators        |
+| `actionColorSystem`  | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`   | System/mirror action indicators       |
+
+These replace all hardcoded `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` literals that previously appeared in screen code.
