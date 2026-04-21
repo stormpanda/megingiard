@@ -357,7 +357,6 @@ Open Settings to create a layout.</string>
     <!-- Pill Menu -->
     <string name="pill_menu_profile_label">Profile</string>
     <string name="pill_menu_layout_label">Layout</string>
-    <string name="pill_menu_layout_chip_cd">Layout %1$s</string>
     <string name="pill_menu_new_profile">New Profile</string>
     <string name="pill_menu_new_layout">New Layout</string>
     <string name="pill_menu_edit_layout">Edit Profile/Layout</string>

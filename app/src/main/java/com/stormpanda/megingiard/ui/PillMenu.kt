@@ -445,7 +445,7 @@ private fun LayoutRow(
                     text = layout.name,
                     isSelected = layout.id == activeLayout?.id,
                     colors = colors,
-                    contentDescription = stringResource(R.string.pill_menu_layout_chip_cd, layout.name),
+                    contentDescription = layout.name,
                     onClick = { onLayoutSelected(layout.id) },
                 )
             }
@@ -628,9 +628,7 @@ private fun SelectableChip(
         modifier = Modifier
             .semantics {
                 this[SemanticsProperties.Selected] = isSelected
-                if (contentDescription != null) {
-                    this.contentDescription = contentDescription
-                }
+                this.contentDescription = contentDescription ?: text
             }
             .clip(RoundedCornerShape(PM_CHIP_CORNER))
             .background(
