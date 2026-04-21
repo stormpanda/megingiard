@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,9 +57,9 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.macropad.MacroPadState
 import java.time.LocalDate
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -72,9 +73,9 @@ private val GS_DIALOG_WIDTH_FRACTION = 0.85f
 private val GS_DIALOG_CORNER = 16.dp
 private val GS_DIALOG_PADDING = 20.dp
 private val GS_DIALOG_TITLE_SIZE = 16.sp
-private val GS_SECTION_CHIP_CORNER = 14.dp
+private val GS_SECTION_CHIP_CORNER = 20.dp
 private val GS_SECTION_CHIP_H_PADDING = 12.dp
-private val GS_SECTION_CHIP_V_PADDING = 8.dp
+private val GS_SECTION_CHIP_V_PADDING = 6.dp
 private val GS_SECTION_CHIP_SPACING = 8.dp
 private val GS_SECTION_CHIP_BORDER = 1.dp
 private const val GS_SECTION_CHIP_SELECTED_ALPHA = 0.85f
@@ -448,16 +449,17 @@ private fun SectionJumpChip(
 ) {
     Text(
         text = label,
-        color = if (selected) Color.White else colors.onSurface,
-        fontSize = 12.sp,
+        color = if (selected) colors.onAccent else colors.onControlOverlay,
+        fontSize = 13.sp,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         modifier = Modifier
             .background(
-                color = if (selected) accentColor.copy(alpha = GS_SECTION_CHIP_SELECTED_ALPHA) else colors.appBackground,
+                color = if (selected) accentColor.copy(alpha = GS_SECTION_CHIP_SELECTED_ALPHA) else colors.navPillBody.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
             )
             .border(
                 width = GS_SECTION_CHIP_BORDER,
-                color = if (selected) accentColor else colors.divider,
+                color = if (selected) accentColor else colors.controlOverlayBorder,
                 shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
             )
             .clickable(onClick = onClick)
@@ -478,7 +480,7 @@ private fun SettingsSection(
         fontSize = 11.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.surface)
+            .background(colors.surfaceVariant)
             .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
     )
     Column { content() }

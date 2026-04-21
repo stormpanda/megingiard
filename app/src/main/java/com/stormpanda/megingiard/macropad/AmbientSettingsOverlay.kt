@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -23,7 +24,6 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -51,7 +51,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
 import com.stormpanda.megingiard.AmbientPreviewConfig
 import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
@@ -61,6 +60,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.LocalAppColors
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -204,7 +204,6 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     // Title + Done button
                     Row(
@@ -227,7 +226,9 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         }
                     }
 
+                    Spacer(Modifier.height(6.dp))
                     Text(text = currentLayout.name, color = colors.onSurfaceSecondary, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
 
                     AsoSectionHeader(text = stringResource(R.string.settings_section_general))
 
@@ -253,7 +254,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         },
                     )
 
-                    HorizontalDivider(color = colors.divider)
+                    AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))
 
                     // ── Vignette toggle ───────────────────────────────────────
                     Row(
@@ -284,8 +285,6 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                     }
 
                     if (vignetteEnabled) {
-                        HorizontalDivider(color = colors.divider)
-                        AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))
                         // Shape dropdown
                         AsoShapeRow(
                             currentShape = vignetteShape,
@@ -412,7 +411,7 @@ private fun AsoSectionHeader(text: String) {
         letterSpacing = 1.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.surface)
+            .background(colors.surfaceVariant)
             .padding(horizontal = ASO_SECTION_HEADER_PADDING_H, vertical = ASO_SECTION_HEADER_PADDING_V),
     )
 }

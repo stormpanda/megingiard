@@ -27,9 +27,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
@@ -259,6 +258,10 @@ fun PillMenu(
                     activeProfile = activeProfile,
                     activeLayout = activeLayout,
                     colors = colors,
+                    onLayoutSelected = { layoutId ->
+                        MacroPadState.setActiveLayoutId(layoutId)
+                        onDismiss()
+                    },
                     onNewLayout = { showNewLayoutDialog = true },
                 )
 
@@ -270,6 +273,14 @@ fun PillMenu(
                 ActionButton(
                     label = stringResource(R.string.pill_menu_edit_layout),
                     colors = colors,
+                    icon = {
+                        Icon(
+                            Icons.Rounded.Edit,
+                            contentDescription = stringResource(R.string.pill_menu_edit_layout),
+                            tint = colors.onControlOverlay,
+                            modifier = Modifier.size(PM_NAV_ICON_SIZE),
+                        )
+                    },
                 ) {
                     AppStateManager.setEditorActive(true)
                     onDismiss()
@@ -415,57 +426,28 @@ private fun LayoutRow(
     activeProfile: PadProfile?,
     activeLayout: PadLayout?,
     colors: AppColors,
+    onLayoutSelected: (String) -> Unit,
     onNewLayout: () -> Unit,
 ) {
     val enabledLayouts = activeProfile?.layouts?.filter { it.enabled } ?: emptyList()
-    val hasMultiple = enabledLayouts.size > 1
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
     ) {
-        IconButton(
-            onClick = { MacroPadState.previousLayout() },
-            enabled = hasMultiple,
-            modifier = Modifier.size(32.dp),
+        LazyRow(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
         ) {
-            Icon(
-                Icons.Rounded.ChevronLeft,
-                contentDescription = stringResource(R.string.cd_layout_prev),
-                tint = if (hasMultiple) colors.onControlOverlay
-                       else colors.onControlOverlay.copy(alpha = 0.3f),
-                modifier = Modifier.size(PM_NAV_ICON_SIZE),
-            )
+            items(enabledLayouts, key = { it.id }) { layout ->
+                SelectableChip(
+                    text = layout.name,
+                    selected = layout.id == activeLayout?.id,
+                    colors = colors,
+                    onClick = { onLayoutSelected(layout.id) },
+                )
+            }
         }
-
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            val layoutName = activeLayout?.name
-                ?: activeProfile?.name
-                ?: stringResource(R.string.pill_menu_new_layout)
-            Text(
-                text = layoutName,
-                color = colors.onControlOverlay,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-
-        IconButton(
-            onClick = { MacroPadState.nextLayout() },
-            enabled = hasMultiple,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                Icons.Rounded.ChevronRight,
-                contentDescription = stringResource(R.string.cd_layout_next),
-                tint = if (hasMultiple) colors.onControlOverlay
-                       else colors.onControlOverlay.copy(alpha = 0.3f),
-                modifier = Modifier.size(PM_NAV_ICON_SIZE),
-            )
-        }
-
-        Spacer(Modifier.width(4.dp))
 
         IconButton(
             onClick = onNewLayout,
@@ -656,7 +638,7 @@ private fun SelectableChip(
     ) {
         Text(
             text = text,
-            color = if (selected) Color.White else colors.onControlOverlay,
+            color = if (selected) colors.onAccent else colors.onControlOverlay,
             fontSize = 13.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         )
