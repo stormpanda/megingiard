@@ -60,6 +60,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -403,6 +404,7 @@ private fun ProfileRow(
                     text = profile.name,
                     selected = isActive,
                     colors = colors,
+                    contentDescription = profile.name,
                     onClick = { onProfileSelected(profile) },
                 )
             }
@@ -444,6 +446,7 @@ private fun LayoutRow(
                     text = layout.name,
                     selected = layout.id == activeLayout?.id,
                     colors = colors,
+                    contentDescription = stringResource(R.string.pill_menu_layout_chip_cd, layout.name),
                     onClick = { onLayoutSelected(layout.id) },
                 )
             }
@@ -619,10 +622,17 @@ private fun SelectableChip(
     text: String,
     selected: Boolean,
     colors: AppColors,
+    contentDescription: String? = null,
     onClick: () -> Unit,
 ) {
     Box(
         modifier = Modifier
+            .semantics {
+                this.selected = selected
+                if (contentDescription != null) {
+                    this.contentDescription = contentDescription
+                }
+            }
             .clip(RoundedCornerShape(PM_CHIP_CORNER))
             .background(
                 if (selected) colors.accent.copy(alpha = 0.85f)

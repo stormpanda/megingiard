@@ -343,6 +343,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Pill Menu -->
     <string name="pill_menu_profile_label">Profil</string>
     <string name="pill_menu_layout_label">Layout</string>
+    <string name="pill_menu_layout_chip_cd">Layout %1$s</string>
     <string name="pill_menu_new_profile">Neues Profil</string>
     <string name="pill_menu_new_layout">Neues Layout</string>
     <string name="pill_menu_edit_layout">Profil/Layout bearbeiten</string>
