@@ -57,10 +57,32 @@
 | `docs/features/config/FEATURE.md`   | Config Export / Import — schema, SAF file picker, migration                      |
 | `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge             |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                           |
+| `docs/BUILD_NATIVE.md`              | How to rebuild the native touch-injector binary                                  |
+| `AGENTS.md` _(this file)_           | AI agent coding conventions & constraints                                        |
 
-> **Convention:** Every feature has its own subfolder under `docs/features/<feature>/` containing a single `FEATURE.md`. This file is the **authoritative source of truth** for that feature's requirements and technical implementation. When adding a new feature, create a new subfolder and `FEATURE.md`.
-> | `docs/BUILD_NATIVE.md` | How to rebuild the native touch-injector binary |
-> | `AGENTS.md` _(this file)_ | AI agent coding conventions & constraints |
+> [!IMPORTANT]
+> **Mandatory doc-sync rule — applies after every code change.**
+>
+> After implementing any change that affects a feature’s behaviour, interface, or architecture,
+> you MUST:
+>
+> 1. Identify which `FEATURE.md` file(s) cover the changed code (use the table above).
+> 2. Read the relevant `FEATURE.md` and check whether the change invalidates any Functional
+>    Requirements or Technical Implementation section.
+> 3. Update `FEATURE.md` to reflect the change — correct outdated descriptions, remove stale
+>    requirements, add documentation for new behaviour.
+> 4. If the change is architecturally significant, also update `docs/ARCHITECTURE.md` and `PRD.md`.
+>
+> This applies to **all** changes — including bug fixes, refactors, and dependency updates that
+> affect runtime behaviour. Do not skip this step.
+
+> [!NOTE]
+> **New features — create a `FEATURE.md` first.**
+>
+> Every new feature MUST have its own `FEATURE.md` in a dedicated subfolder
+> `docs/features/<feature>/`. Use [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md)
+> as the starting point. Once created, **add a row for it to the Documentation Map table above**
+> so all agents can discover it.
 
 ---
 
@@ -637,16 +659,27 @@ The proposal must be copy-paste ready — no placeholders. Present it as a code 
 
 ## 14 Documentation Sync After Changes
 
-After implementing any change that affects a feature's behaviour, interface, or architecture:
+> [!IMPORTANT]
+> This rule is **mandatory** and restates the requirement already announced in §2.
+> It is duplicated here for visibility during code-review checklists.
 
-1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code.
-2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change invalidates any Functional Requirements or Technical Implementation section.
-3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation. This includes:
-   - Correcting or removing outdated requirements or technical descriptions.
-   - Adding documentation for new behaviour introduced by the change.
-4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant, also review `docs/ARCHITECTURE.md` and `PRD.md`.
+After implementing any change that affects a feature’s behaviour, interface, or architecture:
 
-This rule applies to all changes, including bug fixes, refactors, and dependency updates that affect runtime behaviour.
+1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code
+   (consult the Documentation Map in §2).
+2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change
+   invalidates any Functional Requirements or Technical Implementation section.
+3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation:
+   - Correct or remove outdated requirements or technical descriptions.
+   - Add documentation for new behaviour introduced by the change.
+4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant,
+   also review `docs/ARCHITECTURE.md` and `PRD.md`.
+5. **New features** — create a new `docs/features/<feature>/FEATURE.md` using
+   [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
+   point, then **add a row to the Documentation Map table in §2**.
+
+This rule applies to all changes, including bug fixes, refactors, and dependency updates that
+affect runtime behaviour.
 
 ---
 
