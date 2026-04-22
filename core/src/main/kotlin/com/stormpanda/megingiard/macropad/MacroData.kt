@@ -75,6 +75,21 @@ sealed class MacroStep {
         val dirX: Int,
         val dirY: Int,
     ) : MacroStep()
+
+    /**
+     * Injects a single touch tap at the normalised position ([normX], [normY]) on the
+     * primary display, beginning [startTimeMs] milliseconds after macro start, held for
+     * [durationMs] milliseconds. Coordinates are in logical display space:
+     * 0.0 (left/top) … 1.0 (right/bottom).
+     */
+    @Serializable
+    @SerialName("touch_tap")
+    data class TouchTap(
+        override val startTimeMs: Long,
+        override val durationMs: Long,
+        val normX: Float,
+        val normY: Float,
+    ) : MacroStep()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -24,6 +24,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.HorizontalDivider
@@ -53,7 +56,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.sqrt
 
@@ -73,6 +78,7 @@ private const val MT_TICK_INTERVAL_MS          = 500L   // vertical grid line in
 private const val MT_STEP_BAR_PADDING          = 2f     // px padding inside each bar
 private const val MT_AXIS_TEXT_SIZE_SP          = 11    // sp — scaled at runtime via density/fontScale
 private const val MT_BAR_CORNER_RADIUS         = 4      // dp
+private const val MT_DEFAULT_TOUCH_DURATION_MS  = 100L  // ms; tap duration for recorded touch steps
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lane assignment — greedy; assigns each step (sorted by startTimeMs) to the
@@ -148,11 +154,37 @@ internal fun MacroTimelineEditor(
 ) {
     val colors = LocalAppColors.current
 
-    var localName        by remember { mutableStateOf(macro.name) }
-    var steps            by remember { mutableStateOf(macro.steps) }
-    var showAddStep      by remember { mutableStateOf(false) }
-    var editingStepIndex by remember { mutableStateOf<Int?>(null) }
-    var deleteStepIndex  by remember { mutableStateOf<Int?>(null) }
+    var localName             by remember { mutableStateOf(macro.name) }
+    var steps                 by remember { mutableStateOf(macro.steps) }
+    var showAddStep           by remember { mutableStateOf(false) }
+    var editingStepIndex      by remember { mutableStateOf<Int?>(null) }
+    var deleteStepIndex       by remember { mutableStateOf<Int?>(null) }
+    var showRecordTouchDialog by remember { mutableStateOf(false) }
+    val recordedTap           by TouchRecordingManager.recordedTap.collectAsState()
+
+    LaunchedEffect(recordedTap) {
+        val tap = recordedTap ?: return@LaunchedEffect
+        val nextStart = steps.totalDurationMs()
+        steps = steps + MacroStep.TouchTap(
+            startTimeMs = nextStart,
+            durationMs  = MT_DEFAULT_TOUCH_DURATION_MS,
+            normX       = tap.first,
+            normY       = tap.second,
+        )
+        TouchRecordingManager.consumeRecordedTap()
+    }
+
+    if (showRecordTouchDialog) {
+        TouchRecordStartDialog(
+            onStart = {
+                if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
+                TouchRecordingManager.requestRecording()
+                showRecordTouchDialog = false
+            },
+            onCancel = { showRecordTouchDialog = false },
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -242,11 +274,12 @@ internal fun MacroTimelineEditor(
                 HorizontalDivider(color = colors.divider)
             }
 
-            // Add Step chip
+            // Action chips: Add Step + Record Touch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = MT_PADDING.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(
                     modifier = Modifier
@@ -266,6 +299,28 @@ internal fun MacroTimelineEditor(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         stringResource(R.string.macropad_macro_add_step),
+                        color    = accentColor,
+                        style    = MaterialTheme.typography.labelMedium,
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { showRecordTouchDialog = true }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.TouchApp,
+                        contentDescription = stringResource(R.string.cd_record_touch),
+                        tint     = accentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.macropad_macro_record_touch),
                         color    = accentColor,
                         style    = MaterialTheme.typography.labelMedium,
                     )
@@ -340,6 +395,7 @@ private fun MacroTimeline(
     val colors         = LocalAppColors.current
     val joystickColor  = colors.actionColorGamepad
     val dpadColor      = colors.actionColorSystem
+    val touchColor     = MaterialTheme.colorScheme.tertiary
 
     val textPaint = remember(density) {
         NativePaint().apply {
@@ -367,7 +423,7 @@ private fun MacroTimeline(
                 val startX   = step.startTimeMs * pxPerMs
                 val barWidth = (step.durationMs * pxPerMs).coerceAtLeast(2f)
                 val laneY    = lane * laneHeightPx
-                val barColor = stepColor(step, accentColor, joystickColor, dpadColor)
+                val barColor = stepColor(step, accentColor, joystickColor, dpadColor, touchColor)
                 drawRoundRect(
                     color       = barColor.copy(alpha = 0.85f),
                     topLeft     = Offset(startX, laneY + MT_STEP_BAR_PADDING),
@@ -390,10 +446,11 @@ private fun MacroTimeline(
     }
 }
 
-private fun stepColor(step: MacroStep, accentColor: Color, joystickColor: Color, dpadColor: Color): Color = when (step) {
+private fun stepColor(step: MacroStep, accentColor: Color, joystickColor: Color, dpadColor: Color, touchColor: Color): Color = when (step) {
     is MacroStep.GamepadButtonTap -> accentColor
     is MacroStep.JoystickMove     -> joystickColor
     is MacroStep.DPadTap          -> dpadColor
+    is MacroStep.TouchTap         -> touchColor
 }
 
 private fun DrawScope.drawTimeTicks(
@@ -436,10 +493,12 @@ private fun StepListItem(
     val colors = LocalAppColors.current
     val joystickColor = colors.actionColorGamepad
     val dpadColor     = colors.actionColorSystem
+    val touchColor    = MaterialTheme.colorScheme.tertiary
     val typeLabel = stringResource(when (step) {
         is MacroStep.GamepadButtonTap -> R.string.macropad_macro_step_type_gamepad
         is MacroStep.JoystickMove     -> R.string.macropad_macro_step_type_joystick
         is MacroStep.DPadTap          -> R.string.macropad_macro_step_type_dpad
+        is MacroStep.TouchTap         -> R.string.macropad_macro_step_type_touch
     })
     val description = when (step) {
         is MacroStep.GamepadButtonTap -> step.label
@@ -447,9 +506,10 @@ private fun StepListItem(
             val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
             "$stickLabel ${joyDirArrow(step.x, step.y)}"
         }
-        is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
+        is MacroStep.DPadTap  -> dirArrow(step.dirX, step.dirY)
+        is MacroStep.TouchTap -> "${"%.2f".format(step.normX)}, ${"%.2f".format(step.normY)}"
     }
-    val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor)
+    val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor, touchColor)
 
     Row(
         modifier = Modifier

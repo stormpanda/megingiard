@@ -332,9 +332,16 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_editor_save">Save</string>
     <string name="macropad_macro_editor_cancel">Cancel</string>
     <string name="macropad_macro_add_step">Add Step</string>
+    <string name="macropad_macro_record_touch">Record Touch</string>
     <string name="macropad_macro_no_steps">No steps yet. Tap + to add one.</string>
     <string name="macropad_macro_step_delete_title">Delete Step</string>
     <string name="macropad_macro_step_delete_confirm">Remove this step from the macro?</string>
+
+    <!-- Touch recording flow -->
+    <string name="macropad_macro_record_touch_dialog_title">Record Touch Step</string>
+    <string name="macropad_macro_record_touch_dialog_message">The screen mirror will start (if not already active). Tap anywhere on the mirror to record that position as a touch step.</string>
+    <string name="macropad_macro_record_touch_start">Start</string>
+    <string name="cd_record_touch">Record touch step</string>
 
     <!-- MacroStepEditDialog -->
     <string name="macropad_macro_step_new">Add Step</string>
@@ -342,6 +349,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_type_gamepad">Gamepad Button</string>
     <string name="macropad_macro_step_type_joystick">Joystick</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
+    <string name="macropad_macro_step_type_touch">Touch Tap</string>
+    <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>
     <string name="macropad_macro_step_start_ms">Start time (ms)</string>
     <string name="macropad_macro_step_duration_ms">Duration (ms)</string>
     <string name="macropad_macro_step_stick_left">Left Stick</string>

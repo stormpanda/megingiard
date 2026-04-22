@@ -39,6 +39,18 @@ object ScreenCaptureManager {
     private val _isTouchProjectionActive = MutableStateFlow(false)
     val isTouchProjectionActive: StateFlow<Boolean> = _isTouchProjectionActive.asStateFlow()
 
+    private val _captureSourceWidth = MutableStateFlow(0)
+    val captureSourceWidth: StateFlow<Int> = _captureSourceWidth.asStateFlow()
+
+    private val _captureSourceHeight = MutableStateFlow(0)
+    val captureSourceHeight: StateFlow<Int> = _captureSourceHeight.asStateFlow()
+
+    fun setCaptureSourceSize(width: Int, height: Int) {
+        AppLog.d(TAG, "setCaptureSourceSize ${width}x${height}")
+        _captureSourceWidth.value = width
+        _captureSourceHeight.value = height
+    }
+
     fun setCapturing(capturing: Boolean) {
         AppLog.i(TAG, "setCapturing($capturing)")
         _isCapturing.value = capturing

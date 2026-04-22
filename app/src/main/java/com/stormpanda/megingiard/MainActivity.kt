@@ -30,6 +30,7 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
+import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -106,6 +107,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate")
+
+        // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
+        // steps can start TouchInjector without needing the caller to supply a Context.
+        MacroExecutor.init(this)
 
         // Initialise R.string resource IDs for the domain-layer MacroPadHitTestEngine.
         MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_KEYBOARD = R.string.macropad_device_disabled_keyboard

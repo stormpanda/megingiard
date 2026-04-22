@@ -64,7 +64,7 @@ private const val MSD_TIMING_SLIDER_STEPS   = 99
 // Step type (editor-internal)
 // ─────────────────────────────────────────────────────────────────────────────
 
-private enum class StepType { GAMEPAD, JOYSTICK, DPAD }
+private enum class StepType { GAMEPAD, JOYSTICK, DPAD, TOUCH }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Direction arrow labels keyed by (col, row) in the 3×3 grid.
@@ -110,6 +110,7 @@ internal fun MacroStepEditDialog(
         is MacroStep.GamepadButtonTap -> StepType.GAMEPAD
         is MacroStep.JoystickMove     -> StepType.JOYSTICK
         is MacroStep.DPadTap          -> StepType.DPAD
+        is MacroStep.TouchTap         -> StepType.TOUCH
         null                          -> StepType.GAMEPAD
     }
     var stepType  by remember { mutableStateOf(initialType) }
@@ -156,6 +157,7 @@ internal fun MacroStepEditDialog(
         StepType.GAMEPAD  -> true
         StepType.JOYSTICK -> !(joyDirX == 0 && joyDirY == 0)
         StepType.DPAD     -> !(dpadDirX == 0 && dpadDirY == 0)
+        StepType.TOUCH    -> true
     }
 
     // ── Full-screen layout ────────────────────────────────────────────────────────────────
@@ -211,6 +213,10 @@ internal fun MacroStepEditDialog(
                             dirX        = dpadDirX,
                             dirY        = dpadDirY,
                         )
+                        StepType.TOUCH -> (step as MacroStep.TouchTap).copy(
+                            startTimeMs = startMs.toLong(),
+                            durationMs  = durMs.toLong().coerceAtLeast(1L),
+                        )
                     }
                     onConfirm(builtStep)
                 },
@@ -234,11 +240,16 @@ internal fun MacroStepEditDialog(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StepType.entries.forEach { type ->
+                    // Show the TOUCH chip only when editing a TouchTap;
+                    // hide non-TOUCH chips when editing a TouchTap.
+                    if (initialType == StepType.TOUCH && type != StepType.TOUCH) return@forEach
+                    if (initialType != StepType.TOUCH && type == StepType.TOUCH) return@forEach
                     val selected = type == stepType
                     val labelRes = when (type) {
                         StepType.GAMEPAD  -> R.string.macropad_macro_step_type_gamepad
                         StepType.JOYSTICK -> R.string.macropad_macro_step_type_joystick
                         StepType.DPAD     -> R.string.macropad_macro_step_type_dpad
+                        StepType.TOUCH    -> R.string.macropad_macro_step_type_touch
                     }
                     Box(
                         modifier = Modifier
@@ -252,7 +263,7 @@ internal fun MacroStepEditDialog(
                                 if (selected) accentColor else accentColor.copy(alpha = 0.4f),
                                 RoundedCornerShape(6.dp),
                             )
-                            .clickable { stepType = type }
+                            .clickable(enabled = type != StepType.TOUCH) { stepType = type }
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                     ) {
                         Text(
@@ -378,6 +389,30 @@ internal fun MacroStepEditDialog(
                         accentColor = accentColor,
                         onSelect    = { x, y -> dpadDirX = x; dpadDirY = y },
                     )
+                }
+
+                StepType.TOUCH -> {
+                    val touchStep = step as? MacroStep.TouchTap
+                    Text(
+                        stringResource(R.string.macropad_macro_step_touch_position),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            "X: ${"%.3f".format(touchStep?.normX ?: 0f)}",
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            "Y: ${"%.3f".format(touchStep?.normY ?: 0f)}",
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
 

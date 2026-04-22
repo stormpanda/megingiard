@@ -19,6 +19,7 @@ import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,10 @@ class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mirrorPresentation: MirrorPresentation? = null
+    private var recordingPresentation: RecordingMirrorPresentation? = null
+    private var capturedSrcWidth: Int = 0
+    private var capturedSrcHeight: Int = 0
+    private var capturedSecondaryDisplay: Display? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -81,6 +86,11 @@ class ScreenCaptureService : Service() {
             val srcHeight = bounds.height()
             val dpi = windowContext.resources.configuration.densityDpi
 
+            capturedSrcWidth = srcWidth
+            capturedSrcHeight = srcHeight
+            capturedSecondaryDisplay = secondaryDisplay
+            ScreenCaptureManager.setCaptureSourceSize(srcWidth, srcHeight)
+
             var currentSurface: Surface? = null
             // NOTE: freeze is handled entirely by MirrorPresentation.bindStateFlows:
             // PixelCopy captures the last frame, then sv.visibility = INVISIBLE hides the
@@ -127,6 +137,35 @@ class ScreenCaptureService : Service() {
                 AppStateManager.setPromptInFlight(false)
                 presentation.show()
             }
+
+            scope.launch {
+                TouchRecordingManager.recordingRequested.collect { requested ->
+                    if (requested) {
+                        val mp = mediaProjection ?: run {
+                            AppLog.w(TAG, "recording requested but mediaProjection is null — ignoring")
+                            return@collect
+                        }
+                        val sd = capturedSecondaryDisplay ?: run {
+                            AppLog.w(TAG, "recording requested but secondary display is null — ignoring")
+                            return@collect
+                        }
+                        AppLog.i(TAG, "recording requested → creating RecordingMirrorPresentation")
+                        recordingPresentation?.dismiss()
+                        val rp = RecordingMirrorPresentation(
+                            this@ScreenCaptureService,
+                            sd,
+                            capturedSrcWidth,
+                            capturedSrcHeight,
+                            mp,
+                        )
+                        recordingPresentation = rp
+                        rp.show()
+                    } else {
+                        recordingPresentation?.dismiss()
+                        recordingPresentation = null
+                    }
+                }
+            }
         }
         return START_NOT_STICKY
     }
@@ -159,6 +198,7 @@ class ScreenCaptureService : Service() {
         AppStateManager.setUserDeclinedCapture(true)
         virtualDisplay?.release()
         mediaProjection?.stop()
+        recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
     }
 }
