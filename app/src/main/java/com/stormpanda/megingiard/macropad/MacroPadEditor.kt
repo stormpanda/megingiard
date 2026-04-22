@@ -74,6 +74,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -86,6 +87,8 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
+
+private const val TAG = "MacroPadEditor"
 
 private val ED_TOP_BAR_HEIGHT          = 56.dp
 private val ED_PADDING                 = 16.dp
@@ -123,10 +126,11 @@ fun MacroPadEditor(onDone: () -> Unit) {
     // MacroPadViewModel.watchInjectorLifecycle() detects isEditorActive=false and
     // restarts injectors automatically when this screen is dismissed.
     DisposableEffect(Unit) {
+        AppLog.i(TAG, "MacroPadEditor visible \u2192 stopping injectors")
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
-        onDispose { /* restart handled by MacroPadViewModel watcher */ }
+        onDispose { AppLog.i(TAG, "MacroPadEditor dismissed") }
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()

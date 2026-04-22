@@ -145,14 +145,14 @@ fun PillMenu(
     // Android to suppress the soft IME — making text fields un-typeable.
     if (visible) {
         DisposableEffect(Unit) {
-            AppLog.d(TAG, "PillMenu visible → stopping injectors for soft IME")
+            AppLog.i(TAG, "PillMenu visible → stopping injectors for soft IME")
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()
             onDispose {
                 // Injector restart is handled by MacroPadViewModel.watchInjectorLifecycle(),
                 // which reacts to isPillMenuOpen becoming false. No restart needed here.
-                AppLog.d(TAG, "PillMenu dismissed → injector restart handled by MacroPadViewModel watcher")
+                AppLog.i(TAG, "PillMenu dismissed → injector restart handled by MacroPadViewModel watcher")
             }
         }
     }

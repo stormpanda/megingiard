@@ -14,12 +14,18 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "MacroPadViewModel"
+
+/** Debounce window for injector restart to absorb rapid modal open→close→open sequences. */
+private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
 /**
  * ViewModel for [MacroPadScreen] — manages multi-injector lifecycle
@@ -57,13 +63,19 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                 AppStateManager.isAmbientSettingsActive,
             ) { pillMenu, editor, ambient ->
                 pillMenu || editor || ambient
-            }.collect { anyOpen ->
+            }.distinctUntilChanged()
+            .collectLatest { anyOpen ->
                 if (anyOpen) {
-                    AppLog.d(TAG, "modal open \u2192 stopping injectors")
+                    AppLog.i(TAG, "modal open \u2192 stopping injectors")
                     KeyInjector.stop()
                     GamepadInjector.stop()
                     MouseInjector.stop()
                 } else {
+                    // Absorb rapid transitions (e.g. PillMenu closes then Editor opens
+                    // in the same frame).  collectLatest will cancel this branch
+                    // if anyOpen becomes true within the delay window, preventing
+                    // a spurious injector restart from racing ahead of the modal open.
+                    delay(INJECTOR_RESTART_DEBOUNCE_MS)
                     withContext(Dispatchers.IO) {
                         val ap = MacroPadState.activeProfile.value
                         AppLog.i(TAG, "all modals closed \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")

@@ -106,13 +106,13 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     // MacroPadViewModel.watchInjectorLifecycle() detects isAmbientSettingsActive=false
     // and restarts injectors automatically when this screen is dismissed.
     DisposableEffect(Unit) {
-        AppLog.d(TAG, "AmbientSettingsOverlay visible → stopping injectors")
+        AppLog.i(TAG, "AmbientSettingsOverlay visible \u2192 stopping injectors")
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
             AppStateManager.setAmbientPreviewConfig(null)
-            AppLog.d(TAG, "AmbientSettingsOverlay dismissed → injector restart handled by MacroPadViewModel watcher")
+            AppLog.i(TAG, "AmbientSettingsOverlay dismissed \u2192 injector restart handled by MacroPadViewModel watcher")
         }
     }
 
