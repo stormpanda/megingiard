@@ -9,23 +9,14 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.GamepadInjector
+import com.stormpanda.megingiard.macropad.InjectorLifecycleWatcher
 import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private const val TAG = "MacroPadViewModel"
-
-/** Debounce window for injector restart to absorb rapid modal open→close→open sequences. */
-private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
 /**
  * ViewModel for [MacroPadScreen] — manages multi-injector lifecycle
@@ -35,9 +26,9 @@ private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L
  *   - Stop immediately whenever any blocking modal opens (Pill Menu, Editor, Ambient Settings).
  *   - Restart as soon as ALL three are closed simultaneously.
  *
- * [watchInjectorLifecycle] is the single authoritative restart path.
- * [MacroPadEditor] and [AmbientSettingsOverlay] only stop injectors on entry;
- * they do NOT restart on exit — this watcher handles that.
+ * [watchInjectorLifecycle] delegates to [InjectorLifecycleWatcher] — the canonical
+ * restart path. [MacroPadEditor] and [AmbientSettingsOverlay] only stop injectors
+ * on entry; they do NOT restart on exit — the watcher handles that.
  */
 class MacroPadViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -56,36 +47,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
      * When all modals closed  → restart injectors for the active profile.
      */
     fun watchInjectorLifecycle(context: Context) {
-        viewModelScope.launch {
-            combine(
-                AppStateManager.isPillMenuOpen,
-                AppStateManager.isEditorActive,
-                AppStateManager.isAmbientSettingsActive,
-            ) { pillMenu, editor, ambient ->
-                pillMenu || editor || ambient
-            }.distinctUntilChanged()
-            .collectLatest { anyOpen ->
-                if (anyOpen) {
-                    AppLog.i(TAG, "modal open \u2192 stopping injectors")
-                    KeyInjector.stop()
-                    GamepadInjector.stop()
-                    MouseInjector.stop()
-                } else {
-                    // Absorb rapid transitions (e.g. PillMenu closes then Editor opens
-                    // in the same frame).  collectLatest will cancel this branch
-                    // if anyOpen becomes true within the delay window, preventing
-                    // a spurious injector restart from racing ahead of the modal open.
-                    delay(INJECTOR_RESTART_DEBOUNCE_MS)
-                    withContext(Dispatchers.IO) {
-                        val ap = MacroPadState.activeProfile.value
-                        AppLog.i(TAG, "all modals closed \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-                        if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                        if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                        if (ap?.enableMouse == true) MouseInjector.start(context)
-                    }
-                }
-            }
-        }
+        InjectorLifecycleWatcher(viewModelScope, context).start()
     }
 
     fun stopInjectors() {
