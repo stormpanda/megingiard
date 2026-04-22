@@ -509,6 +509,26 @@ options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
 startActivity(intent, options.toBundle())
 \`\`\`
 
+### 9.5a CaptureRequestActivity — mandatory `configChanges`
+
+`CaptureRequestActivity` **must** declare `android:configChanges` for keyboard-related
+events in `AndroidManifest.xml`:
+
+```xml
+android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
+```
+
+**Why:** `MacroPadViewModel.watchInjectorLifecycle()` stops all injectors (including
+`KeyInjector`) when any modal screen opens, and restarts them when all modals are
+closed. `KeyInjector` registers and unregisters a virtual keyboard device via
+`/dev/uinput`. Adding or removing this device triggers a `keyboard`/`keyboardHidden`
+configuration change in Android. Without `configChanges`, `CaptureRequestActivity`
+would be **recreated** by this config change while the MediaProjection system dialog
+is open — which breaks the `ActivityResult` contract and delivers an immediate
+`RESULT_CANCELED`, closing the consent dialog before the user can interact with it.
+On AYN Thor OEM firmware the same config change also causes the app window to lose
+focus (visible as the app being minimized).
+
 ### 9.6 MirrorPresentationLifecycleOwner — Setup & Teardown
 
 **Setup:** After creating the `MirrorPresentationLifecycleOwner`, inject it into the Presentation's DecorView _before_ setting any `ComposeView` content:

@@ -32,8 +32,9 @@ private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L
  * and hit-test engine.
  *
  * Injector lifecycle rule:
- *   - Stop immediately whenever any blocking modal opens (Pill Menu, Editor, Ambient Settings).
- *   - Restart as soon as ALL three are closed simultaneously.
+ *   - Stop immediately whenever any blocking modal opens (Pill Menu, Editor, Ambient Settings)
+ *     or a system prompt is in flight (e.g. MediaProjection consent dialog).
+ *   - Restart as soon as all guards are clear.
  *
  * [watchInjectorLifecycle] is the single authoritative restart path.
  * [MacroPadEditor] and [AmbientSettingsOverlay] only stop injectors on entry;
@@ -52,8 +53,8 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
      * Starts a long-lived watcher that reacts to all three blocking-modal flags.
      * Called once from [MacroPadScreen]'s LaunchedEffect(Unit).
      *
-     * When any modal is open  → stop all injectors immediately.
-     * When all modals closed  → restart injectors for the active profile.
+     * When any modal is open or a system prompt is in flight → stop all injectors immediately.
+     * When all guards are clear → restart injectors for the active profile.
      */
     fun watchInjectorLifecycle(context: Context) {
         viewModelScope.launch {
@@ -61,8 +62,9 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                 AppStateManager.isPillMenuOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isAmbientSettingsActive,
-            ) { pillMenu, editor, ambient ->
-                pillMenu || editor || ambient
+                AppStateManager.promptInFlight,
+            ) { pillMenu, editor, ambient, prompt ->
+                pillMenu || editor || ambient || prompt
             }.distinctUntilChanged()
             .collectLatest { anyOpen ->
                 if (anyOpen) {
