@@ -46,6 +46,8 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 import java.util.UUID
 
+private const val TAG = "PadButtonEditDialog"
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Button Edit Dialog
 // ─────────────────────────────────────────────────────────────────────────────

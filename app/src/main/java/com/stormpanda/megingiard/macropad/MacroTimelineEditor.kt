@@ -57,6 +57,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.sqrt
 
+private const val TAG = "MacroTimelineEditor"
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,8 +73,6 @@ private const val MT_TICK_INTERVAL_MS          = 500L   // vertical grid line in
 private const val MT_STEP_BAR_PADDING          = 2f     // px padding inside each bar
 private const val MT_AXIS_TEXT_SIZE_SP          = 11    // sp — scaled at runtime via density/fontScale
 private const val MT_BAR_CORNER_RADIUS         = 4      // dp
-private val MT_COLOR_JOYSTICK                  = Color(0xFFFF9800) // orange — fallback, overridden at call sites via AppColors
-private val MT_COLOR_DPAD                      = Color(0xFF2196F3) // blue — fallback, overridden at call sites via AppColors
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lane assignment — greedy; assigns each step (sorted by startTimeMs) to the
@@ -307,7 +307,7 @@ internal fun MacroTimelineEditor(
                     }
                     deleteStepIndex = null
                 }) {
-                    Text(stringResource(R.string.macropad_editor_confirm), color = Color(0xFFCF6679))
+                    Text(stringResource(R.string.macropad_editor_confirm), color = colors.error)
                 }
             },
             dismissButton = {

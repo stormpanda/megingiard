@@ -34,6 +34,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.ui.LocalAppColors
 
+private const val TAG = "PadActionPicker"
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Action category enum
 // ─────────────────────────────────────────────────────────────────────────────

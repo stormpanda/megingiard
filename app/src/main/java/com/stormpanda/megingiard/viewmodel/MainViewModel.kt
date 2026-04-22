@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.config.ConfigManager
@@ -30,8 +31,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Config import/export ────────────────────────────────────────────────
     suspend fun parseImportUri(context: Context, uri: Uri): Result<MegingiardExport> {
+        AppLog.i(TAG, "parseImportUri uri=$uri")
         return withContext(Dispatchers.IO) {
-            ConfigManager.readFromUri(context, uri)
+            ConfigManager.readFromUri(context, uri).also { result ->
+                if (result.isSuccess) AppLog.i(TAG, "parseImportUri succeeded")
+                else AppLog.w(TAG, "parseImportUri failed: ${result.exceptionOrNull()}")
+            }
         }
     }
 
@@ -39,5 +44,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setInAppParsedImport(export: MegingiardExport) = ConfigManager.setInAppParsedImport(export)
     fun clearPendingImport() = ConfigManager.clearPendingImport()
     fun clearInAppPendingImport() = ConfigManager.clearInAppPendingImport()
-    suspend fun applyImport(export: MegingiardExport) = ConfigManager.applyImport(export)
+    suspend fun applyImport(export: MegingiardExport) {
+        AppLog.i(TAG, "applyImport")
+        ConfigManager.applyImport(export)
+    }
 }

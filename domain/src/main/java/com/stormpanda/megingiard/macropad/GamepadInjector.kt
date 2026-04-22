@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
+import com.stormpanda.megingiard.AppLog
+
+private const val TAG = "GamepadInjector"
 
 /**
  * Public facade for gamepad button injection.
@@ -10,8 +13,15 @@ import android.content.Context
  */
 object GamepadInjector {
 
-    fun start(context: Context) = ShellGamepadInjector.start(context)
-    fun stop()                  = ShellGamepadInjector.stop()
+    fun start(context: Context) {
+        AppLog.i(TAG, "start()")
+        ShellGamepadInjector.start(context)
+    }
+
+    fun stop() {
+        AppLog.i(TAG, "stop()")
+        ShellGamepadInjector.stop()
+    }
 
     val isRunning: Boolean get() = ShellGamepadInjector.isRunning
 

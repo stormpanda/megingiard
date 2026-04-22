@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.input
 
 import android.content.Context
+import com.stormpanda.megingiard.AppLog
+
+private const val TAG = "MouseInjector"
 
 /**
  * Public facade for mouse injection (clicks + relative pointer movement).
@@ -11,8 +14,15 @@ import android.content.Context
  */
 object MouseInjector {
 
-    fun start(context: Context) = ShellMouseInjector.start(context)
-    fun stop()                  = ShellMouseInjector.stop()
+    fun start(context: Context) {
+        AppLog.i(TAG, "start()")
+        ShellMouseInjector.start(context)
+    }
+
+    fun stop() {
+        AppLog.i(TAG, "stop()")
+        ShellMouseInjector.stop()
+    }
 
     val isRunning: Boolean get() = ShellMouseInjector.isRunning
 

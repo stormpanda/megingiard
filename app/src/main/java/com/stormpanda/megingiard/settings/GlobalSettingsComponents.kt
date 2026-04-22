@@ -36,6 +36,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
 import java.util.Locale
 
+private const val TAG = "GlobalSettingsComponents"
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────

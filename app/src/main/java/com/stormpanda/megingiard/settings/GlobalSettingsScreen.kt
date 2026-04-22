@@ -64,6 +64,8 @@ import java.time.LocalDate
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+private const val TAG = "GlobalSettingsScreen"
+
 // ── In-tree dialog constants ──────────────────────────────────────────────────
 // Dialogs must NOT use Compose AlertDialog (which creates an Android sub-window)
 // because MirrorPresentation has no valid Activity window token for sub-windows.

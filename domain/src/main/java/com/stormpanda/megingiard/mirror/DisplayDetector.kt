@@ -2,7 +2,7 @@ package com.stormpanda.megingiard.mirror
 
 import android.content.Context
 import android.hardware.display.DisplayManager
-import android.view.Display
+import android.view.Display // hardware abstraction, not a UI component — accepted :domain exception
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 

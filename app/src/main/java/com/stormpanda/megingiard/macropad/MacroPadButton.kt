@@ -46,6 +46,8 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
+private const val TAG = "MacroPadButton"
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,7 +69,9 @@ private const val MP_RELEASE_ANIM_MS = 160
 private const val MP_BTN_GRADIENT_OUTER = 0.7f
 private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_ALPHA
 
-// Neutral (theme-independent) ambient button style
+// Neutral (theme-independent) ambient button style — intentionally NOT derived from AppColors;
+// these are muted, always-dim values designed to look unobtrusive on any background color and
+// are identical across all palettes (Dark / Light / Cyberpunk).
 private val MP_AMBIENT_NEUTRAL_BG     = Color.White
 private val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
 private val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
