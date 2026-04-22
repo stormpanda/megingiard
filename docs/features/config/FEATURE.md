@@ -9,11 +9,14 @@
 
 ### Overview
 
-The Configuration Export / Import feature lets users export a single MacroPad **profile** (layouts, buttons, and macros) to a portable `.mgrd` file, and import it on the same device or share it with other Megingiard users ("community configs"). Theme settings are not exported — they are global.
+The Configuration Export / Import feature lets users save the complete application state — all
+tool settings and MacroPad profiles / macros — to a portable `.mgrd` file, and restore it on
+the same device or share it with other Megingiard users ("community configs").
 
-### FR-CF1: Per-Profile Export
+### FR-CF1: Full App Configuration Export
 
-- The user MUST be able to export a **single selected profile** (layouts, buttons, and macros) to a `.mgrd` file. Theme and global settings are not included.
+- The user MUST be able to export all app settings (Global, Mirror, Touchpad, Keyboard) and all
+  MacroPad profiles (each containing its own macros) to a single `.mgrd` file.
 - The export file MUST be created via the Android Storage Access Framework (SAF) so the user
   controls the destination folder.
 - The user MAY optionally provide author, description, and comma-separated tags before exporting
@@ -38,10 +41,12 @@ The Configuration Export / Import feature lets users export a single MacroPad **
 
 ### FR-CF3: Conflict-Free Side-by-Side Import
 
-- Imported MacroPad profiles (with embedded layouts and macros) MUST be added alongside existing profiles
+- Imported MacroPad profiles (with embedded macros) MUST be added alongside existing items
   with new UUIDs — never merging or overwriting existing data.
 - Imported profiles and their macros MUST receive an `" (Imported)"` suffix appended to their names
   to help users identify them.
+- Tool settings (Global, Mirror, Touchpad, Keyboard) that are present in the file ARE applied
+  directly, overwriting current values; this is expected for a "restore settings" workflow.
 
 ### FR-CF4: Schema Versioning
 

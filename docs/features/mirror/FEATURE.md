@@ -8,7 +8,7 @@
 
 ### Overview
 
-The Screen Mirror feature provides a real-time, hardware-accelerated mirror of the primary display rendered as an **Ambient Display** on the secondary screen behind the MacroPad buttons. Mirroring is started and stopped via a `MirrorPlayStop` button action on the MacroPad — it is not a standalone mode and does not launch automatically.
+The Screen Mirror feature provides a permanent, real-time, hardware-accelerated mirror of the primary display on the secondary screen. It is the default tool at app launch.
 
 ### FR-M1: Live Screen Mirroring
 
@@ -53,24 +53,24 @@ The Screen Mirror feature provides a real-time, hardware-accelerated mirror of t
 - Stopping MUST release the `MediaProjection` and cease all capture activity.
 - After stopping, Megingiard (on the secondary display) shows a "Start Mirroring" button to re-initiate capture with a new consent flow.
 
-### FR-M6: Viewport Edit Mode
+### FR-M6: View Lock
 
-- A `MirrorViewportEdit` MacroPad button action MUST activate a temporary **Viewport Edit mode**.
-- In Viewport Edit mode, the mirror image fills the entire secondary screen.
-- **Pinch-to-Zoom** and **drag-to-pan** gestures MUST be active, allowing the user to adjust which portion of the primary display is visible.
-- A **floating X button** in the top-right corner MUST close Viewport Edit mode and return to the MacroPad.
-- The viewport (`scale`, `offsetX`, `offsetY`) MUST be **saved per layout** in `PadLayout.mirrorSavedScale`, `PadLayout.mirrorSavedOffsetX`, and `PadLayout.mirrorSavedOffsetY`, and restored automatically when the layout is next active.
+- A **Lock** button MUST be available in the controls overlay.
+- When locked, all pan and zoom gestures MUST be disabled, including double-tap reset.
+- Unlocking MUST restore full pan/zoom functionality.
+- If **Touch Projection** is active when the user taps the Lock button (to unlock), Touch Projection MUST also be deactivated.
 
 ### FR-M7: Touch Projection
 
 - A **Touch Projection** button MUST be available in the controls overlay.
-- When active, all touch events on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Fullscreen Mouse Overlay.
+- When active, all touch events on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
 - The projected touch position MUST account for the current **zoom level and pan offset**: a user touching a zoomed-in area MUST interact with the correct pixel on the primary display, not the raw viewport pixel.
 - Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the overlay.
 - When the user's finger moves outside the visible content area (due to zoom), an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
+- Activating Touch Projection MUST automatically activate View Lock (zoom/pan during forwarding is not supported).
 - While Touch Projection is active, normal touches (outside the edge zone) MUST NOT show the control button row — only edge-swipe reveals the buttons, reducing visual distraction during precise input.
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
-- All injection state MUST be reset when mirroring is stopped.
+- All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
 
 ---
 
@@ -230,7 +230,7 @@ A fourth `pointerInput` block, placed last in the modifier chain (innermost = fi
 | `ShellInputInjector.kt` | Native binary lifecycle, writer thread, MOVE coalescing                |
 | `TouchInjector.kt`      | `start / stop / injectTouch` facade with hardware coordinate transform |
 
-Both Mirror Touch Projection and the Fullscreen Mouse Overlay use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both; only one can be active at a time by design.
+Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both features; only one can be active at a time by design (they correspond to separate `AppMode` values).
 
 **Lifecycle:**
 

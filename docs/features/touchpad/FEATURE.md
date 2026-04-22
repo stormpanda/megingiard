@@ -1,4 +1,4 @@
-# Feature: Fullscreen Mouse Overlay
+# Feature: Virtual Touchpad
 
 > **Related source:** `app/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `app/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
 > **Native source:** `app/src/main/cpp/touchinjector.c`
@@ -11,19 +11,17 @@
 
 ### Overview
 
-The Fullscreen Mouse Overlay is triggered by a MacroPad button with the `FullScreenMouse(sensitivity)` action. It replaces the MacroPad with a fullscreen relative-mouse surface on the secondary display, forwarding relative cursor movement and click events to the primary display in real-time. Absolute touch forwarding is not supported — only relative mouse mode exists.
+The Virtual Touchpad feature turns the secondary display into a touch surface that forwards input events to the primary display in real-time — enabling the user to control the primary screen from the secondary one without obstructing the primary screen view.
 
-The overlay is closed by swiping the Idle Pill, which reveals an "x close" label.
+### FR-T1: Touch Surface
 
-### FR-T1: Fullscreen Mouse Surface
-
-- The secondary display MUST show a fullscreen touch surface when the overlay is active.
-- Touch movement on this surface MUST be translated into **relative mouse cursor movement** on the primary display via `MouseInjector`.
-- Absolute touch forwarding is **not supported** in this mode.
+- The secondary display MUST show a **16:9 touch area** occupying the dominant portion of the screen.
+- Touch events on this surface MUST be forwarded to the primary screen's input system with minimal latency.
+- The touchpad MUST support **single-finger tap and drag** operations.
 
 ### FR-T2: Visual Feedback
 
-- A **mouse cursor indicator** (semi-transparent dot) MUST follow the finger while a touch is active.
+- A **touch indicator** (semi-transparent circle) MUST follow the finger while a touch is active.
 - The indicator MUST disappear immediately when the finger is lifted.
 
 ### FR-T3: Hint Text
@@ -39,7 +37,8 @@ The overlay is closed by swiping the Idle Pill, which reveals an "x close" label
 
 ### FR-T5: Mouse Mode
 
-- The only supported input mode is **relative mouse mode**. `MouseInjector` (shared `input/` package) is started when the overlay opens and stopped when it closes.
+- The touchpad MUST support an optional **mouse mode**, toggled via a setting, in which touch input is translated into relative mouse cursor movement instead of absolute touch forwarding.
+- In mouse mode the `TouchInjector` lifecycle MUST NOT be started; instead `MouseInjector` (shared `input/` package) is started and stopped alongside the touchpad session.
 - **Tap-to-click:** When enabled, a single short tap (below a configurable slop and time threshold) MUST send a left-button click (down + up) via `MouseInjector`.
 - **Two-finger tap:** When enabled, a two-finger short tap MUST send a right-button click via `MouseInjector`.
 - Only the **primary pointer** (first finger down) drives cursor movement; additional fingers are tracked solely for two-finger tap detection.
@@ -112,7 +111,7 @@ sensorY =  normalizedX        * 1920
 
 The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY = 0`) to the sensor's **maximum X** (`sensorX = 1080`), correcting for the 270° rotation offset. The axis swap (`X ← Y`, `Y ← X`) reflects the portrait-to-landscape re-orientation.
 
-> **Note:** The coordinate transformation and injection pipeline (`ShellInputInjector`, `TouchInjector`, `TouchAction`) have been extracted to the shared `input/` package (`com.stormpanda.megingiard.input`) so that both the Fullscreen Mouse Overlay and Mirror Touch Projection can reuse the same infrastructure. `FullscreenMouseOverlay` calls `TouchInjector` from the shared package in **touch mode**.
+> **Note:** The coordinate transformation and injection pipeline (`ShellInputInjector`, `TouchInjector`, `TouchAction`) have been extracted to the shared `input/` package (`com.stormpanda.megingiard.input`) so that both the Virtual Touchpad and Mirror Touch Projection can reuse the same infrastructure. `FullscreenMouseOverlay` calls `TouchInjector` from the shared package in **touch mode**.
 >
 > In **mouse mode** `FullscreenMouseOverlay` uses `MouseInjector` instead. Relative delta values from Compose pointer events are scaled by `TP_MOUSE_SENSITIVITY` and forwarded to `MouseInjector.moveMouse(dx, dy)`. Tap gestures (single-finger and two-finger) are detected via slop + time thresholds and mapped to LMB / RMB clicks.
 

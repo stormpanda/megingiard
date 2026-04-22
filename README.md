@@ -4,7 +4,7 @@ Welcome to **Megingiard**, a bespoke companion application specifically designed
 
 ## The Goal
 
-Megingiard is a second-screen companion app for the AYN Thor that runs **exclusively on the secondary display**. It provides a fully unified MacroPad interface where the user can place buttons for screen mirroring, virtual keyboard, mouse control, macros, and gamepad input \u2014 all accessible without touching the primary display.
+Users should be able to mirror applications running on the primary screen (such as cameras or games) to the secondary screen with hardware acceleration and "zero-copy/zero-lag". On this secondary screen ("Mirror Screen"), Megingiard offers interactive controls for seamless **Pan**, **Zoom**, and a **Freeze Frame** function.
 
 ## Documentation
 

@@ -18,47 +18,21 @@
 | **Build System**  | Gradle (Kotlin DSL), version catalog `libs.versions.toml` |
 | **Device Target** | AYN Thor dual-screen Android handheld                     |
 
-> [!CAUTION]
-> **Secondary Display Only — Non-Negotiable Constraint**
->
-> Megingiard **always** runs on the **secondary display**. Every `Activity`, `Composable`,
-> `Presentation`, `Dialog`, and overlay MUST be anchored to or rendered on the secondary
-> display (`displayId != Display.DEFAULT_DISPLAY`). This applies to all features without
-> exception.
->
-> The **only permitted exception** is when the user launches or moves the app to the primary
-> display (this cannot be prevented by the app). `MainActivity` detects
-> `displayId == Display.DEFAULT_DISPLAY` and shows a full-screen blocking overlay that
-> instructs the user to move the app to the secondary display. All input events are consumed
-> by this overlay — no functional UI is accessible. All capture auto-start paths are gated on
-> `AppStateManager.isOnValidScreen`.
->
-> **No agent may add any feature, dialog, service UI, or overlay that renders on
-> `DEFAULT_DISPLAY`.** The `CaptureRequestActivity` (MediaProjection consent dialog) is the
-> sole intentional exception and explicitly sets
-> `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)` — do not replicate this
-> pattern elsewhere.
-
 ---
 
 ## 2 Documentation Map
 
-| Document                            | Purpose                                                                          |
-| ----------------------------------- | -------------------------------------------------------------------------------- |
-| `README.md`                         | Project overview, feature list, quick links                                      |
-| `PRD.md`                            | Product requirements (authoritative)                                             |
-| `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                              |
-| `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                              |
-| `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation               |
-| `docs/features/macropad/FEATURE.md` | MacroPad — profiles, layouts, actions, ambient display, macros                   |
-| `docs/features/pillmenu/FEATURE.md` | Idle Pill & Pill Menu — edge-swipe routing, two-card overlay, mirror controls    |
-| `docs/features/keyboard/FEATURE.md` | Fullscreen Keyboard overlay — functional requirements & technical implementation |
-| `docs/features/touchpad/FEATURE.md` | Fullscreen Mouse overlay — functional requirements & technical implementation    |
-| `docs/features/config/FEATURE.md`   | Config Export / Import — schema, SAF file picker, migration                      |
-| `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge             |
-| `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                           |
-| `docs/BUILD_NATIVE.md`              | How to rebuild the native touch-injector binary                                  |
-| `AGENTS.md` _(this file)_           | AI agent coding conventions & constraints                                        |
+| Document                            | Purpose                                                               |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| `README.md`                         | Project overview, feature list, quick links                           |
+| `PRD.md`                            | Product requirements (German, authoritative)                          |
+| `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                   |
+| `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                   |
+| `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation    |
+| `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
+| `docs/features/keyboard/FEATURE.md` | Virtual Keyboard — functional requirements & technical implementation |
+| `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                |
+| `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge  |
 
 > [!IMPORTANT]
 > **Mandatory doc-sync rule — applies after every code change.**
