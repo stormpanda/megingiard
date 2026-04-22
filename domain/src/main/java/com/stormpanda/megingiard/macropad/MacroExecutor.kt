@@ -17,6 +17,9 @@ private const val MAC_ABS_FULL_DEFLECTION = 32768
 // Wait after starting TouchInjector before the first injection, in milliseconds.
 private const val MAC_TOUCH_INJECTOR_INIT_MS = 200L
 
+// Wait after starting GamepadInjector before the first injection, in milliseconds.
+private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
+
 private const val TAG = "MacroExecutor"
 
 private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_UP }
@@ -82,11 +85,20 @@ object MacroExecutor {
     private suspend fun executeSuspend(macro: Macro, context: Context?) {
         val events = buildEventList(macro)
         val hasTouchEvents = events.any { it.type == MacroEventType.TOUCH_DOWN || it.type == MacroEventType.TOUCH_UP }
+        val hasGamepadEvents = events.any {
+            it.type == MacroEventType.BUTTON_DOWN || it.type == MacroEventType.BUTTON_UP ||
+            it.type == MacroEventType.JOYSTICK_SET || it.type == MacroEventType.HAT
+        }
         if (hasTouchEvents && context != null && !TouchInjector.isRunning) {
             AppLog.i(TAG, "macro has touch events → starting TouchInjector")
             TouchInjector.start(context)
-            // Allow the injector process to initialise before first injection.
             delay(MAC_TOUCH_INJECTOR_INIT_MS)
+        }
+        val startedGamepad = hasGamepadEvents && context != null && !GamepadInjector.isRunning
+        if (startedGamepad) {
+            AppLog.i(TAG, "macro has gamepad events → starting GamepadInjector")
+            GamepadInjector.start(context!!)
+            delay(MAC_GAMEPAD_INJECTOR_INIT_MS)
         }
         var currentTimeMs = 0L
         for (event in events) {
@@ -99,6 +111,10 @@ object MacroExecutor {
         if (hasTouchEvents) {
             AppLog.i(TAG, "macro done → stopping TouchInjector")
             TouchInjector.stop()
+        }
+        if (startedGamepad) {
+            AppLog.i(TAG, "macro done → stopping GamepadInjector")
+            GamepadInjector.stop()
         }
     }
 

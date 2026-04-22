@@ -238,7 +238,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             ButtonEditDialog(
                 button      = null,
                 accentColor = colors.accent,
-                onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
+                onEditMacro = { macro -> pendingMacroEditId = macro.id; showAddButton = false; showMacroListEditor = true },
                 onConfirm   = { newBtn ->
                     val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                     MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
@@ -260,7 +260,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             ButtonEditDialog(
                 button      = editingButton,
                 accentColor = colors.accent,
-                onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
+                onEditMacro = { macro -> pendingMacroEditId = macro.id; editingButtonActive = false; showMacroListEditor = true },
                 onConfirm   = { updated ->
                     val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                     MacroPadState.updateLayout(

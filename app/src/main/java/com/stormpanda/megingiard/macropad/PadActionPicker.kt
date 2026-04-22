@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDropDown
@@ -693,19 +695,25 @@ internal fun MacroPicker(
                 }
             }
             if (onEditMacro != null && selectedMacro != null) {
-                Box(
-                    contentAlignment = Alignment.Center,
+                Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                         .clickable { onEditMacro(selectedMacro) }
-                        .padding(10.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         Icons.Rounded.Edit,
-                        contentDescription = stringResource(R.string.cd_edit_macro),
+                        contentDescription = null,
                         tint     = accentColor,
                         modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.cd_edit_macro),
+                        color = accentColor,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
