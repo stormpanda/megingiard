@@ -1,4 +1,4 @@
-# Feature: Virtual Keyboard
+# Feature: Fullscreen Keyboard Overlay
 
 > **Related source:** `app/src/main/java/com/stormpanda/megingiard/keyboard/` (UI + injection), `app/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
 > **Native source:** `app/src/main/cpp/keyinjector.c`
@@ -11,12 +11,12 @@
 
 ### Overview
 
-The Virtual Keyboard feature turns the secondary display into a full hardware keyboard, allowing the user to type text and trigger key shortcuts on the primary screen without touching the primary display. It supports multiple regional layouts and an integrated trackpoint for cursor control.
+The Fullscreen Keyboard Overlay is triggered by a MacroPad button with the `FullScreenKeyboard(layout)` action. It replaces the MacroPad with a full virtual keyboard on the secondary display. The keyboard layout (QWERTZ/QWERTY/AZERTY) is configured per button — not in Global Settings. The overlay is closed by swiping the Idle Pill, which reveals an "x close" label.
 
 ### FR-K1: Virtual Keyboard Layout
 
 - The secondary display MUST show a **full virtual keyboard** occupying the screen.
-- The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, selectable via Settings.
+- The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, configurable per `FullScreenKeyboard` button action (not a global setting).
 - The keyboard MUST include a **number row** (0–9 with symbol alternates), a **function row** (F1–F12), **letter rows**, and a **bottom bar** with Ctrl, Meta, Alt, Space, AltGr, and arrow keys.
 - Shift and AltGr alternate labels MUST be shown on individual keys when the respective modifier is active.
 
@@ -217,5 +217,5 @@ When a full-screen UI overlay is visible:
 | `LinuxKeycodes.kt`               | Linux `input-event-codes.h` constants (A–Z, 0–9, F1–F12, modifiers, navigation)           |
 | `keyinjector.c`                  | C source for the native binary (see `docs/BUILD_NATIVE.md`)                               |
 | `keyinjector_arm64`              | Pre-built ARM64 binary asset (`app/src/main/assets/`)                                     |
-| `../input/TouchInjector.kt`      | Shared trackpoint cursor movement (reused from Virtual Touchpad)                          |
+| `../input/TouchInjector.kt`      | Shared trackpoint cursor movement (reused from the touch injection infrastructure)        |
 | `../input/ShellInputInjector.kt` | Shared touch injection infrastructure (reused by trackpoint cursor movement)              |
