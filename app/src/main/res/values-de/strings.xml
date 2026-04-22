@@ -271,6 +271,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_record_touch_dialog_message">Der Bildschirmspiegel wird gestartet (falls noch nicht aktiv). Tippe auf eine beliebige Stelle des Spiegels, um diese Position als Touch-Schritt zu speichern.</string>
     <string name="macropad_macro_record_touch_start">Starten</string>
     <string name="macropad_macro_record_touch_dont_show_again">Nicht mehr anzeigen</string>
+    <string name="macropad_macro_test_run">Testlauf</string>
+    <string name="cd_test_macro">Makro testen</string>
+    <string name="cd_edit_macro">Makro bearbeiten</string>
     <string name="cd_record_touch">Touch-Schritt aufzeichnen</string>
 
     <!-- Makro-Schritte -->

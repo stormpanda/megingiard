@@ -136,6 +136,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     var showMacroListEditor      by remember { mutableStateOf(false) }
+    var pendingMacroEditId        by remember { mutableStateOf<String?>(null) }
     var showAddButton            by remember { mutableStateOf(false) }
     var editingButton            by remember { mutableStateOf<PadButton?>(null) }
     var editingButtonActive      by remember { mutableStateOf(false) }
@@ -221,7 +222,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
         modifier = Modifier.fillMaxSize(),
     ) {
         MacroListEditor(
-            onDone = { showMacroListEditor = false },
+            onDone             = { showMacroListEditor = false; pendingMacroEditId = null },
+            initialEditMacroId = pendingMacroEditId,
         )
     }
 
@@ -236,6 +238,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             ButtonEditDialog(
                 button      = null,
                 accentColor = colors.accent,
+                onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
                 onConfirm   = { newBtn ->
                     val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                     MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
@@ -257,6 +260,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             ButtonEditDialog(
                 button      = editingButton,
                 accentColor = colors.accent,
+                onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
                 onConfirm   = { updated ->
                     val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                     MacroPadState.updateLayout(
