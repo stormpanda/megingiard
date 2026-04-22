@@ -35,8 +35,11 @@ import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
 import androidx.compose.ui.graphics.Color
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.colorSchemeFor
+import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
@@ -271,8 +274,14 @@ class MainActivity : ComponentActivity() {
             val userAccentArgb by SettingsManager.accentColor.collectAsState()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
-            MaterialTheme(colorScheme = colorSchemeFor(themeMode)) {
-                CompositionLocalProvider(LocalAppColors provides appColors) {
+            MaterialTheme(
+                colorScheme = colorSchemeFor(appColors, themeMode),
+                typography = megingiardTypography
+            ) {
+                CompositionLocalProvider(
+                    LocalAppColors provides appColors,
+                    LocalAppDimens provides AppDimens()
+                ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = appColors.appBackground

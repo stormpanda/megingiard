@@ -32,10 +32,31 @@
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
 | `docs/features/keyboard/FEATURE.md` | Virtual Keyboard — functional requirements & technical implementation |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                |
+| `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge  |
 
-> **Convention:** Every feature has its own subfolder under `docs/features/<feature>/` containing a single `FEATURE.md`. This file is the **authoritative source of truth** for that feature's requirements and technical implementation. When adding a new feature, create a new subfolder and `FEATURE.md`.
-> | `docs/BUILD_NATIVE.md` | How to rebuild the native touch-injector binary |
-> | `AGENTS.md` _(this file)_ | AI agent coding conventions & constraints |
+> [!IMPORTANT]
+> **Mandatory doc-sync rule — applies after every code change.**
+>
+> After implementing any change that affects a feature’s behaviour, interface, or architecture,
+> you MUST:
+>
+> 1. Identify which `FEATURE.md` file(s) cover the changed code (use the table above).
+> 2. Read the relevant `FEATURE.md` and check whether the change invalidates any Functional
+>    Requirements or Technical Implementation section.
+> 3. Update `FEATURE.md` to reflect the change — correct outdated descriptions, remove stale
+>    requirements, add documentation for new behaviour.
+> 4. If the change is architecturally significant, also update `docs/ARCHITECTURE.md` and `PRD.md`.
+>
+> This applies to **all** changes — including bug fixes, refactors, and dependency updates that
+> affect runtime behaviour. Do not skip this step.
+
+> [!NOTE]
+> **New features — create a `FEATURE.md` first.**
+>
+> Every new feature MUST have its own `FEATURE.md` in a dedicated subfolder
+> `docs/features/<feature>/`. Use [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md)
+> as the starting point. Once created, **add a row for it to the Documentation Map table above**
+> so all agents can discover it.
 
 ---
 
@@ -488,6 +509,26 @@ options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
 startActivity(intent, options.toBundle())
 \`\`\`
 
+### 9.5a CaptureRequestActivity — mandatory `configChanges`
+
+`CaptureRequestActivity` **must** declare `android:configChanges` for keyboard-related
+events in `AndroidManifest.xml`:
+
+```xml
+android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
+```
+
+**Why:** `MacroPadViewModel.watchInjectorLifecycle()` stops all injectors (including
+`KeyInjector`) when any modal screen opens, and restarts them when all modals are
+closed. `KeyInjector` registers and unregisters a virtual keyboard device via
+`/dev/uinput`. Adding or removing this device triggers a `keyboard`/`keyboardHidden`
+configuration change in Android. Without `configChanges`, `CaptureRequestActivity`
+would be **recreated** by this config change while the MediaProjection system dialog
+is open — which breaks the `ActivityResult` contract and delivers an immediate
+`RESULT_CANCELED`, closing the consent dialog before the user can interact with it.
+On AYN Thor OEM firmware the same config change also causes the app window to lose
+focus (visible as the app being minimized).
+
 ### 9.6 MirrorPresentationLifecycleOwner — Setup & Teardown
 
 **Setup:** After creating the `MirrorPresentationLifecycleOwner`, inject it into the Presentation's DecorView _before_ setting any `ComposeView` content:
@@ -612,16 +653,104 @@ The proposal must be copy-paste ready — no placeholders. Present it as a code 
 
 ## 14 Documentation Sync After Changes
 
-After implementing any change that affects a feature's behaviour, interface, or architecture:
+> [!IMPORTANT]
+> This rule is **mandatory** and restates the requirement already announced in §2.
+> It is duplicated here for visibility during code-review checklists.
 
-1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code.
-2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change invalidates any Functional Requirements or Technical Implementation section.
-3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation. This includes:
-   - Correcting or removing outdated requirements or technical descriptions.
-   - Adding documentation for new behaviour introduced by the change.
-4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant, also review `docs/ARCHITECTURE.md` and `PRD.md`.
+After implementing any change that affects a feature’s behaviour, interface, or architecture:
 
-This rule applies to all changes, including bug fixes, refactors, and dependency updates that affect runtime behaviour.
+1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code
+   (consult the Documentation Map in §2).
+2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change
+   invalidates any Functional Requirements or Technical Implementation section.
+3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation:
+   - Correct or remove outdated requirements or technical descriptions.
+   - Add documentation for new behaviour introduced by the change.
+4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant,
+   also review `docs/ARCHITECTURE.md` and `PRD.md`.
+5. **New features** — create a new `docs/features/<feature>/FEATURE.md` using
+   [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
+   point, then **add a row to the Documentation Map table in §2**.
+
+This rule applies to all changes, including bug fixes, refactors, and dependency updates that
+affect runtime behaviour.
+
+---
+
+## 16 Design System Rules
+
+These rules encode the unified design system introduced in the typography/theming refactor.
+Every agent **must** follow them when writing or editing any Composable.
+
+### 16.1 Typography — NEVER inline `fontSize`
+
+All text sizing **must** use `MaterialTheme.typography.*`. Inline `fontSize = XX.sp`
+in Composables (outside `AppTheme.kt`) is **forbidden**.
+
+| Use case                       | Token                                                  |
+| ------------------------------ | ------------------------------------------------------ |
+| Dialog titles, section headers | `MaterialTheme.typography.titleLarge` (18sp SemiBold)  |
+| Section titles                 | `MaterialTheme.typography.titleMedium` (16sp SemiBold) |
+| Subsection titles              | `MaterialTheme.typography.titleSmall` (14sp Medium)    |
+| Macro names, list items        | `MaterialTheme.typography.bodyLarge` (15sp Normal)     |
+| Standard row labels (default)  | `MaterialTheme.typography.bodyMedium` (14sp Normal)    |
+| Secondary descriptions, hints  | `MaterialTheme.typography.bodySmall` (12sp Normal)     |
+| Button labels                  | `MaterialTheme.typography.labelLarge` (14sp Medium)    |
+| Dialog subtitles               | `MaterialTheme.typography.labelMedium` (13sp Medium)   |
+| Category headers, pill labels  | `MaterialTheme.typography.labelSmall` (11sp Normal)    |
+
+**Allowed exceptions** (must be commented):
+
+- Computed/data-driven sizes: `(11 * btn.buttonSize.cols).sp` (button label scaled by size)
+- Conditional key sizes: `if (widthWeight >= 1.5f) 11.sp else 12.sp` (keyboard key cap)
+- Internal renderers: `MaterialSymbols` size→sp conversion
+- Intentionally tiny labels below 11sp (e.g. icon name under icon picker grid at 8sp)
+
+### 16.2 Colors — NEVER hardcode `Color(0xFF...)`
+
+All colors in Composables must come from:
+
+- `LocalAppColors.current.<token>` — for app-defined semantic colors (accent, surface, error, etc.)
+- `MaterialTheme.colorScheme.<token>` — for M3 semantic colors (primary, onPrimary, etc.)
+
+**Hardcoded `Color(0xFF...)` literals in screen/composable code are forbidden.**
+
+Key token mapping:
+| Value | Token |
+|---|---|
+| `Color(0xFFCF6679)` / `Color(0xFFB00020)` | `LocalAppColors.current.error` |
+| `Color(0xFFFF9800)` (gamepad orange) | `LocalAppColors.current.actionColorGamepad` |
+| `Color(0xFF2196F3)` (system blue) | `LocalAppColors.current.actionColorSystem` |
+
+### 16.3 Spacing — Prefer named constants over bare `XX.dp`
+
+All dimension values must be extracted to `private val` constants at file scope using
+SCREAMING_SNAKE_CASE with a 2-3 letter feature prefix (e.g. `GS_SECTION_PADDING = 16.dp`).
+Bare magic `XX.dp` inline in Composable code is a code smell.
+
+### 16.4 M3 Component Colors — do NOT override what the ColorScheme provides
+
+Do **not** pass manual `colors =` overrides to M3 components when the `ColorScheme`
+already handles them correctly:
+
+```kotlin
+// ❌ WRONG — override defeats the design system
+Switch(
+    colors = SwitchDefaults.colors(checkedTrackColor = accentColor)
+)
+
+// ✅ CORRECT — let MaterialTheme.colorScheme.primary drive it
+Switch(checked = ..., onCheckedChange = ...)
+```
+
+This applies to: `Switch`, `Slider`, `Checkbox`, `RadioButton`, `OutlinedTextField`
+(border colors are OK to override via `colors =` for contextual accent).
+
+### 16.5 New Composable Parameters — no `accentColor: Color` proliferation
+
+Do **not** add `accentColor: Color` as a new Composable parameter.
+Read accent from `LocalAppColors.current.accent` or `MaterialTheme.colorScheme.primary` directly.
+Existing `accentColor` parameters in older Composables may remain until a future refactor.
 
 ---
 

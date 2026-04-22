@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,10 +38,11 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
+
+private const val TAG = "KeyboardMouseOverlay"
 
 // ---------------------------------------------------------------------------
 // Mouse overlay constants
@@ -217,7 +219,7 @@ internal fun MouseButton(
         Text(
             text = label,
             color = colors.onSurface,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
         )
     }
 }

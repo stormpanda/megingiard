@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.input
 
 import android.content.Context
+import com.stormpanda.megingiard.AppLog
+
+private const val TAG = "TouchInjector"
 
 /**
  * Shared touch injection facade used by both Touchpad and Mirror Touch Projection.
@@ -28,10 +31,12 @@ object TouchInjector {
      * Starts the native touch injector. Safe to call if already running (no-op).
      */
     fun start(context: Context) {
+        AppLog.i(TAG, "start()")
         if (!ShellInputInjector.isRunning) ShellInputInjector.start(context)
     }
 
     fun stop() {
+        AppLog.i(TAG, "stop()")
         ShellInputInjector.stop()
     }
 

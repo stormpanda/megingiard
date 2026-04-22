@@ -2,10 +2,13 @@ package com.stormpanda.megingiard.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -46,18 +50,21 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.macropad.MacroPadState
 import java.time.LocalDate
+import java.util.Locale
 import kotlinx.coroutines.launch
+
+private const val TAG = "GlobalSettingsScreen"
 
 // ── In-tree dialog constants ──────────────────────────────────────────────────
 // Dialogs must NOT use Compose AlertDialog (which creates an Android sub-window)
@@ -67,7 +74,18 @@ private const val GS_DIALOG_SCRIM_ALPHA = 0.5f
 private val GS_DIALOG_WIDTH_FRACTION = 0.85f
 private val GS_DIALOG_CORNER = 16.dp
 private val GS_DIALOG_PADDING = 20.dp
-private val GS_DIALOG_TITLE_SIZE = 16.sp
+private val GS_SECTION_CHIP_CORNER = 20.dp
+private val GS_SECTION_CHIP_H_PADDING = 12.dp
+private val GS_SECTION_CHIP_V_PADDING = 6.dp
+private val GS_SECTION_CHIP_SPACING = 8.dp
+private val GS_SECTION_CHIP_BORDER = 1.dp
+private const val GS_SECTION_CHIP_SELECTED_ALPHA = 0.85f
+private val GS_SECTION_HEADER_PADDING_H = 16.dp
+private val GS_SECTION_HEADER_PADDING_V = 10.dp
+
+private enum class SettingsSectionFilter {
+    GENERAL, APPEARANCE, DATA, CONFIGURATION
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +96,9 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val themeMode by SettingsManager.themeMode.collectAsState()
     val appLanguage by SettingsManager.appLanguage.collectAsState()
     val logLevel by SettingsManager.logLevel.collectAsState()
+    val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
+    val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
+    val showFullscreenExitHints by SettingsManager.showFullscreenExitHints.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
@@ -95,6 +116,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
 
     var showRestoreDefaultsConfirm by remember { mutableStateOf(false) }
+    var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
 
     Box(
         modifier = Modifier
@@ -130,77 +152,122 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
             ) {
-                // General section
-                SettingsCategoryHeader(
-                    text = stringResource(R.string.settings_section_general),
-                    accentColor = effectiveAccent,
-                    colors = colors
-                )
-                OverlayPositionRow(
-                    overlayAtBottom = overlayAtBottom,
-                    accentColor = effectiveAccent,
+                SectionJumpRow(
                     colors = colors,
-                    onChanged = { SettingsManager.setOverlayAtBottom(it) }
-                )
-                HorizontalDivider(color = colors.divider)
-                LanguagePickerRow(
-                    language = appLanguage,
                     accentColor = effectiveAccent,
-                    colors = colors,
-                    onChanged = { SettingsManager.setAppLanguage(it) }
+                    selectedSectionFilter = selectedSectionFilter,
+                    onSelectAll = { selectedSectionFilter = null },
+                    onSelectGeneral = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
+                    onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
+                    onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
+                    onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
                 )
-                HorizontalDivider(color = colors.divider)
-                LogLevelPickerRow(
-                    logLevel = logLevel,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onChanged = { SettingsManager.setLogLevel(it) }
-                )
-                HorizontalDivider(color = colors.divider)
-
-                // Appearance section
-                SettingsCategoryHeader(
-                    text = stringResource(R.string.settings_section_appearance),
-                    accentColor = effectiveAccent,
-                    colors = colors
-                )
-                ThemePickerRow(
-                    themeMode = themeMode,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onChanged = { SettingsManager.setThemeMode(it) }
-                )
-                if (themeMode.supportsCustomAccent) {
-                    HorizontalDivider(color = colors.divider)
-                    AccentColorRow(
-                        accentColor = accentColor,
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_general),
+                        accentColor = effectiveAccent,
                         colors = colors,
-                        onClick = { showColorPicker = true }
-                    )
+                    ) {
+                        OverlayPositionRow(
+                            overlayAtBottom = overlayAtBottom,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { SettingsManager.setOverlayAtBottom(it) }
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_show_navigation_coach_marks),
+                            description = stringResource(R.string.settings_show_navigation_coach_marks_desc),
+                            checked = showNavigationCoachMarks,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { SettingsManager.setShowNavigationCoachMarks(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_show_mirror_control_labels),
+                            description = stringResource(R.string.settings_show_mirror_control_labels_desc),
+                            checked = showMirrorControlLabels,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { SettingsManager.setShowMirrorControlLabels(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_show_fullscreen_exit_hints),
+                            description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
+                            checked = showFullscreenExitHints,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { SettingsManager.setShowFullscreenExitHints(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        LanguagePickerRow(
+                            language = appLanguage,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { SettingsManager.setAppLanguage(it) }
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        LogLevelPickerRow(
+                            logLevel = logLevel,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { SettingsManager.setLogLevel(it) }
+                        )
+                    }
                 }
 
-                // Data section
-                SettingsCategoryHeader(
-                    text = stringResource(R.string.settings_section_data),
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                )
-                ConfigActionRow(
-                    label = stringResource(R.string.settings_restore_defaults),
-                    description = stringResource(R.string.settings_restore_defaults_desc),
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onClick = { showRestoreDefaultsConfirm = true },
-                )
-                HorizontalDivider(color = colors.divider)
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_appearance),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        ThemePickerRow(
+                            themeMode = themeMode,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { SettingsManager.setThemeMode(it) }
+                        )
+                        if (themeMode.supportsCustomAccent) {
+                            HorizontalDivider(color = colors.divider)
+                            AccentColorRow(
+                                accentColor = accentColor,
+                                colors = colors,
+                                onClick = { showColorPicker = true }
+                            )
+                        }
+                    }
+                }
 
-                // Configuration section (export / import)
-                ConfigSection(
-                    colors = colors,
-                    accentColor = effectiveAccent,
-                    onShowExportDialog = { showExportMetadataDialog = true },
-                    onImportPreviewReady = { showImportPreviewDialog = it },
-                )
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DATA) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_data),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        ConfigActionRow(
+                            label = stringResource(R.string.settings_restore_defaults),
+                            description = stringResource(R.string.settings_restore_defaults_desc),
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onClick = { showRestoreDefaultsConfirm = true },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_config),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        ConfigSection(
+                            colors = colors,
+                            accentColor = effectiveAccent,
+                            onShowExportDialog = { showExportMetadataDialog = true },
+                            onImportPreviewReady = { showImportPreviewDialog = it },
+                        )
+                    }
+                }
             }
         }
         // ── In-tree overlays (work in Activity and MirrorPresentation contexts) ─────
@@ -310,6 +377,118 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     }
 }
 
+@Composable
+private fun SectionJumpRow(
+    colors: AppColors,
+    accentColor: Color,
+    selectedSectionFilter: SettingsSectionFilter?,
+    onSelectAll: () -> Unit,
+    onSelectGeneral: () -> Unit,
+    onSelectAppearance: () -> Unit,
+    onSelectData: () -> Unit,
+    onSelectConfig: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GS_SECTION_CHIP_SPACING),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_filter_label),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_all),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == null,
+            onClick = onSelectAll,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_general),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.GENERAL,
+            onClick = onSelectGeneral,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_appearance),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.APPEARANCE,
+            onClick = onSelectAppearance,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_data),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.DATA,
+            onClick = onSelectData,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_config),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
+            onClick = onSelectConfig,
+        )
+    }
+}
+
+@Composable
+private fun SectionJumpChip(
+    label: String,
+    colors: AppColors,
+    accentColor: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Text(
+        text = label,
+        color = if (selected) colors.onAccent else colors.onControlOverlay,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        modifier = Modifier
+            .background(
+                color = if (selected) accentColor.copy(alpha = GS_SECTION_CHIP_SELECTED_ALPHA) else colors.navPillBody.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
+            )
+            .border(
+                width = GS_SECTION_CHIP_BORDER,
+                color = if (selected) accentColor else colors.controlOverlayBorder,
+                shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = GS_SECTION_CHIP_H_PADDING, vertical = GS_SECTION_CHIP_V_PADDING),
+    )
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    accentColor: Color,
+    colors: AppColors,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Text(
+        text = title.uppercase(Locale.ROOT),
+        color = accentColor,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surfaceVariant)
+            .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
+    )
+    Column { content() }
+    HorizontalDivider(color = colors.divider)
+}
+
 /**
  * Configuration export / import section.
  *
@@ -336,11 +515,6 @@ private fun ConfigSection(
         if (pendingImport != null) onImportPreviewReady(pendingImport!!)
     }
 
-    SettingsCategoryHeader(
-        text = stringResource(R.string.settings_section_config),
-        accentColor = accentColor,
-        colors = colors,
-    )
     ConfigActionRow(
         label = stringResource(R.string.settings_config_export),
         description = stringResource(R.string.settings_config_export_desc),
@@ -375,11 +549,11 @@ private fun ExportMetadataDialog(
     var description by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf("") }
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = accentColor,
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
         unfocusedBorderColor = colors.divider,
-        focusedLabelColor = accentColor,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
         unfocusedLabelColor = colors.onSurfaceSecondary,
-        cursorColor = accentColor,
+        cursorColor = MaterialTheme.colorScheme.primary,
         focusedTextColor = colors.onSurface,
         unfocusedTextColor = colors.onSurface,
     )
@@ -414,12 +588,12 @@ private fun ExportMetadataDialog(
             Text(
                 text = stringResource(R.string.config_export_dialog_title),
                 color = colors.onSurface,
-                fontSize = GS_DIALOG_TITLE_SIZE,
+                style = MaterialTheme.typography.titleMedium,
             )
             OutlinedTextField(
                 value = author,
                 onValueChange = { author = it },
-                label = { Text(stringResource(R.string.config_export_author), fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.config_export_author), style = MaterialTheme.typography.bodySmall) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
@@ -429,7 +603,7 @@ private fun ExportMetadataDialog(
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text(stringResource(R.string.config_export_description), fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.config_export_description), style = MaterialTheme.typography.bodySmall) },
                 maxLines = 3,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
@@ -439,7 +613,7 @@ private fun ExportMetadataDialog(
             OutlinedTextField(
                 value = tags,
                 onValueChange = { tags = it },
-                label = { Text(stringResource(R.string.config_export_tags), fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.config_export_tags), style = MaterialTheme.typography.bodySmall) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors,
@@ -491,14 +665,14 @@ private fun ImportPreviewDialog(
             Text(
                 text = stringResource(R.string.config_import_title),
                 color = colors.onSurface,
-                fontSize = GS_DIALOG_TITLE_SIZE,
+                style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(4.dp))
             if (!metadata.author.isNullOrBlank()) {
                 Text(
                     text = stringResource(R.string.config_import_meta_author, metadata.author!!),
                     color = colors.onSurface,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
             val description = metadata.description
@@ -506,49 +680,49 @@ private fun ImportPreviewDialog(
                 Text(
                     text = description,
                     color = colors.onSurfaceSecondary,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             if (metadata.tags.isNotEmpty()) {
                 Text(
                     text = "${stringResource(R.string.config_import_tags_label)}: ${metadata.tags.joinToString(", ")}",
                     color = colors.onSurfaceSecondary,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.config_import_sections_label),
                 color = colors.onSurface,
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.labelMedium,
             )
             if ("global" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("mirror" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("touchpad" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("keyboard" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if ("macropad_settings" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, fontSize = 12.sp)
+                Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                 Text(
                     text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.profiles.sumOf { it.macros.size })}",
                     color = colors.onSurfaceSecondary,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.config_import_warning),
                 color = colors.onSurfaceSecondary,
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -591,9 +765,9 @@ private fun InTreeMessageDialog(
                 .padding(GS_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(title, color = colors.onSurface, fontSize = GS_DIALOG_TITLE_SIZE)
+            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
             if (text.isNotBlank()) {
-                Text(text, color = colors.onSurfaceSecondary, fontSize = 13.sp)
+                Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -639,9 +813,9 @@ private fun InTreeConfirmDialog(
                 .padding(GS_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(title, color = colors.onSurface, fontSize = GS_DIALOG_TITLE_SIZE)
+            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
             if (text.isNotBlank()) {
-                Text(text, color = colors.onSurfaceSecondary, fontSize = 13.sp)
+                Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),

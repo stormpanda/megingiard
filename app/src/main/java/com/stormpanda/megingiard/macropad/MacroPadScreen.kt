@@ -1,19 +1,24 @@
 package com.stormpanda.megingiard.macropad
 
-import android.widget.Toast
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,11 +35,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
+
+import kotlinx.coroutines.delay
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -47,6 +54,8 @@ private const val MP_TRACKPOINT_SENSITIVITY = 3f
 
 // Sensitivity of scroll wheel drag: px per scroll unit sent
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
+private const val MP_DISABLED_FEEDBACK_HIDE_MS = 1800L
+private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
 
 private const val TAG = "MacroPadScreen"
 
@@ -61,10 +70,13 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val profile     by viewModel.activeProfile.collectAsState()
     val layout      by viewModel.activeLayout.collectAsState()
     val colors      = LocalAppColors.current
+    var disabledFeedbackResId by remember { mutableIntStateOf(0) }
+    var disabledFeedbackTrigger by remember { mutableIntStateOf(0) }
+    var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
 
-    // Start injectors after the pill menu has closed
+    // Single watcher that starts/stops injectors reactively based on all modal flags
     LaunchedEffect(Unit) {
-        viewModel.startInjectors(context)
+        viewModel.watchInjectorLifecycle(context)
     }
 
     // Stop all injectors and reset peek state when leaving MACROPAD mode
@@ -85,7 +97,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
             Text(
                 text      = stringResource(R.string.macropad_no_profile),
                 color     = colors.onSurfaceSecondary,
-                fontSize  = 14.sp,
+                style     = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 modifier  = Modifier.padding(32.dp),
             )
@@ -94,8 +106,37 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 profile     = p,
                 layout      = l,
                 accentColor = colors.accent,
+                onDisabledActionFeedback = { resId ->
+                    val now = SystemClock.elapsedRealtime()
+                    if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
+                    lastFeedbackAtMs = now
+                    disabledFeedbackResId = resId
+                    disabledFeedbackTrigger += 1
+                    AppLog.d(TAG, "show disabled action feedback: resId=$resId")
+                },
             )
         }
+
+        if (disabledFeedbackResId != 0) {
+            Text(
+                text = stringResource(disabledFeedbackResId),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 12.dp)
+                    .fillMaxWidth(0.8f)
+                    .background(colors.surface.copy(alpha = 0.92f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
+    }
+
+    LaunchedEffect(disabledFeedbackTrigger) {
+        if (disabledFeedbackTrigger == 0) return@LaunchedEffect
+        delay(MP_DISABLED_FEEDBACK_HIDE_MS)
+        disabledFeedbackResId = 0
     }
 }
 
@@ -111,10 +152,10 @@ internal fun PadSurface(
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
     neutralStyle: Boolean = false,
+    onDisabledActionFeedback: (Int) -> Unit = {},
 ) {
     val viewModel: MacroPadViewModel = viewModel()
     val density      = LocalDensity.current
-    val context      = LocalContext.current
     val colors       = LocalAppColors.current
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
     val isPillMenuOpen      by viewModel.isPillMenuOpen.collectAsState()
@@ -171,7 +212,7 @@ internal fun PadSurface(
                                                     disabledBtn.action, profile
                                                 )
                                                 if (msgRes != null) {
-                                                    Toast.makeText(context, msgRes, Toast.LENGTH_SHORT).show()
+                                                    onDisabledActionFeedback(msgRes)
                                                 }
                                             }
                                         }
@@ -219,5 +260,3 @@ internal fun PadSurface(
         }
     }
 }
-
-

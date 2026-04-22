@@ -76,6 +76,7 @@ Each button supports one of the following actions:
 
 - The MacroPad MUST support **simultaneous presses** of multiple buttons via multi-touch.
 - Each finger is independently tracked by `PointerId`; down and up events are matched per pointer so no button is accidentally stuck in the pressed state.
+- Attempting to press a button whose required injector type is disabled MUST show a temporary inline feedback message in the MacroPad surface.
 
 ### FR-P6: No Special Permissions Required
 
@@ -104,7 +105,7 @@ Each button supports one of the following actions:
 - A new layout can be created as **blank** or from a **template**. The template picker (`NewLayoutOverlay`) lists all layouts from all profiles; selecting one deep-copies its buttons with new UUIDs.
 - Quick layout creation from the **PillMenu** creates a blank layout with a user-provided name (no template selection).
 - Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all enabled layouts** in the profile (via `withSyncedDeviceFlags()`).
-- Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). Profiles loaded from older saves without a `layouts` list are migrated: a default layout named "Layout 1" is created containing the profile's legacy `buttons` list.
+- Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). If a stored `PadProfile` does not contain a `layouts` list, a default layout named "Layout 1" is created on load, populated with the profile's top-level `buttons` list.
 
 ### FR-P9: Ambient Display
 
@@ -127,7 +128,7 @@ Each button supports one of the following actions:
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
 - **Button theme style** (`macropad_ambient_apply_theme`, default: off): A checkbox visible only when Ambient Display is enabled controls whether MacroPad buttons in the Ambient overlay use the active app theme or a neutral, theme-independent style.
   - **Default (off / neutral style):** All buttons are rendered with a soft grey outline (`#AAAAAA`), a colourless white background at the standard press-animation alpha (0.25 / 0.80), and near-white text/icons (`#DDDDDD` at 90% opacity). This style is identical across all themes (DARK, LIGHT, CYBERPUNK).
-  - **Checked (apply theme):** Buttons use the normal themed accent colour and `onSurface` token exactly as in regular MacroPad mode — the previous default behaviour.
+  - **Checked (apply theme):** Buttons use the normal themed accent colour and `onSurface` token exactly as in regular MacroPad mode.
   - The neutral style is implemented via a `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. It is only set to `true` inside `AmbientMacroPadOverlay`; regular `MacroPadScreen` always uses `neutralStyle = false`.
 
 ### FR-P10: Optional Button Icons

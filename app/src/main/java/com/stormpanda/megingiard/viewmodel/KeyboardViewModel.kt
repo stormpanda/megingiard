@@ -12,6 +12,8 @@ import com.stormpanda.megingiard.keyboard.KeyRepeatController
 import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
+import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -25,12 +27,13 @@ private const val TAG = "KeyboardViewModel"
  */
 class KeyboardViewModel(application: Application) : AndroidViewModel(application) {
 
-    val kbLayout: StateFlow<com.stormpanda.megingiard.keyboard.KbLayout> = SettingsManager.kbLayout
+    val kbLayout: StateFlow<KbLayout> = SettingsManager.kbLayout
     val kbRepeatEnabled: StateFlow<Boolean> = SettingsManager.kbRepeatEnabled
     val kbTrackpointEnabled: StateFlow<Boolean> = SettingsManager.kbTrackpointEnabled
     val kbFullscreen: StateFlow<Boolean> = SettingsManager.kbFullscreen
-    val kbMouseBtnPos: StateFlow<com.stormpanda.megingiard.keyboard.KbMouseBtnPos> = SettingsManager.kbMouseBtnPos
+    val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = SettingsManager.kbMouseBtnPos
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
+    val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
 
     val controller = KeyRepeatController(viewModelScope)

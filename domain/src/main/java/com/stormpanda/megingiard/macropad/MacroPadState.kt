@@ -15,6 +15,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 private const val TAG = "MacroPadState"
+private const val MP_DEFAULT_PROFILE_NAME = "Profile"
+private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
+
+private fun List<String>.nextUniqueName(baseName: String, fallback: String): String {
+    val normalizedBase = baseName.trim().ifBlank { fallback }
+    if (none { it.equals(normalizedBase, ignoreCase = true) }) return normalizedBase
+    var index = 2
+    while (true) {
+        val candidate = "$normalizedBase ($index)"
+        if (none { it.equals(candidate, ignoreCase = true) }) return candidate
+        index += 1
+    }
+}
 
 /**
  * Recomputes [PadProfile.enableKeyboard], [PadProfile.enableGamepad], and [PadProfile.enableMouse]
@@ -131,9 +144,16 @@ object MacroPadState {
     // ─────────────────────────────────────────────────────────────────────────
 
     fun addProfile(profile: PadProfile) {
-        AppLog.d(TAG, "addProfile id=${profile.id} name='${profile.name}'")
-        _profiles.value = _profiles.value + profile
-        if (_activeProfileId.value == null) _activeProfileId.value = profile.id
+        val existingNames = _profiles.value.map { it.name }
+        val desiredName = profile.name.trim().ifBlank { MP_DEFAULT_PROFILE_NAME }
+        val uniqueName = existingNames.nextUniqueName(desiredName, MP_DEFAULT_PROFILE_NAME)
+        if (uniqueName != desiredName) {
+            AppLog.w(TAG, "addProfile: duplicate profile name '$desiredName' adjusted to '$uniqueName'")
+        }
+        val normalizedProfile = profile.copy(name = uniqueName)
+        AppLog.d(TAG, "addProfile id=${normalizedProfile.id} name='${normalizedProfile.name}'")
+        _profiles.value = _profiles.value + normalizedProfile
+        if (_activeProfileId.value == null) _activeProfileId.value = normalizedProfile.id
         SettingsManager.saveMacroPadData()
     }
 
@@ -155,9 +175,17 @@ object MacroPadState {
     }
 
     fun renameProfile(profileId: String, newName: String) {
-        AppLog.d(TAG, "renameProfile id=$profileId name='$newName'")
+        val existingNames = _profiles.value
+            .filter { it.id != profileId }
+            .map { it.name }
+        val desiredName = newName.trim().ifBlank { MP_DEFAULT_PROFILE_NAME }
+        val uniqueName = existingNames.nextUniqueName(desiredName, MP_DEFAULT_PROFILE_NAME)
+        if (uniqueName != desiredName) {
+            AppLog.w(TAG, "renameProfile: duplicate profile name '$desiredName' adjusted to '$uniqueName'")
+        }
+        AppLog.d(TAG, "renameProfile id=$profileId name='$uniqueName'")
         _profiles.value = _profiles.value.map {
-            if (it.id == profileId) it.copy(name = newName) else it
+            if (it.id == profileId) it.copy(name = uniqueName) else it
         }
         SettingsManager.saveMacroPadData()
     }
@@ -196,10 +224,17 @@ object MacroPadState {
 
     fun addLayout(layout: PadLayout) {
         val profile = activeProfile.value ?: return
-        AppLog.d(TAG, "addLayout id=${layout.id} name='${layout.name}' to profile=${profile.id}")
+        val existingNames = profile.layouts.map { it.name }
+        val desiredName = layout.name.trim().ifBlank { MP_DEFAULT_LAYOUT_NAME }
+        val uniqueName = existingNames.nextUniqueName(desiredName, MP_DEFAULT_LAYOUT_NAME)
+        if (uniqueName != desiredName) {
+            AppLog.w(TAG, "addLayout: duplicate layout name '$desiredName' adjusted to '$uniqueName'")
+        }
+        val normalizedLayout = layout.copy(name = uniqueName)
+        AppLog.d(TAG, "addLayout id=${normalizedLayout.id} name='${normalizedLayout.name}' to profile=${profile.id}")
         updateProfile(profile.copy(
-            layouts = profile.layouts + layout,
-            activeLayoutId = layout.id,
+            layouts = profile.layouts + normalizedLayout,
+            activeLayoutId = normalizedLayout.id,
         ))
     }
 

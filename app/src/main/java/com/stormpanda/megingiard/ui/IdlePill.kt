@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -22,7 +23,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -34,7 +34,6 @@ private val IP_PILL_TOP_PADDING = 6.dp
 private val IP_PILL_IDLE_WIDTH = 72.dp
 private val IP_PILL_IDLE_HEIGHT = 4.dp
 private val IP_PILL_SHADOW_ELEVATION = 3.dp
-private val IP_CLOSE_LABEL_TEXT_SIZE = 11.sp
 private val IP_CLOSE_LABEL_PADDING = 5.dp
 
 /** Vertical space this pill occupies at the screen edge. Screens can inset by this amount. */
@@ -77,7 +76,7 @@ fun IdlePill(modifier: Modifier = Modifier) {
                     Text(
                         text = stringResource(R.string.pill_x_close),
                         color = colors.onSurface.copy(alpha = 0.7f),
-                        fontSize = IP_CLOSE_LABEL_TEXT_SIZE,
+                        style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(bottom = IP_CLOSE_LABEL_PADDING),
                     )
                 }
@@ -91,7 +90,7 @@ fun IdlePill(modifier: Modifier = Modifier) {
                     Text(
                         text = stringResource(R.string.pill_x_close),
                         color = colors.onSurface.copy(alpha = 0.7f),
-                        fontSize = IP_CLOSE_LABEL_TEXT_SIZE,
+                        style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(top = IP_CLOSE_LABEL_PADDING),
                     )
                 }

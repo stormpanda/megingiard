@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard
 
+private const val TAG = "SwipeGestureProcessor"
+
 /**
  * Reusable edge-zone swipe detector for revealing the pill menu overlay.
  *
@@ -41,6 +43,7 @@ class SwipeGestureProcessor(
                 pointerY - swipeStartY
             }
             if (delta >= swipeThresholdPx) {
+                AppLog.d(TAG, "edge swipe detected (delta=${delta.toInt()}px, bottom=$overlayAtBottom)")
                 AppStateManager.handleEdgeSwipe()
                 swipeTriggered = true
             }

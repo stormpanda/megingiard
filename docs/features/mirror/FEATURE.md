@@ -44,6 +44,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Any interaction during the timeout MUST reset the timer.
 - The auto-hide timer MUST be paused while a finger is touching the screen, even if the finger is held still.
 - Stop and Freeze/Unfreeze buttons MUST be centered on the screen (not corner-aligned) to avoid being obscured by the Pill Menu.
+- Mirror control icon buttons in the Pill Menu MUST use ergonomic touch targets (minimum 48 dp).
+- Mirror control labels MAY be shown below icon buttons via a global setting to improve discoverability.
 
 ### FR-M5: Stop Mirroring
 

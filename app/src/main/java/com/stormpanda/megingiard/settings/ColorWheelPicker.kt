@@ -7,19 +7,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -40,10 +38,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.compose.BackHandler
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.PI
@@ -52,8 +48,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private val TITLE_FONT_SIZE = 18.sp
-private val SUBTITLE_FONT_SIZE = 12.sp
+private const val TAG = "ColorWheelPicker"
+
 private val PICKER_CORNER = 16.dp
 private val WHEEL_SIZE = 240.dp
 
@@ -98,19 +94,49 @@ fun ColorWheelPicker(
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
-                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp - 64.dp)
                 .background(colors.pickerBackground, RoundedCornerShape(PICKER_CORNER))
-                .verticalScroll(rememberScrollState())
-                .clickable(enabled = true, onClick = {})
-                .padding(20.dp),
+                .clickable(enabled = true, onClick = {}),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = stringResource(R.string.settings_accent_color_picker_title),
-                color = colors.onSurface,
-                fontSize = TITLE_FONT_SIZE
-            )
+            // ── Title row with Cancel (left) and Apply (right) ───────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 4.dp, top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text  = stringResource(R.string.settings_color_cancel),
+                        color = colors.onSurfaceSecondary,
+                    )
+                }
+                Text(
+                    text      = stringResource(R.string.settings_accent_color_picker_title),
+                    color     = colors.onSurface,
+                    style     = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier  = Modifier.weight(1f),
+                )
+                Button(
+                    onClick = { onColorSelected(currentColor) },
+                    colors  = ButtonDefaults.buttonColors(containerColor = currentColor),
+                ) {
+                    Text(
+                        text  = stringResource(R.string.settings_color_apply),
+                        color = Color.White,
+                    )
+                }
+            }
+
+            // ── Wheel + brightness slider ────────────────────────────────────
+            Column(
+                modifier            = Modifier
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
 
             // HSV color wheel canvas
             Canvas(
@@ -175,7 +201,7 @@ fun ColorWheelPicker(
                 Text(
                     text = stringResource(R.string.settings_color_brightness),
                     color = colors.onSurfaceSecondary,
-                    fontSize = SUBTITLE_FONT_SIZE
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Slider(
                     value = bri,
@@ -189,29 +215,7 @@ fun ColorWheelPicker(
                 )
             }
 
-            // Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = stringResource(R.string.settings_color_cancel),
-                        color = colors.onSurfaceSecondary
-                    )
-                }
-                Spacer(modifier = Modifier.size(8.dp))
-                Button(
-                    onClick = { onColorSelected(currentColor) },
-                    colors = ButtonDefaults.buttonColors(containerColor = currentColor)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_color_apply),
-                        color = Color.White
-                    )
-                }
-            }
+            } // end wheel+slider Column
         }
     }
 }

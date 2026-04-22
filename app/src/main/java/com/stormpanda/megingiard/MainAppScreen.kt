@@ -1,7 +1,13 @@
 package com.stormpanda.megingiard
 
+import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -11,16 +17,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,19 +51,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.mirror.DisplayDetector
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MainViewModel
-import com.stormpanda.megingiard.AppLog
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -64,7 +74,6 @@ private val MAS_SWIPE_THRESHOLD = 25.dp
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
-private val MAS_WRONG_SCREEN_TEXT_SIZE = 18.sp
 
 @Composable
 fun MainAppScreen() {
@@ -78,6 +87,8 @@ fun MainAppScreen() {
     val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isAmbientSettingsActive by AppStateManager.isAmbientSettingsActive.collectAsState()
+    val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
+    val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
 
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
@@ -124,11 +135,14 @@ fun MainAppScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(overlayAtBottom) {
+            .pointerInput(overlayAtBottom, isValidScreen) {
                 val swipe = viewModel.createSwipeProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (!isValidScreen) {
+                            continue
+                        }
                         when (event.type) {
                             PointerEventType.Press -> {
                                 swipe.onPress(
@@ -159,24 +173,52 @@ fun MainAppScreen() {
             modifier = Modifier.fillMaxSize(),
             forcedLayout = fullscreenKeyboardLayout,
         )
-        if (isEditorActive) MacroPadEditor(
-            onDone = { AppStateManager.setEditorActive(false) },
-        )
-        if (isAmbientSettingsActive) AmbientSettingsOverlay(
-            onDone = { AppStateManager.setAmbientSettingsActive(false) },
-        )
+        AnimatedVisibility(
+            visible  = isEditorActive,
+            enter    = slideInVertically { it } + fadeIn(),
+            exit     = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            MacroPadEditor(
+                onDone = { AppStateManager.setEditorActive(false) },
+            )
+        }
+        AnimatedVisibility(
+            visible  = isAmbientSettingsActive,
+            enter    = slideInVertically { it } + fadeIn(),
+            exit     = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            AmbientSettingsOverlay(
+                onDone = { AppStateManager.setAmbientSettingsActive(false) },
+            )
+        }
 
         // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
         // are open because those modals render their own full-screen chrome.
         if (!isEditorActive && !isAmbientSettingsActive) {
             IdlePill()
+            if (showNavigationCoachMarks && !isPillMenuOpen) {
+                NavigationCoachMark(
+                    overlayAtBottom = overlayAtBottom,
+                    colors = colors,
+                    onDismiss = { SettingsManager.setShowNavigationCoachMarks(false) },
+                )
+            }
         }
 
         // ── Global wrong-screen overlay ─────────────────────────────────────
         // Blocks all interaction and renders on top of everything when the app
         // is running on the primary display instead of the secondary screen.
         if (!isValidScreen) {
-            WrongScreenOverlay(colors = colors)
+            WrongScreenOverlay(
+                colors = colors,
+                onRetry = {
+                    val displayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
+                    DisplayDetector.updateDisplayValidity(displayId)
+                    AppLog.i(TAG, "wrong-screen retry tapped: displayId=$displayId")
+                },
+            )
         }
     }
 
@@ -198,7 +240,7 @@ fun MainAppScreen() {
             onDismissRequest = { importError = null },
             containerColor = colors.surface,
             title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
-            text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, fontSize = 13.sp) },
+            text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, style = MaterialTheme.typography.labelMedium) },
             confirmButton = {
                 TextButton(onClick = { importError = null }) {
                     Text(stringResource(R.string.config_ok), color = colors.accent)
@@ -228,7 +270,8 @@ fun MainAppScreen() {
 }
 
 @Composable
-private fun WrongScreenOverlay(colors: AppColors) {
+private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
+    var showHelpDialog by remember { mutableStateOf(false) }
     val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
     val bounceOffset by bounceTransition.animateFloat(
         initialValue = 0f,
@@ -246,8 +289,10 @@ private fun WrongScreenOverlay(colors: AppColors) {
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        event.changes.forEach { it.consume() }
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        event.changes.forEach { change ->
+                            if (!change.isConsumed) change.consume()
+                        }
                     }
                 }
             },
@@ -257,7 +302,7 @@ private fun WrongScreenOverlay(colors: AppColors) {
             Text(
                 text = stringResource(R.string.wrong_screen_message),
                 color = colors.onSurface,
-                fontSize = MAS_WRONG_SCREEN_TEXT_SIZE,
+                style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
@@ -270,6 +315,62 @@ private fun WrongScreenOverlay(colors: AppColors) {
                     .size(MAS_ARROW_SIZE)
                     .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) }
             )
+            Spacer(Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                TextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.wrong_screen_retry), color = colors.accent)
+                }
+                TextButton(onClick = { showHelpDialog = true }) {
+                    Text(stringResource(R.string.wrong_screen_help), color = colors.accent)
+                }
+            }
+            if (showHelpDialog) {
+                AlertDialog(
+                    onDismissRequest = { showHelpDialog = false },
+                    title = { Text(stringResource(R.string.wrong_screen_help), color = colors.onSurface) },
+                    text = { Text(stringResource(R.string.wrong_screen_help_message), color = colors.onSurface) },
+                    confirmButton = {
+                        TextButton(onClick = { showHelpDialog = false }) {
+                            Text(stringResource(R.string.config_ok), color = colors.accent)
+                        }
+                    },
+                    containerColor = colors.surface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavigationCoachMark(
+    overlayAtBottom: Boolean,
+    colors: AppColors,
+    onDismiss: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                top = if (overlayAtBottom) 0.dp else 24.dp,
+                bottom = if (overlayAtBottom) 24.dp else 0.dp,
+            ),
+        contentAlignment = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .background(colors.surface.copy(alpha = 0.92f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.pill_coach_mark_text),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.pill_coach_mark_dismiss), color = colors.accent)
+            }
         }
     }
 }
@@ -297,14 +398,14 @@ private fun IncomingImportDialog(
                     Text(
                         stringResource(R.string.config_import_meta_author, meta.author ?: ""),
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 if (meta.description?.isNotBlank() == true) {
                     Text(
                         meta.description ?: "",
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -316,21 +417,21 @@ private fun IncomingImportDialog(
                             export.profiles.sumOf { it.macros.size },
                         ),
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 if (export.settings.isNotEmpty()) {
                     Text(
                         stringResource(R.string.config_import_section_settings),
                         color = colors.onSurface,
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.config_import_warning),
                     color = colors.onSurface,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         },
@@ -352,4 +453,3 @@ private fun IncomingImportDialog(
         },
     )
 }
-

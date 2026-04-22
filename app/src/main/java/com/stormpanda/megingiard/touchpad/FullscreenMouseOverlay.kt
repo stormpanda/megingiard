@@ -3,30 +3,45 @@ package com.stormpanda.megingiard.touchpad
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private const val TAG = "FullscreenMouseOverlay"
 private const val FMO_BG_ALPHA = 0.85f
+private const val FMO_HINT_AUTO_HIDE_MS = 2800L
+private val FMO_HINT_PADDING = 12.dp
+private val FMO_HINT_CORNER = 12.dp
+private const val FMO_HINT_BG_ALPHA = 0.9f
 
 /**
  * Full-screen transparent overlay that captures all touch as relative mouse input.
@@ -48,9 +63,20 @@ fun FullscreenMouseOverlay() {
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
     val tapToClick by SettingsManager.touchpadTapToClick.collectAsState()
     val twoFingerTap by SettingsManager.touchpadTwoFingerTap.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val showExitHints by SettingsManager.showFullscreenExitHints.collectAsState()
 
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
+    var showHint by remember { mutableStateOf(showExitHints) }
+
+    LaunchedEffect(showExitHints) {
+        showHint = showExitHints
+        if (showExitHints) {
+            delay(FMO_HINT_AUTO_HIDE_MS)
+            showHint = false
+        }
+    }
 
     LaunchedEffect(Unit) {
         AppLog.i(TAG, "start: starting MouseInjector")
@@ -120,5 +146,18 @@ fun FullscreenMouseOverlay() {
                     }
                 }
             }
-    )
+    ) {
+        if (showHint) {
+            Text(
+                text = stringResource(R.string.overlay_exit_hint_swipe),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .align(if (overlayAtBottom) Alignment.TopCenter else Alignment.BottomCenter)
+                    .padding(FMO_HINT_PADDING)
+                    .background(colors.surface.copy(alpha = FMO_HINT_BG_ALPHA), RoundedCornerShape(FMO_HINT_CORNER))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        }
+    }
 }

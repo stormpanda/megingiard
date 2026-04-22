@@ -17,7 +17,7 @@ Given its hardware-specific approach, this project is extensively documented:
 ## Core Features
 
 1. **Latency-Free Mirroring:** Utilizes Android's `MediaProjection` coupled with native `VirtualDisplay` to `SurfaceView` rendering (bypassing all software composition).
-2. **MacroPad Central Mode:** A fully unified interface offering free-placement buttons with multiple named profiles. This single view seamlessly integrates all tools, replacing the old carousel mode.
+2. **MacroPad Central Mode:** A fully unified interface offering free-placement buttons with multiple named profiles. All tools — mirroring, keyboard, mouse, macros, gamepad — are accessible from this single view.
 3. **Gallery-Style Pan & Zoom:** Natural and smart multi-touch gestures with exact physical boundary constraints (_Hard Edges_ to prevent vanishing windows) and auto-centering (Pinch-Out Snap-Back).
 4. **Resource-Efficient Freeze Frame:** Physically decouples the video producer from the renderer to freeze frames in the hardware buffer with zero CPU overhead while retaining full zoom capabilities.
 5. **Virtual Input Subsystems:** Integrated virtual keyboard (QWERTZ/QWERTY/AZERTY), mouse trackpoint, and virtual gamepad, injecting inputs at sub-millisecond speeds via native binaries directly into `/dev/uinput`.

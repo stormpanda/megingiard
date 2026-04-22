@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +46,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+
+private const val TAG = "IconPickerDialog"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -169,7 +172,7 @@ internal fun IconPickerDialog(
                 Text(
                     text = stringResource(R.string.macropad_icon_picker_filled),
                     color = colors.onSurface,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
         }
@@ -207,15 +210,14 @@ internal fun IconPickerDialog(
                     Text(
                         text = currentIcon,
                         color = colors.onSurface,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.labelMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = stringResource(R.string.macropad_icon_picker_currently_selected),
                         color = colors.onSurfaceSecondary,
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                 }
                 IconButton(onClick = { pendingIcon = null }) {
@@ -239,7 +241,7 @@ internal fun IconPickerDialog(
                 Text(
                     stringResource(R.string.macropad_icon_picker_no_results),
                     color = colors.onSurfaceSecondary,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
         } else {

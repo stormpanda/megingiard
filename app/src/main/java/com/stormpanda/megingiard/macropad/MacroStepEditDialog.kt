@@ -22,6 +22,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,11 +41,12 @@ import androidx.compose.ui.text.font.FontWeight
 
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+
+private const val TAG = "MacroStepEditDialog"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -256,7 +258,7 @@ internal fun MacroStepEditDialog(
                         Text(
                             text     = stringResource(labelRes),
                             color    = if (selected) accentColor else colors.onSurfaceSecondary,
-                            fontSize = 13.sp,
+                            style    = MaterialTheme.typography.labelMedium,
                         )
                     }
                 }
@@ -279,7 +281,7 @@ internal fun MacroStepEditDialog(
                             Text(
                                 selectedPreset.label,
                                 color    = accentColor,
-                                fontSize = 14.sp,
+                                style    = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
                             )
                             Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
@@ -295,7 +297,7 @@ internal fun MacroStepEditDialog(
                                         Text(
                                             preset.label,
                                             color    = if (preset.code == selectedPreset.code) accentColor else colors.onSurface,
-                                            fontSize = 14.sp,
+                                            style    = MaterialTheme.typography.bodyMedium,
                                         )
                                     },
                                     onClick = { selectedPreset = preset; expanded = false },
@@ -330,7 +332,7 @@ internal fun MacroStepEditDialog(
                                 Text(
                                     stickLabel,
                                     color    = if (sel) accentColor else colors.onSurfaceSecondary,
-                                    fontSize = 13.sp,
+                                    style    = MaterialTheme.typography.labelMedium,
                                 )
                             }
                         }
@@ -339,7 +341,7 @@ internal fun MacroStepEditDialog(
                     Text(
                         stringResource(R.string.macropad_macro_step_direction),
                         color    = colors.onSurfaceSecondary,
-                        fontSize = 12.sp,
+                        style    = MaterialTheme.typography.bodySmall,
                     )
                     DirectionGrid(
                         selectedX   = joyDirX,
@@ -351,7 +353,7 @@ internal fun MacroStepEditDialog(
                     Text(
                         stringResource(R.string.macropad_macro_step_magnitude, joyMagnitude),
                         color    = colors.onSurfaceSecondary,
-                        fontSize = 12.sp,
+                        style    = MaterialTheme.typography.bodySmall,
                     )
                     Slider(
                         value         = joyMagnitude,
@@ -368,7 +370,7 @@ internal fun MacroStepEditDialog(
                     Text(
                         stringResource(R.string.macropad_macro_step_direction),
                         color    = colors.onSurfaceSecondary,
-                        fontSize = 12.sp,
+                        style    = MaterialTheme.typography.bodySmall,
                     )
                     DirectionGrid(
                         selectedX   = dpadDirX,
@@ -414,8 +416,8 @@ private fun MsdTimingRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically,
         ) {
-            Text(label, color = colors.onSurfaceSecondary, fontSize = 12.sp)
-            Text("$valueMs ms", color = colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(label, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+            Text("$valueMs ms", color = colors.onSurface, style = MaterialTheme.typography.labelMedium)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Slider(
@@ -430,7 +432,7 @@ private fun MsdTimingRow(
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = { onChange((valueMs + MSD_TIMING_FINE_MS).coerceAtMost(MSD_TIMING_MAX_MS)) }) {
-                Text("+${MSD_TIMING_FINE_MS}ms", color = accentColor, fontSize = 12.sp)
+                Text("+${MSD_TIMING_FINE_MS}ms", color = accentColor, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -484,7 +486,7 @@ private fun DirectionGrid(
                             Text(
                                 text     = MSD_DIR_LABELS[Pair(col, row)] ?: "",
                                 color    = if (isSelected) accentColor else colors.onSurface,
-                                fontSize = 20.sp,
+                                style    = MaterialTheme.typography.titleLarge,
                             )
                         }
                     }

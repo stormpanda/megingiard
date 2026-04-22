@@ -10,28 +10,29 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,9 +49,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AmbientPreviewConfig
 import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
@@ -60,9 +62,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import java.util.Locale
 
 private const val TAG = "AmbientSettingsOverlay"
 
@@ -77,6 +77,10 @@ private val ASO_DROPDOWN_CORNER = 6.dp
 private val ASO_PREVIEW_ICON_SIZE = 36.dp
 private val ASO_PREVIEW_BAR_CORNER = 16.dp
 private val ASO_PREVIEW_BAR_H_PADDING = 16.dp
+private val ASO_SECTION_HEADER_PADDING_H = 16.dp
+private val ASO_SECTION_HEADER_PADDING_V = 10.dp
+private val ASO_ROW_PADDING_H = 16.dp
+private val ASO_ROW_PADDING_V = 12.dp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -99,21 +103,16 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     val layout by MacroPadState.activeLayout.collectAsState()
 
     // Stop all uinput virtual devices while ambient settings are open.
-    // Restart injectors when dismissed (user returns to use mode).
+    // MacroPadViewModel.watchInjectorLifecycle() detects isAmbientSettingsActive=false
+    // and restarts injectors automatically when this screen is dismissed.
     DisposableEffect(Unit) {
-        AppLog.d(TAG, "AmbientSettingsOverlay visible → stopping injectors")
+        AppLog.i(TAG, "AmbientSettingsOverlay visible \u2192 stopping injectors")
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
             AppStateManager.setAmbientPreviewConfig(null)
-            val ap = MacroPadState.activeProfile.value
-            AppLog.d(TAG, "AmbientSettingsOverlay dismissed → restarting injectors")
-            CoroutineScope(Dispatchers.IO).launch {
-                if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                if (ap?.enableMouse == true) MouseInjector.start(context)
-            }
+            AppLog.i(TAG, "AmbientSettingsOverlay dismissed \u2192 injector restart handled by MacroPadViewModel watcher")
         }
     }
 
@@ -197,34 +196,38 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    // Title + Done button
+                    // Title + Back button — styled like GlobalSettingsScreen TopAppBar
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.surface)
+                            .padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.pill_menu_ambient_settings),
-                            color = colors.onSurface,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(onClick = onDone) {
-                            Text(
-                                stringResource(R.string.macropad_editor_done),
-                                color = colors.accent,
-                                fontWeight = FontWeight.SemiBold,
+                        IconButton(onClick = onDone) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = stringResource(R.string.settings_back),
+                                tint = colors.onSurface,
                             )
                         }
+                        Text(
+                            text = buildAnnotatedString {
+                                withStyle(SpanStyle(color = colors.onSurface)) {
+                                    append(stringResource(R.string.pill_menu_ambient_settings))
+                                }
+                                withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
+                                    append(" (${currentLayout.name})")
+                                }
+                            },
+                            style    = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
 
-                    Text(text = currentLayout.name, color = colors.onSurfaceSecondary, fontSize = 13.sp)
-
-                    HorizontalDivider(color = colors.divider)
+                    AsoSectionHeader(text = stringResource(R.string.settings_section_general))
 
                     // ── Dim slider ────────────────────────────────────────────
                     AsoSliderRow(
@@ -248,17 +251,20 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         },
                     )
 
-                    HorizontalDivider(color = colors.divider)
+                    AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))
 
                     // ── Vignette toggle ───────────────────────────────────────
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.surface)
+                            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = stringResource(R.string.settings_macropad_vignette),
                             color = colors.onSurface,
-                            fontSize = 14.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
                         Switch(
@@ -268,10 +274,6 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                 AppLog.d(TAG, "vignette enabled → $it")
                                 commitLayout { copy(ambientVignetteEnabled = it) }
                             },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = colors.accent,
-                            ),
                         )
                     }
 
@@ -387,6 +389,25 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     }
 }
 
+/**
+ * Section header used in ambient settings to match the shared settings visual language.
+ *
+ * @param text Header text displayed in uppercase styling.
+ */
+@Composable
+private fun AsoSectionHeader(text: String) {
+    val colors = LocalAppColors.current
+    Text(
+        text = text.uppercase(Locale.ROOT),
+        color = colors.accent,
+        style = MaterialTheme.typography.labelSmall,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surfaceVariant)
+            .padding(horizontal = ASO_SECTION_HEADER_PADDING_H, vertical = ASO_SECTION_HEADER_PADDING_V),
+    )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Slider row with preview eye-button
 // ─────────────────────────────────────────────────────────────────────────────
@@ -404,12 +425,15 @@ private fun AsoSliderRow(
 ) {
     val colors = LocalAppColors.current
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.onSurface, fontSize = 14.sp)
-            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, fontSize = 12.sp)
+            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
+            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
         }
         Slider(
             modifier = Modifier.weight(2f),
@@ -467,8 +491,8 @@ internal fun AsoPreviewBar(
                 .padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(text = label, color = colors.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, fontSize = 13.sp)
+            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.labelMedium)
+            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -517,13 +541,16 @@ private fun AsoShapeRow(
     val colors = LocalAppColors.current
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.settings_macropad_vignette_shape),
             color = colors.onSurface,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
         Box {
@@ -540,7 +567,7 @@ private fun AsoShapeRow(
                 Text(
                     text = stringResource(currentShape.labelResId()),
                     color = colors.onSurface,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Icon(
                     imageVector = Icons.Rounded.ArrowDropDown,
@@ -559,7 +586,7 @@ private fun AsoShapeRow(
                             Text(
                                 text = stringResource(shape.labelResId()),
                                 color = if (shape == currentShape) accentColor else colors.onSurface,
-                                fontSize = 14.sp,
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         },
                         onClick = { onShapeSelected(shape); expanded = false },
@@ -584,14 +611,15 @@ private fun AsoColorRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(colors.surface)
             .clickable { onShowPicker() }
-            .padding(vertical = 8.dp),
+            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.settings_macropad_vignette_color),
             color = colors.onSurface,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
         Box(
