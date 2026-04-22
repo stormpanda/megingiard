@@ -39,6 +39,12 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,6 +58,9 @@ private val AM_SWIPE_THRESHOLD = 25.dp
 private const val AM_PERCENT_DIVISOR = 100f
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
+
+/** Mirrors MacroPadViewModel.INJECTOR_RESTART_DEBOUNCE_MS — absorbs rapid modal transitions. */
+private const val AM_INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
 private const val TAG = "AmbientMacroPadOverlay"
 
@@ -95,9 +104,34 @@ internal fun AmbientMacroPadOverlay() {
     val effectiveVignetteOpacity = if (isPeekActive) 0f else vignetteOpacity
 
     // Single watcher: stop injectors whenever any modal is open, restart when all closed.
-    // Delegates to InjectorLifecycleWatcher — the canonical single source of truth.
+    // Mirrors MacroPadViewModel.watchInjectorLifecycle() — must use the same combine()+
+    // collectLatest+delay pattern so that rapid PillMenu-close→Editor-open transitions
+    // do not cause a spurious injector restart.
     LaunchedEffect(Unit) {
-        InjectorLifecycleWatcher(this, context).start()
+        combine(
+            AppStateManager.isPillMenuOpen,
+            AppStateManager.isEditorActive,
+            AppStateManager.isAmbientSettingsActive,
+        ) { pillMenu, editor, ambient ->
+            pillMenu || editor || ambient
+        }.distinctUntilChanged()
+        .collectLatest { anyOpen ->
+            if (anyOpen) {
+                AppLog.d(TAG, "modal open → stopping injectors")
+                KeyInjector.stop()
+                GamepadInjector.stop()
+                MouseInjector.stop()
+            } else {
+                delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
+                withContext(Dispatchers.IO) {
+                    val ap = MacroPadState.activeProfile.value
+                    AppLog.i(TAG, "all modals closed → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
+                    if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                    if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                    if (ap?.enableMouse == true) MouseInjector.start(context)
+                }
+            }
+        }
     }
 
     // Stop all injectors and reset peek state when leaving
