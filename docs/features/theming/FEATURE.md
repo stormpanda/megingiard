@@ -282,4 +282,4 @@ Modifier.padding(dimens.paddingLarge)
 | `actionColorGamepad` | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`  | Gamepad button step indicators        |
 | `actionColorSystem`  | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`   | System/mirror action indicators       |
 
-These replace all hardcoded `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` literals that previously appeared in screen code.
+Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` in screen code.

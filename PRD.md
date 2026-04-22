@@ -67,7 +67,7 @@ Triggered by a MacroPad button with the `FullScreenKeyboard(layout)` action. Lay
 ## 3. User Interface & User Experience (UX)
 
 - **Launch behaviour:** On opening the app, it restores the last-used profile and layout. On first run, a blank "Default" profile is shown. The app never starts in Mirror mode automatically.
-- **Navigation:** The **Idle Pill** (a small edge affordance) is always visible on the secondary display. A swipe gesture opens the **Pill Menu**, which provides:
+- **Navigation:** The **Idle Pill** (a small edge affordance) is always visible on the secondary display. A swipe gesture opens the **Pill Menu** — [docs/features/pillmenu/FEATURE.md](docs/features/pillmenu/FEATURE.md) — which provides:
   - Profile and layout selection / creation
   - Layout editor access
   - Ambient Settings overlay access

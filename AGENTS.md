@@ -43,19 +43,20 @@
 
 ## 2 Documentation Map
 
-| Document                             | Purpose                                                                               |
-| ------------------------------------ | ------------------------------------------------------------------------------------- |
-| `README.md`                          | Project overview, feature list, quick links                                           |
-| `PRD.md`                             | Product requirements (authoritative)                                                  |
-| `docs/REQUIREMENTS.md`               | Requirements overview & non-functional requirements                                   |
-| `docs/ARCHITECTURE.md`               | System architecture overview & key design decisions                                   |
-| `docs/features/mirror/FEATURE.md`    | Screen Mirror — functional requirements & technical implementation                    |
-| `docs/features/macropad/FEATURE.md`  | MacroPad — profiles, layouts, actions, ambient display, macros                        |
-| `docs/features/keyboard/FEATURE.md`  | Fullscreen Keyboard overlay — functional requirements & technical implementation      |
-| `docs/features/touchpad/FEATURE.md`  | Fullscreen Mouse overlay — functional requirements & technical implementation         |
-| `docs/features/config/FEATURE.md`    | Config Export / Import — schema, SAF file picker, migration                           |
-| `docs/features/theming/FEATURE.md`   | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                  |
-| `docs/features/FEATURE_TEMPLATE.md`  | Template for new feature documentation                                                |
+| Document                            | Purpose                                                                          |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| `README.md`                         | Project overview, feature list, quick links                                      |
+| `PRD.md`                            | Product requirements (authoritative)                                             |
+| `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                              |
+| `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                              |
+| `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation               |
+| `docs/features/macropad/FEATURE.md` | MacroPad — profiles, layouts, actions, ambient display, macros                   |
+| `docs/features/pillmenu/FEATURE.md` | Idle Pill & Pill Menu — edge-swipe routing, two-card overlay, mirror controls    |
+| `docs/features/keyboard/FEATURE.md` | Fullscreen Keyboard overlay — functional requirements & technical implementation |
+| `docs/features/touchpad/FEATURE.md` | Fullscreen Mouse overlay — functional requirements & technical implementation    |
+| `docs/features/config/FEATURE.md`   | Config Export / Import — schema, SAF file picker, migration                      |
+| `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge             |
+| `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                           |
 
 > **Convention:** Every feature has its own subfolder under `docs/features/<feature>/` containing a single `FEATURE.md`. This file is the **authoritative source of truth** for that feature's requirements and technical implementation. When adding a new feature, create a new subfolder and `FEATURE.md`.
 > | `docs/BUILD_NATIVE.md` | How to rebuild the native touch-injector binary |
