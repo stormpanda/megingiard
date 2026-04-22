@@ -266,8 +266,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_editor_save">Speichern</string>
     <string name="macropad_macro_editor_cancel">Abbrechen</string>
 
+    <!-- Touch-Aufzeichnung -->
+    <string name="macropad_macro_record_touch_dialog_title">Touch-Schritt aufzeichnen</string>
+    <string name="macropad_macro_record_touch_dialog_message">Der Bildschirmspiegel wird gestartet (falls noch nicht aktiv). Tippe auf eine beliebige Stelle des Spiegels, um diese Position als Touch-Schritt zu speichern.</string>
+    <string name="macropad_macro_record_touch_start">Starten</string>
+    <string name="macropad_macro_record_touch_dont_show_again">Nicht mehr anzeigen</string>
+    <string name="cd_record_touch">Touch-Schritt aufzeichnen</string>
+
     <!-- Makro-Schritte -->
     <string name="macropad_macro_add_step">Schritt hinzufügen</string>
+    <string name="macropad_macro_record_touch">Touch aufzeichnen</string>
     <string name="macropad_macro_no_steps">Noch keine Schritte. Tippe auf +, um einen hinzuzufügen.</string>
     <string name="macropad_macro_step_delete_title">Schritt löschen</string>
     <string name="macropad_macro_step_delete_confirm">Diesen Schritt aus dem Makro entfernen?</string>
@@ -276,6 +284,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_step_type_gamepad">Gamepad-Taste</string>
     <string name="macropad_macro_step_type_joystick">Joystick</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
+    <string name="macropad_macro_step_type_touch">Touch-Tippen</string>
+    <string name="macropad_macro_step_touch_position">Aufgezeichnete Position (schreibgeschützt)</string>
     <string name="macropad_macro_step_start_ms">Startzeit (ms)</string>
     <string name="macropad_macro_step_duration_ms">Dauer (ms)</string>
     <string name="macropad_macro_step_stick_left">Linker Stick</string>

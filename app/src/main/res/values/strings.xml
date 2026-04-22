@@ -341,6 +341,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_record_touch_dialog_title">Record Touch Step</string>
     <string name="macropad_macro_record_touch_dialog_message">The screen mirror will start (if not already active). Tap anywhere on the mirror to record that position as a touch step.</string>
     <string name="macropad_macro_record_touch_start">Start</string>
+    <string name="macropad_macro_record_touch_dont_show_again">Don\u2019t show again</string>
     <string name="cd_record_touch">Record touch step</string>
 
     <!-- MacroStepEditDialog -->

@@ -27,15 +27,22 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
+import com.stormpanda.megingiard.mirror.projectCoordinates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 
 private const val TAG = "RecordingMirrorPresent"
 
 private const val RMP_VIRTUAL_DISPLAY_NAME = "RecordingCapture"
+
+/** Duration of the immediate feedback tap injected right after the position is recorded. */
+private const val RMP_FEEDBACK_TAP_DURATION_MS = 50L
 
 /**
  * A minimal [Presentation] shown on the secondary display while the user records a
@@ -59,6 +66,8 @@ class RecordingMirrorPresentation(
 
     private var virtualDisplay: VirtualDisplay? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    /** True if this Presentation started [TouchInjector]; false if it was already running. */
+    private var injectorStartedByUs = false
 
     /** Prevent the system from dismissing this Presentation on back press. */
     override fun cancel() {
@@ -68,6 +77,13 @@ class RecordingMirrorPresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate display=${display?.displayId} src=${srcWidth}x${srcHeight}")
+
+        // Start TouchInjector now so it is ready by the time the user taps.
+        if (!TouchInjector.isRunning) {
+            TouchInjector.start(context)
+            injectorStartedByUs = true
+            AppLog.d(TAG, "TouchInjector started by RecordingMirrorPresentation")
+        }
 
         val lifecycleOwner = MirrorPresentationLifecycleOwner(context.applicationContext as Application)
         window?.decorView?.apply {
@@ -79,6 +95,11 @@ class RecordingMirrorPresentation(
         setOnDismissListener {
             AppLog.i(TAG, "dismissed → scope cancelled, lifecycle destroyed")
             scope.cancel()
+            if (injectorStartedByUs) {
+                TouchInjector.stop()
+                injectorStartedByUs = false
+                AppLog.d(TAG, "TouchInjector stopped by RecordingMirrorPresentation")
+            }
             lifecycleOwner.destroy()
         }
 
@@ -165,7 +186,10 @@ class RecordingMirrorPresentation(
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
             setContent {
-                TapCaptureOverlay()
+                TapCaptureOverlay(
+                    contentWidth  = finalWidth,
+                    contentHeight = finalHeight,
+                )
             }
         }
         container.addView(composeView)
@@ -175,31 +199,60 @@ class RecordingMirrorPresentation(
 
 /**
  * A transparent full-screen Box that captures the first touch-down event and delivers
- * its normalised position to [TouchRecordingManager]. After the tap is recorded the
- * block exits, leaving the surface unresponsive until the Presentation is dismissed
- * by [ScreenCaptureService].
+ * its normalised position to [TouchRecordingManager]. The tap position is mapped through
+ * the letterbox geometry so that tapping exactly on a pixel in the mirrored content area
+ * records the corresponding normalised coordinate on the primary display.
+ *
+ * If the tap lands on the black letterbox bars, the event is ignored and the overlay
+ * waits for the next tap. After a tap is recorded a brief DOWN→UP is also injected on
+ * the primary display for immediate visual feedback.
+ *
+ * @param contentWidth  Width of the mirrored content area (letterboxed) in pixels.
+ * @param contentHeight Height of the mirrored content area (letterboxed) in pixels.
  */
 @Composable
-private fun TapCaptureOverlay() {
+private fun TapCaptureOverlay(contentWidth: Int, contentHeight: Int) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
+                // Capture tap inside the restricted scope, break out immediately.
+                // delay() is only allowed in the outer pointerInput scope, not in
+                // awaitPointerEventScope (which is a restricted coroutine scope).
+                var captured: Pair<Float, Float>? = null
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         if (event.type == PointerEventType.Press) {
                             val change = event.changes.firstOrNull() ?: continue
                             if (size.width <= 0 || size.height <= 0) continue
-                            val normX = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                            val normY = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
+                            // Map tap through letterbox geometry. Taps on the black bars
+                            // return null from projectCoordinates — ignore them.
+                            val result = projectCoordinates(
+                                touchX   = change.position.x,
+                                touchY   = change.position.y,
+                                screenW  = size.width.toFloat(),
+                                screenH  = size.height.toFloat(),
+                                sw       = contentWidth.toFloat(),
+                                sh       = contentHeight.toFloat(),
+                                scale    = 1f,
+                                offsetX  = 0f,
+                                offsetY  = 0f,
+                            ) ?: continue  // tap on letterbox bar — ignore, wait for next tap
+                            val (normX, normY) = result
                             AppLog.i(TAG, "tap captured normX=$normX normY=$normY")
                             change.consume()
-                            TouchRecordingManager.onTapRecorded(normX, normY)
+                            captured = Pair(normX, normY)
                             break
                         }
                     }
                 }
+                // Now in the outer pointerInput scope — delay() is allowed here.
+                val (normX, normY) = captured ?: return@pointerInput
+                TouchInjector.injectTouch(TouchAction.DOWN, normX, normY)
+                delay(RMP_FEEDBACK_TAP_DURATION_MS)
+                TouchInjector.injectTouch(TouchAction.UP, normX, normY)
+                TouchRecordingManager.onTapRecorded(normX, normY)
             },
     )
 }

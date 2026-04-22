@@ -16,13 +16,15 @@ private const val TAG = "TouchRecordStartDialog"
  * Informs the user that the screen mirror will appear on the secondary display and
  * asks them to tap the desired position to record it as a [MacroStep.TouchTap].
  *
- * @param onStart  Called when the user confirms and wants to begin recording.
- * @param onCancel Called when the user cancels the dialog.
+ * @param onStart          Called when the user confirms and wants to begin recording.
+ * @param onCancel         Called when the user cancels the dialog.
+ * @param onDontShowAgain  Called when the user confirms and wants to skip this dialog in future.
  */
 @Composable
 internal fun TouchRecordStartDialog(
     onStart: () -> Unit,
     onCancel: () -> Unit,
+    onDontShowAgain: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     AlertDialog(
@@ -52,6 +54,13 @@ internal fun TouchRecordStartDialog(
             }
         },
         dismissButton = {
+            TextButton(onClick = onDontShowAgain) {
+                Text(
+                    stringResource(R.string.macropad_macro_record_touch_dont_show_again),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
             TextButton(onClick = onCancel) {
                 Text(
                     stringResource(R.string.macropad_editor_cancel),

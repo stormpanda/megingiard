@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.sqrt
 
@@ -182,6 +183,12 @@ internal fun MacroTimelineEditor(
                 showRecordTouchDialog = false
             },
             onCancel = { showRecordTouchDialog = false },
+            onDontShowAgain = {
+                SettingsManager.setSkipTouchRecordDialog(true)
+                if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
+                TouchRecordingManager.requestRecording()
+                showRecordTouchDialog = false
+            },
         )
     }
 
@@ -307,7 +314,14 @@ internal fun MacroTimelineEditor(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { showRecordTouchDialog = true }
+                        .clickable {
+                            if (SettingsManager.skipTouchRecordDialog.value) {
+                                if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
+                                TouchRecordingManager.requestRecording()
+                            } else {
+                                showRecordTouchDialog = true
+                            }
+                        }
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
