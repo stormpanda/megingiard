@@ -309,7 +309,7 @@ internal fun MacroTimelineEditor(
                     Text(
                         stringResource(R.string.macropad_macro_add_step),
                         color    = accentColor,
-                        style    = MaterialTheme.typography.labelMedium,
+                        style    = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 Row(
@@ -338,7 +338,7 @@ internal fun MacroTimelineEditor(
                     Text(
                         stringResource(R.string.macropad_macro_record_touch),
                         color    = accentColor,
-                        style    = MaterialTheme.typography.labelMedium,
+                        style    = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 if (steps.isNotEmpty()) {
@@ -368,7 +368,7 @@ internal fun MacroTimelineEditor(
                         Text(
                             stringResource(R.string.macropad_macro_test_run),
                             color    = accentColor,
-                            style    = MaterialTheme.typography.labelMedium,
+                            style    = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }

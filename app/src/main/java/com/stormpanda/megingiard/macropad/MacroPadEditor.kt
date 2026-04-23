@@ -851,7 +851,7 @@ private fun EditorActionChip(
     ) {
         Icon(icon, contentDescription = null, tint = effectiveColor, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, color = effectiveColor, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, color = effectiveColor, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

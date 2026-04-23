@@ -6,8 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -657,7 +659,9 @@ internal fun MacroPicker(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
-            modifier             = Modifier.fillMaxWidth(),
+            modifier             = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
             verticalAlignment    = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -697,6 +701,7 @@ internal fun MacroPicker(
             if (onEditMacro != null && selectedMacro != null) {
                 Row(
                     modifier = Modifier
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(8.dp))
                         .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                         .clickable { onEditMacro(selectedMacro) }
@@ -713,7 +718,7 @@ internal fun MacroPicker(
                     Text(
                         stringResource(R.string.cd_edit_macro),
                         color = accentColor,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }

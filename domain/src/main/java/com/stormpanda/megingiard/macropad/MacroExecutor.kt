@@ -14,12 +14,6 @@ import kotlinx.coroutines.launch
 // Using 32768 so -1.0 maps exactly to -32768; positive side is clamped below.
 private const val MAC_ABS_FULL_DEFLECTION = 32768
 
-// Wait after starting TouchInjector before the first injection, in milliseconds.
-private const val MAC_TOUCH_INJECTOR_INIT_MS = 200L
-
-// Wait after starting GamepadInjector before the first injection, in milliseconds.
-private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
-
 private const val TAG = "MacroExecutor"
 
 private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_UP }
@@ -89,16 +83,23 @@ object MacroExecutor {
             it.type == MacroEventType.BUTTON_DOWN || it.type == MacroEventType.BUTTON_UP ||
             it.type == MacroEventType.JOYSTICK_SET || it.type == MacroEventType.HAT
         }
+        // Start injectors that aren't already running.
+        // start() blocks until the binary signals readiness ("R\n") before returning,
+        // so no additional delay is needed — isRunning is already true when start() returns.
         if (hasTouchEvents && context != null && !TouchInjector.isRunning) {
             AppLog.i(TAG, "macro has touch events → starting TouchInjector")
             TouchInjector.start(context)
-            delay(MAC_TOUCH_INJECTOR_INIT_MS)
         }
         val startedGamepad = hasGamepadEvents && context != null && !GamepadInjector.isRunning
         if (startedGamepad) {
             AppLog.i(TAG, "macro has gamepad events → starting GamepadInjector")
             GamepadInjector.start(context!!)
-            delay(MAC_GAMEPAD_INJECTOR_INIT_MS)
+        }
+        if (hasTouchEvents && !TouchInjector.isRunning) {
+            AppLog.w(TAG, "TouchInjector failed to start — touch steps will be skipped")
+        }
+        if (hasGamepadEvents && !GamepadInjector.isRunning) {
+            AppLog.w(TAG, "GamepadInjector failed to start — gamepad steps will be skipped")
         }
         var currentTimeMs = 0L
         for (event in events) {
