@@ -483,14 +483,14 @@ private fun MirrorControlCard(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, colors.onControlOverlay.copy(alpha = 0.3f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .border(PM_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .clickable(onClick = onAmbientSettings)
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text  = stringResource(R.string.pill_menu_ambient_settings),
-                color = colors.onControlOverlay,
+                color = colors.accent,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -610,10 +610,11 @@ private fun PillActionChip(
     onClick:  () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val accent = colors.accent
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-            .border(PM_BORDER_WIDTH, colors.onControlOverlay.copy(alpha = 0.3f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+            .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
             .clickable(onClick = onClick)
             .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
         verticalAlignment    = Alignment.CenterVertically,
@@ -622,13 +623,13 @@ private fun PillActionChip(
         Icon(
             imageVector        = icon,
             contentDescription = null,
-            tint               = colors.onControlOverlay,
+            tint               = accent,
             modifier           = Modifier.size(PM_NAV_ICON_SIZE),
         )
         Spacer(Modifier.width(6.dp))
         Text(
             text     = label,
-            color    = colors.onControlOverlay,
+            color    = accent,
             style    = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
