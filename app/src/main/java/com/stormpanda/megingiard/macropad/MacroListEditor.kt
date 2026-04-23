@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,13 +77,27 @@ private const val ML_PADDING        = 16
  * - **[MacroListView]** — flat list of macros belonging to the active profile.
  * - **[MacroTimelineEditor]** — step editor for a single macro.
  *
- * @param onDone Called when the user taps Done on the list view to close the editor.
+ * @param onDone             Called when the user taps Done on the list view to close the editor.
+ * @param initialEditMacroId When non-null, opens [MacroTimelineEditor] immediately for the macro
+ *                           with this id (used when navigating directly from a button config).
  */
 @Composable
-internal fun MacroListEditor(onDone: () -> Unit) {
+internal fun MacroListEditor(
+    onDone: () -> Unit,
+    initialEditMacroId: String? = null,
+) {
     val colors       = LocalAppColors.current
     val accentColor  = colors.accent
     var editingMacro by remember { mutableStateOf<Macro?>(null) }
+
+    // If the caller wants to open a specific macro immediately, look it up once.
+    LaunchedEffect(initialEditMacroId) {
+        if (initialEditMacroId != null && editingMacro == null) {
+            val macro = MacroPadState.activeProfile.value?.macros
+                ?.firstOrNull { it.id == initialEditMacroId }
+            if (macro != null) editingMacro = macro
+        }
+    }
     val defaultName  = stringResource(R.string.macropad_macro_default_name)
     val copyNameFormat = stringResource(R.string.macropad_macro_copy_name)
 

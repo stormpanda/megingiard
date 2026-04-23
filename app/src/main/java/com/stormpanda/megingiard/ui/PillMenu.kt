@@ -264,33 +264,24 @@ fun PillMenu(
                 Spacer(Modifier.height(PM_SECTION_SPACING))
 
                 // ── Action buttons ─────────────────────────────────────────
-                ActionButton(
-                    label = stringResource(R.string.pill_menu_edit_layout),
-                    colors = colors,
-                    icon = {
-                        ActionButtonIcon(
-                            icon = Icons.Rounded.Edit,
-                            contentDescription = stringResource(R.string.pill_menu_edit_layout),
-                            colors = colors,
-                        )
-                    },
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    AppStateManager.setEditorActive(true)
-                    onDismiss()
-                }
-                Spacer(Modifier.height(6.dp))
-                ActionButton(
-                    label = stringResource(R.string.pill_menu_global_settings),
-                    colors = colors,
-                    icon = {
-                        ActionButtonIcon(
-                            icon = Icons.Rounded.Settings,
-                            contentDescription = stringResource(R.string.pill_menu_global_settings),
-                            colors = colors,
-                        )
-                    },
-                ) {
-                    showGlobalSettings = true
+                    PillActionChip(
+                        label    = stringResource(R.string.pill_menu_edit_layout),
+                        icon     = Icons.Rounded.Edit,
+                        colors   = colors,
+                        onClick  = { AppStateManager.setEditorActive(true); onDismiss() },
+                        modifier = Modifier.weight(1f),
+                    )
+                    PillActionChip(
+                        label    = stringResource(R.string.pill_menu_global_settings),
+                        icon     = Icons.Rounded.Settings,
+                        colors   = colors,
+                        onClick  = { showGlobalSettings = true },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
@@ -489,16 +480,20 @@ private fun MirrorControlCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Ambient Settings button (left)
-        Text(
-            text = stringResource(R.string.pill_menu_ambient_settings),
-            color = colors.onControlOverlay,
-            style = MaterialTheme.typography.titleSmall,
+        Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .background(colors.navPillBody.copy(alpha = 0.35f))
+                .border(PM_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .clickable(onClick = onAmbientSettings)
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text  = stringResource(R.string.pill_menu_ambient_settings),
+                color = colors.accent,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
 
         Spacer(Modifier.weight(1f))
 
@@ -608,6 +603,41 @@ private fun MirrorControlIconButton(
 }
 
 @Composable
+private fun PillActionChip(
+    label:    String,
+    icon:     ImageVector,
+    colors:   AppColors,
+    onClick:  () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val accent = colors.accent
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+            .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+            .clickable(onClick = onClick)
+            .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
+        verticalAlignment    = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector        = icon,
+            contentDescription = null,
+            tint               = accent,
+            modifier           = Modifier.size(PM_NAV_ICON_SIZE),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text     = label,
+            color    = accent,
+            style    = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun SelectableChip(
     text: String,
     isSelected: Boolean,
@@ -641,46 +671,6 @@ private fun SelectableChip(
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
-}
-
-@Composable
-private fun ActionButton(
-    label: String,
-    colors: AppColors,
-    icon: @Composable (() -> Unit)? = null,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-            .background(colors.navPillBody.copy(alpha = 0.35f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            color = colors.onControlOverlay,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        if (icon != null) icon()
-    }
-}
-
-@Composable
-private fun ActionButtonIcon(
-    icon: ImageVector,
-    contentDescription: String,
-    colors: AppColors,
-) {
-    Icon(
-        imageVector = icon,
-        contentDescription = contentDescription,
-        tint = colors.onControlOverlay,
-        modifier = Modifier.size(PM_NAV_ICON_SIZE),
-    )
 }
 
 @Composable

@@ -6,12 +6,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -196,6 +203,7 @@ internal fun ActionPicker(
     enableKeyboard: Boolean = true,
     enableGamepad:  Boolean = true,
     enableMouse:    Boolean = true,
+    onEditMacro:    ((Macro) -> Unit)? = null,
     onChange:       (PadAction) -> Unit,
 ) {
     var categoryExpanded by remember { mutableStateOf(false) }
@@ -260,7 +268,7 @@ internal fun ActionPicker(
             is PadAction.KeyboardKey    -> KeyboardKeyPicker(current, accentColor, onChange)
             is PadAction.GamepadButton  -> GamepadButtonPicker(current, accentColor, onChange)
             is PadAction.MouseButton    -> MouseButtonPicker(current, accentColor, onChange)
-            is PadAction.Macro          -> MacroPicker(current, accentColor, onChange)
+            is PadAction.Macro          -> MacroPicker(current, accentColor, onEditMacro, onChange)
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
             is PadAction.AmbientPeek,
@@ -637,6 +645,7 @@ internal fun GamepadButtonPicker(
 internal fun MacroPicker(
     current:     PadAction.Macro,
     accentColor: Color,
+    onEditMacro: ((Macro) -> Unit)? = null,
     onChange:    (PadAction) -> Unit,
 ) {
     val profile by MacroPadState.activeProfile.collectAsState()
@@ -645,40 +654,72 @@ internal fun MacroPicker(
     val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
 
     var macroExpanded by remember { mutableStateOf(false) }
-    val selectedMacroName = macros.firstOrNull { it.id == current.macroId }?.name
-        ?: macros.firstOrNull()?.name
-        ?: ""
+    val selectedMacro = macros.firstOrNull { it.id == current.macroId }
+        ?: macros.firstOrNull()
+    val selectedMacroName = selectedMacro?.name ?: ""
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable(enabled = macros.isNotEmpty()) { macroExpanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    selectedMacroName.ifEmpty { folderEmptyLabel },
-                    color    = if (macros.isEmpty()) colors.onSurfaceSecondary else accentColor,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                if (macros.isNotEmpty()) {
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
+        Row(
+            modifier             = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            verticalAlignment    = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable(enabled = macros.isNotEmpty()) { macroExpanded = true }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        selectedMacroName.ifEmpty { folderEmptyLabel },
+                        color    = if (macros.isEmpty()) colors.onSurfaceSecondary else accentColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (macros.isNotEmpty()) {
+                        Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
+                    }
+                }
+                DropdownMenu(
+                    expanded         = macroExpanded,
+                    onDismissRequest = { macroExpanded = false },
+                    modifier         = Modifier.background(colors.surface),
+                ) {
+                    macros.forEach { macro ->
+                        DropdownMenuItem(
+                            text    = { Text(macro.name, color = if (macro.id == current.macroId) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                            onClick = { onChange(PadAction.Macro(macro.id)); macroExpanded = false },
+                        )
+                    }
                 }
             }
-            DropdownMenu(
-                expanded         = macroExpanded,
-                onDismissRequest = { macroExpanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                macros.forEach { macro ->
-                    DropdownMenuItem(
-                        text    = { Text(macro.name, color = if (macro.id == current.macroId) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                        onClick = { onChange(PadAction.Macro(macro.id)); macroExpanded = false },
+            if (onEditMacro != null && selectedMacro != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable { onEditMacro(selectedMacro) }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.Edit,
+                        contentDescription = null,
+                        tint     = accentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.cd_edit_macro),
+                        color = accentColor,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }

@@ -96,6 +96,9 @@ object SettingsManager {
     private val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
     private val KEY_TOUCHPAD_TWO_FINGER_TAP = booleanPreferencesKey("touchpad_two_finger_tap")
 
+    // MacroPad touch recording
+    private val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
+
     // MacroPad ambient display settings
     private val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
     private val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
@@ -210,6 +213,10 @@ object SettingsManager {
     private val _touchpadUseMouse = MutableStateFlow(false)
     val touchpadUseMouse: StateFlow<Boolean> = _touchpadUseMouse.asStateFlow()
 
+    // MacroPad touch recording — skip confirmation dialog after first use
+    private val _skipTouchRecordDialog = MutableStateFlow(false)
+    val skipTouchRecordDialog: StateFlow<Boolean> = _skipTouchRecordDialog.asStateFlow()
+
     // Tap-to-click — only active in touchpad mouse mode
     private val _touchpadTapToClick = MutableStateFlow(true)
     val touchpadTapToClick: StateFlow<Boolean> = _touchpadTapToClick.asStateFlow()
@@ -297,6 +304,7 @@ object SettingsManager {
                 _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
+                _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                 _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
                 AppLog.level = _logLevel.value
@@ -481,6 +489,12 @@ object SettingsManager {
         AppLog.d(TAG, "setTouchpadTwoFingerTap($value)")
         _touchpadTwoFingerTap.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
+    }
+
+    fun setSkipTouchRecordDialog(value: Boolean) {
+        AppLog.d(TAG, "setSkipTouchRecordDialog($value)")
+        _skipTouchRecordDialog.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] = value } }
     }
 
     fun setMacropadAmbientEnabled(value: Boolean) {

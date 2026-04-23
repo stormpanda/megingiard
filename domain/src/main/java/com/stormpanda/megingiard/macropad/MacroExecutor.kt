@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.macropad
 
+import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.input.TouchInjector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -11,15 +14,23 @@ import kotlinx.coroutines.launch
 // Using 32768 so -1.0 maps exactly to -32768; positive side is clamped below.
 private const val MAC_ABS_FULL_DEFLECTION = 32768
 
+// Wait after starting GamepadInjector before the first event dispatch, in milliseconds.
+// start() blocks until the native binary signals "R\n", meaning the uinput fd is opened,
+// but Android's InputFlinger discovers the new virtual device asynchronously. Dispatching
+// events before InputFlinger registers the device causes them to be silently dropped.
+private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
+
 private const val TAG = "MacroExecutor"
 
-private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT }
+private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_UP }
 
 private data class MacroEvent(
     val timeMs: Long,
     val type: MacroEventType,
     val code: Int,
     val value: Int,
+    val normX: Float = 0f,
+    val normY: Float = 0f,
 )
 
 // "Reset" events (BUTTON_UP, JOYSTICK_SET to 0, HAT to 0) should be dispatched
@@ -27,7 +38,9 @@ private data class MacroEvent(
 // when one step ends exactly as another begins.
 private val MacroEvent.isReset: Boolean get() = when (type) {
     MacroEventType.BUTTON_UP   -> true
+    MacroEventType.TOUCH_UP    -> true
     MacroEventType.BUTTON_DOWN -> false
+    MacroEventType.TOUCH_DOWN  -> false
     MacroEventType.JOYSTICK_SET, MacroEventType.HAT -> value == 0
 }
 
@@ -45,18 +58,58 @@ object MacroExecutor {
     // App-lifetime scope: intentionally never cancelled — lives for the duration of the process.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    fun execute(macro: Macro) {
+    // Stored at app startup so that touch-tap steps can start TouchInjector without
+    // requiring the caller to pass a Context through the action-dispatch chain.
+    private var appContext: Context? = null
+
+    /**
+     * Must be called once from [MainActivity.onCreate] to provide a stable application
+     * context used when starting [TouchInjector] for [MacroStep.TouchTap] replay.
+     */
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        AppLog.d(TAG, "init appContext=${appContext?.packageName}")
+    }
+
+    fun execute(macro: Macro, context: Context? = null) {
         if (macro.steps.isEmpty()) return
+        val ctx = context ?: appContext
         AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size}")
-        scope.launch { executeSuspend(macro) }
+        scope.launch { executeSuspend(macro, ctx) }
     }
 
     // -------------------------------------------------------------------------
     // Internal execution logic
     // -------------------------------------------------------------------------
 
-    private suspend fun executeSuspend(macro: Macro) {
+    private suspend fun executeSuspend(macro: Macro, context: Context?) {
         val events = buildEventList(macro)
+        val hasTouchEvents = events.any { it.type == MacroEventType.TOUCH_DOWN || it.type == MacroEventType.TOUCH_UP }
+        val hasGamepadEvents = events.any {
+            it.type == MacroEventType.BUTTON_DOWN || it.type == MacroEventType.BUTTON_UP ||
+            it.type == MacroEventType.JOYSTICK_SET || it.type == MacroEventType.HAT
+        }
+        // Start injectors that aren't already running.
+        // start() blocks until the binary signals readiness ("R\n") before returning,
+        // so no additional delay is needed — isRunning is already true when start() returns.
+        if (hasTouchEvents && context != null && !TouchInjector.isRunning) {
+            AppLog.i(TAG, "macro has touch events → starting TouchInjector")
+            TouchInjector.start(context)
+        }
+        val startedGamepad = hasGamepadEvents && context != null && !GamepadInjector.isRunning
+        if (startedGamepad) {
+            AppLog.i(TAG, "macro has gamepad events → starting GamepadInjector")
+            GamepadInjector.start(context!!)
+            // InputFlinger discovers the uinput virtual device asynchronously after the binary
+            // creates it. Wait for device registration before dispatching the first event.
+            delay(MAC_GAMEPAD_INJECTOR_INIT_MS)
+        }
+        if (hasTouchEvents && !TouchInjector.isRunning) {
+            AppLog.w(TAG, "TouchInjector failed to start — touch steps will be skipped")
+        }
+        if (hasGamepadEvents && !GamepadInjector.isRunning) {
+            AppLog.w(TAG, "GamepadInjector failed to start — gamepad steps will be skipped")
+        }
         var currentTimeMs = 0L
         for (event in events) {
             val waitMs = event.timeMs - currentTimeMs
@@ -65,6 +118,14 @@ object MacroExecutor {
             dispatch(event)
         }
         AppLog.d(TAG, "macro '${macro.name}' complete (${events.size} events)")
+        if (hasTouchEvents) {
+            AppLog.i(TAG, "macro done → stopping TouchInjector")
+            TouchInjector.stop()
+        }
+        if (startedGamepad) {
+            AppLog.i(TAG, "macro done → stopping GamepadInjector")
+            GamepadInjector.stop()
+        }
     }
 
     private fun buildEventList(macro: Macro): List<MacroEvent> {
@@ -91,6 +152,10 @@ object MacroExecutor {
                     events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.HAT, 0, 0)
                     events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.HAT, 1, 0)
                 }
+                is MacroStep.TouchTap -> {
+                    events += MacroEvent(step.startTimeMs,                    MacroEventType.TOUCH_DOWN, 0, 0, step.normX, step.normY)
+                    events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.TOUCH_UP,   0, 0, step.normX, step.normY)
+                }
             }
         }
         events.sortWith(compareBy({ it.timeMs }, { if (it.isReset) 0 else 1 }))
@@ -103,6 +168,8 @@ object MacroExecutor {
             MacroEventType.BUTTON_UP    -> GamepadInjector.buttonUp(event.code)
             MacroEventType.JOYSTICK_SET -> GamepadInjector.joystick(event.code, event.value)
             MacroEventType.HAT          -> GamepadInjector.hat(axis = event.code, value = event.value)
+            MacroEventType.TOUCH_DOWN   -> TouchInjector.injectTouch(TouchAction.DOWN, event.normX, event.normY)
+            MacroEventType.TOUCH_UP     -> TouchInjector.injectTouch(TouchAction.UP,   event.normX, event.normY)
         }
     }
 }

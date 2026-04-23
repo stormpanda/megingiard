@@ -60,6 +60,7 @@ internal fun ButtonEditDialog(
     enableGamepad:  Boolean = true,
     enableMouse:    Boolean = true,
     initialAction:  PadAction? = null,  // pre-set action for new buttons; ignored if button != null
+    onEditMacro:    ((Macro) -> Unit)? = null,
     onConfirm:      (PadButton) -> Unit,
     onDismiss:      () -> Unit,
     modifier:       Modifier = Modifier,
@@ -395,6 +396,7 @@ internal fun ButtonEditDialog(
                     enableKeyboard = enableKeyboard,
                     enableGamepad  = enableGamepad,
                     enableMouse    = enableMouse,
+                    onEditMacro    = onEditMacro,
                     onChange       = ::onActionChanged,
                 )
             }
