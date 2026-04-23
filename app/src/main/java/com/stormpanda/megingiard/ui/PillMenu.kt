@@ -483,7 +483,7 @@ private fun MirrorControlCard(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .border(PM_BORDER_WIDTH, colors.onControlOverlay.copy(alpha = 0.3f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .clickable(onClick = onAmbientSettings)
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
@@ -613,7 +613,7 @@ private fun PillActionChip(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-            .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+            .border(PM_BORDER_WIDTH, colors.onControlOverlay.copy(alpha = 0.3f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
             .clickable(onClick = onClick)
             .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
         verticalAlignment    = Alignment.CenterVertically,

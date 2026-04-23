@@ -14,6 +14,12 @@ import kotlinx.coroutines.launch
 // Using 32768 so -1.0 maps exactly to -32768; positive side is clamped below.
 private const val MAC_ABS_FULL_DEFLECTION = 32768
 
+// Wait after starting GamepadInjector before the first event dispatch, in milliseconds.
+// start() blocks until the native binary signals "R\n", meaning the uinput fd is opened,
+// but Android's InputFlinger discovers the new virtual device asynchronously. Dispatching
+// events before InputFlinger registers the device causes them to be silently dropped.
+private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
+
 private const val TAG = "MacroExecutor"
 
 private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_UP }
@@ -94,6 +100,9 @@ object MacroExecutor {
         if (startedGamepad) {
             AppLog.i(TAG, "macro has gamepad events → starting GamepadInjector")
             GamepadInjector.start(context!!)
+            // InputFlinger discovers the uinput virtual device asynchronously after the binary
+            // creates it. Wait for device registration before dispatching the first event.
+            delay(MAC_GAMEPAD_INJECTOR_INIT_MS)
         }
         if (hasTouchEvents && !TouchInjector.isRunning) {
             AppLog.w(TAG, "TouchInjector failed to start — touch steps will be skipped")
