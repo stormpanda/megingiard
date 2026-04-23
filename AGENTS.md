@@ -35,6 +35,14 @@
 | `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge  |
 
 > [!IMPORTANT]
+> **Documentation language: English only.**
+>
+> All documentation files in this repository (`*.md` under `docs/`, `AGENTS.md`,
+> `README.md`, `FEATURE.md` files, `BACKLOG.md`, etc.) MUST be written in **English**.
+> Every file — including new `FEATURE.md` files, architecture notes, and the feature backlog — must be written and maintained in
+> English so that all AI agents can process them without ambiguity.
+
+> [!IMPORTANT]
 > **Mandatory doc-sync rule — applies after every code change.**
 >
 > After implementing any change that affects a feature’s behaviour, interface, or architecture,
