@@ -183,6 +183,51 @@ sealed class PadAction {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PadAction defaults — pre-fill helpers for new buttons
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns a sensible default label for this action type, used to pre-fill the
+ * label field when a new button is created. Returns an empty string for action
+ * types that either manage their own label (e.g. [PadAction.KeyboardKey],
+ * [PadAction.GamepadButton]) or have fixed rendering ([PadAction.ScrollWheel],
+ * [PadAction.TrackpointMove], [PadAction.AmbientPeek]).
+ * Macro label is derived from the macro name at the call site, so also returns "".
+ */
+fun PadAction.defaultLabel(): String = when (this) {
+    is PadAction.LayoutNext            -> "Next Layout"
+    is PadAction.LayoutPrevious        -> "Prev Layout"
+    is PadAction.ProfileSwitcher       -> "Switch Profile"
+    is PadAction.MirrorPlayStop        -> "Mirror"
+    is PadAction.MirrorFreeze          -> "Freeze"
+    is PadAction.MirrorViewportEdit    -> "Viewport"
+    is PadAction.MirrorTouchProjection -> "Touch Projection"
+    is PadAction.FullScreenMouse       -> "Mouse"
+    is PadAction.FullScreenKeyboard    -> "Keyboard"
+    else                               -> ""
+}
+
+/**
+ * Returns the Material Symbols Rounded icon name (snake_case ligature string)
+ * to use as a default icon for this action type when a new button is created.
+ * Returns `null` for action types that have no meaningful icon default (e.g.
+ * [PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.MouseButton]).
+ */
+fun PadAction.defaultIconName(): String? = when (this) {
+    is PadAction.LayoutNext            -> "arrow_forward"
+    is PadAction.LayoutPrevious        -> "arrow_back"
+    is PadAction.ProfileSwitcher       -> "swap_horiz"
+    is PadAction.MirrorPlayStop        -> "cast"
+    is PadAction.MirrorFreeze          -> "pause_circle"
+    is PadAction.MirrorViewportEdit    -> "crop_free"
+    is PadAction.MirrorTouchProjection -> "touch_app"
+    is PadAction.FullScreenMouse       -> "mouse"
+    is PadAction.FullScreenKeyboard    -> "keyboard"
+    is PadAction.Macro                 -> "smart_button"
+    else                               -> null
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PadButton — a single interactable element on the pad
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -88,7 +88,7 @@ Within a category a second dropdown appears — as with gamepad — to select th
 
 ### 2 Default Icons & Names for Special Actions
 
-**Status:** Idea · **Effort:** Low · **Value:** Medium–High
+**Status:** ✅ Implemented · **Effort:** Low · **Value:** Medium–High
 
 #### Problem
 

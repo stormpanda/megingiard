@@ -70,10 +70,12 @@ internal fun ButtonEditDialog(
         ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
     val initLabel = button?.label ?: when (val ia = initialAction) {
         is PadAction.Macro -> MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == ia.macroId }?.name ?: ""
-        else               -> ""
+        null               -> ""
+        else               -> ia.defaultLabel()
     }
+    val initIconName = button?.iconName ?: initialAction?.defaultIconName()
     var label            by remember { mutableStateOf(initLabel) }
-    var iconName          by remember { mutableStateOf(button?.iconName) }
+    var iconName          by remember { mutableStateOf(initIconName) }
     var showIconPicker    by remember { mutableStateOf(false) }
     var buttonShape       by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
     var buttonSize        by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
@@ -88,21 +90,33 @@ internal fun ButtonEditDialog(
             buttonSize = ButtonSize.SIZE_1X2
             label = ""
             iconName = null
+            return
         }
         if (newAction is PadAction.TrackpointMove) {
             label = ""
             iconName = null
             buttonShape = ButtonShape.CIRCLE
+            return
         }
         if (newAction is PadAction.AmbientPeek) {
             label = ""
             iconName = null
             buttonShape = ButtonShape.CIRCLE
             buttonSize = ButtonSize.SIZE_1X1
+            return
         }
+        // For Macro: fill label from the macro name if the label field is still blank.
         if (newAction is PadAction.Macro && label.isBlank()) {
             val macroName = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == newAction.macroId }?.name
             if (macroName != null) label = macroName
+        }
+        // For new buttons (or when the label was never customised), pre-fill with the
+        // action-type defaults so the user has a sensible starting point.
+        if (button == null || label.isBlank()) {
+            val defaultLbl = newAction.defaultLabel()
+            val defaultIcon = newAction.defaultIconName()
+            if (defaultLbl.isNotEmpty()) label = defaultLbl
+            if (defaultIcon != null) iconName = defaultIcon
         }
     }
 

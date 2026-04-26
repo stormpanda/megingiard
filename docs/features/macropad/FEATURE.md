@@ -152,6 +152,36 @@ Each button supports one of the following actions:
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
 
+### FR-P11: Default Icons and Labels for Special Action Buttons
+
+- When a new button is created (or the action type is changed while the label field is still blank), the editor MUST pre-fill `label` and `iconName` with sensible defaults for action types that do not manage their own label.
+- Defaults are defined via two package-level extension functions in `core/…/macropad/MacroPadLayout.kt`:
+  - `fun PadAction.defaultLabel(): String` — returns a short English label suggestion.
+  - `fun PadAction.defaultIconName(): String?` — returns a Material Symbols Rounded ligature name, or `null` if no default applies.
+- Default mapping:
+
+  | `PadAction`               | Default label      | Default icon        |
+  |---------------------------|--------------------|---------------------|
+  | `LayoutNext`              | Next Layout        | `arrow_forward`     |
+  | `LayoutPrevious`          | Prev Layout        | `arrow_back`        |
+  | `ProfileSwitcher`         | Switch Profile     | `swap_horiz`        |
+  | `MirrorPlayStop`          | Mirror             | `cast`              |
+  | `MirrorFreeze`            | Freeze             | `pause_circle`      |
+  | `MirrorViewportEdit`      | Viewport           | `crop_free`         |
+  | `MirrorTouchProjection`   | Touch Projection   | `touch_app`         |
+  | `FullScreenMouse`         | Mouse              | `mouse`             |
+  | `FullScreenKeyboard`      | Keyboard           | `keyboard`          |
+  | `Macro`                   | _(from macro name)_| `smart_button`      |
+  | All others                | _(empty)_          | _(null)_            |
+
+- `ScrollWheel`, `TrackpointMove`, and `AmbientPeek` are excluded — they have fixed rendering and do not use labels or icons.
+- `KeyboardKey` and `GamepadButton` are excluded — they manage their own labels via the key/button name.
+- **Behaviour in `ButtonEditDialog`:**
+  - On dialog open (new button with `initialAction`): `initLabel` and `initIconName` are derived from the defaults before any state is initialised.
+  - On action type change (`onActionChanged`): defaults are applied whenever `button == null` (new button) or the label field is blank.
+  - The user can override both label and icon at any time after the default is applied.
+- **No migration required:** existing saved buttons are unaffected; `iconName` defaults to `null` on deserialisation.
+
 ---
 
 ## Technical Implementation
