@@ -411,21 +411,10 @@ class MirrorPresentation(
                                         )
                                         .pointerInput(Unit) {
                                             detectTransformGestures { _, pan, zoom, _ ->
-                                                val sw = ScreenCaptureManager.surfaceWidth.value
-                                                val sh = ScreenCaptureManager.surfaceHeight.value
-                                                val newScale =
-                                                    (ScreenCaptureManager.scale.value * zoom)
-                                                        .coerceIn(1f, 5f)
-                                                ScreenCaptureManager.setScale(newScale)
-                                                val maxX = (sw * (newScale - 1f)) / 2f
-                                                val maxY = (sh * (newScale - 1f)) / 2f
-                                                ScreenCaptureManager.setOffsetX(
-                                                    (ScreenCaptureManager.offsetX.value + pan.x)
-                                                        .coerceIn(-maxX, maxX)
-                                                )
-                                                ScreenCaptureManager.setOffsetY(
-                                                    (ScreenCaptureManager.offsetY.value + pan.y)
-                                                        .coerceIn(-maxY, maxY)
+                                                MirrorViewportController.applyZoomPan(
+                                                    zoom, pan.x, pan.y,
+                                                    ScreenCaptureManager.surfaceWidth.value,
+                                                    ScreenCaptureManager.surfaceHeight.value,
                                                 )
                                             }
                                         }

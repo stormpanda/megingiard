@@ -242,28 +242,32 @@ Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from t
 
 Users can opt in to persisting specific mirror session states across restarts via checkboxes in the Mirror tool settings panel:
 
-| Checkbox            | What is saved                 | DataStore Keys                                                      |
-| ------------------- | ----------------------------- | ------------------------------------------------------------------- |
-| Remember viewport   | `scale`, `offsetX`, `offsetY` | `mirror_remember_viewport` + `mirror_saved_scale/offset_x/offset_y` |
-| Remember lock       | `isLocked`                    | `mirror_remember_lock` + `mirror_saved_locked`                      |
-| Remember projection | `isTouchProjectionActive`     | `mirror_remember_projection` + `mirror_saved_projection`            |
+| Checkbox            | What is saved                 | Storage                                                                 |
+| ------------------- | ----------------------------- | ----------------------------------------------------------------------- |
+| Remember viewport   | `scale`, `offsetX`, `offsetY` | `PadLayout.mirrorSavedScale/X/Y` (per layout, in MacroPad profile JSON) |
+| Remember lock       | `isLocked`                    | `mirror_remember_lock` + `mirror_saved_locked` (DataStore)              |
+| Remember projection | `isTouchProjectionActive`     | `mirror_remember_projection` + `mirror_saved_projection` (DataStore)    |
+
+**Viewport is stored per layout.** Each `PadLayout` carries its own `mirrorSavedScale`, `mirrorSavedOffsetX`, and `mirrorSavedOffsetY` fields. Switching layouts automatically restores the viewport saved for that layout. The global DataStore keys (`mirror_saved_scale/offset_x/offset_y`) are no longer used for viewport.
 
 **Save flow:**
 
-- **Viewport (scale, offsetX, offsetY):** Changes are tracked via `snapshotFlow` in `MirrorScreen`. Scale/offset updates are forwarded to `ScreenCaptureManager` on every animation frame (via `.onEach {}`). DataStore writes are **debounced by 300 ms** (`MR_VIEWPORT_SAVE_DEBOUNCE_MS`) to avoid excessive writes during pan/zoom gestures — only the state after the gesture settles is persisted.
-- **Lock and touch-projection:** Tracked via `combine()` in a separate `LaunchedEffect`. **`distinctUntilChanged()`** prevents duplicate writes when the combined state hasn't actually changed. **`drop(1)`** skips the initial emission so the collector doesn't trigger an unnecessary write on first subscription. State is persisted immediately (no debounce) when either value changes.
-- **On Stop:** `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()` to ensure the final state is persisted before the flows reset.
+- **Viewport (scale, offsetX, offsetY):** All gesture paths (main pan/zoom and viewport-edit overlay) route through `MirrorViewportController.applyZoomPan()` / `setValues()`. The controller combines `_scale/_offsetX/_offsetY` with `activeLayout.id`, forwards every change to `ScreenCaptureManager` (immediate), and after a **300 ms debounce** calls `MacroPadState.saveMirrorViewport(layoutId, scale, offsetX, offsetY)` — which writes to that exact layout and triggers `SettingsManager.saveMacroPadData()`.
+- **Lock and touch-projection:** Tracked via `combine()` in a separate coroutine in `MirrorViewportController.startPersistence()`. **`distinctUntilChanged()`** prevents duplicate writes. **`drop(1)`** skips the initial emission. State is persisted immediately (no debounce) to `SettingsManager.saveMirrorSessionState()`.
+- **On Stop:** `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()` to ensure lock/projection state is persisted before the flows reset. Viewport is already persisted via the debounce path.
+
+`MirrorViewportController.startPersistence()` is started in `ScreenCaptureService` scope (not ViewModel scope), so persistence survives UI recomposition and works for the whole capture session.
 
 **Restore flow:** `ScreenCaptureService.onStartCommand()` launches a coroutine that:
 
-1. Calls `SettingsManager.restoreMirrorSessionState()` — applies saved values to `ScreenCaptureManager` (no UI involved).
-2. Calls `ScreenCaptureManager.setCapturing(true)` — signals the UI that capture is active. Because the values are already in `ScreenCaptureManager` at this point, `MirrorScreen`'s `LaunchedEffect(isCapturing)` reads the correct values with a simple in-memory read (no DataStore I/O).
-3. Calls `AppStateManager.setPromptInFlight(false)` — clears the prompt guard now that capture is confirmed active.
-4. Calls `presentation.show()` — `MirrorPresentation`'s StateFlow collectors receive the restored values on their first emission.
+1. Calls `SettingsManager.restoreMirrorSessionState()` — restores lock/projection state into `ScreenCaptureManager`.
+2. Calls `MirrorViewportController.restoreFromLayout()` — reads the active `PadLayout.mirrorSaved*` fields and applies them to `MirrorViewportController` and `ScreenCaptureManager`.
+3. Calls `ScreenCaptureManager.setCapturing(true)` — signals the UI that capture is active with all values already in place.
+4. Calls `AppStateManager.setPromptInFlight(false)` and `presentation.show()`.
 
-This ordering guarantees correct behaviour both for direct Ambient Display start (where `MirrorScreen` is never in composition) and for quick mode switches (the coroutine runs in the service scope, which is not cancelled by UI navigation).
+**Layout-switch restore:** `MirrorViewportController.startPersistence()` also launches a coroutine that observes `MacroPadState.activeLayout.id`. When the layout changes while capturing, the controller first performs an immediate save of the previous layout (using its previous layout ID and current viewport values), then calls `restoreFromLayout()` for the new layout. This prevents cross-layout debounce bleed where a late debounce write could overwrite the next layout.
 
-**Viewport sync:** `MirrorScreen` contains a `LaunchedEffect(isCapturing)` that, when capturing starts, reads the current `ScreenCaptureManager` scale/offset values and calls `Animatable.snapTo()` to align the animation state with the restored values. This bridges the gap between the manager (source of truth after restore) and the Compose `Animatable` instances (source of truth during gestures).
+**Viewport sync:** `MirrorScreen` contains a `LaunchedEffect(isCapturing)` that, when capturing starts, reads the current `ScreenCaptureManager` scale/offset values and calls `Animatable.snapTo()` to align the animation state with the restored values.
 
 ### Pinch-to-Zoom While Projecting
 

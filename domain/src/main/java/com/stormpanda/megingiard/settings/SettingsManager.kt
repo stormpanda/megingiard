@@ -66,10 +66,7 @@ object SettingsManager {
     private val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
     private val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
     private val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_projection")
-    // Mirror session state persistence — saved values
-    private val KEY_SAVED_SCALE = floatPreferencesKey("mirror_saved_scale")
-    private val KEY_SAVED_OFFSET_X = floatPreferencesKey("mirror_saved_offset_x")
-    private val KEY_SAVED_OFFSET_Y = floatPreferencesKey("mirror_saved_offset_y")
+    // Mirror session state persistence — saved values (viewport moved to PadLayout.mirrorSaved*)
 
     // Appearance
     private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
@@ -602,21 +599,12 @@ object SettingsManager {
         // Capture ALL values synchronously on the calling thread (main) BEFORE
         // resetMirrorSessionState() zeroes them out — including the remember-flags,
         // so the async lambda never reads stale StateFlow state.
-        val scale = ScreenCaptureManager.scale.value
-        val offsetX = ScreenCaptureManager.offsetX.value
-        val offsetY = ScreenCaptureManager.offsetY.value
         val locked = ScreenCaptureManager.isLocked.value
         val projection = ScreenCaptureManager.isTouchProjectionActive.value
-        val rememberViewport = _rememberViewport.value
         val rememberLock = _rememberLock.value
         val rememberProjection = _rememberProjection.value
         scope.launch {
             dataStore.edit { prefs ->
-                if (rememberViewport) {
-                    prefs[KEY_SAVED_SCALE] = scale
-                    prefs[KEY_SAVED_OFFSET_X] = offsetX
-                    prefs[KEY_SAVED_OFFSET_Y] = offsetY
-                }
                 if (rememberLock) {
                     prefs[KEY_SAVED_LOCKED] = locked
                 }
@@ -630,6 +618,8 @@ object SettingsManager {
     /**
      * Restores previously saved mirror session state into [ScreenCaptureManager].
      * Only restores aspects the user opted to remember.
+     * Viewport is NOT restored here — it is now stored per layout in [MacroPadState]
+     * and restored via [MirrorViewportController.restoreFromLayout].
      *
      * This is a **suspend** function so the caller can wait for the DataStore read
      * to complete before syncing UI state (e.g. Animatable values).
@@ -643,11 +633,6 @@ object SettingsManager {
         val prefs = dataStore.data
             .catch { emit(emptyPreferences()) }
             .first()
-        if (prefs[KEY_REMEMBER_VIEWPORT] ?: false) {
-            prefs[KEY_SAVED_SCALE]?.let { ScreenCaptureManager.setScale(it) }
-            prefs[KEY_SAVED_OFFSET_X]?.let { ScreenCaptureManager.setOffsetX(it) }
-            prefs[KEY_SAVED_OFFSET_Y]?.let { ScreenCaptureManager.setOffsetY(it) }
-        }
         if (prefs[KEY_REMEMBER_LOCK] ?: false) {
             prefs[KEY_SAVED_LOCKED]?.let { ScreenCaptureManager.setLocked(it) }
         }

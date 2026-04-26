@@ -126,12 +126,18 @@ class ScreenCaptureService : Service() {
                 }
             }
 
+            // Start viewport persistence coroutines in the service scope so they are
+            // alive for the entire capture session regardless of which UI composable is
+            // active (MirrorScreen on primary or MirrorPresentation on secondary display).
+            MirrorViewportController.startPersistence(scope)
+
             // Restore viewport/lock/freeze FIRST so MirrorScreen's LaunchedEffect(isCapturing)
             // observes the correct values the moment isCapturing becomes true.
             // promptInFlight remains true throughout the restore, so there is no window where
             // isCapturing=false && promptInFlight=false could re-trigger the capture prompt.
             scope.launch {
                 SettingsManager.restoreMirrorSessionState()
+                MirrorViewportController.restoreFromLayout()
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
                 AppStateManager.setPromptInFlight(false)

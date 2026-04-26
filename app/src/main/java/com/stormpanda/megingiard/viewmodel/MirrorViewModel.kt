@@ -55,8 +55,7 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val overlayTimeoutMs: StateFlow<Long> = _overlayTimeoutMs.asStateFlow()
 
     init {
-        MirrorViewportController.startPersistence(viewModelScope)
-        AppLog.d(TAG, "MirrorViewModel created, persistence started")
+        AppLog.d(TAG, "MirrorViewModel created")
     }
 
     // ── UI interactions ─────────────────────────────────────────────────────
