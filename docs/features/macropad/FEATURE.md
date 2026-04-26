@@ -160,19 +160,19 @@ Each button supports one of the following actions:
   - `fun PadAction.defaultIconName(): String?` — returns a Material Symbols Rounded ligature name, or `null` if no default applies.
 - Default mapping:
 
-  | `PadAction`               | Default label      | Default icon        |
-  |---------------------------|--------------------|---------------------|
-  | `LayoutNext`              | Next Layout        | `arrow_forward`     |
-  | `LayoutPrevious`          | Prev Layout        | `arrow_back`        |
-  | `ProfileSwitcher`         | Switch Profile     | `swap_horiz`        |
-  | `MirrorPlayStop`          | Mirror             | `cast`              |
-  | `MirrorFreeze`            | Freeze             | `pause_circle`      |
-  | `MirrorViewportEdit`      | Viewport           | `crop_free`         |
-  | `MirrorTouchProjection`   | Touch Projection   | `touch_app`         |
-  | `FullScreenMouse`         | Mouse              | `mouse`             |
-  | `FullScreenKeyboard`      | Keyboard           | `keyboard`          |
-  | `Macro`                   | _(from macro name)_| `smart_button`      |
-  | All others                | _(empty)_          | _(null)_            |
+  | `PadAction`             | Default label       | Default icon    |
+  | ----------------------- | ------------------- | --------------- |
+  | `LayoutNext`            | Next Layout         | `arrow_forward` |
+  | `LayoutPrevious`        | Prev Layout         | `arrow_back`    |
+  | `ProfileSwitcher`       | Switch Profile      | `swap_horiz`    |
+  | `MirrorPlayStop`        | Mirror              | `cast`          |
+  | `MirrorFreeze`          | Freeze              | `pause_circle`  |
+  | `MirrorViewportEdit`    | Viewport            | `crop_free`     |
+  | `MirrorTouchProjection` | Touch Projection    | `touch_app`     |
+  | `FullScreenMouse`       | Mouse               | `mouse`         |
+  | `FullScreenKeyboard`    | Keyboard            | `keyboard`      |
+  | `Macro`                 | _(from macro name)_ | `smart_button`  |
+  | All others              | _(empty)_           | _(null)_        |
 
 - `ScrollWheel`, `TrackpointMove`, and `AmbientPeek` are excluded — they have fixed rendering and do not use labels or icons.
 - `KeyboardKey` and `GamepadButton` are excluded — they manage their own labels via the key/button name.

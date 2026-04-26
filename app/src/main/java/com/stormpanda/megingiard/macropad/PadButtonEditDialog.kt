@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +48,27 @@ import java.util.Locale
 import java.util.UUID
 
 private const val TAG = "PadButtonEditDialog"
+
+/**
+ * Maps a [PadAction] type to its localised label string resource.
+ * Returns `null` for action types that manage their own label
+ * ([PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.MouseButton])
+ * or have fixed rendering ([PadAction.ScrollWheel], [PadAction.TrackpointMove],
+ * [PadAction.AmbientPeek]).
+ */
+private fun PadAction.defaultLabelRes(): Int? = when (this) {
+    is PadAction.LayoutNext            -> R.string.macropad_action_layout_next
+    is PadAction.LayoutPrevious        -> R.string.macropad_action_layout_previous
+    is PadAction.ProfileSwitcher       -> R.string.macropad_action_profile_switcher
+    is PadAction.MirrorPlayStop        -> R.string.macropad_action_mirror_play_stop
+    is PadAction.MirrorFreeze          -> R.string.macropad_action_mirror_freeze
+    is PadAction.MirrorViewportEdit    -> R.string.macropad_action_mirror_viewport_edit
+    is PadAction.MirrorTouchProjection -> R.string.macropad_action_mirror_touch_projection
+    is PadAction.FullScreenMouse       -> R.string.macropad_action_fullscreen_mouse
+    is PadAction.FullScreenKeyboard    -> R.string.macropad_action_fullscreen_keyboard
+    is PadAction.Macro                 -> R.string.macropad_action_macro
+    else                               -> null
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Button Edit Dialog
@@ -65,13 +87,14 @@ internal fun ButtonEditDialog(
     onDismiss:      () -> Unit,
     modifier:       Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val initAction = button?.action
         ?: initialAction
         ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
     val initLabel = button?.label ?: when (val ia = initialAction) {
         is PadAction.Macro -> MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == ia.macroId }?.name ?: ""
         null               -> ""
-        else               -> ia.defaultLabel()
+        else               -> ia.defaultLabelRes()?.let { context.getString(it) } ?: ""
     }
     val initIconName = button?.iconName ?: initialAction?.defaultIconName()
     var label            by remember { mutableStateOf(initLabel) }
@@ -113,7 +136,7 @@ internal fun ButtonEditDialog(
         // For new buttons (or when the label was never customised), pre-fill with the
         // action-type defaults so the user has a sensible starting point.
         if (button == null || label.isBlank()) {
-            val defaultLbl = newAction.defaultLabel()
+            val defaultLbl = newAction.defaultLabelRes()?.let { context.getString(it) } ?: ""
             val defaultIcon = newAction.defaultIconName()
             if (defaultLbl.isNotEmpty()) label = defaultLbl
             if (defaultIcon != null) iconName = defaultIcon
