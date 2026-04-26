@@ -190,6 +190,23 @@ Each button supports one of the following actions:
   - The user can override both label and icon at any time after the default is applied.
 - **No migration required:** existing saved buttons are unaffected; `iconName` defaults to `null` on deserialisation.
 
+### FR-P13: Global Gamepad Button Label Swap (A/B and X/Y)
+
+- Global Settings MUST provide one boolean toggle: **Swap face button labels (A/B and X/Y)** (default: off).
+- When enabled:
+  - `BTN_SOUTH` (physical A) is shown as **"B / Cross / South"** (EN) / **"B / Kreuz / Unten"** (DE), short label **"B"**.
+  - `BTN_EAST` (physical B) is shown as **"A / Circle / East"** (EN) / **"A / Kreis / Rechts"** (DE), short label **"A"**.
+  - `BTN_NORTH` (physical Y) is shown as **"X / Triangle / North"** (EN) / **"X / Dreieck / Oben"** (DE), short label **"X"**.
+  - `BTN_WEST` (physical X) is shown as **"Y / Square / West"** (EN) / **"Y / Quadrat / Links"** (DE), short label **"Y"**.
+- The swap is **display-only**: injected keycodes (`BTN_SOUTH`, `BTN_EAST`, `BTN_NORTH`, `BTN_WEST`) are never changed.
+- The localized 3-part labels are used consistently in:
+  - `GamepadButtonPicker` (MacroPad button action picker)
+  - `MacroStepEditDialog` (gamepad step dropdown)
+  - `MacroTimelineEditor` step list for `GamepadButtonTap`
+- When the user selects a button from the picker, the **swapped short label** is stored in `PadAction.GamepadButton.label` / `MacroStep.GamepadButtonTap.label`.
+- The setting is persisted in DataStore under the `macropad_settings` export section (`gamepad_swap_face_buttons` key) and therefore included in config export/import.
+- Implementation: `SettingsManager` exposes `gamepadSwapFaceButtons` as read-only `StateFlow<Boolean>`. `PadActionPicker.kt` provides shared label helpers (`gamepadCodeDisplayLabel`, `gamepadCodeDisplayShortLabel`, `localizedDisplayLabel`) that are consumed by button picker, macro step editor, and macro timeline UI.
+
 ---
 
 ## Technical Implementation

@@ -96,6 +96,9 @@ object SettingsManager {
     // MacroPad touch recording
     private val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
 
+    // MacroPad — gamepad face-button label swap (display only, keycodes unchanged)
+    private val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
+
     // MacroPad ambient display settings
     private val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
     private val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
@@ -135,6 +138,7 @@ object SettingsManager {
         KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION, KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY,
         KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR, KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE,
         KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
+        KEY_GAMEPAD_SWAP_FACE_BUTTONS,
     )
 
     internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(
@@ -271,6 +275,10 @@ object SettingsManager {
     private val _macropadAmbientApplyTheme = MutableStateFlow(false)
     val macropadAmbientApplyTheme: StateFlow<Boolean> = _macropadAmbientApplyTheme.asStateFlow()
 
+    // Gamepad face-button label swap (display only — injected keycodes stay unchanged)
+    private val _gamepadSwapFaceButtons = MutableStateFlow(false)
+    val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -315,6 +323,7 @@ object SettingsManager {
                 _macropadAmbientVignetteShape.value = VignetteShape.entries.firstOrNull { it.name == prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE] } ?: VignetteShape.RADIAL
                 _macropadAmbientPreview.value = prefs[KEY_MACROPAD_AMBIENT_PREVIEW] ?: false
                 _macropadAmbientApplyTheme.value = prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] ?: false
+                _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
 
                 // MacroPad profiles
                 val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -572,6 +581,12 @@ object SettingsManager {
         AppLog.d(TAG, "setMacropadAmbientApplyTheme($value)")
         _macropadAmbientApplyTheme.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] = value } }
+    }
+
+    fun setGamepadSwapFaceButtons(value: Boolean) {
+        AppLog.d(TAG, "setGamepadSwapFaceButtons($value)")
+        _gamepadSwapFaceButtons.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] = value } }
     }
 
     /**

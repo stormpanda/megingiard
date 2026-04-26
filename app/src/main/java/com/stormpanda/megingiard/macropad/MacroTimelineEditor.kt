@@ -538,6 +538,7 @@ private fun StepListItem(
     onDelete:    () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
     val joystickColor = colors.actionColorGamepad
     val dpadColor     = colors.actionColorSystem
     val touchColor    = MaterialTheme.colorScheme.tertiary
@@ -548,7 +549,7 @@ private fun StepListItem(
         is MacroStep.TouchTap         -> R.string.macropad_macro_step_type_touch
     })
     val description = when (step) {
-        is MacroStep.GamepadButtonTap -> step.label
+        is MacroStep.GamepadButtonTap -> gamepadCodeDisplayLabel(step.btnCode, swapFaceButtons)
         is MacroStep.JoystickMove     -> {
             val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
             "$stickLabel ${joyDirArrow(step.x, step.y)}"

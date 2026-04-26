@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -104,6 +106,7 @@ internal fun MacroStepEditDialog(
     onDismiss:   () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
 
     // ── Derive initial state from the existing step ───────────────────────────
     val initialType = when (step) {
@@ -195,7 +198,7 @@ internal fun MacroStepEditDialog(
                             startTimeMs = startMs.toLong(),
                             durationMs  = durMs.toLong().coerceAtLeast(1L),
                             btnCode     = selectedPreset.code,
-                            label       = selectedPreset.shortLabel,
+                            label       = selectedPreset.displayShortLabel(swapFaceButtons),
                         )
                         StepType.JOYSTICK -> {
                             val norm = sqrt((joyDirX * joyDirX + joyDirY * joyDirY).toFloat())
@@ -290,7 +293,7 @@ internal fun MacroStepEditDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                selectedPreset.label,
+                                selectedPreset.localizedDisplayLabel(swapFaceButtons),
                                 color    = accentColor,
                                 style    = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f),
@@ -306,7 +309,7 @@ internal fun MacroStepEditDialog(
                                 DropdownMenuItem(
                                     text = {
                                         Text(
-                                            preset.label,
+                                            preset.localizedDisplayLabel(swapFaceButtons),
                                             color    = if (preset.code == selectedPreset.code) accentColor else colors.onSurface,
                                             style    = MaterialTheme.typography.bodyMedium,
                                         )

@@ -230,6 +230,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_de">Deutsch</string>
     <string name="settings_log_level">Log-Level</string>
+    <string name="settings_gamepad_swap_face_buttons">Face-Button-Beschriftung tauschen (A/B und X/Y)</string>
+    <string name="settings_gamepad_swap_face_buttons_desc">Zeigt Nintendo-Layout-Beschriftungen im Gamepad-Picker (A↔B und X↔Y). Die gesendeten Keycodes bleiben unverändert.</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Megingiard beenden</string>
@@ -300,6 +302,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- %.1f = Stärke des Joystick-Ausschlags -->
     <string name="macropad_macro_step_magnitude">Stärke: %.1f</string>
     <string name="macropad_macro_step_direction">Richtung</string>
+    <string name="macropad_gamepad_face_label_template">%1$s / %2$s / %3$s</string>
+    <string name="macropad_gamepad_symbol_cross">Kreuz</string>
+    <string name="macropad_gamepad_symbol_circle">Kreis</string>
+    <string name="macropad_gamepad_symbol_triangle">Dreieck</string>
+    <string name="macropad_gamepad_symbol_square">Quadrat</string>
+    <string name="macropad_gamepad_position_south">Unten</string>
+    <string name="macropad_gamepad_position_east">Rechts</string>
+    <string name="macropad_gamepad_position_north">Oben</string>
+    <string name="macropad_gamepad_position_west">Links</string>
 
     <!-- Makro-Duplikat-Name: %1$s = originaler Makro-Name -->
     <string name="macropad_macro_copy_name">%1$s Kopie</string>

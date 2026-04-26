@@ -99,6 +99,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     val showFullscreenExitHints by SettingsManager.showFullscreenExitHints.collectAsState()
+    val gamepadSwapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
@@ -211,6 +212,14 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             accentColor = effectiveAccent,
                             colors = colors,
                             onChanged = { SettingsManager.setLogLevel(it) }
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
+                            description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
+                            checked = gamepadSwapFaceButtons,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { SettingsManager.setGamepadSwapFaceButtons(it) },
                         )
                     }
                 }

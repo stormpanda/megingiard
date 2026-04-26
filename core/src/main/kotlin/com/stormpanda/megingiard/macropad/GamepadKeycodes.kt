@@ -59,3 +59,37 @@ object GamepadKeycodes {
         GamepadButtonPreset(BTN_MODE,   "Guide / Home",        "🏠"),
     )
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Display helpers — apply global A/B and X/Y swap settings to a preset
+//
+// Only the display labels are affected; injected keycodes (BTN_*) stay unchanged.
+// These are pure functions so they can be used in both :core and :app without
+// any Android or Compose dependency.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the full display label of this preset, honouring the global face-button swap setting.
+ *
+ * Example: BTN_SOUTH ("A / Cross") → "B / Cross" when [swapFaceButtons] is `true`.
+ */
+fun GamepadKeycodes.GamepadButtonPreset.displayLabel(swapFaceButtons: Boolean): String = when {
+    swapFaceButtons && code == GamepadKeycodes.BTN_SOUTH -> "B / Cross"
+    swapFaceButtons && code == GamepadKeycodes.BTN_EAST  -> "A / Circle"
+    swapFaceButtons && code == GamepadKeycodes.BTN_NORTH -> "X / Triangle"
+    swapFaceButtons && code == GamepadKeycodes.BTN_WEST  -> "Y / Square"
+    else                                                 -> label
+}
+
+/**
+ * Returns the short display label of this preset, honouring the global face-button swap setting.
+ *
+ * Example: BTN_SOUTH ("A") → "B" when [swapFaceButtons] is `true`.
+ */
+fun GamepadKeycodes.GamepadButtonPreset.displayShortLabel(swapFaceButtons: Boolean): String = when {
+    swapFaceButtons && code == GamepadKeycodes.BTN_SOUTH -> "B"
+    swapFaceButtons && code == GamepadKeycodes.BTN_EAST  -> "A"
+    swapFaceButtons && code == GamepadKeycodes.BTN_NORTH -> "X"
+    swapFaceButtons && code == GamepadKeycodes.BTN_WEST  -> "Y"
+    else                                                 -> shortLabel
+}

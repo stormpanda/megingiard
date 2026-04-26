@@ -39,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
+import com.stormpanda.megingiard.macropad.displayShortLabel
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 private const val TAG = "PadActionPicker"
@@ -227,6 +229,7 @@ private fun ActionCategory.isEnabled(
 @Composable
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
+    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
     return when (this) {
         is PadAction.KeyboardKey -> {
             val modLabel = if (modifiers.isEmpty()) label else {
@@ -238,11 +241,15 @@ internal fun PadAction.displayLabel(): String {
             context.getString(R.string.macropad_display_keyboard_key, modLabel)
         }
         is PadAction.GamepadButton -> {
-            val comboLabel = if (extraBtnCodes.isEmpty()) label else {
+            val primaryLabel = GamepadKeycodes.PRESETS
+                .firstOrNull { it.code == btnCode }
+                ?.displayShortLabel(swapFaceButtons)
+                ?: label
+            val comboLabel = if (extraBtnCodes.isEmpty()) primaryLabel else {
                 val extraNames = extraBtnCodes.mapNotNull { code ->
-                    GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.shortLabel
+                    GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.displayShortLabel(swapFaceButtons)
                 }.joinToString("+")
-                "$label+$extraNames"
+                "$primaryLabel+$extraNames"
             }
             context.getString(R.string.macropad_display_gamepad_button, comboLabel)
         }
@@ -280,6 +287,57 @@ internal fun MouseButton.displayLabel(): String = when (this) {
     MouseButton.MIDDLE -> "Middle"
     MouseButton.MOUSE4 -> "Mouse 4"
     MouseButton.MOUSE5 -> "Mouse 5"
+}
+
+internal fun gamepadCodeDisplayShortLabel(code: Int, swapFaceButtons: Boolean): String {
+    return when {
+        swapFaceButtons && code == GamepadKeycodes.BTN_SOUTH -> "B"
+        swapFaceButtons && code == GamepadKeycodes.BTN_EAST  -> "A"
+        swapFaceButtons && code == GamepadKeycodes.BTN_NORTH -> "X"
+        swapFaceButtons && code == GamepadKeycodes.BTN_WEST  -> "Y"
+        else -> GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.shortLabel ?: code.toString()
+    }
+}
+
+@Composable
+internal fun gamepadCodeDisplayLabel(code: Int, swapFaceButtons: Boolean): String {
+    val primary = gamepadCodeDisplayShortLabel(code, swapFaceButtons)
+    return when (code) {
+        GamepadKeycodes.BTN_SOUTH -> stringResource(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            stringResource(R.string.macropad_gamepad_symbol_cross),
+            stringResource(R.string.macropad_gamepad_position_south),
+        )
+
+        GamepadKeycodes.BTN_EAST -> stringResource(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            stringResource(R.string.macropad_gamepad_symbol_circle),
+            stringResource(R.string.macropad_gamepad_position_east),
+        )
+
+        GamepadKeycodes.BTN_NORTH -> stringResource(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            stringResource(R.string.macropad_gamepad_symbol_triangle),
+            stringResource(R.string.macropad_gamepad_position_north),
+        )
+
+        GamepadKeycodes.BTN_WEST -> stringResource(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            stringResource(R.string.macropad_gamepad_symbol_square),
+            stringResource(R.string.macropad_gamepad_position_west),
+        )
+
+        else -> GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: code.toString()
+    }
+}
+
+@Composable
+internal fun GamepadKeycodes.GamepadButtonPreset.localizedDisplayLabel(swapFaceButtons: Boolean): String {
+    return gamepadCodeDisplayLabel(code, swapFaceButtons)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -628,16 +686,17 @@ internal fun GamepadButtonPicker(
     var extra3          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(2)) }
     val colors          = LocalAppColors.current
     val noneLabel       = stringResource(R.string.macropad_modifier_none)
+    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
 
     val currentPreset = GamepadKeycodes.PRESETS.firstOrNull { it.code == current.btnCode }
         ?: GamepadKeycodes.PRESETS.first()
 
     fun presetShortLabel(code: Int?) = code?.let { c ->
-        GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.shortLabel
+        GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.displayShortLabel(swapFaceButtons)
     }
 
     fun emitChange(primary: GamepadKeycodes.GamepadButtonPreset, e1: Int?, e2: Int?, e3: Int?) {
-        onChange(PadAction.GamepadButton(primary.code, primary.shortLabel, listOfNotNull(e1, e2, e3)))
+        onChange(PadAction.GamepadButton(primary.code, primary.displayShortLabel(swapFaceButtons), listOfNotNull(e1, e2, e3)))
     }
 
     Row(
@@ -657,7 +716,7 @@ internal fun GamepadButtonPicker(
                         .padding(horizontal = 8.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(currentPreset.shortLabel, color = accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
+                    Text(currentPreset.displayShortLabel(swapFaceButtons), color = accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
                     Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
                 }
                 DropdownMenu(
@@ -667,7 +726,7 @@ internal fun GamepadButtonPicker(
                 ) {
                     GamepadKeycodes.PRESETS.forEach { preset ->
                         DropdownMenuItem(
-                            text    = { Text(preset.label, color = if (preset.code == current.btnCode) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                            text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == current.btnCode) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                             onClick = { emitChange(preset, extra1, extra2, extra3); primaryExpanded = false },
                         )
                     }
@@ -704,7 +763,7 @@ internal fun GamepadButtonPicker(
                     GamepadKeycodes.PRESETS.forEach { preset ->
                         if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra2, extra3)) {
                             DropdownMenuItem(
-                                text    = { Text(preset.label, color = if (preset.code == extra1) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                                text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == extra1) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                                 onClick = { extra1 = preset.code; emitChange(currentPreset, preset.code, extra2, extra3); extra1Expanded = false },
                             )
                         }
@@ -742,7 +801,7 @@ internal fun GamepadButtonPicker(
                     GamepadKeycodes.PRESETS.forEach { preset ->
                         if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra3)) {
                             DropdownMenuItem(
-                                text    = { Text(preset.label, color = if (preset.code == extra2) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                                text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == extra2) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                                 onClick = { extra2 = preset.code; emitChange(currentPreset, extra1, preset.code, extra3); extra2Expanded = false },
                             )
                         }
@@ -780,7 +839,7 @@ internal fun GamepadButtonPicker(
                     GamepadKeycodes.PRESETS.forEach { preset ->
                         if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra2)) {
                             DropdownMenuItem(
-                                text    = { Text(preset.label, color = if (preset.code == extra3) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                                text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == extra3) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                                 onClick = { extra3 = preset.code; emitChange(currentPreset, extra1, extra2, preset.code); extra3Expanded = false },
                             )
                         }

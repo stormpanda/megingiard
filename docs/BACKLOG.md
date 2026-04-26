@@ -12,7 +12,7 @@
 2. [Default Icons & Names for Special Actions](#2-default-icons--names-for-special-actions)
 3. [Macro Recording — Full Input Chains](#3-macro-recording--full-input-chains)
 4. [Recording Gamepad Inputs in Macros](#4-recording-gamepad-inputs-in-macros)
-5. [Global A/B and X/Y Swap](#5-global-ab-and-xy-swap)
+5. [Global Face-Button Label Swap](#5-global-face-button-label-swap)
 6. [More Default Profiles](#6-more-default-profiles)
 7. [More Themes](#7-more-themes)
 
@@ -24,14 +24,14 @@
 | --- | ----------------------------------------- | ----- | ------ | ------------------------------------------ |
 | 2   | Default Icons & Names for Special Actions | ●●●○○ | ●○○○○  | **High — Low Hanging Fruit**               |
 | 6   | More Default Profiles                     | ●●●○○ | ●○○○○  | **High — Low Hanging Fruit**               |
-| 5   | Global A/B and X/Y Swap                   | ●●●●○ | ●●○○○  | **High — targeted AYN Thor fix**           |
+| 5   | Global Face-Button Label Swap             | ●●●●○ | ●○○○○  | **✅ Implemented**                         |
 | 7   | More Themes                               | ●●○○○ | ●○○○○  | **Medium — Low Hanging Fruit**             |
 | 1   | Grouped Action Dropdown                   | ●●●○○ | ●●●○○  | **✅ Implemented**                         |
 | 4   | Recording Gamepad Inputs in Macros        | ●●●○○ | ●●●○○  | **Medium**                                 |
 | 3   | Macro Recording (full chains)             | ●●●●● | ●●●●○  | **Long-term — transformative but complex** |
 
-**Recommendation for the next sprint:** Features 2 → 6 → 5 (in that order).
-All three are independent of each other, deliver tangible value, and have a very favourable effort-to-benefit ratio.
+**Recommendation for the next sprint:** Features 6 → 7 (in that order).
+Both are independent, low-effort candidates with clear user-facing impact.
 
 ---
 
@@ -172,9 +172,9 @@ A **live recording feature** that materialises inputs with correct timing as a `
 
 ---
 
-### 5 Global A/B and X/Y Swap
+### 5 Global Face-Button Label Swap
 
-**Status:** Idea · **Effort:** Low–Medium · **Value:** High (AYN Thor-specific)
+**Status:** ✅ Implemented · **Effort:** Low · **Value:** High (AYN Thor-specific)
 
 #### Problem
 
@@ -184,21 +184,20 @@ The AYN Thor offers a system setting to swap A↔B and X↔Y (Nintendo vs. Xbox 
 
 A **global setting** in the app settings:
 
-- Toggle: "Swap A/B" (default: off)
-- Toggle: "Swap X/Y" (default: off)
+- Toggle: "Swap face button labels (A/B and X/Y)" (default: off)
 
 **Effect:** Only the **display labels** of the affected gamepad buttons are swapped. The transmitted keycodes (`BTN_SOUTH`, `BTN_EAST`, `BTN_NORTH`, `BTN_WEST`) remain unchanged.
 
 Specifically:
 
-- `BTN_SOUTH` (A) shows "B", `BTN_EAST` (B) shows "A" — when A/B swap is active.
-- `BTN_NORTH` (Y) shows "X", `BTN_WEST` (X) shows "Y" — when X/Y swap is active.
+- `BTN_SOUTH` (A) shows "B", `BTN_EAST` (B) shows "A".
+- `BTN_NORTH` (Y) shows "X", `BTN_WEST` (X) shows "Y".
 
 **Implementation idea:**
 
-- Add a function `displayLabel(btnCode: Int, settings: SwapSettings): String` to `GamepadKeycodes.kt`.
+- Add functions `displayLabel(swapFaceButtons: Boolean)` and `displayShortLabel(swapFaceButtons: Boolean)` to `GamepadKeycodes.kt`.
 - Button labels in `PadButton` rendering and the `GamepadButton` picker read from this function instead of directly from the preset map.
-- `SettingsManager` gains two new boolean fields (`swapAB`, `swapXY`).
+- `SettingsManager` gains one boolean field (`gamepadSwapFaceButtons`).
 
 #### Risks
 
