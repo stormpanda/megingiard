@@ -115,6 +115,14 @@ The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY 
 >
 > In **mouse mode** `FullscreenMouseOverlay` uses `MouseInjector` instead. Relative delta values from Compose pointer events are scaled by `TP_MOUSE_SENSITIVITY` and forwarded to `MouseInjector.moveMouse(dx, dy)`. Tap gestures (single-finger and two-finger) are detected via slop + time thresholds and mapped to LMB / RMB clicks.
 
+### Secondary Display Rendering (Ambient Mode)
+
+When the MacroPad is in **ambient mode** (`SettingsManager.macropadAmbientEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `AmbientMacroPadOverlay` — so it appears on the secondary display.
+
+`MainAppScreen` suppresses the `FullscreenMouseOverlay` instance on the primary display whenever ambient mode is active, ensuring only one instance of `MouseInjector` runs at a time.
+
+Dismissal on the secondary display reuses the existing swipe-to-close path in `AmbientMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
+
 ### Pointer Event Handling in FullscreenMouseOverlay
 
 `FullscreenMouseOverlay` uses a raw `awaitPointerEvent()` loop on `PointerEventPass.Main`:

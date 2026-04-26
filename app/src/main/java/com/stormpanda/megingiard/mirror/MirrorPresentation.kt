@@ -39,7 +39,9 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
+import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
@@ -237,6 +239,9 @@ class MirrorPresentation(
                         val offsetY by ScreenCaptureManager.offsetY.collectAsState()
                         val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
                         val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+                        val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+                        val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
+                        val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
                         val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
                         val density = LocalDensity.current
                         val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
@@ -401,6 +406,24 @@ class MirrorPresentation(
                                                 )
                                             }
                                         }
+                                )
+                            }
+
+                            // Layer 4: Fullscreen Mouse Overlay — rendered above ambient
+                            // content when triggered from AmbientMacroPadOverlay buttons.
+                            // Dismissed via edge-swipe → AmbientMacroPadOverlay's
+                            // SwipeGestureProcessor → AppStateManager.closeActiveModal().
+                            if (ambientEnabled && capturing && isFullscreenMouseActive) {
+                                FullscreenMouseOverlay()
+                            }
+
+                            // Layer 5: Fullscreen Keyboard Overlay — rendered above ambient
+                            // content when triggered from AmbientMacroPadOverlay buttons.
+                            // Dismissed via edge-swipe → AppStateManager.closeActiveModal().
+                            if (ambientEnabled && capturing && isFullscreenKeyboardActive) {
+                                KeyboardScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    forcedLayout = fullscreenKeyboardLayout,
                                 )
                             }
                         }

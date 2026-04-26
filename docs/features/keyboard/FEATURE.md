@@ -219,3 +219,11 @@ When a full-screen UI overlay is visible:
 | `keyinjector_arm64`              | Pre-built ARM64 binary asset (`app/src/main/assets/`)                                     |
 | `../input/TouchInjector.kt`      | Shared trackpoint cursor movement (reused from Virtual Touchpad)                          |
 | `../input/ShellInputInjector.kt` | Shared touch injection infrastructure (reused by trackpoint cursor movement)              |
+
+### Secondary Display Rendering (Ambient Mode)
+
+When the MacroPad is in **ambient mode** (`SettingsManager.macropadAmbientEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `KeyboardScreen` is composed inside `MirrorPresentation` as **Layer 5** — above `AmbientMacroPadOverlay` — so it appears on the secondary display.
+
+`MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever ambient mode is active, ensuring only one instance of `KeyInjector` runs at a time.
+
+Dismissal on the secondary display reuses the existing swipe-to-close path in `AmbientMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenKeyboardActive.value = false`.

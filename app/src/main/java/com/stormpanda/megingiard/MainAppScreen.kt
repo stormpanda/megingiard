@@ -59,6 +59,7 @@ import com.stormpanda.megingiard.macropad.AmbientSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.mirror.DisplayDetector
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
@@ -89,6 +90,8 @@ fun MainAppScreen() {
     val isAmbientSettingsActive by AppStateManager.isAmbientSettingsActive.collectAsState()
     val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
     val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
+    val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
@@ -167,9 +170,11 @@ fun MainAppScreen() {
         // MacroPad is the sole content screen
         MacroPadScreen()
 
-        // Fullscreen modal overlays — rendered above MacroPad but below IdlePill
-        if (isFullscreenMouseActive) FullscreenMouseOverlay()
-        if (isFullscreenKeyboardActive) KeyboardScreen(
+        // Fullscreen modal overlays — rendered above MacroPad but below IdlePill.
+        // Suppressed when ambient mode is active: the overlays are rendered on the
+        // secondary display inside MirrorPresentation instead.
+        if (isFullscreenMouseActive && !(ambientEnabled && isCapturing)) FullscreenMouseOverlay()
+        if (isFullscreenKeyboardActive && !(ambientEnabled && isCapturing)) KeyboardScreen(
             modifier = Modifier.fillMaxSize(),
             forcedLayout = fullscreenKeyboardLayout,
         )
