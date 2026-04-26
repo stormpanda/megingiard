@@ -69,7 +69,7 @@ private const val TAG = "AmbientMacroPadOverlay"
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun AmbientMacroPadOverlay() {
+internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
     val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsState()
     val layout by MacroPadState.activeLayout.collectAsState()
@@ -304,7 +304,7 @@ internal fun AmbientMacroPadOverlay() {
             }
         }
 
-        IdlePill()
+        if (showIdlePill) IdlePill()
     }
 }
 

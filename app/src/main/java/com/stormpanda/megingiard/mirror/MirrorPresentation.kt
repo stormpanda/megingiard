@@ -42,6 +42,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
+import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
@@ -367,7 +368,7 @@ class MirrorPresentation(
                             // buttons/dim/vignette during touch projection, freeze, and
                             // viewport edit.
                             if (ambientEnabled && capturing) {
-                                AmbientMacroPadOverlay()
+                                AmbientMacroPadOverlay(showIdlePill = false)
                             }
 
                             // Layer 3: Viewport edit gesture overlay — transparent fullscreen
@@ -425,6 +426,15 @@ class MirrorPresentation(
                                     modifier = Modifier.fillMaxSize(),
                                     forcedLayout = fullscreenKeyboardLayout,
                                 )
+                            }
+
+                            // Layer 6: IdlePill — always the topmost layer so the swipe
+                            // affordance and PillMenu are never covered by fullscreen
+                            // overlays (keyboard / mouse). Suppressed inside
+                            // AmbientMacroPadOverlay (showIdlePill = false) to ensure
+                            // only one IdlePill instance exists at a time.
+                            if (ambientEnabled && capturing) {
+                                IdlePill()
                             }
                         }
                     }
