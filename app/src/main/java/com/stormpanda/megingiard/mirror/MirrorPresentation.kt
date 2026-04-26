@@ -39,6 +39,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
@@ -267,6 +268,27 @@ class MirrorPresentation(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .onGloballyPositioned { coords -> gestureBoxSize = coords.size }
+                                // Parent-level swipe handler (PointerEventPass.Initial).
+                                // Fires BEFORE any child regardless of z-order, so the
+                                // dismiss-swipe works even when FullscreenMouseOverlay or
+                                // KeyboardScreen is the hit-test target.
+                                // Only active while a fullscreen overlay is shown.
+                                .pointerInput(isFullscreenMouseActive, isFullscreenKeyboardActive, overlayAtBottom) {
+                                    if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
+                                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                                            val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                            when (event.type) {
+                                                PointerEventType.Press -> swipe.onPress(y, size.height.toFloat())
+                                                PointerEventType.Move  -> swipe.onMove(y)
+                                                PointerEventType.Release -> swipe.onRelease(!event.changes.any { it.pressed })
+                                                else -> Unit
+                                            }
+                                        }
+                                    }
+                                }
                                 .pointerInput(isTouchProjectionActive, overlayAtBottom) {
                                     if (!isTouchProjectionActive) return@pointerInput
                                     projectionController.reset()
