@@ -1,21 +1,18 @@
 ---
-mode: agent
-description: "TEMPLATE – copy this file to create a new Megingiard agent skill"
-tools:
-  - codebase
-  - editFiles
-  - problems
-  - terminal
+name: megingiard-skill-template
+description: "Template for creating a new Megingiard agent skill. Use when: authoring a new SKILL.md for a repeatable Megingiard workflow. Copy this file, fill in the placeholders, and place it under .github/skills/<name>/SKILL.md."
+argument-hint: 'Name of the new skill (e.g. "megingiard-refactor")'
 ---
 
 # Skill: `<Name>`
 
 > **How to use this template**
 >
-> 1. Copy this file, name it `<slug>.prompt.md` inside `.github/prompts/`.
-> 2. Fill in every `<placeholder>` section.
-> 3. Delete this note block and any unused sections.
-> 4. Confirm the file appears in the VS Code prompt picker before shipping.
+> 1. Create a folder `.github/skills/<slug>/` and place this file there as `SKILL.md`.
+> 2. Set `name:` in the frontmatter to exactly `<slug>` (must match the folder name).
+> 3. Fill in every `<placeholder>` section.
+> 4. Delete this note block and any unused sections.
+> 5. Confirm the skill appears in the VS Code slash-command picker (`/`) before shipping.
 
 ---
 

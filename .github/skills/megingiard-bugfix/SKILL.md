@@ -1,11 +1,7 @@
 ---
-mode: agent
-description: "Megingiard – Analyze and fix a bug (with ADB logs from the Thor device)"
-tools:
-  - codebase
-  - editFiles
-  - problems
-  - terminal
+name: megingiard-bugfix
+description: "Analyze and fix a bug in the Megingiard Android app. Use when: diagnosing crashes, unexpected behavior, or ADB logcat errors on the AYN Thor device. Fetches device logs, traces the root cause through the Kotlin/Compose codebase, implements a clean fix, and proposes a Conventional Commits message."
+argument-hint: 'Describe the bug (e.g. "app crashes when opening the macro editor")'
 ---
 
 # Skill: Megingiard Bug Fix
@@ -178,4 +174,3 @@ fix: <short imperative summary>
 - Never run `./gradlew` or any other build command
 - Never use `android.util.Log` directly
 - Do not remove or refactor any functionality unrelated to the bug
-- If the bug cannot be clearly located: explicitly state what is still unclear and ask the user for more information

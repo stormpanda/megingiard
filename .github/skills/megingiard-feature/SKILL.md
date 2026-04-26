@@ -1,11 +1,7 @@
 ---
-mode: agent
-description: "Megingiard – Plan and implement a new feature (including mandatory doc sync)"
-tools:
-  - codebase
-  - editFiles
-  - problems
-  - terminal
+name: megingiard-feature
+description: "Plan and implement a new feature for the Megingiard Android app. Use when: adding new user-visible behavior, extending existing features (MacroPad, Mirror, Keyboard, Touchpad, Settings), or wiring up new Compose screens. Reads existing docs, presents an implementation plan for approval, implements code, and synchronizes FEATURE.md documentation."
+argument-hint: 'Describe the feature (e.g. "add a dark-mode toggle to the settings screen")'
 ---
 
 # Skill: Megingiard Feature Development
@@ -53,17 +49,18 @@ Read the user's description carefully. Establish internally:
 Identify the affected feature area and read the relevant documentation in full:
 
 **Documentation map** (from `AGENTS.md §2`):
-| Area | Documentation |
-|---|---|
-| Screen Mirror | `docs/features/mirror/FEATURE.md` |
-| Virtual Touchpad | `docs/features/touchpad/FEATURE.md` |
-| Virtual Keyboard | `docs/features/keyboard/FEATURE.md` |
+
+| Area                     | Documentation                       |
+| ------------------------ | ----------------------------------- |
+| Screen Mirror            | `docs/features/mirror/FEATURE.md`   |
+| Virtual Touchpad         | `docs/features/touchpad/FEATURE.md` |
+| Virtual Keyboard         | `docs/features/keyboard/FEATURE.md` |
 | MacroPad / Layout Editor | `docs/features/macropad/FEATURE.md` |
-| Pill Menu | `docs/features/pillmenu/FEATURE.md` |
-| Design System / Theming | `docs/features/theming/FEATURE.md` |
-| Config Export/Import | `docs/features/config/FEATURE.md` |
-| Overall architecture | `docs/ARCHITECTURE.md` |
-| Product requirements | `PRD.md` |
+| Pill Menu                | `docs/features/pillmenu/FEATURE.md` |
+| Design System / Theming  | `docs/features/theming/FEATURE.md`  |
+| Config Export/Import     | `docs/features/config/FEATURE.md`   |
+| Overall architecture     | `docs/ARCHITECTURE.md`              |
+| Product requirements     | `PRD.md`                            |
 
 Also read:
 
