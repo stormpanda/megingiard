@@ -26,7 +26,7 @@
 | 6   | More Default Profiles                     | ●●●○○ | ●○○○○  | **High — Low Hanging Fruit**               |
 | 5   | Global A/B and X/Y Swap                   | ●●●●○ | ●●○○○  | **High — targeted AYN Thor fix**           |
 | 7   | More Themes                               | ●●○○○ | ●○○○○  | **Medium — Low Hanging Fruit**             |
-| 1   | Grouped Action Dropdown                   | ●●●○○ | ●●●○○  | **Medium — pays off as action list grows** |
+| 1   | Grouped Action Dropdown                   | ●●●○○ | ●●●○○  | **✅ Implemented**                         |
 | 4   | Recording Gamepad Inputs in Macros        | ●●●○○ | ●●●○○  | **Medium**                                 |
 | 3   | Macro Recording (full chains)             | ●●●●● | ●●●●○  | **Long-term — transformative but complex** |
 
@@ -41,7 +41,7 @@ All three are independent of each other, deliver tangible value, and have a very
 
 ### 1 Grouped Action Dropdown
 
-**Status:** Idea · **Effort:** Medium · **Value:** Medium
+**Status:** ✅ Implemented · **Effort:** Medium · **Value:** Medium
 
 #### Problem
 

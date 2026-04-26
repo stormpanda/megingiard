@@ -175,6 +175,14 @@ Each button supports one of the following actions:
   | All others              | _(empty)_           | _(null)_        |
 
 - `ScrollWheel`, `TrackpointMove`, and `AmbientPeek` are excluded — they have fixed rendering and do not use labels or icons.
+
+### FR-P12: Grouped Action Dropdown in Button Editor
+
+- `PadActionPicker` MUST provide a grouped action selection flow in `ButtonEditDialog`.
+- The first dropdown selects the action **group** (`Keyboard`, `Gamepad`, `Mouse`, `Macro`, `Layout`, `Mirror`, `Profile`, `Other`).
+- The second dropdown selects the concrete action inside the currently selected group.
+- Group and action labels MUST come from `strings.xml` resources.
+- Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker) MUST remain unchanged and appear after action selection.
 - `KeyboardKey` and `GamepadButton` are excluded — they manage their own labels via the key/button name.
 - **Behaviour in `ButtonEditDialog`:**
   - On dialog open (new button with `initialAction`): `initLabel` and `initIconName` are derived from the defaults before any state is initialised.
@@ -471,7 +479,7 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 | `MacroStepEditDialog.kt`         | Modal dialog for creating/editing a single `MacroStep`; `TouchTap` steps show recorded coords read-only with editable timing                                                                                                                            |
 | `RecordingMirrorPresentation.kt` | `android.app.Presentation` shown on the secondary display during touch recording; creates its own `VirtualDisplay` from the shared `MediaProjection` token; captures the first tap via `pointerInput` and calls `TouchRecordingManager.onTapRecorded`   |
 | `TouchRecordStartDialog.kt`      | Confirmation `AlertDialog` before the recording mirror appears; informs user that the mirror will start and they should tap the target position                                                                                                         |
-| `PadActionPicker.kt`             | Action-type picker; `MacroPicker` uses single dropdown listing macros from active profile                                                                                                                                                               |
+| `PadActionPicker.kt`             | Grouped action picker (group → action) plus existing action-specific inline editors; `MacroPicker` uses single dropdown listing macros from active profile                                                                                              |
 | `PadButtonEditDialog.kt`         | Button create/edit dialog; `initialAction` param for pre-setting Macro action                                                                                                                                                                           |
 | `AmbientMacroPadOverlay.kt`      | Ambient Display overlay on secondary display: mirror background + dim/vignette + MacroPad buttons                                                                                                                                                       |
 | `AmbientSettingsOverlay.kt`      | Per-layout ambient settings editor: dim slider, vignette shape/visible area/transition/opacity/colour                                                                                                                                                   |

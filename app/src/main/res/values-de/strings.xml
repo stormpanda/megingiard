@@ -400,4 +400,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="cd_layout_prev">Vorheriges Layout</string>
     <string name="cd_layout_next">Nächstes Layout</string>
     <string name="cd_viewport_edit">Viewport bearbeiten</string>
+    <string name="macropad_action_group_keyboard">Tastatur</string>
+    <string name="macropad_action_group_gamepad">Gamepad</string>
+    <string name="macropad_action_group_mouse">Maus</string>
+    <string name="macropad_action_group_macro">Makro</string>
+    <string name="macropad_action_group_layout">Profil/Layout</string>
+    <string name="macropad_action_group_mirror">Mirror-Menü</string>
+    <string name="macropad_action_group_profile">Profil</string>
+    <string name="macropad_action_group_other">Overlays</string>
+    <string name="macropad_picker_label_group">Gruppe</string>
 </resources>

@@ -393,4 +393,13 @@ Open Settings to create a layout.</string>
     <!-- Touchpad hints -->
     <string name="touchpad_hint">Tap here to control the top screen</string>
     <string name="touchpad_hint_mouse">Drag to move · Tap to click</string>
+    <string name="macropad_action_group_keyboard">Keyboard</string>
+    <string name="macropad_action_group_gamepad">Gamepad</string>
+    <string name="macropad_action_group_mouse">Mouse</string>
+    <string name="macropad_action_group_macro">Macro</string>
+    <string name="macropad_action_group_layout">Profile/Layout</string>
+    <string name="macropad_action_group_mirror">Mirror Menu</string>
+    <string name="macropad_action_group_profile">Profile</string>
+    <string name="macropad_action_group_other">Overlays</string>
+    <string name="macropad_picker_label_group">Group</string>
 </resources>

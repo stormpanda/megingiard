@@ -47,6 +47,53 @@ private const val TAG = "PadActionPicker"
 // Action category enum
 // ─────────────────────────────────────────────────────────────────────────────
 
+internal enum class ActionGroup {
+    KEYBOARD,
+    GAMEPAD,
+    MOUSE,
+    MACRO,
+    LAYOUT,
+    MIRROR,
+    OTHER,
+}
+
+internal fun ActionGroup.labelResId(): Int = when (this) {
+    ActionGroup.KEYBOARD -> R.string.macropad_action_group_keyboard
+    ActionGroup.GAMEPAD  -> R.string.macropad_action_group_gamepad
+    ActionGroup.MOUSE    -> R.string.macropad_action_group_mouse
+    ActionGroup.MACRO    -> R.string.macropad_action_group_macro
+    ActionGroup.LAYOUT   -> R.string.macropad_action_group_layout
+    ActionGroup.MIRROR   -> R.string.macropad_action_group_mirror
+    ActionGroup.OTHER    -> R.string.macropad_action_group_other
+}
+
+internal fun ActionGroup.actions(): List<ActionCategory> = when (this) {
+    ActionGroup.KEYBOARD -> listOf(ActionCategory.KEYBOARD_KEY)
+    ActionGroup.GAMEPAD  -> listOf(ActionCategory.GAMEPAD_BUTTON)
+    ActionGroup.MOUSE    -> listOf(
+        ActionCategory.MOUSE_BUTTON,
+        ActionCategory.SCROLL_WHEEL,
+        ActionCategory.TRACKPOINT,
+    )
+    ActionGroup.MACRO    -> listOf(ActionCategory.MACRO)
+    ActionGroup.LAYOUT   -> listOf(
+        ActionCategory.LAYOUT_NEXT,
+        ActionCategory.LAYOUT_PREVIOUS,
+        ActionCategory.PROFILE_SWITCHER,
+    )
+    ActionGroup.MIRROR   -> listOf(
+        ActionCategory.MIRROR_PLAY_STOP,
+        ActionCategory.MIRROR_FREEZE,
+        ActionCategory.MIRROR_VIEWPORT_EDIT,
+        ActionCategory.MIRROR_TOUCH_PROJECTION,
+        ActionCategory.AMBIENT_PEEK,
+    )
+    ActionGroup.OTHER    -> listOf(
+        ActionCategory.FULLSCREEN_MOUSE,
+        ActionCategory.FULLSCREEN_KEYBOARD,
+    )
+}
+
 internal enum class ActionCategory {
     KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, AMBIENT_PEEK,
     LAYOUT_NEXT, LAYOUT_PREVIOUS, PROFILE_SWITCHER,
@@ -92,6 +139,25 @@ internal fun ActionCategory.defaultAction(): PadAction = when (this) {
     ActionCategory.FULLSCREEN_KEYBOARD   -> PadAction.FullScreenKeyboard()
 }
 
+internal fun ActionCategory.group(): ActionGroup = when (this) {
+    ActionCategory.KEYBOARD_KEY           -> ActionGroup.KEYBOARD
+    ActionCategory.GAMEPAD_BUTTON         -> ActionGroup.GAMEPAD
+    ActionCategory.MOUSE_BUTTON,
+    ActionCategory.SCROLL_WHEEL,
+    ActionCategory.TRACKPOINT             -> ActionGroup.MOUSE
+    ActionCategory.MACRO                  -> ActionGroup.MACRO
+    ActionCategory.LAYOUT_NEXT,
+    ActionCategory.LAYOUT_PREVIOUS,
+    ActionCategory.PROFILE_SWITCHER       -> ActionGroup.LAYOUT
+    ActionCategory.MIRROR_PLAY_STOP,
+    ActionCategory.MIRROR_FREEZE,
+    ActionCategory.MIRROR_VIEWPORT_EDIT,
+    ActionCategory.MIRROR_TOUCH_PROJECTION,
+    ActionCategory.AMBIENT_PEEK           -> ActionGroup.MIRROR
+    ActionCategory.FULLSCREEN_MOUSE,
+    ActionCategory.FULLSCREEN_KEYBOARD    -> ActionGroup.OTHER
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PadAction display helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -132,6 +198,30 @@ internal fun PadAction.toCategory(): ActionCategory = when (this) {
     is PadAction.MirrorTouchProjection                                         -> ActionCategory.MIRROR_TOUCH_PROJECTION
     is PadAction.FullScreenMouse                                               -> ActionCategory.FULLSCREEN_MOUSE
     is PadAction.FullScreenKeyboard                                            -> ActionCategory.FULLSCREEN_KEYBOARD
+}
+
+private fun ActionCategory.isEnabled(
+    enableKeyboard: Boolean,
+    enableGamepad: Boolean,
+    enableMouse: Boolean,
+    hasMacros: Boolean,
+): Boolean = when (this) {
+    ActionCategory.KEYBOARD_KEY           -> enableKeyboard
+    ActionCategory.GAMEPAD_BUTTON         -> enableGamepad
+    ActionCategory.MOUSE_BUTTON,
+    ActionCategory.SCROLL_WHEEL,
+    ActionCategory.TRACKPOINT             -> enableMouse
+    ActionCategory.MACRO                  -> hasMacros
+    ActionCategory.AMBIENT_PEEK,
+    ActionCategory.LAYOUT_NEXT,
+    ActionCategory.LAYOUT_PREVIOUS,
+    ActionCategory.PROFILE_SWITCHER,
+    ActionCategory.MIRROR_PLAY_STOP,
+    ActionCategory.MIRROR_FREEZE,
+    ActionCategory.MIRROR_VIEWPORT_EDIT,
+    ActionCategory.MIRROR_TOUCH_PROJECTION -> true
+    ActionCategory.FULLSCREEN_MOUSE       -> enableMouse
+    ActionCategory.FULLSCREEN_KEYBOARD    -> enableKeyboard
 }
 
 @Composable
@@ -206,60 +296,129 @@ internal fun ActionPicker(
     onEditMacro:    ((Macro) -> Unit)? = null,
     onChange:       (PadAction) -> Unit,
 ) {
-    var categoryExpanded by remember { mutableStateOf(false) }
-    val colors           = LocalAppColors.current
+    var groupExpanded by remember { mutableStateOf(false) }
+    var actionExpanded by remember { mutableStateOf(false) }
+    val colors = LocalAppColors.current
+    val profile by MacroPadState.activeProfile.collectAsState()
 
-    val categoryLabel   = stringResource(current.categoryResId())
+    val hasMacros = profile?.macros?.isNotEmpty() == true
     val currentCategory = current.toCategory()
+    val currentGroup = currentCategory.group()
+    val currentActionLabel = stringResource(current.categoryResId())
+    val currentGroupLabel = stringResource(currentGroup.labelResId())
+    val availableGroups = ActionGroup.entries.filter { group ->
+        group.actions().any { category ->
+            category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
+        }
+    }
+    val groupActions = currentGroup.actions().filter { category ->
+        category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.macropad_picker_label_group),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelSmall,
+        )
+
+        // Group dropdown
         Box {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
-                    .clickable { categoryExpanded = true }
+                    .clickable(enabled = availableGroups.isNotEmpty()) { groupExpanded = true }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(categoryLabel, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+                Text(
+                    currentGroupLabel,
+                    color = if (availableGroups.isEmpty()) colors.onSurfaceSecondary else colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (availableGroups.isNotEmpty()) {
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+                }
             }
 
             DropdownMenu(
-                expanded         = categoryExpanded,
-                onDismissRequest = { categoryExpanded = false },
+                expanded         = groupExpanded,
+                onDismissRequest = { groupExpanded = false },
                 modifier         = Modifier.background(colors.surface),
             ) {
-                ActionCategory.entries.forEach { cat ->
-                    val catEnabled = when (cat) {
-                        ActionCategory.KEYBOARD_KEY          -> enableKeyboard
-                        ActionCategory.GAMEPAD_BUTTON        -> enableGamepad
-                        ActionCategory.MOUSE_BUTTON,
-                        ActionCategory.SCROLL_WHEEL,
-                        ActionCategory.TRACKPOINT            -> enableMouse
-                        ActionCategory.MACRO                 -> MacroPadState.activeProfile.value?.macros?.isNotEmpty() == true
-                        ActionCategory.AMBIENT_PEEK,
-                        ActionCategory.LAYOUT_NEXT,
-                        ActionCategory.LAYOUT_PREVIOUS,
-                        ActionCategory.PROFILE_SWITCHER,
-                        ActionCategory.MIRROR_PLAY_STOP,
-                        ActionCategory.MIRROR_FREEZE,
-                        ActionCategory.MIRROR_VIEWPORT_EDIT,
-                        ActionCategory.MIRROR_TOUCH_PROJECTION -> true
-                        ActionCategory.FULLSCREEN_MOUSE      -> enableMouse
-                        ActionCategory.FULLSCREEN_KEYBOARD   -> enableKeyboard
-                    }
-                    if (catEnabled) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(cat.labelResId()), color = if (cat == currentCategory) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                            onClick = {
-                                categoryExpanded = false
-                                onChange(cat.defaultAction())
-                            },
-                        )
-                    }
+                availableGroups.forEach { group ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(group.labelResId()),
+                                color = if (group == currentGroup) accentColor else colors.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        onClick = {
+                            groupExpanded = false
+                            val defaultCategory = group.actions().firstOrNull { category ->
+                                category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
+                            }
+                            if (defaultCategory != null) {
+                                onChange(defaultCategory.defaultAction())
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        Text(
+            text = stringResource(R.string.macropad_editor_action),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelSmall,
+        )
+
+        // Action dropdown (within selected group)
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
+                    .clickable(enabled = groupActions.isNotEmpty()) { actionExpanded = true }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    currentActionLabel,
+                    color = if (groupActions.isEmpty()) colors.onSurfaceSecondary else colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (groupActions.isNotEmpty()) {
+                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+                }
+            }
+
+            DropdownMenu(
+                expanded         = actionExpanded,
+                onDismissRequest = { actionExpanded = false },
+                modifier         = Modifier.background(colors.surface),
+            ) {
+                groupActions.forEach { category ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(category.labelResId()),
+                                color = if (category == currentCategory) accentColor else colors.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        onClick = {
+                            actionExpanded = false
+                            onChange(category.defaultAction())
+                        },
+                    )
                 }
             }
         }
