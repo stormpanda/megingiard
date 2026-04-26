@@ -120,8 +120,8 @@ Each button supports one of the following actions:
 - **Ambient Settings Overlay** (`AmbientSettingsOverlay`): A dedicated full-screen overlay (opened from the editor) for configuring the active layout's ambient parameters. Provides sliders for dim and vignette settings, shape dropdown, and colour picker. Changes are committed to `MacroPadState.updateLayout()` on slider release (live-update + persist-on-release pattern).
 - **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
 - **Vignette** (optional, default off) darkens the screen edges using a shape-specific gradient layer. Configurable via five settings:
-  - **Shape** (`RADIAL` / `LETTERBOX` / `PILLARBOX`): `RADIAL` = circular vignette centred on the screen; `LETTERBOX` = horizontal dark bars at top and bottom; `PILLARBOX` = vertical dark bars at left and right.
-  - **Visible Area** (0–100%, default 70%): controls the size of the inner transparent zone. At 100% the transparent zone reaches all four corners (`innerRadius = halfDiag = √(w²+h²)/2`) — the vignette is effectively off-screen. At 0% the entire screen is covered. For `LETTERBOX` the visible area is the fraction of the screen height that remains transparent; for `PILLARBOX` the fraction of the screen width.
+  - **Shape** (`RADIAL` / `LETTERBOX` / `PILLARBOX` / `TOP` / `BOTTOM` / `LEFT` / `RIGHT`): `RADIAL` = circular vignette centred on the screen; `LETTERBOX` = horizontal dark bars at top and bottom; `PILLARBOX` = vertical dark bars at left and right; `TOP`/`BOTTOM`/`LEFT`/`RIGHT` = single-edge vignette that fades inward from the selected side only.
+  - **Visible Area** (0–100%, default 70%): controls the size of the transparent zone. At 100% the vignette is effectively off-screen. At 0% the entire screen is covered. For `RADIAL` the transparent zone reaches all four corners at 100% (`innerRadius = halfDiag = √(w²+h²)/2`). For `LETTERBOX` the visible area is the fraction of the screen height that remains transparent; for `PILLARBOX` the fraction of the screen width; for `TOP`/`BOTTOM`/`LEFT`/`RIGHT` it is the fraction that remains transparent away from the darkened edge.
   - **Transition** (0 = Soft → 100 = Hard, default 50%): at 0% (Soft) the gradient sweeps the entire dark band from the screen edge to the visible-area boundary; at 100% (Hard) there is an instant cut with no gradient.
   - **Opacity** (0–100%, default 60%): alpha of the vignette colour.
   - **Color** (any ARGB colour, selected via `ColorWheelPicker`, default black `0xFF000000`).
@@ -215,11 +215,14 @@ When Ambient Display is enabled and `ScreenCaptureService` is capturing:
 1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `AmbientMacroPadOverlay` in its `ComposeView`.
 2. The `SurfaceView` receives the `VirtualDisplay` output directly (live hardware path — no PixelCopy overhead).
 3. A dim overlay (`Color.Black.copy(alpha = ambientDim)`) is drawn on top.
-4. If vignette is enabled, a shape-specific gradient layer is drawn between the dim overlay and the MacroPad buttons using private `DrawScope` extension functions (`drawRadialVignette`, `drawLetterboxVignette`, `drawPillarboxVignette`):
+4. If vignette is enabled, a shape-specific gradient layer is drawn between the dim overlay and the MacroPad buttons using private `DrawScope` extension functions (`drawRadialVignette`, `drawLetterboxVignette`, `drawPillarboxVignette`, `drawTopVignette`, `drawBottomVignette`, `drawLeftVignette`, `drawRightVignette`):
    - **Radial**: `Brush.radialGradient(colorStops, center, radius = halfDiag)`. `innerFrac = visibleArea`; `gEnd = min(1f, max(innerFrac + (1-innerFrac)*(1-transition), innerFrac + VIGNETTE_MIN_STOP_GAP))`; colorStops = `[(0,T), (innerFrac,T)?, (gEnd,C), (1,C)?]`.
    - **Letterbox**: `Brush.verticalGradient(colorStops)`. `innerFrac = (1-visibleArea)/2`; `safeGStart = max(0, min(innerFrac-eps, innerFrac*(1-transition)*(innerFrac/innerFrac)))`; colorStops = `[(0,C), (safeGStart,C)?, (innerFrac,T), (1-innerFrac,T), (1-safeGStart,C)?, (1,C)]`. Returns early when `innerFrac ≤ 0`.
    - **Pillarbox**: same as Letterbox but uses `Brush.horizontalGradient` and `visibleArea` maps to the width fraction instead of height.
-     `VIGNETTE_MIN_STOP_GAP = 0.001f` ensures no two adjacent colour-stops share the same fractional position (which would crash `Brush`).
+
+- **Directional edges** (`TOP` / `BOTTOM` / `LEFT` / `RIGHT`): `drawEdgeVignette(...)` builds a one-sided linear gradient on the matching axis. `coveredFrac = 1 - visibleArea`; `transitionFrac = coveredFrac * easedTransition`. `TOP`/`LEFT` place the opaque stop at the selected edge and fade to transparent at `coveredFrac`; `BOTTOM`/`RIGHT` mirror the same stop layout from the opposite edge. When `coveredFrac >= 1f`, the overlay falls back to a solid fill to avoid duplicate gradient-stop positions.
+  `VIGNETTE_MIN_STOP_GAP = 0.001f` ensures no two adjacent colour-stops share the same fractional position (which would crash `Brush`).
+
 5. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
 6. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered (the Press hit-test list is also filtered to `AmbientPeek` buttons so hidden buttons cannot be triggered), and dim/vignette are overridden to 0.
    - **Peek state reset:** `MacroPadState.resetPeek()` is called in two places: in `AmbientMacroPadOverlay`'s `DisposableEffect.onDispose` (leaving ambient mode), and in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode entirely). This ensures peek state never leaks across mode switches, regardless of which screen was active when the mode changed.
@@ -270,7 +273,7 @@ PadProfile
         ├── buttons: List<PadButton>
         ├── ambientDim: Float              (0–0.9, default 0)
         ├── ambientVignetteEnabled: Boolean (default false)
-        ├── ambientVignetteShape: VignetteShape (RADIAL/LETTERBOX/PILLARBOX)
+        ├── ambientVignetteShape: VignetteShape (RADIAL/LETTERBOX/PILLARBOX/TOP/BOTTOM/LEFT/RIGHT)
         ├── ambientVignetteVisibleArea: Float  (0–1, default 0.7)
         ├── ambientVignetteTransition: Float   (0–1, default 0.5)
         ├── ambientVignetteOpacity: Float      (0–1, default 0.6)

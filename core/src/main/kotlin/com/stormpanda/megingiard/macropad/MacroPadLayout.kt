@@ -43,7 +43,7 @@ enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Serializable
-enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX }
+enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
@@ -251,7 +251,7 @@ data class PadButton(
  * @param buttons                     All buttons placed on this layout.
  * @param ambientDim                  Dim overlay alpha [0.0, 0.9] when screen mirror is active.
  * @param ambientVignetteEnabled      Whether the vignette effect is active.
- * @param ambientVignetteShape        Vignette shape (RADIAL, LETTERBOX, PILLARBOX).
+ * @param ambientVignetteShape        Vignette shape (RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT).
  * @param ambientVignetteVisibleArea  Vignette inner transparent zone size [0.0, 1.0].
  * @param ambientVignetteTransition   Vignette gradient softness [0.0, 1.0].
  * @param ambientVignetteOpacity      Vignette alpha [0.0, 1.0].

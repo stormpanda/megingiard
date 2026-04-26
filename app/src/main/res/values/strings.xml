@@ -250,6 +250,10 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_vignette_shape_radial">Radial</string>
     <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
     <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
+    <string name="settings_macropad_vignette_shape_top">From Top</string>
+    <string name="settings_macropad_vignette_shape_bottom">From Bottom</string>
+    <string name="settings_macropad_vignette_shape_left">From Left</string>
+    <string name="settings_macropad_vignette_shape_right">From Right</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>

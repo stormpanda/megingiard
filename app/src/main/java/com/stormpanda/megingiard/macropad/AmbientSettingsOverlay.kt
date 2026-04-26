@@ -90,6 +90,10 @@ private fun VignetteShape.labelResId(): Int = when (this) {
     VignetteShape.RADIAL    -> R.string.settings_macropad_vignette_shape_radial
     VignetteShape.LETTERBOX -> R.string.settings_macropad_vignette_shape_letterbox
     VignetteShape.PILLARBOX -> R.string.settings_macropad_vignette_shape_pillarbox
+    VignetteShape.TOP       -> R.string.settings_macropad_vignette_shape_top
+    VignetteShape.BOTTOM    -> R.string.settings_macropad_vignette_shape_bottom
+    VignetteShape.LEFT      -> R.string.settings_macropad_vignette_shape_left
+    VignetteShape.RIGHT     -> R.string.settings_macropad_vignette_shape_right
 }
 
 /**

@@ -211,6 +211,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_vignette_shape_radial">Radial</string>
     <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
     <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
+    <string name="settings_macropad_vignette_shape_top">Von oben</string>
+    <string name="settings_macropad_vignette_shape_bottom">Von unten</string>
+    <string name="settings_macropad_vignette_shape_left">Von links</string>
+    <string name="settings_macropad_vignette_shape_right">Von rechts</string>
     <string name="ambient_preview">Vorschau</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->

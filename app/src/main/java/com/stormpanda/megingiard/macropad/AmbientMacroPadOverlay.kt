@@ -195,6 +195,10 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
                             VignetteShape.RADIAL     -> drawRadialVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
                             VignetteShape.LETTERBOX  -> drawLetterboxVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
                             VignetteShape.PILLARBOX  -> drawPillarboxVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
+                            VignetteShape.TOP        -> drawTopVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
+                            VignetteShape.BOTTOM     -> drawBottomVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
+                            VignetteShape.LEFT       -> drawLeftVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
+                            VignetteShape.RIGHT      -> drawRightVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
                         }
                     }
             )
@@ -412,4 +416,93 @@ private fun DrawScope.drawPillarboxVignette(
         add(1f to vColor)
     }.toTypedArray()
     drawRect(brush = Brush.horizontalGradient(colorStops = stops))
+}
+
+/**
+ * Directional vignette: darkens from one edge inward, leaving the rest transparent.
+ * visibleArea controls the fraction of the screen that remains transparent.
+ */
+private fun DrawScope.drawEdgeVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+    vertical: Boolean,
+    fromStart: Boolean,
+) {
+    val coveredFrac = 1f - visibleArea
+    if (coveredFrac <= 0f) return
+    if (coveredFrac >= 1f) {
+        drawRect(color = vignetteColor.copy(alpha = opacity))
+        return
+    }
+    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
+    val easedTransition = easeOutQuad(1f - transition)
+    val transitionFrac = coveredFrac * easedTransition
+    val vColor = vignetteColor.copy(alpha = opacity)
+    val stops = if (fromStart) {
+        val transparentStart = maxOf(
+            VIGNETTE_MIN_STOP_GAP,
+            minOf(coveredFrac, coveredFrac - transitionFrac),
+        )
+        buildList {
+            add(0f to vColor)
+            if (transparentStart > 0f) add(transparentStart to vColor)
+            add(coveredFrac to Color.Transparent)
+            add(1f to Color.Transparent)
+        }.toTypedArray()
+    } else {
+        val coloredStart = minOf(
+            1f - VIGNETTE_MIN_STOP_GAP,
+            maxOf(1f - coveredFrac, 1f - coveredFrac + transitionFrac),
+        )
+        buildList {
+            add(0f to Color.Transparent)
+            add((1f - coveredFrac) to Color.Transparent)
+            if (coloredStart < 1f) add(coloredStart to vColor)
+            add(1f to vColor)
+        }.toTypedArray()
+    }
+    val brush = if (vertical) {
+        Brush.verticalGradient(colorStops = stops)
+    } else {
+        Brush.horizontalGradient(colorStops = stops)
+    }
+    drawRect(brush = brush)
+}
+
+private fun DrawScope.drawTopVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+) {
+    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = true, fromStart = true)
+}
+
+private fun DrawScope.drawBottomVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+) {
+    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = true, fromStart = false)
+}
+
+private fun DrawScope.drawLeftVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+) {
+    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = false, fromStart = true)
+}
+
+private fun DrawScope.drawRightVignette(
+    vignetteColor: Color,
+    visibleArea: Float,
+    transition: Float,
+    opacity: Float,
+) {
+    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = false, fromStart = false)
 }
