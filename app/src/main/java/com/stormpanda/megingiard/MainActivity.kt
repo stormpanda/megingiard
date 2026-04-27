@@ -7,6 +7,10 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.os.LocaleList
 import android.view.Display
+import android.view.InputEvent
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,6 +36,8 @@ import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
+import com.stormpanda.megingiard.macropad.GamepadRecordingManager
+import com.stormpanda.megingiard.macropad.GamepadKeycodes
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
 import androidx.compose.ui.graphics.Color
@@ -44,12 +50,17 @@ import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainActivity"
+private const val VIRTUAL_GAMEPAD_DEVICE_NAME = "Megingiard Virtual Gamepad"
 
 class MainActivity : ComponentActivity() {
+
+    private var fallbackDpadX = 0
+    private var fallbackDpadY = 0
 
     // ── File picker launchers ─────────────────────────────────────────────────
     // Registered here because ActivityResultLaunchers require an Activity context.
@@ -145,14 +156,18 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // FLAG_NOT_FOCUSABLE must only be active when the fullscreen keyboard overlay is
-        // shown so that uinput key events are delivered to the focused app (the game) rather
-        // than to Megingiard. Keeping it active otherwise would break in-app text fields
-        // (e.g. MacroPad profile name inputs).
+        // FLAG_NOT_FOCUSABLE must only be active for focus-forwarding overlays/sessions:
+        // fullscreen keyboard and gamepad recording passthrough. This keeps injected input
+        // targeted at the currently focused game window instead of Megingiard.
         lifecycleScope.launch {
-            AppStateManager.isFullscreenKeyboardActive.collect { active ->
+            combine(
+                AppStateManager.isFullscreenKeyboardActive,
+                AppStateManager.isGamepadRecordingPassthroughActive,
+            ) { keyboardActive, recordingPassthroughActive ->
+                keyboardActive || recordingPassthroughActive
+            }.collect { active ->
                 if (active) {
-                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (fullscreen keyboard active)")
+                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (keyboard/recording passthrough active)")
                     window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
                 } else {
                     AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared")
@@ -298,6 +313,51 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (GamepadRecordingManager.isFrameworkCaptureActive() && !isFromVirtualGamepad(event)) {
+            val action = event.action
+            if (action == KeyEvent.ACTION_DOWN || action == KeyEvent.ACTION_UP) {
+                val isPressed = action == KeyEvent.ACTION_DOWN
+                val mappedButton = mapAndroidGamepadButton(event.keyCode)
+                if (mappedButton != null) {
+                    if (GamepadRecordingManager.onFrameworkButtonEvent(mappedButton, isPressed)) {
+                        return true
+                    }
+                }
+                if (handleDpadKeyForFallback(event.keyCode, isPressed)) {
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (GamepadRecordingManager.isFrameworkCaptureActive()
+            && !isFromVirtualGamepad(event)
+            && event.action == MotionEvent.ACTION_MOVE
+            && (event.isFromSource(InputDevice.SOURCE_GAMEPAD) || event.isFromSource(InputDevice.SOURCE_JOYSTICK))
+        ) {
+            val handled = GamepadRecordingManager.onFrameworkAxisSnapshot(
+                leftX = event.getAxisValue(MotionEvent.AXIS_X),
+                leftY = event.getAxisValue(MotionEvent.AXIS_Y),
+                rightX = event.getAxisValue(MotionEvent.AXIS_Z),
+                rightY = event.getAxisValue(MotionEvent.AXIS_RZ),
+                hatX = axisToHatDirection(event.getAxisValue(MotionEvent.AXIS_HAT_X)),
+                hatY = axisToHatDirection(event.getAxisValue(MotionEvent.AXIS_HAT_Y)),
+            )
+            if (handled) {
+                return true
+            }
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    private fun isFromVirtualGamepad(event: InputEvent): Boolean {
+        val deviceName = event.device?.name ?: return false
+        return deviceName.contains(VIRTUAL_GAMEPAD_DEVICE_NAME, ignoreCase = true)
+    }
+
     /** Called when the app is already running and receives a new ACTION_VIEW intent. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -317,5 +377,70 @@ class MainActivity : ComponentActivity() {
                 ConfigManager.setPendingUri(uri)
             }
         }
+    }
+
+    private fun handleDpadKeyForFallback(keyCode: Int, isPressed: Boolean): Boolean {
+        var changed = false
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                val next = if (isPressed) -1 else if (fallbackDpadX < 0) 0 else fallbackDpadX
+                if (next != fallbackDpadX) {
+                    fallbackDpadX = next
+                    changed = true
+                }
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                val next = if (isPressed) 1 else if (fallbackDpadX > 0) 0 else fallbackDpadX
+                if (next != fallbackDpadX) {
+                    fallbackDpadX = next
+                    changed = true
+                }
+            }
+
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                val next = if (isPressed) -1 else if (fallbackDpadY < 0) 0 else fallbackDpadY
+                if (next != fallbackDpadY) {
+                    fallbackDpadY = next
+                    changed = true
+                }
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                val next = if (isPressed) 1 else if (fallbackDpadY > 0) 0 else fallbackDpadY
+                if (next != fallbackDpadY) {
+                    fallbackDpadY = next
+                    changed = true
+                }
+            }
+        }
+
+        if (!changed) {
+            return false
+        }
+        return GamepadRecordingManager.onFrameworkDpadState(fallbackDpadX, fallbackDpadY)
+    }
+
+    private fun axisToHatDirection(value: Float): Int = when {
+        value > 0.5f -> 1
+        value < -0.5f -> -1
+        else -> 0
+    }
+
+    private fun mapAndroidGamepadButton(keyCode: Int): Int? = when (keyCode) {
+        KeyEvent.KEYCODE_BUTTON_A -> GamepadKeycodes.BTN_SOUTH
+        KeyEvent.KEYCODE_BUTTON_B -> GamepadKeycodes.BTN_EAST
+        KeyEvent.KEYCODE_BUTTON_X -> GamepadKeycodes.BTN_WEST
+        KeyEvent.KEYCODE_BUTTON_Y -> GamepadKeycodes.BTN_NORTH
+        KeyEvent.KEYCODE_BUTTON_L1 -> GamepadKeycodes.BTN_TL
+        KeyEvent.KEYCODE_BUTTON_R1 -> GamepadKeycodes.BTN_TR
+        KeyEvent.KEYCODE_BUTTON_L2 -> GamepadKeycodes.BTN_TL2
+        KeyEvent.KEYCODE_BUTTON_R2 -> GamepadKeycodes.BTN_TR2
+        KeyEvent.KEYCODE_BUTTON_THUMBL -> GamepadKeycodes.BTN_THUMBL
+        KeyEvent.KEYCODE_BUTTON_THUMBR -> GamepadKeycodes.BTN_THUMBR
+        KeyEvent.KEYCODE_BUTTON_START -> GamepadKeycodes.BTN_START
+        KeyEvent.KEYCODE_BUTTON_SELECT -> GamepadKeycodes.BTN_SELECT
+        KeyEvent.KEYCODE_BUTTON_MODE -> GamepadKeycodes.BTN_MODE
+        else -> null
     }
 }

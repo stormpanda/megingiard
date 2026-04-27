@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,6 +52,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -156,6 +158,7 @@ internal fun MacroTimelineEditor(
     onBack:      () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val context = LocalContext.current
 
     var localName             by remember { mutableStateOf(macro.name) }
     var steps                 by remember { mutableStateOf(macro.steps) }
@@ -163,6 +166,7 @@ internal fun MacroTimelineEditor(
     var editingStepIndex      by remember { mutableStateOf<Int?>(null) }
     var deleteStepIndex       by remember { mutableStateOf<Int?>(null) }
     var showRecordTouchDialog by remember { mutableStateOf(false) }
+    var showGamepadRecording  by remember { mutableStateOf(false) }
     val recordedTap           by TouchRecordingManager.recordedTap.collectAsState()
 
     LaunchedEffect(recordedTap) {
@@ -317,6 +321,31 @@ internal fun MacroTimelineEditor(
                         .clip(RoundedCornerShape(8.dp))
                         .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                         .clickable {
+                            GamepadRecordingManager.startRecording(context)
+                            showGamepadRecording = true
+                        }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.SportsEsports,
+                        contentDescription = stringResource(R.string.cd_record_gamepad),
+                        tint     = accentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.macropad_macro_record_gamepad),
+                        color    = accentColor,
+                        style    = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable {
                             if (SettingsManager.skipTouchRecordDialog.value) {
                                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                                 TouchRecordingManager.requestRecording()
@@ -374,6 +403,21 @@ internal fun MacroTimelineEditor(
                 }
             }
         }
+    }
+
+    if (showGamepadRecording) {
+        GamepadRecordingOverlay(
+            accentColor = accentColor,
+            onConfirm = { recordedSteps ->
+                steps = recordedSteps
+                showGamepadRecording = false
+                GamepadRecordingManager.resetState()
+            },
+            onDismiss = {
+                showGamepadRecording = false
+                GamepadRecordingManager.resetState()
+            },
+        )
     }
 
     // ── Step edit overlay (same window as outer Dialog — IME works) ─────────

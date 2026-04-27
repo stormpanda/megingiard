@@ -119,6 +119,54 @@ no dynamic linker path issues when running from `filesDir`.
 
 ---
 
+## Gamepad Reader Helper
+
+`gamepadreader_arm64` is a small read-only helper binary used by the MacroPad
+macro editor's **Record Gamepad** flow. Unlike `gamepadinjector_arm64`, it does
+not create a virtual device. Instead, it scans `/dev/input/event0..31`, skips
+any device whose `EVIOCGNAME` contains `"Virtual"`, selects the first physical
+device that exposes `BTN_SOUTH`, and streams button / axis events to stdout.
+
+### Source
+
+`app/src/main/cpp/gamepadreader.c`
+
+### Build
+
+Use the checked-in helper script:
+
+```bash
+sh build_gamepadreader.sh
+```
+
+The script writes the rebuilt binary to:
+
+```bash
+app/src/main/assets/gamepadreader_arm64
+```
+
+### Startup protocol
+
+On startup the binary emits one `AR <axis_code> <min> <max>` line per detected
+axis, followed by a single ready line:
+
+```text
+R /dev/input/event9
+```
+
+At runtime it emits:
+
+| Stdout line           | Meaning                                 |
+| --------------------- | --------------------------------------- |
+| `E KB <code> <value>` | Gamepad button event (`1` down, `0` up) |
+| `E AX <code> <value>` | Absolute axis / hat event               |
+
+Because it reads the physical Linux event node directly, it bypasses Android's
+window-focus routing. This is what allows recording to keep working even when
+the active game on the primary display currently owns the input focus.
+
+---
+
 ## Device specifics (AYN Thor)
 
 | Property                    | Value                           |

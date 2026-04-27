@@ -141,6 +141,9 @@ object AppStateManager {
     private val _isFullscreenKeyboardActive = MutableStateFlow(false)
     val isFullscreenKeyboardActive: StateFlow<Boolean> = _isFullscreenKeyboardActive.asStateFlow()
 
+    private val _isGamepadRecordingPassthroughActive = MutableStateFlow(false)
+    val isGamepadRecordingPassthroughActive: StateFlow<Boolean> = _isGamepadRecordingPassthroughActive.asStateFlow()
+
     private val _isFullscreenMouseActive = MutableStateFlow(false)
     val isFullscreenMouseActive: StateFlow<Boolean> = _isFullscreenMouseActive.asStateFlow()
 
@@ -203,6 +206,11 @@ object AppStateManager {
             _isAmbientSettingsActive.value = false
         }
         _isFullscreenKeyboardActive.value = active
+    }
+
+    fun setGamepadRecordingPassthroughActive(active: Boolean) {
+        AppLog.i(TAG, "setGamepadRecordingPassthroughActive($active)")
+        _isGamepadRecordingPassthroughActive.value = active
     }
 
     fun setFullscreenMouseActive(active: Boolean, sensitivity: Float = 1.0f) {

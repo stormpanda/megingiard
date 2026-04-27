@@ -338,17 +338,40 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_editor_save">Save</string>
     <string name="macropad_macro_editor_cancel">Cancel</string>
     <string name="macropad_macro_add_step">Add Step</string>
+    <string name="macropad_macro_record_gamepad">Record Gamepad</string>
     <string name="macropad_macro_record_touch">Record Touch</string>
     <string name="macropad_macro_no_steps">No steps yet. Tap + to add one.</string>
     <string name="macropad_macro_step_delete_title">Delete Step</string>
     <string name="macropad_macro_step_delete_confirm">Remove this step from the macro?</string>
+    <string name="macropad_recording_starting">Starting recorder...</string>
+    <string name="macropad_recording_active">Recording</string>
+    <string name="macropad_recording_stop">Stop Recording</string>
+    <string name="macropad_recording_confirm">Confirm</string>
+    <string name="macropad_recording_discard">Discard</string>
+    <string name="macropad_recording_close">Close</string>
+    <string name="macropad_recording_last_events">Recent input</string>
+    <string name="macropad_recording_device">Device: %1$s</string>
+    <string name="macropad_recording_done_steps">%1$d steps recorded</string>
+    <string name="macropad_recording_error_deploy_failed">The recorder binary could not be deployed.</string>
+    <string name="macropad_recording_error_start_failed">Gamepad passthrough could not be started.</string>
+    <string name="macropad_recording_error_no_device">No physical gamepad device was found.</string>
+    <string name="macropad_recording_error_access_denied">A gamepad was found, but the recorder cannot access its input node on this firmware.</string>
+    <string name="macropad_recording_framework_fallback_hint">Passthrough is active: gamepad input is recorded and forwarded to the virtual gamepad. Megingiard temporarily releases focus so injections can target the primary-screen game.</string>
+    <string name="macropad_recording_error_process_terminated">The recorder process stopped unexpectedly.</string>
+    <string name="macropad_recording_event_button_down">%1$s down</string>
+    <string name="macropad_recording_event_button_up">%1$s up</string>
+    <string name="macropad_recording_event_dpad">D-Pad %1$s</string>
+    <string name="macropad_recording_event_joystick">%1$s %2$s</string>
+    <string name="macropad_recording_unknown_button">Button %1$d</string>
 
     <!-- Touch recording flow -->
     <string name="macropad_macro_record_touch_dialog_title">Record Touch Step</string>
     <string name="macropad_macro_record_touch_dialog_message">The screen mirror will start (if not already active). Tap anywhere on the mirror to record that position as a touch step.</string>
     <string name="macropad_macro_record_touch_start">Start</string>
     <string name="macropad_macro_record_touch_dont_show_again">Don\u2019t show again</string>
-    <string name="cd_record_touch">Record touch step</string>    <string name="macropad_macro_test_run">Test Run</string>
+    <string name="cd_record_touch">Record touch step</string>
+    <string name="cd_record_gamepad">Record gamepad input</string>
+    <string name="macropad_macro_test_run">Test Run</string>
     <string name="cd_test_macro">Test macro</string>
     <string name="cd_edit_macro">Edit macro</string>
     <!-- MacroStepEditDialog -->

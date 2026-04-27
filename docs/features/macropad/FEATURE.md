@@ -91,8 +91,11 @@ Each button supports one of the following actions:
 - A **`PadAction.Macro(macroId)`** button action MUST reference a macro by ID; pressing the button fires the macro **once (fire-and-forget)** without blocking further input.
 - The MacroPad editor toolbar exposes two chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
 - The macro editor shows a **visual horizontal timeline** (Canvas, 0.3 dp/ms scale) colour-coded by step type (accent = Gamepad Button, orange = Joystick, blue = D-Pad, tertiary = Touch Tap), plus a scrollable step list for editing individual steps.
-- The step list exposes two action chips: **"Add Step"** (opens `MacroStepEditDialog` for Gamepad/Joystick/D-Pad steps) and **"Record Touch"** (opens a confirmation dialog, then shows a live recording mirror on the secondary display).
+- The step list exposes three action chips: **"Add Step"** (opens `MacroStepEditDialog` for Gamepad/Joystick/D-Pad steps), **"Record Gamepad"** (opens an inline recording overlay on the secondary display), and **"Record Touch"** (opens a confirmation dialog, then shows a live recording mirror on the secondary display).
 - Steps are configured in **`MacroStepEditDialog`** which provides: step-type chips (Gamepad / Joystick / D-Pad; Touch Tap shown read-only when editing), gamepad button dropdown, 3×3 direction grid for joystick/D-Pad, a magnitude slider (0–1, default 1) for joystick, and numeric fields for start/duration timing.
+- **Gamepad recording flow:** The user taps **"Record Gamepad"** in the timeline editor → `GamepadRecordingManager.startRecording()` activates a framework-input recording session and starts `GamepadInjector` passthrough → `MainActivity` forwards Android gamepad key/motion events (`dispatchKeyEvent` / `dispatchGenericMotionEvent`) to `GamepadRecordingManager` while recording is active → each event is recorded into macro timing state and simultaneously mirrored to `GamepadInjector` so input continues to reach the primary-screen game via the virtual gamepad device → the overlay shows a live event list and a **"Stop Recording"** action → `GamepadRecordingManager.finishRecording()` compiles the captured input into `GamepadButtonTap`, `DPadTap`, and `JoystickMove` steps → the user can **Confirm** to replace the macro's current step list, or **Discard** to keep the previous steps.
+- To avoid feedback loops, `MainActivity` ignores events originating from the `Megingiard Virtual Gamepad` device while a recording session is active.
+- While recording passthrough is active, `MainActivity` enables `FLAG_NOT_FOCUSABLE` so Megingiard does not keep input focus; this is intended to route injected gamepad events to the currently focused primary-screen game window.
 - **Touch Tap recording flow:** The user taps "Record Touch" in the timeline editor → a confirmation dialog explains that the mirror will appear on the secondary display → the user confirms → `TouchRecordingManager.requestRecording()` is called (mirror auto-starts if not active) → `ScreenCaptureService` observes `recordingRequested=true` and shows a `RecordingMirrorPresentation` on the secondary display → the user taps the desired position on the mirror → normalised coordinates are delivered to `TouchRecordingManager.onTapRecorded()` → the presentation is dismissed → `MacroTimelineEditor` observes `recordedTap` via `LaunchedEffect` and appends a `MacroStep.TouchTap` step.
 - The macro list is a **flat list** (no folders). Macros can be reordered via drag handle, and CRUD operations (add, edit, duplicate, delete) are available via context menu on each row.
 - Macro CRUD is performed through `MacroPadState.addMacro()`, `updateMacro()`, `deleteMacro()`, `renameMacro()`, `reorderMacros()`. All mutations persist via `SettingsManager.saveMacroPadData()`.
@@ -231,6 +234,17 @@ MacroPadEditor (Composable, opened from MacroPadToolSettings)
       ├── Layout bar (create/rename/delete/reorder/enable-disable, template selection)
       ├── Button CRUD on active layout via PadCanvas
       └── Macro library (MacroListEditor, per-profile flat list)
+
+MacroTimelineEditor (Composable)
+  ├── Manual step editing (`MacroStepEditDialog`)
+  ├── Touch recording (`TouchRecordingManager` + `RecordingMirrorPresentation`)
+  └── Gamepad recording (`GamepadRecordingOverlay` + `GamepadRecordingManager`)
+
+GamepadRecordingManager (object singleton)
+  │  StateFlow<GamepadRecordingState>
+  │  Records Android framework gamepad events forwarded by `MainActivity`
+  │  Mirrors active recording events to `GamepadInjector` passthrough
+  └── compiles captured input into `MacroStep.GamepadButtonTap` / `DPadTap` / `JoystickMove`
 ```
 
 #### Ambient Display Rendering Pipeline
@@ -281,6 +295,18 @@ MacroListEditor
 Context menu actions per macro row: Edit, Duplicate, Delete.
 
 **`MacroPicker` in `PadActionPicker`** uses a single dropdown listing all macros in the active profile. Pre-selects the currently assigned macro (if any).
+
+**Gamepad recording data flow:**
+
+- `GamepadRecordingManager.startRecording()` starts a framework-capture session and enables `GamepadInjector` passthrough.
+- While recording is active, `MainActivity` forwards gamepad key/motion events to `GamepadRecordingManager`.
+- For every forwarded event, the manager updates macro-recording state and sends the corresponding passthrough command (`buttonDown/buttonUp`, `hat`, `joystick`) to `GamepadInjector`.
+- `MainActivity` ignores events from the virtual passthrough device (`Megingiard Virtual Gamepad`) to prevent event recursion.
+- During this session, `MainActivity` applies `FLAG_NOT_FOCUSABLE` (driven by `AppStateManager.isGamepadRecordingPassthroughActive`) to keep focus on the external game target while preserving the recording overlay UI.
+- `GamepadRecordingManager` converts the captured events into macro steps:
+  - button down/up pairs → `MacroStep.GamepadButtonTap`
+  - `ABS_HAT0X` / `ABS_HAT0Y` direction windows → `MacroStep.DPadTap`
+  - left/right stick gestures above the dead zone → `MacroStep.JoystickMove` using the peak deflection reached during the gesture
 
 ```
 PadProfile
