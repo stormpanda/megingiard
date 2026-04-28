@@ -397,8 +397,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Macro timeline editor -->
     <string name="macropad_macro_editor_undo">Rückgängig</string>
     <string name="macropad_macro_editor_redo">Wiederherstellen</string>
-    <string name="macropad_macro_editor_view_list">Listenansicht</string>
-    <string name="macropad_macro_editor_view_timeline">Timeline-Ansicht</string>
+    <string name="macropad_macro_editor_view_list">Liste</string>
+    <string name="macropad_macro_editor_view_timeline">Zeit</string>
     <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
 
     <!-- Idle Pill -->

@@ -27,10 +27,13 @@ import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -277,6 +280,60 @@ internal fun MacroTimelineEditor(
                     .padding(horizontal = MT_PADDING.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                FilterChip(
+                    selected = viewMode == MacroEditorViewMode.LIST,
+                    onClick = { viewMode = MacroEditorViewMode.LIST },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.FormatListBulleted,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    label = {
+                        Text(stringResource(R.string.macropad_macro_editor_view_list))
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.Transparent,
+                        labelColor = accentColor,
+                        iconColor = accentColor,
+                        selectedContainerColor = accentColor.copy(alpha = 0.2f),
+                        selectedLabelColor = accentColor,
+                        selectedLeadingIconColor = accentColor,
+                    ),
+                )
+                Spacer(Modifier.width(8.dp))
+                FilterChip(
+                    selected = viewMode == MacroEditorViewMode.TIMELINE,
+                    onClick = { viewMode = MacroEditorViewMode.TIMELINE },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Timeline,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    label = {
+                        Text(stringResource(R.string.macropad_macro_editor_view_timeline))
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.Transparent,
+                        labelColor = accentColor,
+                        iconColor = accentColor,
+                        selectedContainerColor = accentColor.copy(alpha = 0.2f),
+                        selectedLabelColor = accentColor,
+                        selectedLeadingIconColor = accentColor,
+                    ),
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .padding(start = MT_PADDING.dp, end = MT_PADDING.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(
                     onClick = {
                         if (undoStack.isNotEmpty()) {
@@ -314,31 +371,11 @@ internal fun MacroTimelineEditor(
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
-
-                FilterChip(
-                    selected = viewMode == MacroEditorViewMode.LIST,
-                    onClick = { viewMode = MacroEditorViewMode.LIST },
-                    label = {
-                        Text(stringResource(R.string.macropad_macro_editor_view_list))
-                    },
-                )
-                Spacer(Modifier.width(8.dp))
-                FilterChip(
-                    selected = viewMode == MacroEditorViewMode.TIMELINE,
-                    onClick = { viewMode = MacroEditorViewMode.TIMELINE },
-                    label = {
-                        Text(stringResource(R.string.macropad_macro_editor_view_timeline))
-                    },
-                )
-
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.width(6.dp))
                 Switch(

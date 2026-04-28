@@ -99,7 +99,7 @@ Each button supports one of the following actions:
     - Each step block contains a short action label (for example gamepad short code, joystick stick+direction, D-Pad direction, or Tap).
 - Both editor modes expose the same action row: **"Add Step"**, **"Record Touch"**, and **"Test Run"**.
 - The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion).
-- Mode switching is exposed as two always-visible chips (**List View** / **Timeline View**), with the active mode shown as selected.
+- Mode switching is exposed as two always-visible chips (**List/Liste** / **Time/Zeit**), with the active mode shown as selected.
 - The editor includes a global **"Shift subsequent steps"** toggle that defines the default for the per-step toggle in `MacroStepEditDialog`.
 - `MacroStepEditDialog` now contains its own **"Shift subsequent steps"** toggle. The state of this per-step toggle is what is actually applied when saving the step.
 - Shift behavior:

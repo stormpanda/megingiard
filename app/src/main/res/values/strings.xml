@@ -354,8 +354,8 @@ Open Settings to create a layout.</string>
     <string name="cd_edit_macro">Edit macro</string>
     <string name="macropad_macro_editor_undo">Undo</string>
     <string name="macropad_macro_editor_redo">Redo</string>
-    <string name="macropad_macro_editor_view_list">List View</string>
-    <string name="macropad_macro_editor_view_timeline">Timeline View</string>
+    <string name="macropad_macro_editor_view_list">List</string>
+    <string name="macropad_macro_editor_view_timeline">Time</string>
     <string name="macropad_macro_editor_shift_subsequent">Shift subsequent steps</string>
     <!-- MacroStepEditDialog -->
     <string name="macropad_macro_step_new">Add Step</string>
