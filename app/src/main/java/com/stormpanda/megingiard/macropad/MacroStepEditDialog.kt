@@ -17,10 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material.icons.rounded.Grid4x4
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -42,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 
@@ -265,15 +260,15 @@ internal fun MacroStepEditDialog(
                         StepType.DPAD     -> R.string.macropad_macro_step_type_dpad
                         StepType.TOUCH    -> R.string.macropad_macro_step_type_touch
                     }
-                    val icon = when (type) {
-                        StepType.GAMEPAD -> Icons.Rounded.SportsEsports
-                        StepType.JOYSTICK -> Icons.Rounded.TripOrigin
-                        StepType.DPAD -> Icons.Rounded.Grid4x4
-                        StepType.TOUCH -> Icons.Rounded.TouchApp
+                    val symbolName = when (type) {
+                        StepType.GAMEPAD -> "sports_esports"
+                        StepType.JOYSTICK -> "joystick"
+                        StepType.DPAD -> "gamepad"
+                        StepType.TOUCH -> "touch_app"
                     }
                     StepTypeChip(
                         text = stringResource(labelRes),
-                        icon = icon,
+                        symbolName = symbolName,
                         selected = selected,
                         enabled = type != StepType.TOUCH,
                         onClick = { stepType = type },
@@ -458,7 +453,7 @@ internal fun MacroStepEditDialog(
 @Composable
 private fun StepTypeChip(
     text: String,
-    icon: ImageVector,
+    symbolName: String,
     selected: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -483,9 +478,9 @@ private fun StepTypeChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
+            MaterialSymbol(
+                name = symbolName,
+                size = 18.dp,
                 tint = if (selected) colors.onAccent else colors.onControlOverlay,
                 modifier = Modifier.size(18.dp),
             )
