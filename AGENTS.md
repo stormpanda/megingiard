@@ -370,7 +370,7 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 - Format args: `stringResource(R.string.key, arg1, arg2)` — not string concatenation.
 - Internal defaults in singletons that are immediately overwritten by
   callbacks may remain as literals.
-- all strings must be translated to all supported languages.
+- All strings must be translated to all supported languages.
 
 ### 6.3 Accessibility
 

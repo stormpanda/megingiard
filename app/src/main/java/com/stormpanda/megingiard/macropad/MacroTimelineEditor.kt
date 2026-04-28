@@ -93,6 +93,7 @@ private const val MT_VIEW_CHIP_CORNER = 20
 private const val MT_VIEW_CHIP_H_PADDING = 12
 private const val MT_VIEW_CHIP_V_PADDING = 6
 private const val MT_VIEW_CHIP_SPACING = 6
+private const val MT_TIMING_MAX_MS = 10_000L
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -474,13 +475,16 @@ internal fun MacroTimelineEditor(
                     val updated = if (!applyShift) {
                         steps.toMutableList().also { it[idx] = newStep }
                     } else {
-                        val endDelta = newStep.endTimeMs() - oldStep.endTimeMs()
+                        val oldStepEndTimeMs = oldStep.endTimeMs()
+                        val endDelta = newStep.endTimeMs() - oldStepEndTimeMs
                         steps.mapIndexed { i, step ->
                             when {
                                 i == idx -> newStep
                                 endDelta == 0L -> step
-                                step.startTimeMs > oldStep.startTimeMs -> {
-                                    step.withStartTime((step.startTimeMs + endDelta).coerceAtLeast(0L))
+                                step.startTimeMs >= oldStepEndTimeMs -> {
+                                    step.withStartTime(
+                                        (step.startTimeMs + endDelta).coerceIn(0L, MT_TIMING_MAX_MS),
+                                    )
                                 }
                                 else -> step
                             }
@@ -495,7 +499,10 @@ internal fun MacroTimelineEditor(
                     } else {
                         val shifted = steps.map { existing ->
                             if (existing.startTimeMs >= newStep.startTimeMs) {
-                                existing.withStartTime((existing.startTimeMs + newStep.durationMs).coerceAtLeast(0L))
+                                existing.withStartTime(
+                                    (existing.startTimeMs + newStep.durationMs)
+                                        .coerceIn(0L, MT_TIMING_MAX_MS),
+                                )
                             } else {
                                 existing
                             }
@@ -887,7 +894,7 @@ private fun StepListItem(
         IconButton(onClick = onEdit) {
             Icon(
                 Icons.Rounded.Edit,
-                contentDescription = stringResource(R.string.macropad_editor_rename),
+                contentDescription = stringResource(R.string.macropad_macro_step_edit),
                 tint = colors.onSurfaceSecondary,
             )
         }
