@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +53,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -65,6 +67,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlin.math.max
 import kotlin.math.sqrt
 
 private const val TAG = "MacroTimelineEditor"
@@ -78,8 +81,8 @@ private const val MT_DEFAULT_TOUCH_DURATION_MS = 100L
 private const val MT_UNDO_STACK_MAX = 50
 private const val MT_VERTICAL_DP_PER_MS = 0.22f
 private const val MT_VERTICAL_AXIS_WIDTH = 52
-private const val MT_VERTICAL_LANE_WIDTH = 52
 private const val MT_VERTICAL_BAR_PADDING = 3f
+private const val MT_BAR_LABEL_TEXT_SIZE_SP = 10
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -134,6 +137,16 @@ private fun joyDirArrow(x: Float, y: Float): String {
         else -> 0
     }
     return dirArrow(nx, ny)
+}
+
+private fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean): String = when (step) {
+    is MacroStep.GamepadButtonTap -> gamepadCodeDisplayShortLabel(step.btnCode, swapFaceButtons)
+    is MacroStep.JoystickMove -> {
+        val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
+        "$stick${joyDirArrow(step.x, step.y)}"
+    }
+    is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
+    is MacroStep.TouchTap -> "Tap"
 }
 
 @Composable
@@ -503,35 +516,48 @@ private fun MacroVerticalTimeline(
     val totalMs = remember(steps) { steps.totalDurationMs().coerceAtLeast(1000L) }
     val density = LocalDensity.current
     val colors = LocalAppColors.current
+    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
     val joystickColor = colors.actionColorGamepad
     val dpadColor = colors.actionColorSystem
     val touchColor = MaterialTheme.colorScheme.tertiary
     val tickFormat = stringResource(R.string.macropad_macro_timeline_tick)
+    val stepLabels = remember(steps, swapFaceButtons) {
+        steps.map { shortStepLabel(it, swapFaceButtons) }
+    }
 
     val pxPerMs = with(density) { MT_VERTICAL_DP_PER_MS.dp.toPx() }
     val axisWidthPx = with(density) { MT_VERTICAL_AXIS_WIDTH.dp.toPx() }
-    val laneWidthPx = with(density) { MT_VERTICAL_LANE_WIDTH.dp.toPx() }
     val contentHeightDp = (totalMs * MT_VERTICAL_DP_PER_MS).dp
-    val canvasWidthDp = (MT_VERTICAL_AXIS_WIDTH + numLanes * MT_VERTICAL_LANE_WIDTH).dp
 
-    val textPaint = remember(density) {
+    val textPaint = remember(density, colors.onSurfaceSecondary) {
         NativePaint().apply {
             isAntiAlias = true
             textSize = with(density) { MT_AXIS_TEXT_SIZE_SP.sp.toPx() }
-            color = 0xFFA0A0A0.toInt()
+            color = colors.onSurfaceSecondary.toArgb()
+        }
+    }
+    val labelPaint = remember(density, colors.onSurface) {
+        NativePaint().apply {
+            isAntiAlias = true
+            isFakeBoldText = true
+            textSize = with(density) { MT_BAR_LABEL_TEXT_SIZE_SP.sp.toPx() }
+            color = colors.onSurface.toArgb()
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .background(colors.appBackground)
             .verticalScroll(rememberScrollState()),
     ) {
+        val canvasWidthPx = with(density) { maxWidth.toPx() }
+        val laneWidthPx = max((canvasWidthPx - axisWidthPx) / numLanes.toFloat(), 1f)
+
         Canvas(
             modifier = Modifier
-                .width(canvasWidthDp)
+                .fillMaxWidth()
                 .height(contentHeightDp)
-                .pointerInput(steps) {
+                .pointerInput(steps, laneWidthPx, axisWidthPx, pxPerMs) {
                     detectTapGestures { tap ->
                         val y = tap.y
                         val x = tap.x
@@ -574,12 +600,21 @@ private fun MacroVerticalTimeline(
                 val barHeight = (step.durationMs * pxPerMs).coerceAtLeast(6f)
                 val barLeft = axisWidthPx + lane * laneWidthPx + MT_VERTICAL_BAR_PADDING
                 val barWidth = laneWidthPx - MT_VERTICAL_BAR_PADDING * 2
+                val barLabel = stepLabels.getOrElse(idx) { "" }
                 drawRoundRect(
                     color = stepColor(step, accentColor, joystickColor, dpadColor, touchColor).copy(alpha = 0.85f),
                     topLeft = Offset(barLeft, barTop),
                     size = Size(barWidth, barHeight),
                     cornerRadius = CornerRadius(MT_BAR_CORNER_RADIUS.dp.toPx()),
                 )
+                if (barLabel.isNotEmpty() && barHeight > labelPaint.textSize + 6f) {
+                    drawContext.canvas.nativeCanvas.apply {
+                        save()
+                        clipRect(barLeft, barTop, barLeft + barWidth, barTop + barHeight)
+                        drawText(barLabel, barLeft + 4f, barTop + labelPaint.textSize + 2f, labelPaint)
+                        restore()
+                    }
+                }
             }
         }
     }

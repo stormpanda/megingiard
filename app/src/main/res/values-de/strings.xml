@@ -394,6 +394,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_error_unknown">Ein unerwarteter Fehler ist aufgetreten.</string>
     <string name="config_ok">OK</string>
 
+    <!-- Macro timeline editor -->
+    <string name="macropad_macro_editor_undo">Rückgängig</string>
+    <string name="macropad_macro_editor_redo">Wiederherstellen</string>
+    <string name="macropad_macro_editor_view_list">Listenansicht</string>
+    <string name="macropad_macro_editor_view_timeline">Timeline-Ansicht</string>
+    <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
+
     <!-- Idle Pill -->
     <string name="pill_x_close">× schließen</string>
 
