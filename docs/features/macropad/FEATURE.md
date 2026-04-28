@@ -90,8 +90,16 @@ Each button supports one of the following actions:
 - Each macro contains a list of **`MacroStep`** subtypes: `GamepadButtonTap`, `JoystickMove`, `DPadTap`, and `TouchTap`. Each step has `startTimeMs` and `durationMs` fields that allow overlapping parallel steps within the same macro.
 - A **`PadAction.Macro(macroId)`** button action MUST reference a macro by ID; pressing the button fires the macro **once (fire-and-forget)** without blocking further input.
 - The MacroPad editor toolbar exposes two chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
-- The macro editor shows a **visual horizontal timeline** (Canvas, 0.3 dp/ms scale) colour-coded by step type (accent = Gamepad Button, orange = Joystick, blue = D-Pad, tertiary = Touch Tap), plus a scrollable step list for editing individual steps.
-- The step list exposes two action chips: **"Add Step"** (opens `MacroStepEditDialog` for Gamepad/Joystick/D-Pad steps) and **"Record Touch"** (opens a confirmation dialog, then shows a live recording mirror on the secondary display).
+- The macro editor supports two switchable editing modes:
+  - **List View**: step list only (no timeline strip above the list), optimized for quick per-step editing.
+  - **Timeline View**: a **full-height vertical timeline** (Canvas) where time runs top-to-bottom and steps are rendered in lanes by overlap.
+- Both editor modes expose the same action row: **"Add Step"**, **"Record Touch"**, and **"Test Run"**.
+- The editor includes **Undo** and **Redo** controls for step mutations (add/edit/delete/recorded-touch insertion).
+- The editor includes a global **"Shift subsequent steps"** toggle that defines the default for the per-step toggle in `MacroStepEditDialog`.
+- `MacroStepEditDialog` now contains its own **"Shift subsequent steps"** toggle. The state of this per-step toggle is what is actually applied when saving the step.
+- Shift behavior:
+  - Editing an existing step with shift enabled moves later steps by the edited step end-time delta.
+  - Adding a new step with shift enabled moves existing steps at/after the new start time by the new step duration.
 - Steps are configured in **`MacroStepEditDialog`** which provides: step-type chips (Gamepad / Joystick / D-Pad; Touch Tap shown read-only when editing), gamepad button dropdown, 3×3 direction grid for joystick/D-Pad, a magnitude slider (0–1, default 1) for joystick, and numeric fields for start/duration timing.
 - **Touch Tap recording flow:** The user taps "Record Touch" in the timeline editor → a confirmation dialog explains that the mirror will appear on the secondary display → the user confirms → `TouchRecordingManager.requestRecording()` is called (mirror auto-starts if not active) → `ScreenCaptureService` observes `recordingRequested=true` and shows a `RecordingMirrorPresentation` on the secondary display → the user taps the desired position on the mirror → normalised coordinates are delivered to `TouchRecordingManager.onTapRecorded()` → the presentation is dismissed → `MacroTimelineEditor` observes `recordedTap` via `LaunchedEffect` and appends a `MacroStep.TouchTap` step.
 - The macro list is a **flat list** (no folders). Macros can be reordered via drag handle, and CRUD operations (add, edit, duplicate, delete) are available via context menu on each row.

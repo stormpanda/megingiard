@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -102,7 +103,8 @@ private val MSD_DIR_LABELS: Map<Pair<Int, Int>, String> = mapOf(
 internal fun MacroStepEditDialog(
     step:        MacroStep?,
     accentColor: Color,
-    onConfirm:   (MacroStep) -> Unit,
+    initialShiftSubsequent: Boolean,
+    onConfirm:   (MacroStep, Boolean) -> Unit,
     onDismiss:   () -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -154,6 +156,7 @@ internal fun MacroStepEditDialog(
     // DPadTap state
     var dpadDirX by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirX else 0) }
     var dpadDirY by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirY else -1) }
+    var shiftSubsequent by remember { mutableStateOf(initialShiftSubsequent) }
 
     // ── Confirm guard ─────────────────────────────────────────────────────────
     val isConfirmEnabled = durMs > 0 && when (stepType) {
@@ -221,7 +224,7 @@ internal fun MacroStepEditDialog(
                             durationMs  = durMs.toLong().coerceAtLeast(1L),
                         )
                     }
-                    onConfirm(builtStep)
+                    onConfirm(builtStep, shiftSubsequent)
                 },
                 enabled = isConfirmEnabled,
             ) {
@@ -432,6 +435,22 @@ internal fun MacroStepEditDialog(
                 accentColor = accentColor,
                 onChange    = { durMs = it },
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Switch(
+                    checked = shiftSubsequent,
+                    onCheckedChange = { shiftSubsequent = it },
+                )
+            }
         }
     }
 }
