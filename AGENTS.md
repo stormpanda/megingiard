@@ -656,7 +656,7 @@ The message MUST cover **every change made since the last commit** — across th
 
 When in doubt, mentally run through all files that were modified during the session and verify each one is represented.
 
-The proposal must be copy-paste ready — no placeholders. Present it as a code block so the user can copy it directly.
+The proposal must be copy-paste ready — no placeholders. You must present it as a separate code block so the user can copy it directly.
 
 ---
 

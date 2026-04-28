@@ -22,12 +22,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Redo
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -83,6 +86,7 @@ private const val MT_VERTICAL_DP_PER_MS = 0.22f
 private const val MT_VERTICAL_AXIS_WIDTH = 52
 private const val MT_VERTICAL_BAR_PADDING = 3f
 private const val MT_BAR_LABEL_TEXT_SIZE_SP = 10
+private const val MT_TIMELINE_SIDE_PADDING = 10
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -273,7 +277,7 @@ internal fun MacroTimelineEditor(
                     .padding(horizontal = MT_PADDING.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(
+                IconButton(
                     onClick = {
                         if (undoStack.isNotEmpty()) {
                             val previous = undoStack.last()
@@ -285,9 +289,13 @@ internal fun MacroTimelineEditor(
                     },
                     enabled = undoStack.isNotEmpty(),
                 ) {
-                    Text(stringResource(R.string.macropad_macro_editor_undo))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Undo,
+                        contentDescription = stringResource(R.string.macropad_macro_editor_undo),
+                        tint = if (undoStack.isNotEmpty()) colors.onSurface else colors.onSurfaceSecondary,
+                    )
                 }
-                TextButton(
+                IconButton(
                     onClick = {
                         if (redoStack.isNotEmpty()) {
                             val restored = redoStack.last()
@@ -299,29 +307,38 @@ internal fun MacroTimelineEditor(
                     },
                     enabled = redoStack.isNotEmpty(),
                 ) {
-                    Text(stringResource(R.string.macropad_macro_editor_redo))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Redo,
+                        contentDescription = stringResource(R.string.macropad_macro_editor_redo),
+                        tint = if (redoStack.isNotEmpty()) colors.onSurface else colors.onSurfaceSecondary,
+                    )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                TextButton(onClick = {
-                    viewMode = if (viewMode == MacroEditorViewMode.LIST) MacroEditorViewMode.TIMELINE else MacroEditorViewMode.LIST
-                }) {
-                    Text(
-                        if (viewMode == MacroEditorViewMode.LIST) {
-                            stringResource(R.string.macropad_macro_editor_view_timeline)
-                        } else {
-                            stringResource(R.string.macropad_macro_editor_view_list)
-                        },
-                        color = accentColor,
-                    )
-                }
+                FilterChip(
+                    selected = viewMode == MacroEditorViewMode.LIST,
+                    onClick = { viewMode = MacroEditorViewMode.LIST },
+                    label = {
+                        Text(stringResource(R.string.macropad_macro_editor_view_list))
+                    },
+                )
+                Spacer(Modifier.width(8.dp))
+                FilterChip(
+                    selected = viewMode == MacroEditorViewMode.TIMELINE,
+                    onClick = { viewMode = MacroEditorViewMode.TIMELINE },
+                    label = {
+                        Text(stringResource(R.string.macropad_macro_editor_view_timeline))
+                    },
+                )
 
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.width(6.dp))
                 Switch(
@@ -400,7 +417,8 @@ internal fun MacroTimelineEditor(
                         MacroVerticalTimeline(
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                                .padding(horizontal = MT_TIMELINE_SIDE_PADDING.dp),
                             steps = steps,
                             accentColor = accentColor,
                             onEditStep = { editingStepIndex = it },

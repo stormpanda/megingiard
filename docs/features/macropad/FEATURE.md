@@ -95,9 +95,11 @@ Each button supports one of the following actions:
   - **Timeline View**: a **full-height vertical timeline** (Canvas) where time runs top-to-bottom and steps are rendered in lanes by overlap.
     - The timeline always uses the full available screen width.
     - Lane widths are divided adaptively based on the current number of required overlap lanes.
+    - A small horizontal inset is applied so the timeline content is not flush against the screen edges.
     - Each step block contains a short action label (for example gamepad short code, joystick stick+direction, D-Pad direction, or Tap).
 - Both editor modes expose the same action row: **"Add Step"**, **"Record Touch"**, and **"Test Run"**.
-- The editor includes **Undo** and **Redo** controls for step mutations (add/edit/delete/recorded-touch insertion).
+- The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion).
+- Mode switching is exposed as two always-visible chips (**List View** / **Timeline View**), with the active mode shown as selected.
 - The editor includes a global **"Shift subsequent steps"** toggle that defines the default for the per-step toggle in `MacroStepEditDialog`.
 - `MacroStepEditDialog` now contains its own **"Shift subsequent steps"** toggle. The state of this per-step toggle is what is actually applied when saving the step.
 - Shift behavior:
