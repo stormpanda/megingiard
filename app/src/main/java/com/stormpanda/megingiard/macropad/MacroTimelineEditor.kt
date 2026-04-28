@@ -27,7 +27,9 @@ import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -53,6 +55,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -288,12 +291,14 @@ internal fun MacroTimelineEditor(
                 Spacer(Modifier.width(8.dp))
                 MacroViewModeChip(
                     text = stringResource(R.string.macropad_macro_editor_view_list),
+                    icon = Icons.Rounded.FormatListBulleted,
                     selected = viewMode == MacroEditorViewMode.LIST,
                     onClick = { viewMode = MacroEditorViewMode.LIST },
                 )
                 Spacer(Modifier.width(MT_VIEW_CHIP_SPACING.dp))
                 MacroViewModeChip(
                     text = stringResource(R.string.macropad_macro_editor_view_timeline),
+                    icon = Icons.Rounded.Timeline,
                     selected = viewMode == MacroEditorViewMode.TIMELINE,
                     onClick = { viewMode = MacroEditorViewMode.TIMELINE },
                 )
@@ -535,6 +540,7 @@ internal fun MacroTimelineEditor(
 @Composable
 private fun MacroViewModeChip(
     text: String,
+    icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -557,12 +563,23 @@ private fun MacroViewModeChip(
                 vertical = MT_VIEW_CHIP_V_PADDING.dp,
             ),
     ) {
-        Text(
-            text = text,
-            color = if (selected) colors.onAccent else colors.onControlOverlay,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) colors.onAccent else colors.onControlOverlay,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = text,
+                color = if (selected) colors.onAccent else colors.onControlOverlay,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            )
+        }
     }
 }
 

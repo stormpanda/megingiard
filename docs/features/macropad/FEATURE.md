@@ -103,6 +103,7 @@ Each button supports one of the following actions:
 - The control header uses compact vertical spacing to preserve more vertical space for the step list/timeline area, and the global **Shift subsequent steps** toggle is right-aligned.
 - The editor includes a global **"Shift subsequent steps"** toggle (enabled by default) that defines the default for the per-step toggle in `MacroStepEditDialog`.
 - `MacroStepEditDialog` now contains its own **"Shift subsequent steps"** toggle. The state of this per-step toggle is what is actually applied when saving the step.
+- In `MacroStepEditDialog`, step-type chips use the same visual style as Idle Pill selector chips and include leading icons (controller icon for Gamepad, stick icon for Joystick, and D-pad-like grid icon for D-Pad).
 - Shift behavior:
   - Editing an existing step with shift enabled moves later steps by the edited step end-time delta.
   - Adding a new step with shift enabled moves existing steps at/after the new start time by the new step duration.

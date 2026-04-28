@@ -17,6 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Grid4x4
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -38,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 
@@ -62,6 +67,9 @@ private const val MSD_TIMING_MAX_MS         = 10000
 private const val MSD_TIMING_STEP_MS        = 100
 private const val MSD_TIMING_FINE_MS        = 10
 private const val MSD_TIMING_SLIDER_STEPS   = 99
+private const val MSD_TYPE_CHIP_CORNER      = 20
+private const val MSD_TYPE_CHIP_H_PADDING   = 12
+private const val MSD_TYPE_CHIP_V_PADDING   = 6
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step type (editor-internal)
@@ -257,27 +265,19 @@ internal fun MacroStepEditDialog(
                         StepType.DPAD     -> R.string.macropad_macro_step_type_dpad
                         StepType.TOUCH    -> R.string.macropad_macro_step_type_touch
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                if (selected) accentColor.copy(alpha = 0.2f)
-                                else          Color.Transparent
-                            )
-                            .border(
-                                1.dp,
-                                if (selected) accentColor else accentColor.copy(alpha = 0.4f),
-                                RoundedCornerShape(6.dp),
-                            )
-                            .clickable(enabled = type != StepType.TOUCH) { stepType = type }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                    ) {
-                        Text(
-                            text     = stringResource(labelRes),
-                            color    = if (selected) accentColor else colors.onSurfaceSecondary,
-                            style    = MaterialTheme.typography.labelMedium,
-                        )
+                    val icon = when (type) {
+                        StepType.GAMEPAD -> Icons.Rounded.SportsEsports
+                        StepType.JOYSTICK -> Icons.Rounded.TripOrigin
+                        StepType.DPAD -> Icons.Rounded.Grid4x4
+                        StepType.TOUCH -> Icons.Rounded.TouchApp
                     }
+                    StepTypeChip(
+                        text = stringResource(labelRes),
+                        icon = icon,
+                        selected = selected,
+                        enabled = type != StepType.TOUCH,
+                        onClick = { stepType = type },
+                    )
                 }
             }
 
@@ -451,6 +451,50 @@ internal fun MacroStepEditDialog(
                     onCheckedChange = { shiftSubsequent = it },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun StepTypeChip(
+    text: String,
+    icon: ImageVector,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(MSD_TYPE_CHIP_CORNER.dp))
+            .background(
+                if (selected) colors.accent.copy(alpha = 0.85f)
+                else colors.navPillBody.copy(alpha = 0.5f),
+            )
+            .border(
+                1.dp,
+                if (selected) colors.accent else colors.controlOverlayBorder,
+                RoundedCornerShape(MSD_TYPE_CHIP_CORNER.dp),
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = MSD_TYPE_CHIP_H_PADDING.dp, vertical = MSD_TYPE_CHIP_V_PADDING.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected) colors.onAccent else colors.onControlOverlay,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = text,
+                color = if (selected) colors.onAccent else colors.onControlOverlay,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            )
         }
     }
 }
