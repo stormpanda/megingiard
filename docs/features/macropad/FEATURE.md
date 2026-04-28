@@ -112,7 +112,8 @@ Each button supports one of the following actions:
 - New-step timing defaults and controls:
   - New steps open with `startTimeMs = (latest macro end) + 2000 ms`.
   - Duration uses a base slider range of `0..1000 ms`.
-  - Both timing rows expose quick delta buttons: `-10`, `-1`, `+1`, `+10`, `+1000`.
+  - Both timing rows expose quick delta buttons: `-100`, `-10`, `-1`, `+1`, `+10`, `+100`, `+1000`.
+  - Both timing sliders use a constant `100 ms` step resolution.
   - For both start and duration, pressing a positive delta that exceeds the current slider max extends the slider scale in `+1000 ms` steps.
 - **Touch Tap recording flow:** The user taps "Record Touch" in the timeline editor → a confirmation dialog explains that the mirror will appear on the secondary display → the user confirms → `TouchRecordingManager.requestRecording()` is called (mirror auto-starts if not active) → `ScreenCaptureService` observes `recordingRequested=true` and shows a `RecordingMirrorPresentation` on the secondary display → the user taps the desired position on the mirror → normalised coordinates are delivered to `TouchRecordingManager.onTapRecorded()` → the presentation is dismissed → `MacroTimelineEditor` observes `recordedTap` via `LaunchedEffect` and appends a `MacroStep.TouchTap` step.
 - The macro list is a **flat list** (no folders). Macros can be reordered via drag handle, and CRUD operations (add, edit, duplicate, delete) are available via context menu on each row.

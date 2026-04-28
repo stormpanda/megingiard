@@ -6,7 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,11 +64,18 @@ private const val MSD_DEFAULT_NEW_STEP_START_OFFSET_MS = 2_000L
 private const val MSD_TIMING_BASE_START_MAX_MS = 10_000
 private const val MSD_TIMING_BASE_DURATION_MAX_MS = 1_000
 private const val MSD_TIMING_SCALE_STEP_MS = 1_000
+private const val MSD_TIMING_SLIDER_INCREMENT_MS = 100
+private const val MSD_TIMING_DELTA_MINUS_HUNDRED_MS = -100
 private const val MSD_TIMING_DELTA_MINUS_TEN_MS = -10
 private const val MSD_TIMING_DELTA_MINUS_ONE_MS = -1
 private const val MSD_TIMING_DELTA_PLUS_ONE_MS = 1
 private const val MSD_TIMING_DELTA_PLUS_TEN_MS = 10
+private const val MSD_TIMING_DELTA_PLUS_HUNDRED_MS = 100
 private const val MSD_TIMING_DELTA_PLUS_THOUSAND_MS = 1_000
+private const val MSD_TIMING_DELTA_BUTTON_MIN_WIDTH = 30
+private const val MSD_TIMING_DELTA_BUTTON_MIN_HEIGHT = 28
+private const val MSD_TIMING_DELTA_BUTTON_H_PADDING = 4
+private const val MSD_TIMING_DELTA_BUTTON_V_PADDING = 2
 private const val MSD_TYPE_CHIP_CORNER      = 20
 private const val MSD_TYPE_CHIP_H_PADDING   = 12
 private const val MSD_TYPE_CHIP_V_PADDING   = 6
@@ -519,7 +528,7 @@ private fun StepTypeChip(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Timing row — label + current value + slider + +fine button
+// Timing row — label + current value + slider + delta buttons
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -549,68 +558,64 @@ private fun MsdTimingRow(
             Text("$valueMs ms", color = colors.onSurface, style = MaterialTheme.typography.labelMedium)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_MINUS_TEN_MS) }) {
-                Text(
-                    text = stringResource(
-                        R.string.macropad_macro_step_timing_delta,
-                        MSD_TIMING_DELTA_MINUS_TEN_MS,
-                    ),
-                    color = accentColor,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_MINUS_HUNDRED_MS) {
+                applyDelta(MSD_TIMING_DELTA_MINUS_HUNDRED_MS)
             }
-            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_MINUS_ONE_MS) }) {
-                Text(
-                    text = stringResource(
-                        R.string.macropad_macro_step_timing_delta,
-                        MSD_TIMING_DELTA_MINUS_ONE_MS,
-                    ),
-                    color = accentColor,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_MINUS_TEN_MS) {
+                applyDelta(MSD_TIMING_DELTA_MINUS_TEN_MS)
+            }
+            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_MINUS_ONE_MS) {
+                applyDelta(MSD_TIMING_DELTA_MINUS_ONE_MS)
             }
             Slider(
                 value         = valueMs.toFloat(),
                 onValueChange = { onChange(it.roundToInt().coerceIn(0, sliderMaxMs)) },
                 valueRange    = 0f..sliderMaxMs.toFloat(),
-                steps = ((sliderMaxMs / MSD_TIMING_SCALE_STEP_MS) - 1).coerceAtLeast(0),
+                steps = ((sliderMaxMs / MSD_TIMING_SLIDER_INCREMENT_MS) - 1).coerceAtLeast(0),
                 colors        = SliderDefaults.colors(
                     thumbColor       = accentColor,
                     activeTrackColor = accentColor,
                 ),
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_PLUS_ONE_MS) }) {
-                Text(
-                    text = stringResource(
-                        R.string.macropad_macro_step_timing_delta,
-                        MSD_TIMING_DELTA_PLUS_ONE_MS,
-                    ),
-                    color = accentColor,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_ONE_MS) {
+                applyDelta(MSD_TIMING_DELTA_PLUS_ONE_MS)
             }
-            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_PLUS_TEN_MS) }) {
-                Text(
-                    text = stringResource(
-                        R.string.macropad_macro_step_timing_delta,
-                        MSD_TIMING_DELTA_PLUS_TEN_MS,
-                    ),
-                    color = accentColor,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_TEN_MS) {
+                applyDelta(MSD_TIMING_DELTA_PLUS_TEN_MS)
             }
-            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_PLUS_THOUSAND_MS) }) {
-                Text(
-                    text = stringResource(
-                        R.string.macropad_macro_step_timing_delta,
-                        MSD_TIMING_DELTA_PLUS_THOUSAND_MS,
-                    ),
-                    color = accentColor,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_HUNDRED_MS) {
+                applyDelta(MSD_TIMING_DELTA_PLUS_HUNDRED_MS)
+            }
+            MsdTimingDeltaButton(accentColor = accentColor, deltaMs = MSD_TIMING_DELTA_PLUS_THOUSAND_MS) {
+                applyDelta(MSD_TIMING_DELTA_PLUS_THOUSAND_MS)
             }
         }
+    }
+}
+
+@Composable
+private fun MsdTimingDeltaButton(
+    accentColor: Color,
+    deltaMs: Int,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(
+            horizontal = MSD_TIMING_DELTA_BUTTON_H_PADDING.dp,
+            vertical = MSD_TIMING_DELTA_BUTTON_V_PADDING.dp,
+        ),
+        modifier = Modifier.defaultMinSize(
+            minWidth = MSD_TIMING_DELTA_BUTTON_MIN_WIDTH.dp,
+            minHeight = MSD_TIMING_DELTA_BUTTON_MIN_HEIGHT.dp,
+        ),
+    ) {
+        Text(
+            text = stringResource(R.string.macropad_macro_step_timing_delta, deltaMs),
+            color = accentColor,
+            style = MaterialTheme.typography.labelSmall,
+        )
     }
 }
 
