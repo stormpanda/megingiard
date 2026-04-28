@@ -58,10 +58,15 @@ private const val TAG = "MacroStepEditDialog"
 private const val MSD_GRID_CELL_SIZE        = 44
 private const val MSD_GRID_SPACING          = 4
 private const val MSD_DEFAULT_DURATION_MS   = 100L
-private const val MSD_TIMING_MAX_MS         = 10000
-private const val MSD_TIMING_STEP_MS        = 100
-private const val MSD_TIMING_FINE_MS        = 10
-private const val MSD_TIMING_SLIDER_STEPS   = 99
+private const val MSD_DEFAULT_NEW_STEP_START_OFFSET_MS = 2_000L
+private const val MSD_TIMING_BASE_START_MAX_MS = 10_000
+private const val MSD_TIMING_BASE_DURATION_MAX_MS = 1_000
+private const val MSD_TIMING_SCALE_STEP_MS = 1_000
+private const val MSD_TIMING_DELTA_MINUS_TEN_MS = -10
+private const val MSD_TIMING_DELTA_MINUS_ONE_MS = -1
+private const val MSD_TIMING_DELTA_PLUS_ONE_MS = 1
+private const val MSD_TIMING_DELTA_PLUS_TEN_MS = 10
+private const val MSD_TIMING_DELTA_PLUS_THOUSAND_MS = 1_000
 private const val MSD_TYPE_CHIP_CORNER      = 20
 private const val MSD_TYPE_CHIP_H_PADDING   = 12
 private const val MSD_TYPE_CHIP_V_PADDING   = 6
@@ -106,6 +111,7 @@ private val MSD_DIR_LABELS: Map<Pair<Int, Int>, String> = mapOf(
 internal fun MacroStepEditDialog(
     step:        MacroStep?,
     accentColor: Color,
+    suggestedStartTimeMs: Long,
     initialShiftSubsequent: Boolean,
     onConfirm:   (MacroStep, Boolean) -> Unit,
     onDismiss:   () -> Unit,
@@ -121,9 +127,23 @@ internal fun MacroStepEditDialog(
         is MacroStep.TouchTap         -> StepType.TOUCH
         null                          -> StepType.GAMEPAD
     }
+
+    val initialStartMs = when {
+        step != null -> step.startTimeMs.toInt().coerceAtLeast(0)
+        suggestedStartTimeMs > 0L -> suggestedStartTimeMs.toInt().coerceAtLeast(0)
+        else -> MSD_DEFAULT_NEW_STEP_START_OFFSET_MS.toInt()
+    }
+    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).toInt().coerceAtLeast(0)
+
     var stepType  by remember { mutableStateOf(initialType) }
-    var startMs by remember { mutableIntStateOf((step?.startTimeMs ?: 0L).toInt().coerceIn(0, MSD_TIMING_MAX_MS)) }
-    var durMs   by remember { mutableIntStateOf((step?.durationMs ?: MSD_DEFAULT_DURATION_MS).toInt().coerceIn(0, MSD_TIMING_MAX_MS)) }
+    var startMs by remember { mutableIntStateOf(initialStartMs) }
+    var durMs by remember { mutableIntStateOf(initialDurationMs) }
+    var startMaxMs by remember {
+        mutableIntStateOf(expandScaleToFit(MSD_TIMING_BASE_START_MAX_MS, initialStartMs))
+    }
+    var durationMaxMs by remember {
+        mutableIntStateOf(expandScaleToFit(MSD_TIMING_BASE_DURATION_MAX_MS, initialDurationMs))
+    }
 
     // GamepadButtonTap state
     val initPreset = if (step is MacroStep.GamepadButtonTap)
@@ -421,13 +441,17 @@ internal fun MacroStepEditDialog(
             MsdTimingRow(
                 label       = stringResource(R.string.macropad_macro_step_start_ms),
                 valueMs     = startMs,
+                sliderMaxMs = startMaxMs,
                 accentColor = accentColor,
+                onSliderMaxChange = { startMaxMs = it },
                 onChange    = { startMs = it },
             )
             MsdTimingRow(
                 label       = stringResource(R.string.macropad_macro_step_duration_ms),
                 valueMs     = durMs,
+                sliderMaxMs = durationMaxMs,
                 accentColor = accentColor,
+                onSliderMaxChange = { durationMaxMs = it },
                 onChange    = { durMs = it },
             )
 
@@ -502,10 +526,19 @@ private fun StepTypeChip(
 private fun MsdTimingRow(
     label:       String,
     valueMs:     Int,
+    sliderMaxMs: Int,
     accentColor: Color,
+    onSliderMaxChange: (Int) -> Unit,
     onChange:    (Int) -> Unit,
 ) {
     val colors = LocalAppColors.current
+    fun applyDelta(deltaMs: Int) {
+        val nextValue = (valueMs + deltaMs).coerceAtLeast(0)
+        val nextMax = expandScaleToFit(sliderMaxMs, nextValue)
+        if (nextMax != sliderMaxMs) onSliderMaxChange(nextMax)
+        onChange(nextValue)
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier              = Modifier.fillMaxWidth(),
@@ -516,22 +549,77 @@ private fun MsdTimingRow(
             Text("$valueMs ms", color = colors.onSurface, style = MaterialTheme.typography.labelMedium)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_MINUS_TEN_MS) }) {
+                Text(
+                    text = stringResource(
+                        R.string.macropad_macro_step_timing_delta,
+                        MSD_TIMING_DELTA_MINUS_TEN_MS,
+                    ),
+                    color = accentColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_MINUS_ONE_MS) }) {
+                Text(
+                    text = stringResource(
+                        R.string.macropad_macro_step_timing_delta,
+                        MSD_TIMING_DELTA_MINUS_ONE_MS,
+                    ),
+                    color = accentColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             Slider(
                 value         = valueMs.toFloat(),
-                onValueChange = { onChange(it.roundToInt().coerceIn(0, MSD_TIMING_MAX_MS)) },
-                valueRange    = 0f..MSD_TIMING_MAX_MS.toFloat(),
-                steps         = MSD_TIMING_SLIDER_STEPS,
+                onValueChange = { onChange(it.roundToInt().coerceIn(0, sliderMaxMs)) },
+                valueRange    = 0f..sliderMaxMs.toFloat(),
+                steps = ((sliderMaxMs / MSD_TIMING_SCALE_STEP_MS) - 1).coerceAtLeast(0),
                 colors        = SliderDefaults.colors(
                     thumbColor       = accentColor,
                     activeTrackColor = accentColor,
                 ),
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { onChange((valueMs + MSD_TIMING_FINE_MS).coerceAtMost(MSD_TIMING_MAX_MS)) }) {
-                Text("+${MSD_TIMING_FINE_MS}ms", color = accentColor, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_PLUS_ONE_MS) }) {
+                Text(
+                    text = stringResource(
+                        R.string.macropad_macro_step_timing_delta,
+                        MSD_TIMING_DELTA_PLUS_ONE_MS,
+                    ),
+                    color = accentColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_PLUS_TEN_MS) }) {
+                Text(
+                    text = stringResource(
+                        R.string.macropad_macro_step_timing_delta,
+                        MSD_TIMING_DELTA_PLUS_TEN_MS,
+                    ),
+                    color = accentColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            TextButton(onClick = { applyDelta(MSD_TIMING_DELTA_PLUS_THOUSAND_MS) }) {
+                Text(
+                    text = stringResource(
+                        R.string.macropad_macro_step_timing_delta,
+                        MSD_TIMING_DELTA_PLUS_THOUSAND_MS,
+                    ),
+                    color = accentColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
+}
+
+private fun expandScaleToFit(currentMaxMs: Int, requiredValueMs: Int): Int {
+    var maxMs = currentMaxMs.coerceAtLeast(MSD_TIMING_SCALE_STEP_MS)
+    while (requiredValueMs > maxMs) {
+        maxMs += MSD_TIMING_SCALE_STEP_MS
+    }
+    return maxMs
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

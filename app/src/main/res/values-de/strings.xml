@@ -297,6 +297,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_step_touch_position">Aufgezeichnete Position (schreibgeschützt)</string>
     <string name="macropad_macro_step_start_ms">Startzeit (ms)</string>
     <string name="macropad_macro_step_duration_ms">Dauer (ms)</string>
+    <string name="macropad_macro_step_timing_delta">%+d</string>
     <string name="macropad_macro_step_stick_left">Linker Stick</string>
     <string name="macropad_macro_step_stick_right">Rechter Stick</string>
     <!-- %.1f = Stärke des Joystick-Ausschlags -->

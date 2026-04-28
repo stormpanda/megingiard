@@ -94,6 +94,7 @@ private const val MT_VIEW_CHIP_H_PADDING = 12
 private const val MT_VIEW_CHIP_V_PADDING = 6
 private const val MT_VIEW_CHIP_SPACING = 6
 private const val MT_TIMING_MAX_MS = 10_000L
+private const val MT_NEW_STEP_START_OFFSET_MS = 2_000L
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -464,9 +465,11 @@ internal fun MacroTimelineEditor(
 
     if (showAddStep || editingStepIndex != null) {
         val stepToEdit: MacroStep? = editingStepIndex?.let { steps[it] }
+        val suggestedStartTimeMs = (steps.totalDurationMs() + MT_NEW_STEP_START_OFFSET_MS).coerceAtLeast(0L)
         MacroStepEditDialog(
             step = stepToEdit,
             accentColor = accentColor,
+            suggestedStartTimeMs = suggestedStartTimeMs,
             initialShiftSubsequent = shiftSubsequentDefault,
             onConfirm = { newStep, applyShift ->
                 if (editingStepIndex != null) {
