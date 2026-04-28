@@ -172,7 +172,7 @@ internal fun MacroTimelineEditor(
     var deleteStepIndex by remember { mutableStateOf<Int?>(null) }
     var showRecordTouchDialog by remember { mutableStateOf(false) }
     var viewMode by remember { mutableStateOf(MacroEditorViewMode.LIST) }
-    var shiftSubsequentDefault by remember { mutableStateOf(false) }
+    var shiftSubsequentDefault by remember { mutableStateOf(true) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
 
