@@ -22,12 +22,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.TouchApp
@@ -293,7 +293,7 @@ internal fun MacroTimelineEditor(
                 Spacer(Modifier.width(8.dp))
                 MacroViewModeChip(
                     text = stringResource(R.string.macropad_macro_editor_view_list),
-                    icon = Icons.Rounded.FormatListBulleted,
+                    icon = Icons.AutoMirrored.Rounded.FormatListBulleted,
                     selected = viewMode == MacroEditorViewMode.LIST,
                     onClick = { viewMode = MacroEditorViewMode.LIST },
                 )
@@ -320,7 +320,7 @@ internal fun MacroTimelineEditor(
                             undoStack = undoStack.dropLast(1)
                             redoStack = (redoStack + listOf(steps)).takeLast(MT_UNDO_STACK_MAX)
                             steps = previous
-                            AppLog.d(TAG, "undo size=${steps.size}")
+                            AppLog.d(TAG, "undo stack=${undoStack.size} redo stack=${redoStack.size}")
                         }
                     },
                     enabled = undoStack.isNotEmpty(),
@@ -338,7 +338,7 @@ internal fun MacroTimelineEditor(
                             redoStack = redoStack.dropLast(1)
                             undoStack = (undoStack + listOf(steps)).takeLast(MT_UNDO_STACK_MAX)
                             steps = restored
-                            AppLog.d(TAG, "redo size=${steps.size}")
+                            AppLog.d(TAG, "undo stack=${undoStack.size} redo stack=${redoStack.size}")
                         }
                     },
                     enabled = redoStack.isNotEmpty(),

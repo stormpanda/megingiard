@@ -138,11 +138,11 @@ internal fun MacroStepEditDialog(
     }
 
     val initialStartMs = when {
-        step != null -> step.startTimeMs.toInt().coerceAtLeast(0)
-        suggestedStartTimeMs > 0L -> suggestedStartTimeMs.toInt().coerceAtLeast(0)
-        else -> MSD_DEFAULT_NEW_STEP_START_OFFSET_MS.toInt()
+        step != null -> clampLongToNonNegativeInt(step.startTimeMs)
+        suggestedStartTimeMs > 0L -> clampLongToNonNegativeInt(suggestedStartTimeMs)
+        else -> clampLongToNonNegativeInt(MSD_DEFAULT_NEW_STEP_START_OFFSET_MS)
     }
-    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).toInt().coerceAtLeast(0)
+    val initialDurationMs = clampLongToNonNegativeInt(step?.durationMs ?: MSD_DEFAULT_DURATION_MS)
 
     var stepType  by remember { mutableStateOf(initialType) }
     var startMs by remember { mutableIntStateOf(initialStartMs) }
@@ -625,6 +625,10 @@ private fun expandScaleToFit(currentMaxMs: Int, requiredValueMs: Int): Int {
         maxMs += MSD_TIMING_SCALE_STEP_MS
     }
     return maxMs
+}
+
+private fun clampLongToNonNegativeInt(value: Long): Int {
+    return value.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
