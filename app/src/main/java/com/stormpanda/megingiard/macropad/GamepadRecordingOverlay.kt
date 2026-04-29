@@ -34,6 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -48,6 +49,7 @@ import kotlin.math.sqrt
 private const val TAG = "GamepadRecordingOverlay"
 private val GRO_PADDING = 16.dp
 private val GRO_STICK_SIZE = 144.dp
+private val GRO_LEFT_STICK_SIZE = 120.dp
 private val GRO_STICK_THUMB_SIZE = 52.dp
 private val GRO_DPAD_ARROW_SIZE = 48.dp
 private val GRO_FACE_BUTTON_SIZE = 52.dp
@@ -161,6 +163,7 @@ internal fun GamepadRecordingOverlay(
                     }
                     Spacer(Modifier.weight(1f))
                     StickSurface(
+                        surfaceSize = GRO_LEFT_STICK_SIZE,
                         x = state.leftStickX,
                         y = state.leftStickY,
                         onChanged = { x, y -> onJoystickChanged(JoystickStick.LEFT, x, y) },
@@ -181,16 +184,16 @@ internal fun GamepadRecordingOverlay(
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING)) {
                         ShoulderButton(
-                            iconName = "game_bumper_right",
-                            pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR),
-                            code = GamepadKeycodes.BTN_TR,
+                            iconName = "game_trigger_right",
+                            pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR2),
+                            code = GamepadKeycodes.BTN_TR2,
                             onButtonDown = onButtonDown,
                             onButtonUp = onButtonUp,
                         )
                         ShoulderButton(
-                            iconName = "game_trigger_right",
-                            pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR2),
-                            code = GamepadKeycodes.BTN_TR2,
+                            iconName = "game_bumper_right",
+                            pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR),
+                            code = GamepadKeycodes.BTN_TR,
                             onButtonDown = onButtonDown,
                             onButtonUp = onButtonUp,
                         )
@@ -408,6 +411,7 @@ private fun DpadButtons(
 
 @Composable
 private fun StickSurface(
+    surfaceSize: Dp = GRO_STICK_SIZE,
     x: Float,
     y: Float,
     onChanged: (Float, Float) -> Unit,
@@ -415,7 +419,7 @@ private fun StickSurface(
     val colors = LocalAppColors.current
     Box(
         modifier = Modifier
-            .size(GRO_STICK_SIZE)
+            .size(surfaceSize)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
