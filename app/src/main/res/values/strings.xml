@@ -345,7 +345,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_delete_confirm">Remove this step from the macro?</string>
     <string name="macropad_macro_record_gamepad_title">Record Gamepad Input</string>
     <string name="macropad_macro_record_gamepad_hint">Touch the on-screen controller. Inputs are recorded and forwarded live to the top screen.</string>
-    <string name="macropad_macro_record_gamepad_stop">Stop</string>
+    <string name="macropad_macro_record_gamepad_stop">Done</string>
     <string name="macropad_macro_record_gamepad_cancel">Cancel</string>
     <string name="macropad_macro_record_gamepad_left_stick">Left Stick</string>
     <string name="macropad_macro_record_gamepad_right_stick">Right Stick</string>
@@ -354,6 +354,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_record_gamepad_select">SE</string>
     <string name="macropad_macro_record_gamepad_home">HM</string>
     <string name="macropad_macro_record_gamepad_start">ST</string>
+    <string name="macropad_macro_record_gamepad_dialog_confirm">Start</string>
     <string name="macropad_macro_record_gamepad_dialog_title">Start Gamepad Recording</string>
     <string name="macropad_macro_record_gamepad_dialog_message">A touch gamepad overlay will open on this screen. Your touches will be recorded as macro steps and forwarded live to the top screen via the virtual gamepad.</string>
     <string name="macropad_macro_record_gamepad_error_title">Gamepad Recording Unavailable</string>
