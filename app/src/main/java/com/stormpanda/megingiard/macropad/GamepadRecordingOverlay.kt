@@ -7,13 +7,14 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -186,46 +187,77 @@ internal fun GamepadRecordingOverlay(
                     )
                 }
             }
-            // Main area — two equal-width columns.
-            // Both sticks rendered at the top of their column (same Y level).
-            // D-Pad and Face-Cluster rendered at the bottom (same Y level).
-            // SpaceBetween distributes remaining height between them symmetrically.
-            Row(
+            // Main area — absolute proportional layout via BoxWithConstraints.
+            // Sticks pushed to outer edges (16 %/84 % horizontal).
+            // D-Pad and Face Cluster inward (26 %/74 %), both at the same vertical
+            // level so the layout is fully symmetric.
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .padding(start = GRO_PADDING, end = GRO_PADDING, bottom = GRO_CLUSTER_SPACING),
+                    .weight(1f),
             ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween,
+                val w = maxWidth
+                val h = maxHeight
+                val stickHalf = GRO_STICK_SIZE / 2
+                // D-Pad cross spans 3 × GRO_DPAD_ARROW_SIZE in each dimension
+                val dpadHalf = GRO_DPAD_ARROW_SIZE * 3 / 2  // 72.dp
+                val faceHalf = GRO_FACE_CLUSTER_SIZE / 2    // 88.dp
+
+                // Left stick — center at 16 % horizontal, 35 % vertical
+                Box(
+                    modifier = Modifier.offset(
+                        x = (w * 0.16f - stickHalf).coerceAtLeast(GRO_PADDING),
+                        y = (h * 0.35f - stickHalf).coerceAtLeast(0.dp),
+                    ),
                 ) {
                     StickSurface(
                         x = state.leftStickX,
                         y = state.leftStickY,
                         onChanged = { x, y -> onJoystickChanged(JoystickStick.LEFT, x, y) },
                     )
-                    DpadButtons(
-                        dirX = state.dpadDirectionX,
-                        dirY = state.dpadDirectionY,
-                        onChanged = onDpadChanged,
-                    )
                 }
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween,
+
+                // Right stick — center at 84 % horizontal, 35 % vertical
+                Box(
+                    modifier = Modifier.offset(
+                        x = (w * 0.84f - stickHalf).coerceAtMost(w - GRO_STICK_SIZE - GRO_PADDING),
+                        y = (h * 0.35f - stickHalf).coerceAtLeast(0.dp),
+                    ),
                 ) {
                     StickSurface(
                         x = state.rightStickX,
                         y = state.rightStickY,
                         onChanged = { x, y -> onJoystickChanged(JoystickStick.RIGHT, x, y) },
                     )
+                }
+
+                // D-Pad — center at 26 % horizontal, 76 % vertical
+                Box(
+                    modifier = Modifier.offset(
+                        x = w * 0.26f - dpadHalf,
+                        y = (h * 0.76f - dpadHalf).coerceAtMost(
+                            h - GRO_DPAD_ARROW_SIZE * 3 - GRO_PADDING,
+                        ),
+                    ),
+                ) {
+                    DpadButtons(
+                        dirX = state.dpadDirectionX,
+                        dirY = state.dpadDirectionY,
+                        onChanged = onDpadChanged,
+                    )
+                }
+
+                // Face button cluster — center at 74 % horizontal, 76 % vertical
+                Box(
+                    modifier = Modifier.offset(
+                        x = (w * 0.74f - faceHalf).coerceAtMost(
+                            w - GRO_FACE_CLUSTER_SIZE - GRO_PADDING,
+                        ),
+                        y = (h * 0.76f - faceHalf).coerceAtMost(
+                            h - GRO_FACE_CLUSTER_SIZE - GRO_PADDING,
+                        ),
+                    ),
+                ) {
                     FaceButtonCluster(
                         buttons = faceButtons,
                         pressedButtons = state.pressedButtons,
