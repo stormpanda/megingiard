@@ -43,7 +43,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,9 +70,6 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.macropad.GamepadInjector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -139,23 +135,6 @@ fun PillMenu(
     var showGlobalSettings by remember { mutableStateOf(false) }
     var showNewProfileDialog by remember { mutableStateOf(false) }
     var showNewLayoutDialog by remember { mutableStateOf(false) }
-
-    // Stop all uinput virtual devices while the menu is visible.
-    // keyinjector_arm64 registers as a hardware keyboard via uinput, which causes
-    // Android to suppress the soft IME — making text fields un-typeable.
-    if (visible) {
-        DisposableEffect(Unit) {
-            AppLog.i(TAG, "PillMenu visible → stopping injectors for soft IME")
-            KeyInjector.stop()
-            GamepadInjector.stop()
-            MouseInjector.stop()
-            onDispose {
-                // Injector restart is handled by MacroPadViewModel.watchInjectorLifecycle(),
-                // which reacts to isPillMenuOpen becoming false. No restart needed here.
-                AppLog.i(TAG, "PillMenu dismissed → injector restart handled by MacroPadViewModel watcher")
-            }
-        }
-    }
 
     AnimatedVisibility(
         visible = visible,

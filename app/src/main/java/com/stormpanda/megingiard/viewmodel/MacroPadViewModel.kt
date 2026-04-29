@@ -27,13 +27,19 @@ private const val TAG = "MacroPadViewModel"
 /** Debounce window for injector restart to absorb rapid modal open→close→open sequences. */
 private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
+private data class InjectorGate(
+    val stopKeyboard: Boolean,
+    val stopMouseAndGamepad: Boolean,
+)
+
 /**
  * ViewModel for [MacroPadScreen] — manages multi-injector lifecycle
  * and hit-test engine.
  *
  * Injector lifecycle rule:
- *   - Stop immediately whenever any blocking modal opens (Pill Menu, Editor, Ambient Settings)
- *     or a system prompt is in flight (e.g. MediaProjection consent dialog).
+ *   - Pill Menu open: stop mouse/gamepad injectors only.
+ *   - Blocking modal open (Editor/Ambient Settings) or system prompt in flight:
+ *     stop all injectors including keyboard.
  *   - Restart as soon as all guards are clear.
  *
  * [watchInjectorLifecycle] is the single authoritative restart path.
@@ -50,10 +56,11 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
         MacroPadHitTestEngine(buttonUnitDpToPx)
 
     /**
-     * Starts a long-lived watcher that reacts to all three blocking-modal flags.
+     * Starts a long-lived watcher that reacts to menu/modal/prompt flags.
      * Called once from [MacroPadScreen]'s LaunchedEffect(Unit).
      *
-     * When any modal is open or a system prompt is in flight → stop all injectors immediately.
+     * Pill Menu open → stop mouse/gamepad immediately.
+     * Blocking modal open or prompt in flight → stop all injectors immediately.
      * When all guards are clear → restart injectors for the active profile.
      */
     fun watchInjectorLifecycle(context: Context) {
@@ -64,26 +71,39 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                 AppStateManager.isAmbientSettingsActive,
                 AppStateManager.promptInFlight,
             ) { pillMenu, editor, ambient, prompt ->
-                pillMenu || editor || ambient || prompt
+                val stopAll = editor || ambient || prompt
+                InjectorGate(
+                    stopKeyboard = stopAll,
+                    stopMouseAndGamepad = stopAll || pillMenu,
+                )
             }.distinctUntilChanged()
-            .collectLatest { anyOpen ->
-                if (anyOpen) {
-                    AppLog.i(TAG, "modal open \u2192 stopping injectors")
-                    KeyInjector.stop()
-                    GamepadInjector.stop()
-                    MouseInjector.stop()
-                } else {
-                    // Absorb rapid transitions (e.g. PillMenu closes then Editor opens
-                    // in the same frame).  collectLatest will cancel this branch
-                    // if anyOpen becomes true within the delay window, preventing
-                    // a spurious injector restart from racing ahead of the modal open.
-                    delay(INJECTOR_RESTART_DEBOUNCE_MS)
-                    withContext(Dispatchers.IO) {
-                        val ap = MacroPadState.activeProfile.value
-                        AppLog.i(TAG, "all modals closed \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-                        if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                        if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                        if (ap?.enableMouse == true) MouseInjector.start(context)
+            .collectLatest { gate ->
+                when {
+                    gate.stopKeyboard -> {
+                        AppLog.i(TAG, "blocking modal/prompt open \u2192 stopping keyboard/gamepad/mouse injectors")
+                        KeyInjector.stop()
+                        GamepadInjector.stop()
+                        MouseInjector.stop()
+                    }
+                    gate.stopMouseAndGamepad -> {
+                        AppLog.i(TAG, "pill menu open \u2192 stopping gamepad/mouse injectors")
+                        GamepadInjector.stop()
+                        MouseInjector.stop()
+                    }
+                    else -> {
+                        // Absorb rapid transitions (e.g. PillMenu closes then Editor opens
+                        // in the same frame).  collectLatest will cancel this branch
+                        // if any gate flips back to stop-mode within the delay window,
+                        // preventing
+                        // a spurious injector restart from racing ahead of the modal open.
+                        delay(INJECTOR_RESTART_DEBOUNCE_MS)
+                        withContext(Dispatchers.IO) {
+                            val ap = MacroPadState.activeProfile.value
+                            AppLog.i(TAG, "all guards clear \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
+                            if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                            if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                            if (ap?.enableMouse == true) MouseInjector.start(context)
+                        }
                     }
                 }
             }

@@ -88,13 +88,13 @@ throughout the app.
 
 ### FR-PM6: Injector Suspension While Open
 
-- While the Pill Menu is visible, all virtual input devices (keyboard, gamepad, mouse injectors)
-  MUST be stopped. The `keyinjector_arm64` binary registers a virtual keyboard device via
-  `/dev/uinput`; while it is active, Android suppresses the soft IME, making the name-input text
-  fields inside the Pill Menu un-typeable.
-- Injector restart after the Pill Menu is dismissed is handled entirely by `InjectorLifecycleWatcher`
-  reacting to `AppStateManager.isPillMenuOpen` becoming `false`. The Pill Menu itself does not
-  restart injectors.
+- While the Pill Menu is visible, virtual **gamepad and mouse** injectors MUST be stopped.
+- The virtual keyboard injector remains attached while the menu is open to avoid OEM launcher
+  focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
+  Toggling keyboard availability could otherwise background the app immediately after opening the menu.
+- Injector stop/restart for Pill Menu and modal transitions is handled by the injector lifecycle
+  watchers (`MacroPadViewModel.watchInjectorLifecycle()` and ambient equivalent). The Pill Menu
+  Composable does not directly manage injector processes.
 
 ---
 
