@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -357,7 +356,10 @@ private fun CenterControlButton(
     }
 }
 
-// D-Pad as 4 individual arrow buttons in a cross/plus layout
+// D-Pad as a single unified touch surface — the finger position is mapped to one of
+// 8 zones (4 cardinal + 4 diagonal) by dividing the area into a 3 × 3 grid.
+// The middle cell is the dead zone (neutral).  Sliding the finger without lifting
+// continuously fires onChanged so every direction segment is recorded as its own step.
 @Composable
 private fun DpadButtons(
     dirX: Int,
@@ -365,68 +367,101 @@ private fun DpadButtons(
     onChanged: (Int, Int) -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val upPressed = dirY < 0 && dirX == 0
-    val downPressed = dirY > 0 && dirX == 0
-    val leftPressed = dirX < 0 && dirY == 0
-    val rightPressed = dirX > 0 && dirY == 0
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        PressableSurface(
-            modifier = Modifier.size(GRO_DPAD_ARROW_SIZE),
-            pressed = upPressed,
-            onPress = { onChanged(0, -1) },
-            onRelease = { onChanged(0, 0) },
-        ) {
-            MaterialSymbol(
-                name = "keyboard_arrow_up",
-                size = 28.dp,
-                tint = if (upPressed) colors.onAccent else colors.accent,
-                filled = upPressed,
-            )
-        }
-        Row {
-            PressableSurface(
-                modifier = Modifier.size(GRO_DPAD_ARROW_SIZE),
-                pressed = leftPressed,
-                onPress = { onChanged(-1, 0) },
-                onRelease = { onChanged(0, 0) },
-            ) {
-                MaterialSymbol(
-                    name = "keyboard_arrow_left",
-                    size = 28.dp,
-                    tint = if (leftPressed) colors.onAccent else colors.accent,
-                    filled = leftPressed,
-                )
-            }
-            Spacer(Modifier.size(GRO_DPAD_ARROW_SIZE))
-            PressableSurface(
-                modifier = Modifier.size(GRO_DPAD_ARROW_SIZE),
-                pressed = rightPressed,
-                onPress = { onChanged(1, 0) },
-                onRelease = { onChanged(0, 0) },
-            ) {
-                MaterialSymbol(
-                    name = "keyboard_arrow_right",
-                    size = 28.dp,
-                    tint = if (rightPressed) colors.onAccent else colors.accent,
-                    filled = rightPressed,
-                )
-            }
-        }
-        PressableSurface(
-            modifier = Modifier.size(GRO_DPAD_ARROW_SIZE),
-            pressed = downPressed,
-            onPress = { onChanged(0, 1) },
-            onRelease = { onChanged(0, 0) },
-        ) {
-            MaterialSymbol(
-                name = "keyboard_arrow_down",
-                size = 28.dp,
-                tint = if (downPressed) colors.onAccent else colors.accent,
-                filled = downPressed,
-            )
-        }
+    val latestOnChanged by rememberUpdatedState(onChanged)
+
+    val upActive = dirY < 0
+    val downActive = dirY > 0
+    val leftActive = dirX < 0
+    val rightActive = dirX > 0
+
+    // Total size is 3 × arrow tile so each tile occupies exactly one third of the area.
+    val totalSize = GRO_DPAD_ARROW_SIZE * 3
+
+    Box(
+        modifier = Modifier
+            .size(totalSize)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    val (dx0, dy0) = dpadPositionToDirection(down.position, size.width.toFloat(), size.height.toFloat())
+                    latestOnChanged(dx0, dy0)
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            latestOnChanged(0, 0)
+                            change?.consume()
+                            break
+                        }
+                        val (dxN, dyN) = dpadPositionToDirection(change.position, size.width.toFloat(), size.height.toFloat())
+                        latestOnChanged(dxN, dyN)
+                        change.consume()
+                    }
+                }
+            },
+    ) {
+        // Up arrow — top-center cell
+        DpadArrowCell(
+            modifier = Modifier.align(Alignment.TopCenter),
+            iconName = "keyboard_arrow_up",
+            active = upActive,
+        )
+        // Left arrow — center-left cell
+        DpadArrowCell(
+            modifier = Modifier.align(Alignment.CenterStart),
+            iconName = "keyboard_arrow_left",
+            active = leftActive,
+        )
+        // Right arrow — center-right cell
+        DpadArrowCell(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            iconName = "keyboard_arrow_right",
+            active = rightActive,
+        )
+        // Down arrow — bottom-center cell
+        DpadArrowCell(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            iconName = "keyboard_arrow_down",
+            active = downActive,
+        )
     }
 }
+
+@Composable
+private fun DpadArrowCell(
+    modifier: Modifier,
+    iconName: String,
+    active: Boolean,
+) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier = modifier
+            .size(GRO_DPAD_ARROW_SIZE)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (active) colors.accent else colors.surface)
+            .border(1.dp, if (active) colors.accent else colors.controlOverlayBorder, RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        MaterialSymbol(
+            name = iconName,
+            size = 28.dp,
+            tint = if (active) colors.onAccent else colors.accent,
+            filled = active,
+        )
+    }
+}
+
+// Maps a touch position within the D-pad surface to a direction pair (dirX, dirY).
+// The surface is divided into a 3 × 3 grid; the center cell is the dead zone.
+// Returns a Pair<Int, Int> where each component is in {-1, 0, +1}.
+private fun dpadPositionToDirection(position: Offset, width: Float, height: Float): Pair<Int, Int> {
+    val col = (position.x / (width / 3f)).toInt().coerceIn(0, 2)
+    val row = (position.y / (height / 3f)).toInt().coerceIn(0, 2)
+    return (col - 1) to (row - 1)
+}
+
+
 
 @Composable
 private fun StickSurface(

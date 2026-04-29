@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.macropad
 
 import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
+import kotlin.math.PI
+import kotlin.math.atan2
 import kotlin.math.sqrt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,6 +11,20 @@ import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "GamepadRecordingManager"
 private const val JOYSTICK_DEAD_ZONE = 0.15f
+
+// Full-deflection canonical directions for each of the 8 joystick octants.
+// Index matches joystickOctant(): 0=left, 1=up-left, 2=up, 3=up-right,
+// 4=right, 5=down-right, 6=down, 7=down-left.
+private val OCTANT_FULL_DEFLECTION: Array<Pair<Float, Float>> = arrayOf(
+    -1f to  0f,  // 0: left
+    -1f to -1f,  // 1: up-left
+     0f to -1f,  // 2: up
+     1f to -1f,  // 3: up-right
+     1f to  0f,  // 4: right
+     1f to  1f,  // 5: down-right
+     0f to  1f,  // 6: down
+    -1f to  1f,  // 7: down-left
+)
 
 sealed interface GamepadRecordingState {
     data object Idle : GamepadRecordingState
@@ -26,8 +42,9 @@ sealed interface GamepadRecordingState {
 
 private data class JoystickGesture(
     val startTimeMs: Long,
-    val peakX: Float,
-    val peakY: Float,
+    val currentX: Float,
+    val currentY: Float,
+    val octant: Int,
 )
 
 object GamepadRecordingManager {
@@ -149,6 +166,9 @@ object GamepadRecordingManager {
                     currentX = leftCurrentX,
                     currentY = leftCurrentY,
                 )
+                // Reflect the snapped (full-deflection) values in the UI state.
+                leftCurrentX = leftGesture?.currentX ?: 0f
+                leftCurrentY = leftGesture?.currentY ?: 0f
             }
             JoystickStick.RIGHT -> {
                 rightCurrentX = x.coerceIn(-1f, 1f)
@@ -160,6 +180,9 @@ object GamepadRecordingManager {
                     currentX = rightCurrentX,
                     currentY = rightCurrentY,
                 )
+                // Reflect the snapped (full-deflection) values in the UI state.
+                rightCurrentX = rightGesture?.currentX ?: 0f
+                rightCurrentY = rightGesture?.currentY ?: 0f
             }
         }
         updateRecordingState()
@@ -210,20 +233,32 @@ object GamepadRecordingManager {
             return null
         }
 
+        val newOctant = joystickOctant(currentX, currentY)
+        val (snapX, snapY) = OCTANT_FULL_DEFLECTION[newOctant]
         if (activeGesture == null) {
-            AppLog.d(TAG, "Joystick gesture start stick=$stick at=$nowMs")
+            AppLog.d(TAG, "Joystick segment start stick=$stick octant=$newOctant snapX=$snapX snapY=$snapY at=$nowMs")
             return JoystickGesture(
                 startTimeMs = nowMs,
-                peakX = currentX,
-                peakY = currentY,
+                currentX = snapX,
+                currentY = snapY,
+                octant = newOctant,
             )
         }
 
-        return if (magnitude > magnitude(activeGesture.peakX, activeGesture.peakY)) {
-            activeGesture.copy(peakX = currentX, peakY = currentY)
-        } else {
-            activeGesture
+        if (newOctant != activeGesture.octant) {
+            // Direction crossed into a new octant — emit the previous segment and start a fresh one.
+            emitJoystickStep(stick = stick, gesture = activeGesture, endMs = nowMs)
+            AppLog.d(TAG, "Joystick segment change stick=$stick octant=${activeGesture.octant}→$newOctant snapX=$snapX snapY=$snapY at=$nowMs")
+            return JoystickGesture(
+                startTimeMs = nowMs,
+                currentX = snapX,
+                currentY = snapY,
+                octant = newOctant,
+            )
         }
+
+        // Same octant — canonical values are fixed; no update needed.
+        return activeGesture
     }
 
     private fun emitJoystickStep(stick: JoystickStick, gesture: JoystickGesture, endMs: Long) {
@@ -232,12 +267,12 @@ object GamepadRecordingManager {
             startTimeMs = gesture.startTimeMs,
             durationMs = durationMs,
             stick = stick,
-            x = gesture.peakX,
-            y = gesture.peakY,
+            x = gesture.currentX,
+            y = gesture.currentY,
         )
         AppLog.d(
             TAG,
-            "Joystick step stick=$stick start=${gesture.startTimeMs} duration=$durationMs peakX=${gesture.peakX} peakY=${gesture.peakY}",
+            "Joystick step stick=$stick start=${gesture.startTimeMs} duration=$durationMs x=${gesture.currentX} y=${gesture.currentY} octant=${gesture.octant}",
         )
     }
 
@@ -287,6 +322,12 @@ object GamepadRecordingManager {
     }
 
     private fun magnitude(x: Float, y: Float): Float = sqrt((x * x) + (y * y))
+
+    // Maps a continuous (x, y) stick position to one of 8 octants (0–7, clockwise from right).
+    private fun joystickOctant(x: Float, y: Float): Int {
+        val angle = atan2(y.toDouble(), x.toDouble())
+        return (((angle + PI) / (PI / 4)).toInt() % 8).coerceIn(0, 7)
+    }
 
     private fun relativeElapsedMs(nowElapsedMs: Long): Long {
         if (recordingStartElapsedMs == 0L) {
