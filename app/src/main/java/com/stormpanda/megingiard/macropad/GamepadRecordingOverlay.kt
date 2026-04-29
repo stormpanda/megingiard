@@ -25,7 +25,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -187,10 +189,8 @@ internal fun GamepadRecordingOverlay(
                     )
                 }
             }
-            // Main area — absolute proportional layout via BoxWithConstraints.
-            // Sticks pushed to outer edges (16 %/84 % horizontal).
-            // D-Pad and Face Cluster inward (26 %/74 %), both at the same vertical
-            // level so the layout is fully symmetric.
+            // Sticks area — BoxWithConstraints for proportional horizontal placement only.
+            // D-Pad and Face Cluster are in a dedicated Row below (outside this box).
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -199,15 +199,12 @@ internal fun GamepadRecordingOverlay(
                 val w = maxWidth
                 val h = maxHeight
                 val stickHalf = GRO_STICK_SIZE / 2
-                // D-Pad cross spans 3 × GRO_DPAD_ARROW_SIZE in each dimension
-                val dpadHalf = GRO_DPAD_ARROW_SIZE * 3 / 2  // 72.dp
-                val faceHalf = GRO_FACE_CLUSTER_SIZE / 2    // 88.dp
 
-                // Left stick — center at 16 % horizontal, 35 % vertical
+                // Left stick — center at 16 % horizontal, vertically centered
                 Box(
                     modifier = Modifier.offset(
                         x = (w * 0.16f - stickHalf).coerceAtLeast(GRO_PADDING),
-                        y = (h * 0.35f - stickHalf).coerceAtLeast(0.dp),
+                        y = (h / 2 - stickHalf).coerceAtLeast(0.dp),
                     ),
                 ) {
                     StickSurface(
@@ -217,11 +214,11 @@ internal fun GamepadRecordingOverlay(
                     )
                 }
 
-                // Right stick — center at 84 % horizontal, 35 % vertical
+                // Right stick — center at 84 % horizontal, vertically centered
                 Box(
                     modifier = Modifier.offset(
                         x = (w * 0.84f - stickHalf).coerceAtMost(w - GRO_STICK_SIZE - GRO_PADDING),
-                        y = (h * 0.35f - stickHalf).coerceAtLeast(0.dp),
+                        y = (h / 2 - stickHalf).coerceAtLeast(0.dp),
                     ),
                 ) {
                     StickSurface(
@@ -230,41 +227,26 @@ internal fun GamepadRecordingOverlay(
                         onChanged = { x, y -> onJoystickChanged(JoystickStick.RIGHT, x, y) },
                     )
                 }
-
-                // D-Pad — center at 26 % horizontal, 76 % vertical
-                Box(
-                    modifier = Modifier.offset(
-                        x = w * 0.26f - dpadHalf,
-                        y = (h * 0.76f - dpadHalf).coerceAtMost(
-                            h - GRO_DPAD_ARROW_SIZE * 3 - GRO_PADDING,
-                        ),
-                    ),
-                ) {
-                    DpadButtons(
-                        dirX = state.dpadDirectionX,
-                        dirY = state.dpadDirectionY,
-                        onChanged = onDpadChanged,
-                    )
-                }
-
-                // Face button cluster — center at 74 % horizontal, 76 % vertical
-                Box(
-                    modifier = Modifier.offset(
-                        x = (w * 0.74f - faceHalf).coerceAtMost(
-                            w - GRO_FACE_CLUSTER_SIZE - GRO_PADDING,
-                        ),
-                        y = (h * 0.76f - faceHalf).coerceAtMost(
-                            h - GRO_FACE_CLUSTER_SIZE - GRO_PADDING,
-                        ),
-                    ),
-                ) {
-                    FaceButtonCluster(
-                        buttons = faceButtons,
-                        pressedButtons = state.pressedButtons,
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                }
+            }
+            // D-Pad and Face Cluster row — directly above L3/R3
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = GRO_PADDING, vertical = GRO_CLUSTER_SPACING),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DpadButtons(
+                    dirX = state.dpadDirectionX,
+                    dirY = state.dpadDirectionY,
+                    onChanged = onDpadChanged,
+                )
+                FaceButtonCluster(
+                    buttons = faceButtons,
+                    pressedButtons = state.pressedButtons,
+                    onButtonDown = onButtonDown,
+                    onButtonUp = onButtonUp,
+                )
             }
             // Bottom row: L3 and R3 at equal edge distances
             Row(
@@ -557,21 +539,25 @@ private fun PressableSurface(
     content: @Composable () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    // Use rememberUpdatedState so pointerInput(Unit) never restarts mid-gesture when
+    // lambdas are recreated by recomposition (which would silently swallow onRelease).
+    val latestOnPress by rememberUpdatedState(onPress)
+    val latestOnRelease by rememberUpdatedState(onRelease)
     Box(
         modifier = modifier
             .clip(shape)
             .background(if (pressed) colors.accent else colors.surface)
             .border(1.dp, if (pressed) colors.accent else colors.controlOverlayBorder, shape)
-            .pointerInput(onPress, onRelease) {
+            .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    onPress()
+                    latestOnPress()
                     down.consume()
                     do {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id }
                         if (change == null || !change.pressed) {
-                            onRelease()
+                            latestOnRelease()
                             change?.consume()
                             break
                         }
