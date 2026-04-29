@@ -202,15 +202,6 @@ internal fun MacroTimelineEditor(
         redoStack = emptyList()
     }
 
-    fun requestTouchRecording() {
-        if (SettingsManager.skipTouchRecordDialog.value) {
-            if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
-            TouchRecordingManager.requestRecording()
-        } else {
-            showRecordTouchDialog = true
-        }
-    }
-
     fun startGamepadRecording() {
         GamepadInjector.start(context)
         if (!GamepadInjector.isRunning) {
@@ -223,6 +214,23 @@ internal fun MacroTimelineEditor(
         GamepadRecordingManager.startRecording()
         showRecordGamepadDialog = false
         showGamepadRecordingOverlay = true
+    }
+
+    fun requestTouchRecording() {
+        if (SettingsManager.skipTouchRecordDialog.value) {
+            if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
+            TouchRecordingManager.requestRecording()
+        } else {
+            showRecordTouchDialog = true
+        }
+    }
+
+    fun requestGamepadRecording() {
+        if (SettingsManager.skipGamepadRecordDialog.value) {
+            startGamepadRecording()
+        } else {
+            showRecordGamepadDialog = true
+        }
     }
 
     LaunchedEffect(recordedTap) {
@@ -272,6 +280,10 @@ internal fun MacroTimelineEditor(
         GamepadRecordStartDialog(
             onStart = { startGamepadRecording() },
             onCancel = { showRecordGamepadDialog = false },
+            onDontShowAgain = {
+                SettingsManager.setSkipGamepadRecordDialog(true)
+                startGamepadRecording()
+            },
         )
     }
 
@@ -449,7 +461,7 @@ internal fun MacroTimelineEditor(
                         steps = steps,
                         accentColor = accentColor,
                         onAdd = { showAddStep = true },
-                        onRecordGamepad = { showRecordGamepadDialog = true },
+                        onRecordGamepad = { requestGamepadRecording() },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
                             MacroExecutor.execute(
@@ -495,7 +507,7 @@ internal fun MacroTimelineEditor(
                         steps = steps,
                         accentColor = accentColor,
                         onAdd = { showAddStep = true },
-                        onRecordGamepad = { showRecordGamepadDialog = true },
+                        onRecordGamepad = { requestGamepadRecording() },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
                             MacroExecutor.execute(
