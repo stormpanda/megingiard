@@ -141,7 +141,7 @@ internal fun GamepadRecordingOverlay(
                         .weight(1f)
                         .fillMaxHeight(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.Top,
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING)) {
                         ShoulderButton(
@@ -159,11 +159,13 @@ internal fun GamepadRecordingOverlay(
                             onButtonUp = onButtonUp,
                         )
                     }
+                    Spacer(Modifier.weight(1f))
                     StickSurface(
                         x = state.leftStickX,
                         y = state.leftStickY,
                         onChanged = { x, y -> onJoystickChanged(JoystickStick.LEFT, x, y) },
                     )
+                    Spacer(Modifier.height(GRO_CLUSTER_SPACING))
                     DpadButtons(
                         dirX = state.dpadDirectionX,
                         dirY = state.dpadDirectionY,
@@ -175,19 +177,8 @@ internal fun GamepadRecordingOverlay(
                         .weight(1f)
                         .fillMaxHeight(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.Top,
                 ) {
-                    FaceButtonCluster(
-                        buttons = faceButtons,
-                        pressedButtons = state.pressedButtons,
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                    StickSurface(
-                        x = state.rightStickX,
-                        y = state.rightStickY,
-                        onChanged = { x, y -> onJoystickChanged(JoystickStick.RIGHT, x, y) },
-                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING)) {
                         ShoulderButton(
                             iconName = "game_bumper_right",
@@ -204,6 +195,19 @@ internal fun GamepadRecordingOverlay(
                             onButtonUp = onButtonUp,
                         )
                     }
+                    Spacer(Modifier.weight(1f))
+                    FaceButtonCluster(
+                        buttons = faceButtons,
+                        pressedButtons = state.pressedButtons,
+                        onButtonDown = onButtonDown,
+                        onButtonUp = onButtonUp,
+                    )
+                    Spacer(Modifier.height(GRO_CLUSTER_SPACING))
+                    StickSurface(
+                        x = state.rightStickX,
+                        y = state.rightStickY,
+                        onChanged = { x, y -> onJoystickChanged(JoystickStick.RIGHT, x, y) },
+                    )
                 }
             }
             // Bottom row: L3 | Select + Start | R3

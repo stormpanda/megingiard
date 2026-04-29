@@ -63,7 +63,7 @@ internal fun GamepadRecordStartDialog(
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(4.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
