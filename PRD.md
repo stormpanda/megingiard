@@ -37,6 +37,7 @@ The app offers a set of tools, each of which occupies the entire secondary scree
 - Frei konfigurierbares Button-Pad mit mehreren benannten Profilen und freier Positionierung.
 - Unterstützte Aktionstypen: Tastatur-Taste, Gamepad-Button (via virtuellem uinput-Gamepad), Maus-Links-/Rechtsklick, Scroll-Wheel und Trackpoint (relative Mausbewegung).
 - Layouts werden im integrierten Editor (Drag & Drop, Größenauswahl, Beschriftung) erstellt und als JSON in DataStore persistiert.
+- The macro editor supports touch recording for mirror taps and an integrated touch-gamepad recording overlay that forwards gamepad input live to the primary screen and stores it as macro steps.
 
 ## 3. User Interface & User Experience (UX)
 

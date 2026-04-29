@@ -116,6 +116,7 @@ Each button supports one of the following actions:
   - Both timing sliders use a constant `100 ms` step resolution.
   - For both start and duration, pressing a positive delta that exceeds the current slider max extends the slider scale in `+1000 ms` steps.
 - **Touch Tap recording flow:** The user taps "Record Touch" in the timeline editor → a confirmation dialog explains that the mirror will appear on the secondary display → the user confirms → `TouchRecordingManager.requestRecording()` is called (mirror auto-starts if not active) → `ScreenCaptureService` observes `recordingRequested=true` and shows a `RecordingMirrorPresentation` on the secondary display → the user taps the desired position on the mirror → normalised coordinates are delivered to `TouchRecordingManager.onTapRecorded()` → the presentation is dismissed → `MacroTimelineEditor` observes `recordedTap` via `LaunchedEffect` and appends a `MacroStep.TouchTap` step.
+- **Gamepad recording flow:** The user taps **"Record Gamepad"** in the timeline editor → a confirmation dialog explains that a touch controller overlay will open → the user confirms → `MacroTimelineEditor` starts `GamepadInjector`, calls `GamepadRecordingManager.startRecording()`, and renders `GamepadRecordingOverlay` inline above the editor → touches on face buttons, D-Pad, shoulder buttons, start/select/home, and both stick circles are simultaneously (a) forwarded live to the primary display through `GamepadInjector` and (b) recorded as `MacroStep.GamepadButtonTap`, `MacroStep.DPadTap`, and `MacroStep.JoystickMove` events → tapping **Stop** finalises the recording, trims the idle offset before the first input to 0 ms, and appends the recorded step block to the current macro timeline.
 - The macro list is a **flat list** (no folders). Macros can be reordered via drag handle, and CRUD operations (add, edit, duplicate, delete) are available via context menu on each row.
 - Macro CRUD is performed through `MacroPadState.addMacro()`, `updateMacro()`, `deleteMacro()`, `renameMacro()`, `reorderMacros()`. All mutations persist via `SettingsManager.saveMacroPadData()`.
 
@@ -253,6 +254,12 @@ MacroPadEditor (Composable, opened from MacroPadToolSettings)
       ├── Layout bar (create/rename/delete/reorder/enable-disable, template selection)
       ├── Button CRUD on active layout via PadCanvas
       └── Macro library (MacroListEditor, per-profile flat list)
+
+MacroTimelineEditor (Composable, opened from MacroListEditor)
+  ├── Record Touch → TouchRecordingManager → RecordingMirrorPresentation
+  └── Record Gamepad → GamepadRecordingOverlay
+     ├── live passthrough via GamepadInjector (gamepadinjector_arm64)
+     └── timed step compilation via GamepadRecordingManager
 ```
 
 #### Ambient Display Rendering Pipeline

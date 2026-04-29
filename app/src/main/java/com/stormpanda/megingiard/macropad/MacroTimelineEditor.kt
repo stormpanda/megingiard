@@ -47,6 +47,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +61,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +76,7 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
 import kotlin.math.sqrt
+import kotlinx.coroutines.launch
 
 private const val TAG = "MacroTimelineEditor"
 
@@ -122,6 +125,9 @@ private fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (thi
     is MacroStep.DPadTap -> copy(startTimeMs = newStartTimeMs)
     is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs)
 }
+
+private fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
+    map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
 
 private fun dirArrow(dirX: Int, dirY: Int): String = when {
     dirX > 0 && dirY < 0 -> "↗"
@@ -176,12 +182,19 @@ internal fun MacroTimelineEditor(
     var editingStepIndex by remember { mutableStateOf<Int?>(null) }
     var deleteStepIndex by remember { mutableStateOf<Int?>(null) }
     var showRecordTouchDialog by remember { mutableStateOf(false) }
+    var showRecordGamepadDialog by remember { mutableStateOf(false) }
+    var showGamepadRecordingOverlay by remember { mutableStateOf(false) }
+    var gamepadRecordingError by remember { mutableStateOf<String?>(null) }
     var viewMode by remember { mutableStateOf(MacroEditorViewMode.LIST) }
     var shiftSubsequentDefault by remember { mutableStateOf(true) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
+    val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
+    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
 
     fun pushUndo(previous: List<MacroStep>) {
         val bounded = (undoStack + listOf(previous)).takeLast(MT_UNDO_STACK_MAX)
@@ -198,6 +211,20 @@ internal fun MacroTimelineEditor(
         }
     }
 
+    fun startGamepadRecording() {
+        GamepadInjector.start(context)
+        if (!GamepadInjector.isRunning) {
+            AppLog.e(TAG, "gamepad recording overlay aborted because GamepadInjector failed to start")
+            gamepadRecordingError = context.getString(R.string.macropad_macro_record_gamepad_error_start)
+            showRecordGamepadDialog = false
+            showGamepadRecordingOverlay = false
+            return
+        }
+        GamepadRecordingManager.startRecording()
+        showRecordGamepadDialog = false
+        showGamepadRecordingOverlay = true
+    }
+
     LaunchedEffect(recordedTap) {
         val tap = recordedTap ?: return@LaunchedEffect
         val nextStart = steps.totalDurationMs()
@@ -210,6 +237,18 @@ internal fun MacroTimelineEditor(
         )
         AppLog.d(TAG, "recordedTouchAdded startMs=$nextStart")
         TouchRecordingManager.consumeRecordedTap()
+    }
+
+    LaunchedEffect(gamepadRecordingState) {
+        val recorded = gamepadRecordingState as? GamepadRecordingState.Done ?: return@LaunchedEffect
+        val nextStart = steps.totalDurationMs()
+        val shiftedSteps = recorded.steps.offsetBy(nextStart)
+        pushUndo(steps)
+        steps = steps + shiftedSteps
+        AppLog.d(TAG, "recordedGamepadAdded count=${shiftedSteps.size} startMs=$nextStart")
+        GamepadInjector.stop()
+        GamepadRecordingManager.resetState()
+        showGamepadRecordingOverlay = false
     }
 
     if (showRecordTouchDialog) {
@@ -226,6 +265,13 @@ internal fun MacroTimelineEditor(
                 TouchRecordingManager.requestRecording()
                 showRecordTouchDialog = false
             },
+        )
+    }
+
+    if (showRecordGamepadDialog) {
+        GamepadRecordStartDialog(
+            onStart = { startGamepadRecording() },
+            onCancel = { showRecordGamepadDialog = false },
         )
     }
 
@@ -403,6 +449,7 @@ internal fun MacroTimelineEditor(
                         steps = steps,
                         accentColor = accentColor,
                         onAdd = { showAddStep = true },
+                        onRecordGamepad = { showRecordGamepadDialog = true },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
                             MacroExecutor.execute(
@@ -448,6 +495,7 @@ internal fun MacroTimelineEditor(
                         steps = steps,
                         accentColor = accentColor,
                         onAdd = { showAddStep = true },
+                        onRecordGamepad = { showRecordGamepadDialog = true },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
                             MacroExecutor.execute(
@@ -460,6 +508,49 @@ internal fun MacroTimelineEditor(
                     )
                 }
             }
+        }
+
+        val recordingState = gamepadRecordingState as? GamepadRecordingState.Recording
+        if (showGamepadRecordingOverlay && recordingState != null) {
+            GamepadRecordingOverlay(
+                state = recordingState,
+                swapFaceButtons = swapFaceButtons,
+                onButtonDown = { code ->
+                    GamepadRecordingManager.recordButtonDown(code)
+                    GamepadInjector.buttonDown(code)
+                },
+                onButtonUp = { code ->
+                    GamepadRecordingManager.recordButtonUp(code)
+                    GamepadInjector.buttonUp(code)
+                },
+                onDpadChanged = { dirX, dirY ->
+                    GamepadRecordingManager.setDpad(dirX, dirY)
+                    GamepadInjector.hat(axis = 0, value = dirX)
+                    GamepadInjector.hat(axis = 1, value = dirY)
+                },
+                onJoystickChanged = { stick, x, y ->
+                    GamepadRecordingManager.setJoystick(stick, x, y)
+                    when (stick) {
+                        JoystickStick.LEFT -> {
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_X, normalizedAxisValue(x))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_Y, normalizedAxisValue(y))
+                        }
+
+                        JoystickStick.RIGHT -> {
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_Z, normalizedAxisValue(x))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_RZ, normalizedAxisValue(y))
+                        }
+                    }
+                },
+                onStop = {
+                    scope.launch { GamepadRecordingManager.finishRecording() }
+                },
+                onCancel = {
+                    scope.launch { GamepadRecordingManager.cancelRecording() }
+                    GamepadInjector.stop()
+                    showGamepadRecordingOverlay = false
+                },
+            )
         }
     }
 
@@ -541,6 +632,33 @@ internal fun MacroTimelineEditor(
             dismissButton = {
                 TextButton(onClick = { deleteStepIndex = null }) {
                     Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+            },
+        )
+    }
+
+    gamepadRecordingError?.let { message ->
+        AlertDialog(
+            containerColor = colors.surface,
+            onDismissRequest = { gamepadRecordingError = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.macropad_macro_record_gamepad_error_title),
+                    color = colors.onSurface,
+                )
+            },
+            text = {
+                Text(
+                    text = message,
+                    color = colors.onSurfaceSecondary,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { gamepadRecordingError = null }) {
+                    Text(
+                        text = stringResource(R.string.config_ok),
+                        color = colors.accent,
+                    )
                 }
             },
         )
@@ -737,6 +855,7 @@ private fun StepActionRow(
     steps: List<MacroStep>,
     accentColor: Color,
     onAdd: () -> Unit,
+    onRecordGamepad: () -> Unit,
     onRecordTouch: () -> Unit,
     onTest: () -> Unit,
 ) {
@@ -764,6 +883,29 @@ private fun StepActionRow(
             Spacer(Modifier.width(6.dp))
             Text(
                 stringResource(R.string.macropad_macro_add_step),
+                color = accentColor,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable { onRecordGamepad() }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            MaterialSymbol(
+                name = "sports_esports",
+                size = 18.dp,
+                tint = accentColor,
+                filled = true,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                stringResource(R.string.macropad_macro_record_gamepad),
                 color = accentColor,
                 style = MaterialTheme.typography.bodyMedium,
             )
