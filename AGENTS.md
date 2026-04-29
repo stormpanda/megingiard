@@ -370,6 +370,7 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 - Format args: `stringResource(R.string.key, arg1, arg2)` — not string concatenation.
 - Internal defaults in singletons that are immediately overwritten by
   callbacks may remain as literals.
+- All strings must be translated to all supported languages.
 
 ### 6.3 Accessibility
 
@@ -655,7 +656,7 @@ The message MUST cover **every change made since the last commit** — across th
 
 When in doubt, mentally run through all files that were modified during the session and verify each one is represented.
 
-The proposal must be copy-paste ready — no placeholders. Present it as a code block so the user can copy it directly.
+The proposal must be copy-paste ready — no placeholders. You must present it as a separate code block so the user can copy it directly.
 
 ---
 

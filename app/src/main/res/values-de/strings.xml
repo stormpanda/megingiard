@@ -297,6 +297,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_step_touch_position">Aufgezeichnete Position (schreibgeschützt)</string>
     <string name="macropad_macro_step_start_ms">Startzeit (ms)</string>
     <string name="macropad_macro_step_duration_ms">Dauer (ms)</string>
+    <string name="macropad_macro_step_timing_delta">%+d</string>
     <string name="macropad_macro_step_stick_left">Linker Stick</string>
     <string name="macropad_macro_step_stick_right">Rechter Stick</string>
     <!-- %.1f = Stärke des Joystick-Ausschlags -->
@@ -393,6 +394,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_success_title">Fertig</string>
     <string name="config_error_unknown">Ein unerwarteter Fehler ist aufgetreten.</string>
     <string name="config_ok">OK</string>
+
+    <!-- Macro timeline editor -->
+    <string name="macropad_macro_editor_undo">Rückgängig</string>
+    <string name="macropad_macro_editor_redo">Wiederherstellen</string>
+    <string name="macropad_macro_editor_view_label">Ansicht</string>
+    <string name="macropad_macro_editor_view_list">Liste</string>
+    <string name="macropad_macro_editor_view_timeline">Zeit</string>
+    <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
 
     <!-- Idle Pill -->
     <string name="pill_x_close">× schließen</string>

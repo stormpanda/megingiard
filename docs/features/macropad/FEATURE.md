@@ -90,9 +90,31 @@ Each button supports one of the following actions:
 - Each macro contains a list of **`MacroStep`** subtypes: `GamepadButtonTap`, `JoystickMove`, `DPadTap`, and `TouchTap`. Each step has `startTimeMs` and `durationMs` fields that allow overlapping parallel steps within the same macro.
 - A **`PadAction.Macro(macroId)`** button action MUST reference a macro by ID; pressing the button fires the macro **once (fire-and-forget)** without blocking further input.
 - The MacroPad editor toolbar exposes two chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
-- The macro editor shows a **visual horizontal timeline** (Canvas, 0.3 dp/ms scale) colour-coded by step type (accent = Gamepad Button, orange = Joystick, blue = D-Pad, tertiary = Touch Tap), plus a scrollable step list for editing individual steps.
-- The step list exposes two action chips: **"Add Step"** (opens `MacroStepEditDialog` for Gamepad/Joystick/D-Pad steps) and **"Record Touch"** (opens a confirmation dialog, then shows a live recording mirror on the secondary display).
-- Steps are configured in **`MacroStepEditDialog`** which provides: step-type chips (Gamepad / Joystick / D-Pad; Touch Tap shown read-only when editing), gamepad button dropdown, 3×3 direction grid for joystick/D-Pad, a magnitude slider (0–1, default 1) for joystick, and numeric fields for start/duration timing.
+- The macro editor supports two switchable editing modes:
+  - **List View**: step list only (no timeline strip above the list), optimized for quick per-step editing.
+  - **Timeline View**: a **full-height vertical timeline** (Canvas) where time runs top-to-bottom and steps are rendered in lanes by overlap.
+    - The timeline always uses the full available screen width.
+    - Lane widths are divided adaptively based on the current number of required overlap lanes.
+    - A small horizontal inset is applied so the timeline content is not flush against the screen edges.
+    - Each step block contains a short action label (for example gamepad short code, joystick stick+direction, D-Pad direction, or Tap).
+- Both editor modes expose the same action row: **"Add Step"**, **"Record Touch"**, and **"Test Run"**.
+- The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion).
+- Mode switching is exposed as two always-visible chips (**List/Liste** / **Time/Zeit**) with a leading **View/Ansicht** label, and the chips use the same visual style as the Idle Pill Profile/Layout selector chips.
+- The control header uses compact vertical spacing to preserve more vertical space for the step list/timeline area, and the global **Shift subsequent steps** toggle is right-aligned.
+- The editor includes a global **"Shift subsequent steps"** toggle (enabled by default) that defines the default for the per-step toggle in `MacroStepEditDialog`.
+- `MacroStepEditDialog` now contains its own **"Shift subsequent steps"** toggle. The state of this per-step toggle is what is actually applied when saving the step.
+- In `MacroStepEditDialog`, step-type chips use the same visual style as Idle Pill selector chips and include leading icons (controller icon for Gamepad, stick icon for Joystick, and D-pad-like grid icon for D-Pad).
+- Shift behavior:
+  - Editing an existing step with shift enabled moves later steps by the edited step end-time delta.
+  - Adding a new step with shift enabled moves existing steps at/after the new start time by the new step duration.
+  - Shifted start times are clamped to 0..10000 ms by the timeline shift logic.
+- Steps are configured in **`MacroStepEditDialog`** which provides: step-type chips (Gamepad / Joystick / D-Pad; Touch Tap shown read-only when editing), gamepad button dropdown, 3×3 direction grid for joystick/D-Pad, a magnitude slider (0–1, default 1) for joystick, and timing controls for start/duration.
+- New-step timing defaults and controls:
+  - New steps open with `startTimeMs = (latest macro end) + 2000 ms`.
+  - Duration uses a base slider range of `0..1000 ms`.
+  - Both timing rows expose quick delta buttons: `-100`, `-10`, `-1`, `+1`, `+10`, `+100`, `+1000`.
+  - Both timing sliders use a constant `100 ms` step resolution.
+  - For both start and duration, pressing a positive delta that exceeds the current slider max extends the slider scale in `+1000 ms` steps.
 - **Touch Tap recording flow:** The user taps "Record Touch" in the timeline editor → a confirmation dialog explains that the mirror will appear on the secondary display → the user confirms → `TouchRecordingManager.requestRecording()` is called (mirror auto-starts if not active) → `ScreenCaptureService` observes `recordingRequested=true` and shows a `RecordingMirrorPresentation` on the secondary display → the user taps the desired position on the mirror → normalised coordinates are delivered to `TouchRecordingManager.onTapRecorded()` → the presentation is dismissed → `MacroTimelineEditor` observes `recordedTap` via `LaunchedEffect` and appends a `MacroStep.TouchTap` step.
 - The macro list is a **flat list** (no folders). Macros can be reordered via drag handle, and CRUD operations (add, edit, duplicate, delete) are available via context menu on each row.
 - Macro CRUD is performed through `MacroPadState.addMacro()`, `updateMacro()`, `deleteMacro()`, `renameMacro()`, `reorderMacros()`. All mutations persist via `SettingsManager.saveMacroPadData()`.

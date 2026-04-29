@@ -62,6 +62,11 @@ private const val VIGNETTE_MIN_STOP_GAP = 0.001f
 /** Mirrors MacroPadViewModel.INJECTOR_RESTART_DEBOUNCE_MS — absorbs rapid modal transitions. */
 private const val AM_INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
+private data class AmbientInjectorGate(
+    val stopKeyboard: Boolean,
+    val stopMouseAndGamepad: Boolean,
+)
+
 private const val TAG = "AmbientMacroPadOverlay"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,9 +108,9 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
     val effectiveVignetteOpacity = if (isPeekActive) 0f else vignetteOpacity
 
-    // Single watcher: stop injectors whenever any modal is open, restart when all closed.
+    // Single watcher: stop injectors according to overlay state, restart when all closed.
     // Mirrors MacroPadViewModel.watchInjectorLifecycle() — must use the same combine()+
-    // collectLatest+delay pattern so that rapid PillMenu-close→Editor-open transitions
+    // collectLatest+delay pattern so that rapid PillMenu-close→Ambient-open transitions
     // do not cause a spurious injector restart.
     LaunchedEffect(Unit) {
         combine(
@@ -113,22 +118,34 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
             AppStateManager.isEditorActive,
             AppStateManager.isAmbientSettingsActive,
         ) { pillMenu, editor, ambient ->
-            pillMenu || editor || ambient
+            val stopAll = editor || ambient
+            AmbientInjectorGate(
+                stopKeyboard = stopAll,
+                stopMouseAndGamepad = stopAll || pillMenu,
+            )
         }.distinctUntilChanged()
-        .collectLatest { anyOpen ->
-            if (anyOpen) {
-                AppLog.d(TAG, "modal open → stopping injectors")
-                KeyInjector.stop()
-                GamepadInjector.stop()
-                MouseInjector.stop()
-            } else {
-                delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
-                withContext(Dispatchers.IO) {
-                    val ap = MacroPadState.activeProfile.value
-                    AppLog.i(TAG, "all modals closed → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
-                    if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                    if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                    if (ap?.enableMouse == true) MouseInjector.start(context)
+        .collectLatest { gate ->
+            when {
+                gate.stopKeyboard -> {
+                    AppLog.d(TAG, "blocking modal open → stopping keyboard/gamepad/mouse injectors")
+                    KeyInjector.stop()
+                    GamepadInjector.stop()
+                    MouseInjector.stop()
+                }
+                gate.stopMouseAndGamepad -> {
+                    AppLog.d(TAG, "pill menu open → stopping gamepad/mouse injectors")
+                    GamepadInjector.stop()
+                    MouseInjector.stop()
+                }
+                else -> {
+                    delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
+                    withContext(Dispatchers.IO) {
+                        val ap = MacroPadState.activeProfile.value
+                        AppLog.i(TAG, "all guards clear → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
+                        if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                        if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                        if (ap?.enableMouse == true) MouseInjector.start(context)
+                    }
                 }
             }
         }

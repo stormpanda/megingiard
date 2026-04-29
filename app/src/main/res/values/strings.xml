@@ -348,9 +348,16 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_record_touch_dialog_message">The screen mirror will start (if not already active). Tap anywhere on the mirror to record that position as a touch step.</string>
     <string name="macropad_macro_record_touch_start">Start</string>
     <string name="macropad_macro_record_touch_dont_show_again">Don\u2019t show again</string>
-    <string name="cd_record_touch">Record touch step</string>    <string name="macropad_macro_test_run">Test Run</string>
+    <string name="cd_record_touch">Record touch step</string>
+    <string name="macropad_macro_test_run">Test Run</string>
     <string name="cd_test_macro">Test macro</string>
     <string name="cd_edit_macro">Edit macro</string>
+    <string name="macropad_macro_editor_undo">Undo</string>
+    <string name="macropad_macro_editor_redo">Redo</string>
+    <string name="macropad_macro_editor_view_label">View</string>
+    <string name="macropad_macro_editor_view_list">List</string>
+    <string name="macropad_macro_editor_view_timeline">Time</string>
+    <string name="macropad_macro_editor_shift_subsequent">Shift subsequent steps</string>
     <!-- MacroStepEditDialog -->
     <string name="macropad_macro_step_new">Add Step</string>
     <string name="macropad_macro_step_edit">Edit Step</string>
@@ -361,6 +368,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>
     <string name="macropad_macro_step_start_ms">Start time (ms)</string>
     <string name="macropad_macro_step_duration_ms">Duration (ms)</string>
+    <string name="macropad_macro_step_timing_delta">%+d</string>
     <string name="macropad_macro_step_stick_left">Left Stick</string>
     <string name="macropad_macro_step_stick_right">Right Stick</string>
     <string name="macropad_macro_step_magnitude">Magnitude: %.1f</string>
