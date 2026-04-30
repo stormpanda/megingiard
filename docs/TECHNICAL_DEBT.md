@@ -114,7 +114,16 @@ Check off items as they are completed.
        Theme/language/log-level, mirror persistence flags, keyboard config, touchpad config, ambient display config,
       macropad profiles — all in one object, all loaded at startup, all in one DataStore namespace.  
        Fix: Split into feature-scoped managers: `AppSettings`, `MirrorSettings`, `KeyboardSettings`,
-      `TouchpadSettings`, `MacroPadSettings`. Each owns its DataStore keys and initialization.
+      `TouchpadSettings`, `MacroPadSettings`. Each owns its DataStore keys and initialization.  
+       **Progress (wave 3):**  
+       - Commit 1 (done): extracted all `KEY_*` declarations + section maps into
+      `domain/.../settings/SettingsKeys.kt` (`internal` visibility, shared with sub-managers).  
+       - Commit 2 (done): extracted `KeyboardSettings` (5 prefs) and `TouchpadSettings` (3 prefs) as
+      standalone singletons sharing the same DataStore + scope. `SettingsManager.init()` hands both
+      the `dataStore` and `scope` and calls `loadFrom(prefs)` inside the existing collect block.  
+       - Commit 3 (todo): extract `MirrorSettings`, `MacroPadSettings`, `AmbientSettings`. After that
+      `SettingsManager` keeps only theme/language/log-level + macropad profile data + mirror session
+      state.
 
 ### Compose — direct singleton mutation from Composable event handlers
 

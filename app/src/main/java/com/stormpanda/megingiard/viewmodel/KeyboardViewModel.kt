@@ -10,6 +10,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.keyboard.KeyRepeatController
 import com.stormpanda.megingiard.keyboard.KeyboardState
+import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import com.stormpanda.megingiard.keyboard.KbLayout
@@ -27,11 +28,11 @@ private const val TAG = "KeyboardViewModel"
  */
 class KeyboardViewModel(application: Application) : AndroidViewModel(application) {
 
-    val kbLayout: StateFlow<KbLayout> = SettingsManager.kbLayout
-    val kbRepeatEnabled: StateFlow<Boolean> = SettingsManager.kbRepeatEnabled
-    val kbTrackpointEnabled: StateFlow<Boolean> = SettingsManager.kbTrackpointEnabled
-    val kbFullscreen: StateFlow<Boolean> = SettingsManager.kbFullscreen
-    val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = SettingsManager.kbMouseBtnPos
+    val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
+    val kbRepeatEnabled: StateFlow<Boolean> = KeyboardSettings.kbRepeatEnabled
+    val kbTrackpointEnabled: StateFlow<Boolean> = KeyboardSettings.kbTrackpointEnabled
+    val kbFullscreen: StateFlow<Boolean> = KeyboardSettings.kbFullscreen
+    val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = KeyboardSettings.kbMouseBtnPos
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen

@@ -7,8 +7,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.keyboard.KbLayout
-import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.VignetteShape
@@ -95,27 +93,8 @@ object SettingsManager {
     private val _pinchWhileProjecting = MutableStateFlow(false)
     val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
 
-    // Keyboard
-    private val _kbLayout = MutableStateFlow(KbLayout.QWERTZ)
-    val kbLayout: StateFlow<KbLayout> = _kbLayout.asStateFlow()
-
-    private val _kbTrackpointEnabled = MutableStateFlow(true)
-    val kbTrackpointEnabled: StateFlow<Boolean> = _kbTrackpointEnabled.asStateFlow()
-
-    private val _kbRepeatEnabled = MutableStateFlow(true)
-    val kbRepeatEnabled: StateFlow<Boolean> = _kbRepeatEnabled.asStateFlow()
-
-    // false = bottom padding for IME (default); true = fullscreen, no padding
-    private val _kbFullscreen = MutableStateFlow(false)
-    val kbFullscreen: StateFlow<Boolean> = _kbFullscreen.asStateFlow()
-
-    // Keyboard trackpoint mouse button position
-    private val _kbMouseBtnPos = MutableStateFlow(KbMouseBtnPos.LEFT)
-    val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = _kbMouseBtnPos.asStateFlow()
-
-    // Touchpad input method: false = touch (default), true = mouse
-    private val _touchpadUseMouse = MutableStateFlow(false)
-    val touchpadUseMouse: StateFlow<Boolean> = _touchpadUseMouse.asStateFlow()
+    // Keyboard settings live in [KeyboardSettings].
+    // Touchpad settings live in [TouchpadSettings].
 
     // MacroPad touch recording — skip confirmation dialog after first use
     private val _skipTouchRecordDialog = MutableStateFlow(false)
@@ -124,14 +103,6 @@ object SettingsManager {
     // MacroPad gamepad recording — skip confirmation dialog after first use
     private val _skipGamepadRecordDialog = MutableStateFlow(false)
     val skipGamepadRecordDialog: StateFlow<Boolean> = _skipGamepadRecordDialog.asStateFlow()
-
-    // Tap-to-click — only active in touchpad mouse mode
-    private val _touchpadTapToClick = MutableStateFlow(true)
-    val touchpadTapToClick: StateFlow<Boolean> = _touchpadTapToClick.asStateFlow()
-
-    // Two-finger tap = right click — only active in touchpad mouse mode
-    private val _touchpadTwoFingerTap = MutableStateFlow(true)
-    val touchpadTwoFingerTap: StateFlow<Boolean> = _touchpadTwoFingerTap.asStateFlow()
 
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
@@ -192,6 +163,11 @@ object SettingsManager {
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
 
+        // Hand the shared DataStore + scope to feature-scoped sub-managers so they
+        // can persist their own settings without each one opening its own DataStore.
+        KeyboardSettings.init(dataStore, scope)
+        TouchpadSettings.init(dataStore, scope)
+
         // Debounced MacroPad save — coalesces rapid drag-frame emissions into a
         // single DataStore write 500 ms after the last call to saveMacroPadData().
         scope.launch {
@@ -217,14 +193,8 @@ object SettingsManager {
                 _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
                 _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
                 _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
-                _kbLayout.value = KbLayout.entries.firstOrNull { it.name == prefs[KEY_KB_LAYOUT] } ?: KbLayout.QWERTZ
-                _kbTrackpointEnabled.value = prefs[KEY_KB_TRACKPOINT_ENABLED] ?: true
-                _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
-                _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
-                _kbMouseBtnPos.value = KbMouseBtnPos.entries.firstOrNull { it.name == prefs[KEY_KB_MOUSE_BTN_POS] } ?: KbMouseBtnPos.LEFT
-                _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
-                _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
-                _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
+                KeyboardSettings.loadFrom(prefs)
+                TouchpadSettings.loadFrom(prefs)
                 _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
                 _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
@@ -366,53 +336,7 @@ object SettingsManager {
         scope.launch { dataStore.edit { prefs -> prefs[KEY_LOG_LEVEL] = value.name } }
     }
 
-    fun setKbLayout(value: KbLayout) {
-        AppLog.d(TAG, "setKbLayout($value)")
-        _kbLayout.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_LAYOUT] = value.name } }
-    }
-
-    fun setKbTrackpointEnabled(value: Boolean) {
-        AppLog.d(TAG, "setKbTrackpointEnabled($value)")
-        _kbTrackpointEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TRACKPOINT_ENABLED] = value } }
-    }
-
-    fun setKbRepeatEnabled(value: Boolean) {
-        AppLog.d(TAG, "setKbRepeatEnabled($value)")
-        _kbRepeatEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_REPEAT_ENABLED] = value } }
-    }
-
-    fun setKbFullscreen(value: Boolean) {
-        AppLog.d(TAG, "setKbFullscreen($value)")
-        _kbFullscreen.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_FULLSCREEN] = value } }
-    }
-
-    fun setKbMouseBtnPos(value: KbMouseBtnPos) {
-        AppLog.d(TAG, "setKbMouseBtnPos($value)")
-        _kbMouseBtnPos.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
-    }
-
-    fun setTouchpadUseMouse(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadUseMouse($value)")
-        _touchpadUseMouse.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_USE_MOUSE] = value } }
-    }
-
-    fun setTouchpadTapToClick(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadTapToClick($value)")
-        _touchpadTapToClick.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TAP_TO_CLICK] = value } }
-    }
-
-    fun setTouchpadTwoFingerTap(value: Boolean) {
-        AppLog.d(TAG, "setTouchpadTwoFingerTap($value)")
-        _touchpadTwoFingerTap.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
-    }
+    // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].
 
     fun setSkipTouchRecordDialog(value: Boolean) {
         AppLog.d(TAG, "setSkipTouchRecordDialog($value)")

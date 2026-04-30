@@ -31,6 +31,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -61,8 +62,8 @@ fun FullscreenMouseOverlay() {
     val coroutineScope = rememberCoroutineScope()
 
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
-    val tapToClick by SettingsManager.touchpadTapToClick.collectAsState()
-    val twoFingerTap by SettingsManager.touchpadTwoFingerTap.collectAsState()
+    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
+    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val showExitHints by SettingsManager.showFullscreenExitHints.collectAsState()
 
