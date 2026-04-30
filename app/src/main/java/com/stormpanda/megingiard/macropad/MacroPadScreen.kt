@@ -58,6 +58,7 @@ private const val MP_SCROLL_SENSITIVITY_PX = 12f
 private const val MP_DISABLED_FEEDBACK_HIDE_MS = 1800L
 private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
 
+@Suppress("unused")
 private const val TAG = "MacroPadScreen"
 
 // ─────────────────────────────────────────────────────────────────────────────

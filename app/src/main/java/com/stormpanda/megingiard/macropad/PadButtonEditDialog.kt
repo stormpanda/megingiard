@@ -47,6 +47,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 import java.util.UUID
 
+@Suppress("unused")
 private const val TAG = "PadButtonEditDialog"
 
 /**

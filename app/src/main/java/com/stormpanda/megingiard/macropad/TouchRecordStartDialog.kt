@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
+@Suppress("unused")
 private const val TAG = "TouchRecordStartDialog"
 
 /**

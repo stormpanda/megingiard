@@ -88,6 +88,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
+@Suppress("unused")
 private const val TAG = "MacroPadEditor"
 
 private val ED_TOP_BAR_HEIGHT          = 56.dp

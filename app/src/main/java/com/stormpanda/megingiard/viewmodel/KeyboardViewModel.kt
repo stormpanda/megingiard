@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Suppress("unused")
 private const val TAG = "KeyboardViewModel"
 
 /**

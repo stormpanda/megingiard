@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
+@Suppress("unused")
 private const val TAG = "AppStateManager"
 
 /** Type of value being live-previewed in ambient settings preview mode. */

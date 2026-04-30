@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+@Suppress("unused")
 private const val TAG = "SwipeGestureProcessor"
 
 /**

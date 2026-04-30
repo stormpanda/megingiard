@@ -38,7 +38,8 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 object ShellInputInjector {
 
-    private const val TAG = "ShellInputInjector"
+    @Suppress("unused")
+private const val TAG = "ShellInputInjector"
     private const val BINARY_ASSET = "touchinjector_arm64"
     private const val EVENT_NODE   = "/dev/input/event6"
 

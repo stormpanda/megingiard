@@ -64,6 +64,7 @@ import java.time.LocalDate
 import java.util.Locale
 import kotlinx.coroutines.launch
 
+@Suppress("unused")
 private const val TAG = "GlobalSettingsScreen"
 
 // ── In-tree dialog constants ──────────────────────────────────────────────────

@@ -69,6 +69,7 @@ import com.stormpanda.megingiard.viewmodel.MainViewModel
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
+@Suppress("unused")
 private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp

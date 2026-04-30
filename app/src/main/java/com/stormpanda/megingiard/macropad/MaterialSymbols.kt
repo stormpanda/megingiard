@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.stormpanda.megingiard.R
 
+@Suppress("unused")
 private const val TAG = "MaterialSymbols"
 
 private const val MS_FILL_FILLED  = 1f   // 1 = filled (matches former Icons.Rounded look)

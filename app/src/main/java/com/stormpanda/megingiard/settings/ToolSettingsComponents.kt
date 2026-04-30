@@ -32,6 +32,7 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.ui.LocalAppColors
 
+@Suppress("unused")
 private const val TAG = "ToolSettingsComponents"
 
 // ─────────────────────────────────────────────────────────────────────────────

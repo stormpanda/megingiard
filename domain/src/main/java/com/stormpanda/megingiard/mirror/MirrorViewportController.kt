@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
+@Suppress("unused")
 private const val TAG = "MirrorViewportCtrl"
 
 const val VIEWPORT_ZOOM_MIN = 1f

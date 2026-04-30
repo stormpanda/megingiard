@@ -59,6 +59,7 @@ private const val KB_EXIT_HINT_AUTO_HIDE_MS = 2800L
 private const val KB_EXIT_HINT_BG_ALPHA = 0.9f
 private val KB_EXIT_HINT_PADDING = 12.dp
 
+@Suppress("unused")
 private const val TAG = "KeyboardScreen"
 
 @Composable

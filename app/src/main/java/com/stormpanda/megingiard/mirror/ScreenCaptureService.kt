@@ -27,6 +27,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
+@Suppress("unused")
 private const val TAG = "ScreenCaptureService"
 
 class ScreenCaptureService : Service() {

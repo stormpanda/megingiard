@@ -67,6 +67,7 @@ private data class AmbientInjectorGate(
     val stopMouseAndGamepad: Boolean,
 )
 
+@Suppress("unused")
 private const val TAG = "AmbientMacroPadOverlay"
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+@Suppress("unused")
 private const val TAG = "MaterialIconRegistry"
 
 /**

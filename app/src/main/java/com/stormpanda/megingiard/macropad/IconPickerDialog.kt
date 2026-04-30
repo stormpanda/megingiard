@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
+@Suppress("unused")
 private const val TAG = "IconPickerDialog"
 
 // ─────────────────────────────────────────────────────────────────────────────

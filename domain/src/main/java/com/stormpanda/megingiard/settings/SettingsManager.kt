@@ -50,6 +50,7 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 
 private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 
+@Suppress("unused")
 private const val TAG = "SettingsManager"
 
 object SettingsManager {

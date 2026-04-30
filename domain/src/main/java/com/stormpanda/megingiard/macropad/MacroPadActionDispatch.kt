@@ -8,6 +8,7 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 
 // MacroPadState and MacroExecutor are in the same package — no import needed.
 
+@Suppress("unused")
 private const val TAG = "MacroPadActionDispatch"
 
 // ─────────────────────────────────────────────────────────────────────────────

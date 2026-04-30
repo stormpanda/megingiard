@@ -85,6 +85,7 @@ import kotlin.math.sqrt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@Suppress("unused")
 private const val TAG = "MacroTimelineEditor"
 
 private const val MT_TOP_BAR_HEIGHT = 68

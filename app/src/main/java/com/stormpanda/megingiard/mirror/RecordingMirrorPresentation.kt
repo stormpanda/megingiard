@@ -37,6 +37,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 
+@Suppress("unused")
 private const val TAG = "RecordingMirrorPresent"
 
 private const val RMP_VIRTUAL_DISPLAY_NAME = "RecordingCapture"

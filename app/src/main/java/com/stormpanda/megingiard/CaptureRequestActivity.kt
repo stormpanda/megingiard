@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.media.projection.MediaProjectionManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 
+@Suppress("unused")
 private const val TAG = "CaptureRequestActivity"
 
 class CaptureRequestActivity : ComponentActivity() {

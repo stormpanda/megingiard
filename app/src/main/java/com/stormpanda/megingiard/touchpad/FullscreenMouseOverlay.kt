@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+@Suppress("unused")
 private const val TAG = "FullscreenMouseOverlay"
 private const val FMO_BG_ALPHA = 0.85f
 private const val FMO_HINT_AUTO_HIDE_MS = 2800L
