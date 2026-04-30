@@ -280,11 +280,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_test_run">Testlauf</string>
     <string name="cd_test_macro">Makro testen</string>
     <string name="cd_edit_macro">Makro bearbeiten</string>
+    <string name="macropad_macro_loop_toggle">Makro wiederholen</string>
+    <string name="macropad_macro_loop_pause_label">Pause zwischen Wiederholungen</string>
     <string name="cd_record_touch">Touch-Schritt aufzeichnen</string>
 
     <!-- Makro-Schritte -->
-    <string name="macropad_macro_add_step">Schritt hinzufügen</string>
-    <string name="macropad_macro_record_touch">Touch aufzeichnen</string>
+    <string name="macropad_macro_add_step">Schritt</string>
+    <string name="macropad_macro_record_touch">Aufzeichnen</string>
     <string name="macropad_macro_no_steps">Noch keine Schritte. Tippe auf +, um einen hinzuzufügen.</string>
     <string name="macropad_macro_step_delete_title">Schritt löschen</string>
     <string name="macropad_macro_step_delete_confirm">Diesen Schritt aus dem Makro entfernen?</string>
@@ -402,7 +404,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_editor_view_list">Liste</string>
     <string name="macropad_macro_editor_view_timeline">Zeit</string>
     <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
-    <string name="macropad_macro_record_gamepad">Gamepad aufnehmen</string>
+    <string name="macropad_macro_record_gamepad">Aufzeichnen</string>
     <string name="macropad_macro_record_gamepad_title">Gamepad-Eingabe aufnehmen</string>
     <string name="macropad_macro_record_gamepad_hint">Berühre den eingeblendeten Controller. Eingaben werden aufgenommen und live an den oberen Bildschirm weitergegeben.</string>
     <string name="macropad_macro_record_gamepad_stop">Fertig</string>

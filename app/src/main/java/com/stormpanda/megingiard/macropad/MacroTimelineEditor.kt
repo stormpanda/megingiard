@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +40,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,6 +78,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlin.math.roundToInt
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -98,6 +104,14 @@ private const val MT_VIEW_CHIP_V_PADDING = 6
 private const val MT_VIEW_CHIP_SPACING = 6
 private const val MT_TIMING_MAX_MS = 10_000L
 private const val MT_NEW_STEP_START_OFFSET_MS = 2_000L
+
+// Loop-pause slider config
+private const val MT_LOOP_PAUSE_INIT_MAX_MS  = 2_000
+private const val MT_LOOP_PAUSE_SCALE_STEP_MS = 1_000
+private const val MT_LOOP_PAUSE_SLIDER_STEP_MS = 100
+
+// Uniform height for the StepActionRow buttons
+private val MT_ACTION_BTN_HEIGHT = 44.dp
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -157,6 +171,16 @@ private fun joyDirArrow(x: Float, y: Float): String {
     return dirArrow(nx, ny)
 }
 
+/**
+ * Extends the loop-pause slider scale in [MT_LOOP_PAUSE_SCALE_STEP_MS] increments until
+ * [requiredValueMs] fits, mirroring the scale-extension pattern in MacroStepEditDialog.
+ */
+private fun mtExpandLoopScale(currentMaxMs: Int, requiredValueMs: Int): Int {
+    var maxMs = currentMaxMs.coerceAtLeast(MT_LOOP_PAUSE_SCALE_STEP_MS)
+    while (requiredValueMs > maxMs) maxMs += MT_LOOP_PAUSE_SCALE_STEP_MS
+    return maxMs
+}
+
 private fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean): String = when (step) {
     is MacroStep.GamepadButtonTap -> gamepadCodeDisplayShortLabel(step.btnCode, swapFaceButtons)
     is MacroStep.JoystickMove -> {
@@ -189,6 +213,9 @@ internal fun MacroTimelineEditor(
     var shiftSubsequentDefault by remember { mutableStateOf(true) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
+    var loopEnabled by remember { mutableStateOf(macro.loopEnabled) }
+    var loopPauseMs by remember { mutableIntStateOf(macro.loopPauseMs) }
+    var loopPauseMaxMs by remember { mutableIntStateOf(mtExpandLoopScale(MT_LOOP_PAUSE_INIT_MAX_MS, macro.loopPauseMs).coerceAtLeast(MT_LOOP_PAUSE_INIT_MAX_MS)) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -322,7 +349,7 @@ internal fun MacroTimelineEditor(
                 }
                 TextButton(
                     onClick = {
-                        onSave(macro.copy(name = localName.trim().ifBlank { macro.name }, steps = steps))
+                        onSave(macro.copy(name = localName.trim().ifBlank { macro.name }, steps = steps, loopEnabled = loopEnabled, loopPauseMs = loopPauseMs))
                     },
                     enabled = localName.isNotBlank(),
                 ) {
@@ -468,9 +495,21 @@ internal fun MacroTimelineEditor(
                                 macro.copy(
                                     name = localName.trim().ifBlank { macro.name },
                                     steps = steps,
+                                    loopEnabled = loopEnabled,
+                                    loopPauseMs = loopPauseMs,
                                 ),
                             )
                         },
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    MtLoopSection(
+                        loopEnabled = loopEnabled,
+                        loopPauseMs = loopPauseMs,
+                        loopPauseMaxMs = loopPauseMaxMs,
+                        accentColor = accentColor,
+                        onLoopEnabledChange = { loopEnabled = it },
+                        onLoopPauseMsChange = { loopPauseMs = it },
+                        onLoopPauseMaxMsChange = { loopPauseMaxMs = it },
                     )
                 }
             } else {
@@ -514,9 +553,21 @@ internal fun MacroTimelineEditor(
                                 macro.copy(
                                     name = localName.trim().ifBlank { macro.name },
                                     steps = steps,
+                                    loopEnabled = loopEnabled,
+                                    loopPauseMs = loopPauseMs,
                                 ),
                             )
                         },
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    MtLoopSection(
+                        loopEnabled = loopEnabled,
+                        loopPauseMs = loopPauseMs,
+                        loopPauseMaxMs = loopPauseMaxMs,
+                        accentColor = accentColor,
+                        onLoopEnabledChange = { loopEnabled = it },
+                        onLoopPauseMsChange = { loopPauseMs = it },
+                        onLoopPauseMaxMsChange = { loopPauseMaxMs = it },
                     )
                 }
             }
@@ -866,6 +917,107 @@ private fun DrawScope.drawVerticalTicks(
 }
 
 @Composable
+private fun MtLoopPauseDeltaButton(
+    accentColor: Color,
+    deltaMs: Int,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+        modifier = Modifier.defaultMinSize(minWidth = 30.dp, minHeight = 28.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.macropad_macro_step_timing_delta, deltaMs),
+            color = accentColor,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
+private fun MtLoopSection(
+    loopEnabled: Boolean,
+    loopPauseMs: Int,
+    loopPauseMaxMs: Int,
+    accentColor: Color,
+    onLoopEnabledChange: (Boolean) -> Unit,
+    onLoopPauseMsChange: (Int) -> Unit,
+    onLoopPauseMaxMsChange: (Int) -> Unit,
+) {
+    val colors = LocalAppColors.current
+
+    fun applyPauseDelta(deltaMs: Int) {
+        val next = (loopPauseMs + deltaMs).coerceAtLeast(0)
+        val nextMax = mtExpandLoopScale(loopPauseMaxMs, next)
+        if (nextMax != loopPauseMaxMs) onLoopPauseMaxMsChange(nextMax)
+        onLoopPauseMsChange(next)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = MT_PADDING.dp, end = MT_PADDING.dp, bottom = MT_PADDING.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.macropad_macro_loop_toggle),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = loopEnabled,
+                onCheckedChange = onLoopEnabledChange,
+            )
+        }
+
+        if (loopEnabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.macropad_macro_loop_pause_label),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text = "$loopPauseMs ms",
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -100) { applyPauseDelta(-100) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -10)  { applyPauseDelta(-10) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -1)   { applyPauseDelta(-1) }
+                Slider(
+                    value = loopPauseMs.toFloat(),
+                    onValueChange = { onLoopPauseMsChange(it.roundToInt().coerceIn(0, loopPauseMaxMs)) },
+                    valueRange = 0f..loopPauseMaxMs.toFloat(),
+                    steps = ((loopPauseMaxMs / MT_LOOP_PAUSE_SLIDER_STEP_MS) - 1).coerceAtLeast(0),
+                    colors = SliderDefaults.colors(
+                        thumbColor = accentColor,
+                        activeTrackColor = accentColor,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 1)    { applyPauseDelta(1) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 10)   { applyPauseDelta(10) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 100)  { applyPauseDelta(100) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 1_000) { applyPauseDelta(1_000) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun StepActionRow(
     steps: List<MacroStep>,
     accentColor: Color,
@@ -874,6 +1026,7 @@ private fun StepActionRow(
     onRecordTouch: () -> Unit,
     onTest: () -> Unit,
 ) {
+    val btnShape = RoundedCornerShape(8.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -882,95 +1035,63 @@ private fun StepActionRow(
     ) {
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { onAdd() }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .weight(1f)
+                .height(MT_ACTION_BTN_HEIGHT)
+                .clip(btnShape)
+                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                .clickable { onAdd() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                Icons.Rounded.Add,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                stringResource(R.string.macropad_macro_add_step),
-                color = accentColor,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Icon(Icons.Rounded.Add, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.macropad_macro_add_step), color = accentColor, style = MaterialTheme.typography.bodyMedium)
         }
 
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { onRecordGamepad() }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .weight(1f)
+                .height(MT_ACTION_BTN_HEIGHT)
+                .clip(btnShape)
+                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                .clickable { onRecordGamepad() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            MaterialSymbol(
-                name = "sports_esports",
-                size = 18.dp,
-                tint = accentColor,
-                filled = true,
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                stringResource(R.string.macropad_macro_record_gamepad),
-                color = accentColor,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            MaterialSymbol(name = "sports_esports", size = 18.dp, tint = accentColor, filled = true)
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.macropad_macro_record_gamepad), color = accentColor, style = MaterialTheme.typography.bodyMedium)
         }
 
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { onRecordTouch() }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .weight(1f)
+                .height(MT_ACTION_BTN_HEIGHT)
+                .clip(btnShape)
+                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                .clickable { onRecordTouch() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                Icons.Rounded.TouchApp,
-                contentDescription = stringResource(R.string.cd_record_touch),
-                tint = accentColor,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                stringResource(R.string.macropad_macro_record_touch),
-                color = accentColor,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Icon(Icons.Rounded.TouchApp, contentDescription = stringResource(R.string.cd_record_touch), tint = accentColor, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.macropad_macro_record_touch), color = accentColor, style = MaterialTheme.typography.bodyMedium)
         }
 
         if (steps.isNotEmpty()) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { onTest() }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .weight(1f)
+                    .height(MT_ACTION_BTN_HEIGHT)
+                    .clip(btnShape)
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                    .clickable { onTest() },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(
-                    Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(R.string.cd_test_macro),
-                    tint = accentColor,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.macropad_macro_test_run),
-                    color = accentColor,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.cd_test_macro), tint = accentColor, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.macropad_macro_test_run), color = accentColor, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
