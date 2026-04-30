@@ -10,16 +10,16 @@ Check off items as they are completed.
 
 ### Architecture / Module boundaries
 
-- [ ] **`MacroPadHitTestEngine` stores `R.string.*` IDs as mutable statics** — breaks module boundaries  
+- [x] **`MacroPadHitTestEngine` stores `R.string.*` IDs as mutable statics** — breaks module boundaries ✅ fixed in commit bff0505
        `domain/.../macropad/MacroPadHitTestEngine.kt` + `app/.../MainActivity.kt:117-119`  
        `MainActivity.onCreate()` assigns R.string resource IDs to `var` fields on a `:domain` object.
       Fix: Replace with a sealed class result (e.g. `enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE }`);
       let the UI map `DisabledReason` → `stringResource(...)` at the display site.
 
-- [ ] **File-level `mutableStateOf` outside Compose (`iconsFilledState`)** — shared global Compose state  
+- [x] **File-level `mutableStateOf` outside Compose (`iconsFilledState`)** — shared global Compose state ✅ fixed in commit 30e4ca3
        `app/.../macropad/IconPickerDialog.kt:64`  
        `internal val iconsFilledState = mutableStateOf(true)` survives dialog reopens, is untestable, and is not persisted.
-      Fix: Move to `rememberSaveable` inside the dialog composable, or to `SettingsManager` if persistence is desired.
+      Fix: Removed; `PadButtonEditDialog` now defaults to `button?.iconFilled ?: true` per dialog open.
 
 ### Singleton / Init-order fragility
 
@@ -44,11 +44,8 @@ Check off items as they are completed.
 
 ### Compose — Stability
 
-- [ ] **Activate Compose Compiler Strong-Skipping mode** — avoids need for `@Immutable` on `:core` data classes  
-       `app/build.gradle.kts` (or root Compose Compiler config)  
-       Adding `composeCompiler { featureFlags.add(ComposeFeatureFlag.StrongSkipping) }` treats all `data class`es
-      with only `val` properties as stable without touching `:core`. One-line change; prevents excess recomposition
-      in `MacroListEditor` (macro rows), `PadCanvas` (button list), and all action picker dropdowns.
+- [x] **Activate Compose Compiler Strong-Skipping mode** ✅ fixed in commit 1419527
+       `app/build.gradle.kts` — added `composeCompiler { featureFlags.add(ComposeFeatureFlag.StrongSkipping) }`.
 
 ### Compose — `LaunchedEffect` correctness
 
@@ -60,11 +57,9 @@ Check off items as they are completed.
 
 ### Lifecycle — Background collection without `repeatOnLifecycle`
 
-- [ ] **`lifecycleScope.launch { .collect { } }` without `repeatOnLifecycle`** — processes events in STOPPED state  
-       `app/.../MainActivity.kt` — two `lifecycleScope.launch { ... .collect { ... } }` blocks for
-      `ConfigManager.exportRequest` and `ConfigManager.importRequested`.  
-       Risk: `openDocumentLauncher.launch(...)` can be called while Activity is invisible → ignored or crashed.  
-       Fix: Wrap collection in `repeatOnLifecycle(Lifecycle.State.STARTED) { ... }`.
+- [x] **`lifecycleScope.launch { .collect { } }` without `repeatOnLifecycle`** ✅ fixed in commit b64c653
+       `app/.../MainActivity.kt` — both ConfigManager collectors now wrapped with
+      `lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED)` so they pause when the Activity is not visible.
 
 ### Event bus using `StateFlow`
 
@@ -130,10 +125,8 @@ Check off items as they are completed.
 
 ### Context leak risk in `MacroExecutor.init()`
 
-- [ ] **Verify `MacroExecutor.init(context)` stores `applicationContext`, not the `Activity`**  
-       `app/.../MainActivity.kt:114` + `domain/.../macropad/MacroExecutor.kt`  
-       Called with `this` (Activity). If `MacroExecutor` stores the raw Context, it leaks the Activity on recreate.  
-       Fix: Ensure `init(ctx)` stores `ctx.applicationContext`. If not, fix in `MacroExecutor`.
+- [x] **Verify `MacroExecutor.init(context)` stores `applicationContext`, not the `Activity`** ✅ already correct
+       `MacroExecutor.kt` correctly stores `ctx.applicationContext` — no leak present. No change needed.
 
 ---
 
@@ -141,9 +134,8 @@ Check off items as they are completed.
 
 ### Code quality
 
-- [ ] **`@Suppress("unused")` on `TAG` constants is unnecessary** — `TAG` is always used via `AppLog.*`  
-       Occurs in: `AppStateManager.kt`, `MacroPadState.kt`, `MainViewModel.kt`, `MainActivity.kt`, and ~20 more files.  
-       Fix: Remove all `@Suppress("unused")` annotations on `TAG` constants in a single pass.
+- [x] **`@Suppress("unused")` on `TAG` constants is unnecessary** ✅ fixed in commit 05424f5
+       Removed from all 58 `.kt` files in a single `perl` pass.
 
 - [ ] **`LazyColumn` / `LazyRow` key audit** — verify all lists use stable keys  
        Already correct in: `MacroListEditor`, `PillMenu`, `MacroTimeline`.  
