@@ -84,7 +84,6 @@ class MainActivity : ComponentActivity() {
     ) { uri ->
         AppStateManager.setFilePickerOpen(false)
         if (uri == null) {
-            ConfigManager.clearImportRequest()
             return@registerForActivityResult
         }
         ConfigManager.setPendingInAppUri(uri)
@@ -121,27 +120,21 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.exportRequest.collect { meta ->
-                    if (meta != null) {
-                        pendingExportMetadata = meta
-                        AppStateManager.setFilePickerOpen(true)
-                        createDocumentLauncher.launch(ConfigManager.exportFilename.value)
-                        ConfigManager.clearExportRequest()
-                    }
+                    pendingExportMetadata = meta
+                    AppStateManager.setFilePickerOpen(true)
+                    createDocumentLauncher.launch(ConfigManager.exportFilename.value)
                 }
             }
         }
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                ConfigManager.importRequested.collect { requested ->
-                    if (requested) {
-                        AppStateManager.setFilePickerOpen(true)
-                        // Use "*/*" instead of the custom MGRD MIME type: the Android file
-                        // picker (DocumentsUI) does not know the custom MIME type and would
-                        // show an empty list. With "*/*" all files are visible and the user
-                        // can navigate to their .mgrd file.
-                        openDocumentLauncher.launch(arrayOf("*/*"))
-                        ConfigManager.clearImportRequest()
-                    }
+                ConfigManager.importRequest.collect {
+                    AppStateManager.setFilePickerOpen(true)
+                    // Use "*/*" instead of the custom MGRD MIME type: the Android file
+                    // picker (DocumentsUI) does not know the custom MIME type and would
+                    // show an empty list. With "*/*" all files are visible and the user
+                    // can navigate to their .mgrd file.
+                    openDocumentLauncher.launch(arrayOf("*/*"))
                 }
             }
         }

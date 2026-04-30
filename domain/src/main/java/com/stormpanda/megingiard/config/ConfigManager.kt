@@ -14,8 +14,12 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -55,11 +59,18 @@ private val checksumJson = Json {
  */
 object ConfigManager {
 
-    // ── Coordinator StateFlows (export) ──────────────────────────────────────
+    // ── Coordinator SharedFlows (export) ──────────────────────────────────────
 
-    /** Non-null while a "save file" picker should be opened by MainActivity. */
-    private val _exportRequest = MutableStateFlow<ExportMetadata?>(null)
-    val exportRequest: StateFlow<ExportMetadata?> = _exportRequest.asStateFlow()
+    /**
+     * Emits a one-shot export command to MainActivity.
+     * Uses [BufferOverflow.DROP_OLDEST] so a second rapid call overrides a pending one.
+     */
+    private val _exportRequest = MutableSharedFlow<ExportMetadata>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val exportRequest: SharedFlow<ExportMetadata> = _exportRequest.asSharedFlow()
 
     /** Suggested default filename for the "create document" picker. */
     private val _exportFilename = MutableStateFlow("")
@@ -68,28 +79,25 @@ object ConfigManager {
     fun requestExport(metadata: ExportMetadata, filename: String) {
         AppLog.d(TAG, "requestExport filename=$filename")
         _exportFilename.value = filename
-        _exportRequest.value = metadata
+        _exportRequest.tryEmit(metadata)
     }
 
-    fun clearExportRequest() {
-        AppLog.d(TAG, "clearExportRequest")
-        _exportRequest.value = null
-    }
+    // ── Coordinator SharedFlows (import from Settings) ────────────────────────
 
-    // ── Coordinator StateFlows (import from Settings) ────────────────────────
-
-    /** True while an "open file" picker should be opened by MainActivity. */
-    private val _importRequested = MutableStateFlow(false)
-    val importRequested: StateFlow<Boolean> = _importRequested.asStateFlow()
+    /**
+     * Emits a one-shot import command to MainActivity (open file picker).
+     * Uses [BufferOverflow.DROP_OLDEST] — a second call while the first is processing is a no-op.
+     */
+    private val _importRequest = MutableSharedFlow<Unit>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val importRequest: SharedFlow<Unit> = _importRequest.asSharedFlow()
 
     fun requestImport() {
         AppLog.d(TAG, "requestImport")
-        _importRequested.value = true
-    }
-
-    fun clearImportRequest() {
-        AppLog.d(TAG, "clearImportRequest")
-        _importRequested.value = false
+        _importRequest.tryEmit(Unit)
     }
 
     // ── Coordinator StateFlows (import from external ACTION_VIEW intent) ────────
