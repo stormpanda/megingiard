@@ -49,11 +49,9 @@ Check off items as they are completed.
 
 ### Compose — `LaunchedEffect` correctness
 
-- [ ] **`LaunchedEffect` with 4 combined keys in `MainActivity`** — restarts coroutine on any flag change  
-       `app/.../MainActivity.kt:241` (approx)  
-       `LaunchedEffect(isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) { ... }`  
-       Fix: Split into separate `LaunchedEffect` per concern, or use a single `LaunchedEffect(Unit)` with
-      `snapshotFlow { ... }.distinctUntilChanged().collectLatest { ... }` inside.
+- [x] **`LaunchedEffect` with 4 combined keys in `MainActivity`** ✅ fixed in commit 3912c8b
+       Replaced with `LaunchedEffect(Unit) + snapshotFlow { condition }.collect { }` so the block
+      only fires when the combined boolean expression transitions to `true`.
 
 ### Lifecycle — Background collection without `repeatOnLifecycle`
 
@@ -63,11 +61,9 @@ Check off items as they are completed.
 
 ### Event bus using `StateFlow`
 
-- [ ] **`ConfigManager.exportRequest` / `importRequested` use `StateFlow` for one-shot commands**  
-       `domain/.../config/ConfigManager.kt`  
-       `StateFlow` drops events if the collector is paused or if two events fire in rapid succession (only last value retained).  
-       Fix: Use `MutableSharedFlow(replay = 0, extraBufferCapacity = 1, onBufferOverflow = DROP_OLDEST)` or
-      `Channel<T>(Channel.CONFLATED)` for fire-and-forget command signals.
+- [x] **`ConfigManager.exportRequest` / `importRequested` use `StateFlow` for one-shot commands** ✅ fixed in commit a9a839a
+       Replaced with `MutableSharedFlow(replay=0, extraBufferCapacity=1, DROP_OLDEST)`. Removed
+      `clearExportRequest()` and `clearImportRequest()`. Renamed `importRequested` → `importRequest`.
 
 ### DataStore write flood on slider drag
 
@@ -93,10 +89,9 @@ Check off items as they are completed.
 
 ### Architecture — `MainViewModel` is pure delegation (no value)
 
-- [ ] **`MainViewModel` is a zero-value pass-through** — delegates 100% to singletons  
-       `app/.../viewmodel/MainViewModel.kt`  
-       The only non-trivial method (`parseImportUri`) belongs in `ConfigManager`.
-      Fix: Move `parseImportUri` into `ConfigManager`, delete `MainViewModel`, update callers.
+- [x] **`MainViewModel` is a zero-value pass-through** ✅ fixed in commit 730beea
+       `MainViewModel.kt` deleted. `parseImportUri` moved to `ConfigManager.parseImportUri()`.
+      `MainAppScreen` now reads singletons directly.
 
 ### Architecture — Composables bypass ViewModels and read singletons directly
 
@@ -137,9 +132,9 @@ Check off items as they are completed.
 - [x] **`@Suppress("unused")` on `TAG` constants is unnecessary** ✅ fixed in commit 05424f5
        Removed from all 58 `.kt` files in a single `perl` pass.
 
-- [ ] **`LazyColumn` / `LazyRow` key audit** — verify all lists use stable keys  
-       Already correct in: `MacroListEditor`, `PillMenu`, `MacroTimeline`.  
-       Audit: `PadCanvas` button list, `AmbientMacroPadOverlay`, `IconPickerDialog` grid, `PadActionPicker` lists.
+- [x] **`LazyColumn` / `LazyRow` key audit** ✅ audited — all lists already have stable keys
+       `MacroPadEditor`, `PillMenu`, `MacroListEditor`, `IconPickerDialog` all use `key = { it.id }` or `key = { it }`.
+      `PadCanvas` and `AmbientMacroPadOverlay` use no lazy layout. No fix needed.
 
 ---
 
