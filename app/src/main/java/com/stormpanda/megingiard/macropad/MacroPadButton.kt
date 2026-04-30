@@ -1,6 +1,11 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +63,11 @@ private const val MP_BTN_PRESSED_ALPHA    = 0.80f
 private const val MP_BTN_NORMAL_ALPHA     = 0.25f
 private const val MP_BTN_DISABLED_ALPHA   = 0.38f
 
+// Pulsing animation for running macros: alpha cycles between low and high.
+private const val MP_BTN_RUNNING_PULSE_LOW  = 0.30f
+private const val MP_BTN_RUNNING_PULSE_HIGH = 0.80f
+private const val MP_PULSE_HALF_PERIOD_MS   = 600
+
 private val  MP_BTN_SQUARE_RADIUS   = 4.dp
 private val  MP_BTN_ICON_UNIT        = 44.dp  // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
 
@@ -88,6 +98,7 @@ internal fun PadButton(
     accentColor:      Color,
     isDeviceDisabled: Boolean,
     neutralStyle:     Boolean = false,
+    isRunning:        Boolean = false,
 ) {
     val density = LocalDensity.current
     val colors  = LocalAppColors.current
@@ -99,11 +110,26 @@ internal fun PadButton(
 
     val alphaTarget  = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
-    val alpha by animateFloatAsState(
+    val pressedAlpha by animateFloatAsState(
         targetValue = alphaTarget,
         animationSpec = tween(animDuration),
         label = "btnAlpha",
     )
+    val alpha = if (isRunning) {
+        val infiniteTransition = rememberInfiniteTransition(label = "btnPulse")
+        val runningAlpha by infiniteTransition.animateFloat(
+            initialValue = MP_BTN_RUNNING_PULSE_LOW,
+            targetValue  = MP_BTN_RUNNING_PULSE_HIGH,
+            animationSpec = infiniteRepeatable(
+                animation  = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "btnRunningAlpha",
+        )
+        runningAlpha
+    } else {
+        pressedAlpha
+    }
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f

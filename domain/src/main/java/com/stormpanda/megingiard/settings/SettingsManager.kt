@@ -96,6 +96,9 @@ object SettingsManager {
     // MacroPad touch recording
     private val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
 
+    // MacroPad gamepad recording
+    private val KEY_SKIP_GAMEPAD_RECORD_DIALOG = booleanPreferencesKey("skip_gamepad_record_dialog")
+
     // MacroPad — gamepad face-button label swap (display only, keycodes unchanged)
     private val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
 
@@ -218,6 +221,10 @@ object SettingsManager {
     private val _skipTouchRecordDialog = MutableStateFlow(false)
     val skipTouchRecordDialog: StateFlow<Boolean> = _skipTouchRecordDialog.asStateFlow()
 
+    // MacroPad gamepad recording — skip confirmation dialog after first use
+    private val _skipGamepadRecordDialog = MutableStateFlow(false)
+    val skipGamepadRecordDialog: StateFlow<Boolean> = _skipGamepadRecordDialog.asStateFlow()
+
     // Tap-to-click — only active in touchpad mouse mode
     private val _touchpadTapToClick = MutableStateFlow(true)
     val touchpadTapToClick: StateFlow<Boolean> = _touchpadTapToClick.asStateFlow()
@@ -310,6 +317,7 @@ object SettingsManager {
                 _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
                 _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
                 _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
+                _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                 _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
                 AppLog.level = _logLevel.value
@@ -501,6 +509,12 @@ object SettingsManager {
         AppLog.d(TAG, "setSkipTouchRecordDialog($value)")
         _skipTouchRecordDialog.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] = value } }
+    }
+
+    fun setSkipGamepadRecordDialog(value: Boolean) {
+        AppLog.d(TAG, "setSkipGamepadRecordDialog($value)")
+        _skipGamepadRecordDialog.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] = value } }
     }
 
     fun setMacropadAmbientEnabled(value: Boolean) {

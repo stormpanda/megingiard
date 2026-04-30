@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +40,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,8 +49,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,11 +61,12 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -73,7 +80,10 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val TAG = "MacroTimelineEditor"
 
@@ -95,6 +105,18 @@ private const val MT_VIEW_CHIP_V_PADDING = 6
 private const val MT_VIEW_CHIP_SPACING = 6
 private const val MT_TIMING_MAX_MS = 10_000L
 private const val MT_NEW_STEP_START_OFFSET_MS = 2_000L
+
+// Post-start delay before showing the recording overlay: waits for InputFlinger to register
+// the uinput device so early user taps are not silently dropped (mirrors MAC_GAMEPAD_INJECTOR_INIT_MS).
+private const val MT_GAMEPAD_INJECTOR_INIT_MS = 200L
+
+// Loop-pause slider config
+private const val MT_LOOP_PAUSE_INIT_MAX_MS  = 2_000
+private const val MT_LOOP_PAUSE_SCALE_STEP_MS = 1_000
+private const val MT_LOOP_PAUSE_SLIDER_STEP_MS = 100
+
+// Uniform height for the StepActionRow buttons
+private val MT_ACTION_BTN_HEIGHT = 44.dp
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -122,6 +144,9 @@ private fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (thi
     is MacroStep.DPadTap -> copy(startTimeMs = newStartTimeMs)
     is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs)
 }
+
+private fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
+    map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
 
 private fun dirArrow(dirX: Int, dirY: Int): String = when {
     dirX > 0 && dirY < 0 -> "↗"
@@ -151,6 +176,16 @@ private fun joyDirArrow(x: Float, y: Float): String {
     return dirArrow(nx, ny)
 }
 
+/**
+ * Extends the loop-pause slider scale in [MT_LOOP_PAUSE_SCALE_STEP_MS] increments until
+ * [requiredValueMs] fits, mirroring the scale-extension pattern in MacroStepEditDialog.
+ */
+private fun mtExpandLoopScale(currentMaxMs: Int, requiredValueMs: Int): Int {
+    var maxMs = currentMaxMs.coerceAtLeast(MT_LOOP_PAUSE_SCALE_STEP_MS)
+    while (requiredValueMs > maxMs) maxMs += MT_LOOP_PAUSE_SCALE_STEP_MS
+    return maxMs
+}
+
 private fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean): String = when (step) {
     is MacroStep.GamepadButtonTap -> gamepadCodeDisplayShortLabel(step.btnCode, swapFaceButtons)
     is MacroStep.JoystickMove -> {
@@ -176,17 +211,50 @@ internal fun MacroTimelineEditor(
     var editingStepIndex by remember { mutableStateOf<Int?>(null) }
     var deleteStepIndex by remember { mutableStateOf<Int?>(null) }
     var showRecordTouchDialog by remember { mutableStateOf(false) }
+    var showRecordGamepadDialog by remember { mutableStateOf(false) }
+    var showGamepadRecordingOverlay by remember { mutableStateOf(false) }
+    var gamepadRecordingError by remember { mutableStateOf<String?>(null) }
     var viewMode by remember { mutableStateOf(MacroEditorViewMode.LIST) }
     var shiftSubsequentDefault by remember { mutableStateOf(true) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
+    var loopEnabled by remember { mutableStateOf(macro.loopEnabled) }
+    var loopPauseMs by remember { mutableIntStateOf(macro.loopPauseMs) }
+    var loopPauseMaxMs by remember { mutableIntStateOf(mtExpandLoopScale(MT_LOOP_PAUSE_INIT_MAX_MS, macro.loopPauseMs).coerceAtLeast(MT_LOOP_PAUSE_INIT_MAX_MS)) }
+    // Tracks whether the recording session started GamepadInjector; guards the matching stop() call.
+    var recordingStartedGamepad by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
+    val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
+    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
 
     fun pushUndo(previous: List<MacroStep>) {
         val bounded = (undoStack + listOf(previous)).takeLast(MT_UNDO_STACK_MAX)
         undoStack = bounded
         redoStack = emptyList()
+    }
+
+    fun startGamepadRecording() {
+        val wasAlreadyRunning = GamepadInjector.isRunning
+        GamepadInjector.start(context)
+        if (!GamepadInjector.isRunning) {
+            AppLog.e(TAG, "gamepad recording overlay aborted because GamepadInjector failed to start")
+            gamepadRecordingError = context.getString(R.string.macropad_macro_record_gamepad_error_start)
+            showRecordGamepadDialog = false
+            showGamepadRecordingOverlay = false
+            return
+        }
+        recordingStartedGamepad = !wasAlreadyRunning
+        scope.launch {
+            // Wait for InputFlinger to register the uinput device before showing the overlay,
+            // so early user taps are not silently dropped.
+            delay(MT_GAMEPAD_INJECTOR_INIT_MS)
+            GamepadRecordingManager.startRecording()
+            showRecordGamepadDialog = false
+            showGamepadRecordingOverlay = true
+        }
     }
 
     fun requestTouchRecording() {
@@ -195,6 +263,14 @@ internal fun MacroTimelineEditor(
             TouchRecordingManager.requestRecording()
         } else {
             showRecordTouchDialog = true
+        }
+    }
+
+    fun requestGamepadRecording() {
+        if (SettingsManager.skipGamepadRecordDialog.value) {
+            startGamepadRecording()
+        } else {
+            showRecordGamepadDialog = true
         }
     }
 
@@ -212,6 +288,19 @@ internal fun MacroTimelineEditor(
         TouchRecordingManager.consumeRecordedTap()
     }
 
+    LaunchedEffect(gamepadRecordingState) {
+        val recorded = gamepadRecordingState as? GamepadRecordingState.Done ?: return@LaunchedEffect
+        val nextStart = steps.totalDurationMs()
+        val shiftedSteps = recorded.steps.offsetBy(nextStart)
+        pushUndo(steps)
+        steps = steps + shiftedSteps
+        AppLog.d(TAG, "recordedGamepadAdded count=${shiftedSteps.size} startMs=$nextStart")
+        if (recordingStartedGamepad) GamepadInjector.stop()
+        recordingStartedGamepad = false
+        GamepadRecordingManager.resetState()
+        showGamepadRecordingOverlay = false
+    }
+
     if (showRecordTouchDialog) {
         TouchRecordStartDialog(
             onStart = {
@@ -225,6 +314,17 @@ internal fun MacroTimelineEditor(
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording()
                 showRecordTouchDialog = false
+            },
+        )
+    }
+
+    if (showRecordGamepadDialog) {
+        GamepadRecordStartDialog(
+            onStart = { startGamepadRecording() },
+            onCancel = { showRecordGamepadDialog = false },
+            onDontShowAgain = {
+                SettingsManager.setSkipGamepadRecordDialog(true)
+                startGamepadRecording()
             },
         )
     }
@@ -264,7 +364,7 @@ internal fun MacroTimelineEditor(
                 }
                 TextButton(
                     onClick = {
-                        onSave(macro.copy(name = localName.trim().ifBlank { macro.name }, steps = steps))
+                        onSave(macro.copy(name = localName.trim().ifBlank { macro.name }, steps = steps, loopEnabled = loopEnabled, loopPauseMs = loopPauseMs))
                     },
                     enabled = localName.isNotBlank(),
                 ) {
@@ -403,15 +503,30 @@ internal fun MacroTimelineEditor(
                         steps = steps,
                         accentColor = accentColor,
                         onAdd = { showAddStep = true },
+                        onRecordGamepad = { requestGamepadRecording() },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
+                            // Force loopEnabled=false for test runs: a looping macro would run
+                            // indefinitely in the editor with no obvious way to stop it.
                             MacroExecutor.execute(
                                 macro.copy(
                                     name = localName.trim().ifBlank { macro.name },
                                     steps = steps,
+                                    loopEnabled = false,
+                                    loopPauseMs = 0,
                                 ),
                             )
                         },
+                    )
+                    HorizontalDivider(color = colors.divider)
+                    MtLoopSection(
+                        loopEnabled = loopEnabled,
+                        loopPauseMs = loopPauseMs,
+                        loopPauseMaxMs = loopPauseMaxMs,
+                        accentColor = accentColor,
+                        onLoopEnabledChange = { loopEnabled = it },
+                        onLoopPauseMsChange = { loopPauseMs = it },
+                        onLoopPauseMaxMsChange = { loopPauseMaxMs = it },
                     )
                 }
             } else {
@@ -448,18 +563,80 @@ internal fun MacroTimelineEditor(
                         steps = steps,
                         accentColor = accentColor,
                         onAdd = { showAddStep = true },
+                        onRecordGamepad = { requestGamepadRecording() },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
+                            // Force loopEnabled=false for test runs: a looping macro would run
+                            // indefinitely in the editor with no obvious way to stop it.
                             MacroExecutor.execute(
                                 macro.copy(
                                     name = localName.trim().ifBlank { macro.name },
                                     steps = steps,
+                                    loopEnabled = false,
+                                    loopPauseMs = 0,
                                 ),
                             )
                         },
                     )
+                    HorizontalDivider(color = colors.divider)
+                    MtLoopSection(
+                        loopEnabled = loopEnabled,
+                        loopPauseMs = loopPauseMs,
+                        loopPauseMaxMs = loopPauseMaxMs,
+                        accentColor = accentColor,
+                        onLoopEnabledChange = { loopEnabled = it },
+                        onLoopPauseMsChange = { loopPauseMs = it },
+                        onLoopPauseMaxMsChange = { loopPauseMaxMs = it },
+                    )
                 }
             }
+        }
+
+        val recordingState = gamepadRecordingState as? GamepadRecordingState.Recording
+        if (showGamepadRecordingOverlay && recordingState != null) {
+            GamepadRecordingOverlay(
+                state = recordingState,
+                swapFaceButtons = swapFaceButtons,
+                onButtonDown = { code ->
+                    GamepadRecordingManager.recordButtonDown(code)
+                    GamepadInjector.buttonDown(code)
+                },
+                onButtonUp = { code ->
+                    GamepadRecordingManager.recordButtonUp(code)
+                    GamepadInjector.buttonUp(code)
+                },
+                onDpadChanged = { dirX, dirY ->
+                    GamepadRecordingManager.setDpad(dirX, dirY)
+                    GamepadInjector.hat(axis = 0, value = dirX)
+                    GamepadInjector.hat(axis = 1, value = dirY)
+                },
+                onJoystickChanged = { stick, x, y ->
+                    // Use the snapped (octant-quantised) values returned by the manager for
+                    // live injection. This ensures the target app sees the same input during
+                    // recording as it will receive during macro playback.
+                    val (snapX, snapY) = GamepadRecordingManager.setJoystick(stick, x, y)
+                    when (stick) {
+                        JoystickStick.LEFT -> {
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_X, normalizedAxisValue(snapX))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_Y, normalizedAxisValue(snapY))
+                        }
+
+                        JoystickStick.RIGHT -> {
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_Z, normalizedAxisValue(snapX))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_RZ, normalizedAxisValue(snapY))
+                        }
+                    }
+                },
+                onStop = {
+                    scope.launch { GamepadRecordingManager.finishRecording() }
+                },
+                onCancel = {
+                    scope.launch { GamepadRecordingManager.cancelRecording() }
+                    if (recordingStartedGamepad) GamepadInjector.stop()
+                    recordingStartedGamepad = false
+                    showGamepadRecordingOverlay = false
+                },
+            )
         }
     }
 
@@ -541,6 +718,33 @@ internal fun MacroTimelineEditor(
             dismissButton = {
                 TextButton(onClick = { deleteStepIndex = null }) {
                     Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+            },
+        )
+    }
+
+    gamepadRecordingError?.let { message ->
+        AlertDialog(
+            containerColor = colors.surface,
+            onDismissRequest = { gamepadRecordingError = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.macropad_macro_record_gamepad_error_title),
+                    color = colors.onSurface,
+                )
+            },
+            text = {
+                Text(
+                    text = message,
+                    color = colors.onSurfaceSecondary,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { gamepadRecordingError = null }) {
+                    Text(
+                        text = stringResource(R.string.config_ok),
+                        color = colors.accent,
+                    )
                 }
             },
         )
@@ -733,13 +937,116 @@ private fun DrawScope.drawVerticalTicks(
 }
 
 @Composable
+private fun MtLoopPauseDeltaButton(
+    accentColor: Color,
+    deltaMs: Int,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+        modifier = Modifier.defaultMinSize(minWidth = 30.dp, minHeight = 28.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.macropad_macro_step_timing_delta, deltaMs),
+            color = accentColor,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
+private fun MtLoopSection(
+    loopEnabled: Boolean,
+    loopPauseMs: Int,
+    loopPauseMaxMs: Int,
+    accentColor: Color,
+    onLoopEnabledChange: (Boolean) -> Unit,
+    onLoopPauseMsChange: (Int) -> Unit,
+    onLoopPauseMaxMsChange: (Int) -> Unit,
+) {
+    val colors = LocalAppColors.current
+
+    fun applyPauseDelta(deltaMs: Int) {
+        val next = (loopPauseMs + deltaMs).coerceAtLeast(0)
+        val nextMax = mtExpandLoopScale(loopPauseMaxMs, next)
+        if (nextMax != loopPauseMaxMs) onLoopPauseMaxMsChange(nextMax)
+        onLoopPauseMsChange(next)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = MT_PADDING.dp, end = MT_PADDING.dp, bottom = MT_PADDING.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.macropad_macro_loop_toggle),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = loopEnabled,
+                onCheckedChange = onLoopEnabledChange,
+            )
+        }
+
+        if (loopEnabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.macropad_macro_loop_pause_label),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text = "$loopPauseMs ms",
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -100) { applyPauseDelta(-100) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -10)  { applyPauseDelta(-10) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -1)   { applyPauseDelta(-1) }
+                Slider(
+                    value = loopPauseMs.toFloat(),
+                    onValueChange = { onLoopPauseMsChange(it.roundToInt().coerceIn(0, loopPauseMaxMs)) },
+                    valueRange = 0f..loopPauseMaxMs.toFloat(),
+                    steps = ((loopPauseMaxMs / MT_LOOP_PAUSE_SLIDER_STEP_MS) - 1).coerceAtLeast(0),
+                    colors = SliderDefaults.colors(
+                        thumbColor = accentColor,
+                        activeTrackColor = accentColor,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 1)    { applyPauseDelta(1) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 10)   { applyPauseDelta(10) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 100)  { applyPauseDelta(100) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 1_000) { applyPauseDelta(1_000) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun StepActionRow(
     steps: List<MacroStep>,
     accentColor: Color,
     onAdd: () -> Unit,
+    onRecordGamepad: () -> Unit,
     onRecordTouch: () -> Unit,
     onTest: () -> Unit,
 ) {
+    val btnShape = RoundedCornerShape(8.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -748,72 +1055,63 @@ private fun StepActionRow(
     ) {
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { onAdd() }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .weight(1f)
+                .height(MT_ACTION_BTN_HEIGHT)
+                .clip(btnShape)
+                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                .clickable { onAdd() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                Icons.Rounded.Add,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                stringResource(R.string.macropad_macro_add_step),
-                color = accentColor,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Icon(Icons.Rounded.Add, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.macropad_macro_add_step), color = accentColor, style = MaterialTheme.typography.bodyMedium)
         }
 
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { onRecordTouch() }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .weight(1f)
+                .height(MT_ACTION_BTN_HEIGHT)
+                .clip(btnShape)
+                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                .clickable { onRecordGamepad() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                Icons.Rounded.TouchApp,
-                contentDescription = stringResource(R.string.cd_record_touch),
-                tint = accentColor,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                stringResource(R.string.macropad_macro_record_touch),
-                color = accentColor,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            MaterialSymbol(name = "sports_esports", size = 18.dp, tint = accentColor, filled = true)
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.macropad_macro_record_gamepad), color = accentColor, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .height(MT_ACTION_BTN_HEIGHT)
+                .clip(btnShape)
+                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                .clickable { onRecordTouch() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(Icons.Rounded.TouchApp, contentDescription = stringResource(R.string.cd_record_touch), tint = accentColor, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(stringResource(R.string.macropad_macro_record_touch), color = accentColor, style = MaterialTheme.typography.bodyMedium)
         }
 
         if (steps.isNotEmpty()) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .clickable { onTest() }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .weight(1f)
+                    .height(MT_ACTION_BTN_HEIGHT)
+                    .clip(btnShape)
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                    .clickable { onTest() },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(
-                    Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(R.string.cd_test_macro),
-                    tint = accentColor,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.macropad_macro_test_run),
-                    color = accentColor,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.cd_test_macro), tint = accentColor, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.macropad_macro_test_run), color = accentColor, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

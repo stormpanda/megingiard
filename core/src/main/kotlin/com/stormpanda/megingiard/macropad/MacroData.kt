@@ -104,9 +104,12 @@ fun List<MacroStep>.totalDurationMs(): Long = maxOfOrNull { it.endTimeMs() } ?: 
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @param id       Stable unique identifier (UUID string).
- * @param name     User-visible name shown in editors and on pad buttons.
- * @param steps    Ordered list of timed steps; steps may overlap for parallel execution.
+ * @param id          Stable unique identifier (UUID string).
+ * @param name        User-visible name shown in editors and on pad buttons.
+ * @param steps       Ordered list of timed steps; steps may overlap for parallel execution.
+ * @param loopEnabled When true, the macro replays indefinitely until stopped by a second tap.
+ * @param loopPauseMs Milliseconds to pause between loop iterations (0 = no pause). Only used
+ *                    when [loopEnabled] is true.
  *
  * The data is exported/imported as a standalone JSON array via [kotlinx.serialization].
  */
@@ -115,4 +118,6 @@ data class Macro(
     val id: String,
     val name: String,
     val steps: List<MacroStep> = emptyList(),
+    val loopEnabled: Boolean = false,
+    val loopPauseMs: Int = 0,
 )

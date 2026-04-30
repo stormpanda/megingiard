@@ -40,8 +40,11 @@ fun injectActionDown(action: PadAction) {
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
         is PadAction.Macro           -> {
             val macro = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == action.macroId }
-            AppLog.d(TAG, "actionDown: Macro id=${action.macroId} found=${macro != null}")
-            if (macro != null) MacroExecutor.execute(macro)
+            val running = MacroExecutor.isRunning(action.macroId)
+            AppLog.d(TAG, "actionDown: Macro id=${action.macroId} found=${macro != null} running=$running")
+            if (macro != null) {
+                if (running) MacroExecutor.stop(action.macroId) else MacroExecutor.execute(macro)
+            }
         }
         is PadAction.AmbientPeek          -> { AppLog.d(TAG, "actionDown: AmbientPeek"); MacroPadState.togglePeek() }
         is PadAction.LayoutNext             -> { AppLog.d(TAG, "actionDown: LayoutNext"); MacroPadState.nextLayout() }
@@ -87,7 +90,7 @@ fun injectActionUp(action: PadAction) {
         }
         is PadAction.ScrollWheel     -> { /* handled via drag events */ }
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
-        is PadAction.Macro                 -> { /* fire-and-forget on down; up is no-op */ }
+        is PadAction.Macro                 -> { /* toggle on down; up is no-op */ }
         is PadAction.AmbientPeek            -> { /* toggle on down; up is no-op */ }
         is PadAction.LayoutNext             -> { /* fires on down; up is no-op */ }
         is PadAction.LayoutPrevious         -> { /* fires on down; up is no-op */ }

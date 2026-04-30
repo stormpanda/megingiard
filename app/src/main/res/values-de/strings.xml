@@ -280,11 +280,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_test_run">Testlauf</string>
     <string name="cd_test_macro">Makro testen</string>
     <string name="cd_edit_macro">Makro bearbeiten</string>
+    <string name="macropad_macro_loop_toggle">Makro wiederholen</string>
+    <string name="macropad_macro_loop_pause_label">Pause zwischen Wiederholungen</string>
     <string name="cd_record_touch">Touch-Schritt aufzeichnen</string>
 
     <!-- Makro-Schritte -->
-    <string name="macropad_macro_add_step">Schritt hinzufügen</string>
-    <string name="macropad_macro_record_touch">Touch aufzeichnen</string>
+    <string name="macropad_macro_add_step">Schritt</string>
+    <string name="macropad_macro_record_touch">Aufzeichnen</string>
     <string name="macropad_macro_no_steps">Noch keine Schritte. Tippe auf +, um einen hinzuzufügen.</string>
     <string name="macropad_macro_step_delete_title">Schritt löschen</string>
     <string name="macropad_macro_step_delete_confirm">Diesen Schritt aus dem Makro entfernen?</string>
@@ -402,6 +404,24 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_editor_view_list">Liste</string>
     <string name="macropad_macro_editor_view_timeline">Zeit</string>
     <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
+    <string name="macropad_macro_record_gamepad">Aufzeichnen</string>
+    <string name="macropad_macro_record_gamepad_title">Gamepad-Eingabe aufnehmen</string>
+    <string name="macropad_macro_record_gamepad_hint">Berühre den eingeblendeten Controller. Eingaben werden aufgenommen und live an den oberen Bildschirm weitergegeben.</string>
+    <string name="macropad_macro_record_gamepad_stop">Fertig</string>
+    <string name="macropad_macro_record_gamepad_cancel">Abbrechen</string>
+    <string name="macropad_macro_record_gamepad_left_stick">Linker Stick</string>
+    <string name="macropad_macro_record_gamepad_right_stick">Rechter Stick</string>
+    <string name="macropad_macro_record_gamepad_l3">L3</string>
+    <string name="macropad_macro_record_gamepad_r3">R3</string>
+    <string name="macropad_macro_record_gamepad_select">SE</string>
+    <string name="macropad_macro_record_gamepad_home">HM</string>
+    <string name="macropad_macro_record_gamepad_start">ST</string>
+    <string name="macropad_macro_record_gamepad_dialog_confirm">Start</string>
+    <string name="macropad_macro_record_gamepad_dialog_title">Gamepad-Aufnahme starten</string>
+    <string name="macropad_macro_record_gamepad_dialog_message">Ein Touch-Gamepad wird auf diesem Bildschirm geöffnet. Deine Berührungen werden als Makro-Schritte aufgenommen und live über das virtuelle Gamepad an den oberen Bildschirm weitergegeben.</string>
+    <string name="macropad_macro_record_gamepad_error_title">Gamepad-Aufnahme nicht verfügbar</string>
+    <string name="macropad_macro_record_gamepad_error_start">Das virtuelle Gamepad konnte nicht gestartet werden. Die Aufnahme wurde nicht begonnen.</string>
+    <string name="cd_record_gamepad">Gamepad-Eingabe aufnehmen</string>
 
     <!-- Idle Pill -->
     <string name="pill_x_close">× schließen</string>

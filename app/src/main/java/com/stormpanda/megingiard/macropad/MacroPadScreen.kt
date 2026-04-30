@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 
@@ -168,6 +169,8 @@ internal fun PadSurface(
 
     // Track which button IDs are currently pressed (from engine)
     val pressedIds by engine.pressedIds.collectAsState()
+    // Track running macro IDs to drive the pulse animation
+    val runningMacroIds by MacroExecutor.runningMacroIds.collectAsState()
 
     Box(
         contentAlignment = Alignment.Center,
@@ -248,6 +251,8 @@ internal fun PadSurface(
             visibleButtons.forEach { btn ->
                 val isDeviceDisabled = MacroPadHitTestEngine.isDeviceDisabled(btn.action, profile)
                 val isPressed = btn.id in pressedIds
+                val isRunning = btn.action is PadAction.Macro &&
+                    (btn.action as PadAction.Macro).macroId in runningMacroIds
                 PadButton(
                     btn              = btn,
                     isPressed        = isPressed,
@@ -255,6 +260,7 @@ internal fun PadSurface(
                     accentColor      = accentColor,
                     isDeviceDisabled = isDeviceDisabled,
                     neutralStyle     = neutralStyle,
+                    isRunning        = isRunning,
                 )
             }
         }
