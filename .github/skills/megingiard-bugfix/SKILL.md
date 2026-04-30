@@ -151,6 +151,8 @@ Perform a static review — no build command:
 - [ ] `SupervisorJob()` for new class-level scopes
 - [ ] Scope cancelled in `onDestroy()`
 - [ ] No suspected compile errors
+- [ ] If the fix touches pure logic in `:core` / `:domain`: a regression test added or updated
+- [ ] `./gradlew :core:test :domain:test` executed and all tests pass
 
 ---
 
@@ -172,5 +174,7 @@ fix: <short imperative summary>
 ## Constraints
 
 - Never run `./gradlew` or any other build command
+- **One exception:** `./gradlew :core:test :domain:test` **must** be run after every fix to verify all unit tests pass. This is the only permitted Gradle invocation.
+- If the fix touches pure logic in `:core` / `:domain`, always write a regression test covering the fixed behaviour. If not testable without major refactoring, document it as a follow-up.
 - Never use `android.util.Log` directly
 - Do not remove or refactor any functionality unrelated to the bug

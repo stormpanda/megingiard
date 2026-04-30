@@ -202,6 +202,9 @@ Perform a static review — no build command:
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY` (for new Services)
 - [ ] `FEATURE.md` updated / created
 - [ ] No suspected compile errors
+- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
+- [ ] Existing tests updated if the change modifies previously-tested behaviour
+- [ ] `./gradlew :core:test :domain:test` executed and all tests pass
 
 ---
 
@@ -225,6 +228,8 @@ feat: <short imperative summary>
 ## Constraints
 
 - Never run `./gradlew` or any other build command
+- **One exception:** `./gradlew :core:test :domain:test` **must** be run after every implementation to verify all unit tests pass. This is the only permitted Gradle invocation.
+- After implementation, always write or update unit tests for new or changed pure logic in `:core` / `:domain`. If logic is not testable without major refactoring, document it as a follow-up task instead of skipping silently.
 - **Always present the plan before implementing** — no silent coding
 - Never remove existing functionality without explicit user approval
 - Do not design features that cross module boundaries in ways that violate the architecture in `docs/ARCHITECTURE.md`

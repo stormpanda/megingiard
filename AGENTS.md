@@ -771,6 +771,24 @@ Existing `accentColor` parameters in older Composables may remain until a future
 > symbol references, type compatibility, and API usage by reading the relevant source
 > files. Flag any suspected compile error as a comment to the operator.
 
+> **Unit test policy:** After every implementation — feature, bug fix, or refactor —
+> the agent **must**:
+>
+> 1. **Write new tests** for any new pure logic in `:core` or `:domain` (pure functions,
+>    data compilers, state machines, serialization round-trips).
+> 2. **Update existing tests** if the change modifies the behaviour or signature of
+>    already-tested code.
+> 3. **Run all tests** via `./gradlew :core:test :domain:test` and report the result.
+>    This is the **only** Gradle command the agent is permitted to run.
+>
+> Tests must be placed in the correct source set:
+>
+> - `:core` pure-JVM tests → `core/src/test/kotlin/`
+> - `:domain` local tests → `domain/src/test/java/`
+>
+> If logic cannot be unit-tested without significant refactoring, state that explicitly
+> as a follow-up task rather than skipping silently.
+
 Before marking a task as done, verify:
 
 - [ ] No `MutableStateFlow` exposed outside its owning singleton
@@ -794,3 +812,6 @@ Before marking a task as done, verify:
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)
+- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
+- [ ] Existing tests updated if the change modifies previously-tested behaviour
+- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (only permitted Gradle command)

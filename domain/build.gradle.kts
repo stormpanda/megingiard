@@ -28,6 +28,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    kotlinOptions {
+        // debounce() carries @FlowPreview in the binary metadata of coroutines 1.8.x
+        // even though the annotation class is no longer exported publicly.
+        // Opt-in globally so no import is needed.
+        freeCompilerArgs += "-opt-in=kotlinx.coroutines.FlowPreview"
+    }
 }
 
 kotlin {

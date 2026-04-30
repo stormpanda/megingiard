@@ -106,6 +106,8 @@ gh api graphql \
 - Do not write code before user approves the implementation plan.
 - Treat reviews, inline comments, issue comments, and unresolved threads as mandatory feedback sources.
 - Perform static validation only; do not run `./gradlew` or build/compile tasks.
+- **One exception:** `./gradlew :core:test :domain:test` **must** be run after every implementation to verify all unit tests pass. This is the only permitted Gradle invocation.
+- After any implementation, write or update unit tests for new or changed pure logic in `:core` / `:domain`. If not testable without major refactoring, document as a follow-up task instead of skipping silently.
 - Keep changes minimal and targeted to requested review items; avoid unrelated refactors.
 - End by proposing a commit message only; do not auto-commit.
 
@@ -123,3 +125,6 @@ Before marking the task done, verify:
 - [ ] `SupervisorJob()` used for class-level scopes
 - [ ] Scope cancelled in `onDestroy()`
 - [ ] No suspected compile errors (verified by static analysis)
+- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
+- [ ] Existing tests updated if the change modifies previously-tested behaviour
+- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (only permitted Gradle command)
