@@ -3,12 +3,8 @@ package com.stormpanda.megingiard.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.keyboard.KbLayout
@@ -57,114 +53,7 @@ private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 private const val TAG = "SettingsManager"
 
 object SettingsManager {
-    private val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
-    private val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
-    private val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
-    private val KEY_SHOW_NAVIGATION_COACH_MARKS = booleanPreferencesKey("show_navigation_coach_marks")
-    private val KEY_SHOW_MIRROR_CONTROL_LABELS = booleanPreferencesKey("show_mirror_control_labels")
-    private val KEY_SHOW_FULLSCREEN_EXIT_HINTS = booleanPreferencesKey("show_fullscreen_exit_hints")
-
-    // Mirror touch projection settings
-    private val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
-    // Mirror session state persistence — "remember" flags
-    private val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
-    private val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
-    private val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_projection")
-    // Mirror session state persistence — saved values (viewport moved to PadLayout.mirrorSaved*)
-
-    // Appearance
-    private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
-
-    // MacroPad settings
-    private val KEY_MACROPAD_PROFILES           = stringPreferencesKey("macropad_profiles")
-    private val KEY_MACROPAD_ACTIVE_PROFILE_ID  = stringPreferencesKey("macropad_active_profile_id")
-
-    // Keyboard settings
-    private val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
-    private val KEY_KB_TRACKPOINT_ENABLED = booleanPreferencesKey("kb_trackpoint_enabled")
-    private val KEY_KB_REPEAT_ENABLED = booleanPreferencesKey("kb_repeat_enabled")
-    private val KEY_KB_FULLSCREEN = booleanPreferencesKey("kb_fullscreen")
-    private val KEY_KB_MOUSE_BTN_POS = stringPreferencesKey("kb_mouse_btn_pos")
-
-    // Language
-    private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
-
-    // Logging
-    private val KEY_LOG_LEVEL = stringPreferencesKey("log_level")
-
-    // Touchpad settings
-    private val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
-    private val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
-    private val KEY_TOUCHPAD_TWO_FINGER_TAP = booleanPreferencesKey("touchpad_two_finger_tap")
-
-    // MacroPad touch recording
-    private val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
-
-    // MacroPad gamepad recording
-    private val KEY_SKIP_GAMEPAD_RECORD_DIALOG = booleanPreferencesKey("skip_gamepad_record_dialog")
-
-    // MacroPad — gamepad face-button label swap (display only, keycodes unchanged)
-    private val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
-
-    // MacroPad ambient display settings
-    private val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
-    private val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
-    private val KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED = booleanPreferencesKey("macropad_ambient_vignette_enabled")
-    private val KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA = floatPreferencesKey("macropad_ambient_vignette_visible_area")
-    private val KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION = floatPreferencesKey("macropad_ambient_vignette_transition")
-    private val KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY = floatPreferencesKey("macropad_ambient_vignette_opacity")
-    private val KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR = intPreferencesKey("macropad_ambient_vignette_color")
-    private val KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE = stringPreferencesKey("macropad_ambient_vignette_shape")
-    private val KEY_MACROPAD_AMBIENT_PREVIEW = booleanPreferencesKey("macropad_ambient_preview")
-    private val KEY_MACROPAD_AMBIENT_APPLY_THEME = booleanPreferencesKey("macropad_ambient_apply_theme")
-
-    private val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
-    private val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
-
-    // ── Section key groups for config export/import ───────────────────────────
-
-    private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
-        KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_THEME_MODE,
-        KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
-        KEY_SHOW_NAVIGATION_COACH_MARKS, KEY_SHOW_MIRROR_CONTROL_LABELS, KEY_SHOW_FULLSCREEN_EXIT_HINTS,
-    )
-    private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
-        KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,
-        KEY_REMEMBER_VIEWPORT, KEY_REMEMBER_LOCK, KEY_REMEMBER_PROJECTION,
-    )
-    private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> = setOf(
-        KEY_TOUCHPAD_USE_MOUSE, KEY_TOUCHPAD_TAP_TO_CLICK, KEY_TOUCHPAD_TWO_FINGER_TAP,
-    )
-    private val KEYBOARD_KEYS: Set<Preferences.Key<*>> = setOf(
-        KEY_KB_LAYOUT, KEY_KB_TRACKPOINT_ENABLED, KEY_KB_REPEAT_ENABLED,
-        KEY_KB_FULLSCREEN, KEY_KB_MOUSE_BTN_POS,
-    )
-    private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
-        KEY_MACROPAD_AMBIENT_ENABLED, KEY_MACROPAD_AMBIENT_DIM,
-        KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED, KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA,
-        KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION, KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY,
-        KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR, KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE,
-        KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
-        KEY_GAMEPAD_SWAP_FACE_BUTTONS,
-    )
-
-    internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(
-        "global" to GLOBAL_KEYS,
-        "mirror" to MIRROR_KEYS,
-        "touchpad" to TOUCHPAD_KEYS,
-        "keyboard" to KEYBOARD_KEYS,
-        "macropad_settings" to MACROPAD_SETTINGS_KEYS,
-    )
-
-    // Reverse lookup: DataStore key name → section name
-    internal val KEY_TO_SECTION: Map<String, String> by lazy {
-        SECTION_MAP.flatMap { (section, keys) -> keys.map { it.name to section } }.toMap()
-    }
-
-    /** Flat map from DataStore key name to the actual typed key instance, used by [importGroupedSettings]. */
-    internal val KEY_BY_NAME: Map<String, Preferences.Key<*>> by lazy {
-        SECTION_MAP.values.flatten().associateBy { it.name }
-    }
+    // Preference keys + section maps live in SettingsKeys.kt (same package, internal).
 
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
