@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 @Suppress("unused")
@@ -99,28 +100,10 @@ internal fun IconPickerDialog(
             .fillMaxSize()
             .background(colors.appBackground),
     ) {
-        // ── Top bar ────────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(colors.surface)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        FullScreenTopBar(
+            title = stringResource(R.string.macropad_icon_picker_title),
+            onDismiss = onDismiss,
         ) {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    stringResource(R.string.macropad_editor_cancel),
-                    color = colors.onSurfaceSecondary,
-                )
-            }
-            Text(
-                text = stringResource(R.string.macropad_icon_picker_title),
-                color = colors.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-            )
             IconButton(onClick = { onSelect(pendingIcon) }) {
                 Icon(
                     imageVector = Icons.Rounded.Check,

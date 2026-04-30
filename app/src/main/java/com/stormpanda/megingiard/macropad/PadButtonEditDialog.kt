@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 import java.util.UUID
@@ -157,28 +158,13 @@ internal fun ButtonEditDialog(
             .fillMaxSize()
             .background(colors.surface),
     ) {
-        // ── Top bar ────────────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(colors.surface)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-            Text(
-                text = if (button == null) stringResource(R.string.macropad_editor_add_button)
-                       else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
-                       else if (button.action is PadAction.AmbientPeek) stringResource(R.string.macropad_action_ambient_peek)
-                       else button.label,
-                color      = colors.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                modifier   = Modifier.weight(1f),
-                textAlign  = TextAlign.Center,
-            )
+        val topBarTitle = when {
+            button == null -> stringResource(R.string.macropad_editor_add_button)
+            button.action is PadAction.TrackpointMove -> stringResource(R.string.macropad_action_trackpoint)
+            button.action is PadAction.AmbientPeek -> stringResource(R.string.macropad_action_ambient_peek)
+            else -> button.label
+        }
+        FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
             TextButton(
                 onClick = {
                     if (isConfirmEnabled) {
