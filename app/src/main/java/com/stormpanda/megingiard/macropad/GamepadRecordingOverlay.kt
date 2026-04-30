@@ -8,7 +8,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,7 +49,7 @@ import kotlin.math.sqrt
 
 private const val TAG = "GamepadRecordingOverlay"
 private val GRO_PADDING = 16.dp
-private val GRO_STICK_SIZE = 144.dp
+private val GRO_STICK_SIZE = 172.dp
 private val GRO_STICK_THUMB_SIZE = 52.dp
 private val GRO_DPAD_ARROW_SIZE = 48.dp
 private val GRO_FACE_BUTTON_SIZE = 52.dp
@@ -95,183 +94,196 @@ internal fun GamepadRecordingOverlay(
             FaceButtonSpec(GamepadKeycodes.BTN_SOUTH, gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons), Alignment.BottomCenter),
         )
     }
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.appBackground),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.surface)
-                    .padding(horizontal = GRO_PADDING, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        // ── Title bar ──────────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .padding(horizontal = GRO_PADDING, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.macropad_macro_record_gamepad_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            TextButton(onClick = onCancel) {
                 Text(
-                    modifier = Modifier.weight(1f),
-                    text = stringResource(R.string.macropad_macro_record_gamepad_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                TextButton(onClick = onCancel) {
-                    Text(
-                        text = stringResource(R.string.macropad_macro_record_gamepad_cancel),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-                TextButton(onClick = onStop) {
-                    Text(
-                        text = stringResource(R.string.macropad_macro_record_gamepad_stop),
-                        color = colors.accent,
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-            // Controls strip — symmetric single row:
-            // [LB (outer) | LT (inner)]  …  [SE | ST]  …  [RT (inner) | RB (outer)]
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = GRO_PADDING, vertical = GRO_CLUSTER_SPACING),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING)) {
-                    ShoulderButton(
-                        iconName = "game_bumper_left",
-                        pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TL),
-                        code = GamepadKeycodes.BTN_TL,
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                    ShoulderButton(
-                        iconName = "game_trigger_left",
-                        pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TL2),
-                        code = GamepadKeycodes.BTN_TL2,
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(GRO_CLUSTER_SPACING)) {
-                    CenterControlButton(
-                        label = stringResource(R.string.macropad_macro_record_gamepad_select),
-                        code = GamepadKeycodes.BTN_SELECT,
-                        isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_SELECT),
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                    CenterControlButton(
-                        label = stringResource(R.string.macropad_macro_record_gamepad_start),
-                        code = GamepadKeycodes.BTN_START,
-                        isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_START),
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING)) {
-                    ShoulderButton(
-                        iconName = "game_trigger_right",
-                        pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR2),
-                        code = GamepadKeycodes.BTN_TR2,
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                    ShoulderButton(
-                        iconName = "game_bumper_right",
-                        pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR),
-                        code = GamepadKeycodes.BTN_TR,
-                        onButtonDown = onButtonDown,
-                        onButtonUp = onButtonUp,
-                    )
-                }
-            }
-            // Sticks area — BoxWithConstraints for proportional horizontal placement only.
-            // D-Pad and Face Cluster are in a dedicated Row below (outside this box).
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-            ) {
-                val w = maxWidth
-                val h = maxHeight
-                val stickHalf = GRO_STICK_SIZE / 2
-
-                // Left stick — center at 16 % horizontal, vertically centered
-                Box(
-                    modifier = Modifier.offset(
-                        x = (w * 0.16f - stickHalf).coerceAtLeast(GRO_PADDING),
-                        y = (h / 2 - stickHalf).coerceAtLeast(0.dp),
-                    ),
-                ) {
-                    StickSurface(
-                        x = state.leftStickX,
-                        y = state.leftStickY,
-                        onChanged = { x, y -> onJoystickChanged(JoystickStick.LEFT, x, y) },
-                    )
-                }
-
-                // Right stick — center at 84 % horizontal, vertically centered
-                Box(
-                    modifier = Modifier.offset(
-                        x = (w * 0.84f - stickHalf).coerceAtMost(w - GRO_STICK_SIZE - GRO_PADDING),
-                        y = (h / 2 - stickHalf).coerceAtLeast(0.dp),
-                    ),
-                ) {
-                    StickSurface(
-                        x = state.rightStickX,
-                        y = state.rightStickY,
-                        onChanged = { x, y -> onJoystickChanged(JoystickStick.RIGHT, x, y) },
-                    )
-                }
-            }
-            // D-Pad and Face Cluster row — directly above L3/R3
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = GRO_PADDING, vertical = GRO_CLUSTER_SPACING),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DpadButtons(
-                    dirX = state.dpadDirectionX,
-                    dirY = state.dpadDirectionY,
-                    onChanged = onDpadChanged,
-                )
-                FaceButtonCluster(
-                    buttons = faceButtons,
-                    pressedButtons = state.pressedButtons,
-                    onButtonDown = onButtonDown,
-                    onButtonUp = onButtonUp,
+                    text = stringResource(R.string.macropad_macro_record_gamepad_cancel),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
-            // Bottom row: L3 and R3 at equal edge distances
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = GRO_PADDING, end = GRO_PADDING, bottom = GRO_PADDING),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PressableIconButton(
-                    code = GamepadKeycodes.BTN_THUMBL,
-                    isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_THUMBL),
-                    onButtonDown = onButtonDown,
-                    onButtonUp = onButtonUp,
-                    size = GRO_FACE_BUTTON_SIZE,
-                    label = stringResource(R.string.macropad_macro_record_gamepad_l3),
-                )
-                PressableIconButton(
-                    code = GamepadKeycodes.BTN_THUMBR,
-                    isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_THUMBR),
-                    onButtonDown = onButtonDown,
-                    onButtonUp = onButtonUp,
-                    size = GRO_FACE_BUTTON_SIZE,
-                    label = stringResource(R.string.macropad_macro_record_gamepad_r3),
+            TextButton(onClick = onStop) {
+                Text(
+                    text = stringResource(R.string.macropad_macro_record_gamepad_stop),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
+        }
+        // ── LB + LT group ─────────────────────────────────────────────
+        Row(
+            modifier = Modifier.offset(
+                x = maxWidth * 0.02f,
+                y = maxHeight * 0.12f,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING),
+        ) {
+            ShoulderButton(
+                iconName = "game_bumper_left",
+                pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TL),
+                code = GamepadKeycodes.BTN_TL,
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+            )
+            ShoulderButton(
+                iconName = "game_trigger_left",
+                pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TL2),
+                code = GamepadKeycodes.BTN_TL2,
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+            )
+        }
+        // ── SE + ST group (centered) ───────────────────────────────────
+        Row(
+            modifier = Modifier.offset(
+                x = (maxWidth * 0.5f - GRO_CENTER_BUTTON_WIDTH - GRO_CLUSTER_SPACING / 2)
+                    .coerceAtLeast(0.dp),
+                y = maxHeight * 0.14f,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(GRO_CLUSTER_SPACING),
+        ) {
+            CenterControlButton(
+                label = stringResource(R.string.macropad_macro_record_gamepad_select),
+                code = GamepadKeycodes.BTN_SELECT,
+                isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_SELECT),
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+            )
+            CenterControlButton(
+                label = stringResource(R.string.macropad_macro_record_gamepad_start),
+                code = GamepadKeycodes.BTN_START,
+                isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_START),
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+            )
+        }
+        // ── RB + RT group ──────────────────────────────────────────────
+        Row(
+            modifier = Modifier.offset(
+                x = (maxWidth * 0.98f - GRO_SHOULDER_BUTTON_WIDTH * 2 - GRO_SHOULDER_SPACING)
+                    .coerceAtLeast(0.dp),
+                y = maxHeight * 0.12f,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING),
+        ) {
+            ShoulderButton(
+                iconName = "game_trigger_right",
+                pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR2),
+                code = GamepadKeycodes.BTN_TR2,
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+            )
+            ShoulderButton(
+                iconName = "game_bumper_right",
+                pressed = state.pressedButtons.contains(GamepadKeycodes.BTN_TR),
+                code = GamepadKeycodes.BTN_TR,
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+            )
+        }
+        // ── Left stick — center at 22 % horizontal, 46 % vertical ──────
+        Box(
+            modifier = Modifier.offset(
+                x = (maxWidth * 0.22f - GRO_STICK_SIZE / 2).coerceAtLeast(GRO_PADDING),
+                y = (maxHeight * 0.46f - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
+            ),
+        ) {
+            StickSurface(
+                x = state.leftStickX,
+                y = state.leftStickY,
+                onChanged = { x, y -> onJoystickChanged(JoystickStick.LEFT, x, y) },
+            )
+        }
+        // ── Right stick — center at 78 % horizontal, 46 % vertical ─────
+        Box(
+            modifier = Modifier.offset(
+                x = (maxWidth * 0.78f - GRO_STICK_SIZE / 2)
+                    .coerceAtMost(maxWidth - GRO_STICK_SIZE - GRO_PADDING),
+                y = (maxHeight * 0.46f - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
+            ),
+        ) {
+            StickSurface(
+                x = state.rightStickX,
+                y = state.rightStickY,
+                onChanged = { x, y -> onJoystickChanged(JoystickStick.RIGHT, x, y) },
+            )
+        }
+        // ── D-Pad group — lower-left, below stick centers ──────────────
+        Box(
+            modifier = Modifier.offset(
+                x = maxWidth * 0.04f,
+                y = maxHeight * 0.62f,
+            ),
+        ) {
+            DpadButtons(
+                dirX = state.dpadDirectionX,
+                dirY = state.dpadDirectionY,
+                onChanged = onDpadChanged,
+            )
+        }
+        // ── Face buttons group — lower-right, below stick centers ───────
+        Box(
+            modifier = Modifier.offset(
+                x = (maxWidth * 0.96f - GRO_FACE_CLUSTER_SIZE).coerceAtLeast(0.dp),
+                y = maxHeight * 0.60f,
+            ),
+        ) {
+            FaceButtonCluster(
+                buttons = faceButtons,
+                pressedButtons = state.pressedButtons,
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+            )
+        }
+        // ── L3 ─────────────────────────────────────────────────────────
+        Box(
+            modifier = Modifier.offset(
+                x = maxWidth * 0.04f,
+                y = maxHeight - GRO_FACE_BUTTON_SIZE - GRO_PADDING,
+            ),
+        ) {
+            PressableIconButton(
+                code = GamepadKeycodes.BTN_THUMBL,
+                isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_THUMBL),
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+                size = GRO_FACE_BUTTON_SIZE,
+                label = stringResource(R.string.macropad_macro_record_gamepad_l3),
+            )
+        }
+        // ── R3 ─────────────────────────────────────────────────────────
+        Box(
+            modifier = Modifier.offset(
+                x = (maxWidth * 0.96f - GRO_FACE_BUTTON_SIZE).coerceAtLeast(0.dp),
+                y = maxHeight - GRO_FACE_BUTTON_SIZE - GRO_PADDING,
+            ),
+        ) {
+            PressableIconButton(
+                code = GamepadKeycodes.BTN_THUMBR,
+                isPressed = state.pressedButtons.contains(GamepadKeycodes.BTN_THUMBR),
+                onButtonDown = onButtonDown,
+                onButtonUp = onButtonUp,
+                size = GRO_FACE_BUTTON_SIZE,
+                label = stringResource(R.string.macropad_macro_record_gamepad_r3),
+            )
         }
     }
 }
