@@ -19,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -236,17 +237,20 @@ class MainActivity : ComponentActivity() {
             // With autoStartCapture=false (default) the user must tap "Start mirroring" manually.
             // With autoStartCapture=true the prompt fires once per app session (on resume);
             // declining within a session is respected — the dialog will not re-appear until the next resume.
-            LaunchedEffect(isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
-                if (!promptInFlight && isOnValidScreenLocal && !isCapturing && !userDeclinedCapture) {
-                    AppLog.i(TAG, "launching CaptureRequestActivity on display DEFAULT")
-                    AppStateManager.setPromptInFlight(true)
-                    val options = ActivityOptions.makeBasic()
-                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                    val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            LaunchedEffect(Unit) {
+                snapshotFlow { !promptInFlight && isOnValidScreenLocal && !isCapturing && !userDeclinedCapture }
+                    .collect { shouldLaunch ->
+                        if (shouldLaunch) {
+                            AppLog.i(TAG, "launching CaptureRequestActivity on display DEFAULT")
+                            AppStateManager.setPromptInFlight(true)
+                            val options = ActivityOptions.makeBasic()
+                            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                            val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                            }
+                            startActivity(intent, options.toBundle())
+                        }
                     }
-                    startActivity(intent, options.toBundle())
-                }
             }
 
             // ── Mirror button signals from MacroPad ───────────────────────────────
