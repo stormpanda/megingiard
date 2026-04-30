@@ -88,6 +88,16 @@ Check off items as they are completed.
   - `domain/.../SwipeGestureProcessor` — gesture state machine
   - `domain/.../config/ConfigManager` — schema migration / UUID remap
 
+  **Progress (wave 3):** Bootstrapped JUnit 4 test source set in `:core` and added two test classes:
+  - `core/.../mirror/MirrorCoordinateTransformTest` — 9 tests covering identity mapping, zoom/pan,
+    letterbox boundaries, out-of-bounds, and degenerate inputs.
+  - `core/.../mirror/ViewportMathTest` — 5 tests covering same-ratio, letterbox/pillarbox, square
+    source, and the AYN Thor portrait-into-landscape scenario.
+
+  Remaining targets either need refactor for testability (`MacroExecutor.buildEventList` is private;
+  `SwipeGestureProcessor` calls `AppStateManager` directly) or are deferred (`MacroPadHitTestEngine`,
+  `ConfigManager`).
+
 ---
 
 ## 🟡 Medium
