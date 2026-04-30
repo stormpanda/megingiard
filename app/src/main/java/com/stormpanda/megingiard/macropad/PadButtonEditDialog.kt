@@ -106,7 +106,7 @@ internal fun ButtonEditDialog(
     var buttonSize        by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
     var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
-    var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: iconsFilledState.value) }
+    var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
     val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -432,7 +432,7 @@ internal fun ButtonEditDialog(
                 selectedIcon   = iconName,
                 accentColor    = accentColor,
                 filled         = iconFilled,
-                onFilledChange = { iconFilled = it; iconsFilledState.value = it },
+                onFilledChange = { iconFilled = it },
                 onSelect       = { name -> iconName = name; showIconPicker = false },
                 onDismiss      = { showIconPicker = false },
                 modifier       = Modifier.fillMaxSize(),

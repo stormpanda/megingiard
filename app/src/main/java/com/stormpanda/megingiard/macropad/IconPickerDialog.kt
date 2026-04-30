@@ -62,9 +62,6 @@ private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
 
-/** Process-level singleton: last chosen fill style — persists across dialog re-opens within the session. */
-internal val iconsFilledState = mutableStateOf(true)
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon Picker Dialog
 // ─────────────────────────────────────────────────────────────────────────────
