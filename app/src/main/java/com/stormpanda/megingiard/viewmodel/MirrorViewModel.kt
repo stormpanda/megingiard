@@ -12,6 +12,7 @@ import com.stormpanda.megingiard.mirror.MirrorViewportController
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController
 import com.stormpanda.megingiard.settings.MirrorSettings
+import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
