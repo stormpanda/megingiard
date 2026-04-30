@@ -25,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.config.ConfigManager
@@ -118,25 +119,29 @@ class MainActivity : ComponentActivity() {
         // Collect export/import requests posted by GlobalSettingsScreen (which may be
         // inside MirrorPresentation and thus cannot hold ActivityResultLaunchers itself).
         lifecycleScope.launch {
-            ConfigManager.exportRequest.collect { meta ->
-                if (meta != null) {
-                    pendingExportMetadata = meta
-                    AppStateManager.setFilePickerOpen(true)
-                    createDocumentLauncher.launch(ConfigManager.exportFilename.value)
-                    ConfigManager.clearExportRequest()
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ConfigManager.exportRequest.collect { meta ->
+                    if (meta != null) {
+                        pendingExportMetadata = meta
+                        AppStateManager.setFilePickerOpen(true)
+                        createDocumentLauncher.launch(ConfigManager.exportFilename.value)
+                        ConfigManager.clearExportRequest()
+                    }
                 }
             }
         }
         lifecycleScope.launch {
-            ConfigManager.importRequested.collect { requested ->
-                if (requested) {
-                    AppStateManager.setFilePickerOpen(true)
-                    // Use "*/*" instead of the custom MGRD MIME type: the Android file
-                    // picker (DocumentsUI) does not know the custom MIME type and would
-                    // show an empty list. With "*/*" all files are visible and the user
-                    // can navigate to their .mgrd file.
-                    openDocumentLauncher.launch(arrayOf("*/*"))
-                    ConfigManager.clearImportRequest()
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ConfigManager.importRequested.collect { requested ->
+                    if (requested) {
+                        AppStateManager.setFilePickerOpen(true)
+                        // Use "*/*" instead of the custom MGRD MIME type: the Android file
+                        // picker (DocumentsUI) does not know the custom MIME type and would
+                        // show an empty list. With "*/*" all files are visible and the user
+                        // can navigate to their .mgrd file.
+                        openDocumentLauncher.launch(arrayOf("*/*"))
+                        ConfigManager.clearImportRequest()
+                    }
                 }
             }
         }
