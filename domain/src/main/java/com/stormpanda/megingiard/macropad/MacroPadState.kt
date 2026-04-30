@@ -356,7 +356,7 @@ object MacroPadState {
      * Saves the current mirror viewport (scale and offsets) into the active layout's
      * [PadLayout.mirrorSavedScale/X/Y] fields and persists via [SettingsManager.saveMacroPadData].
      *
-     * Called by [MirrorViewportController] after a debounce when [SettingsManager.rememberViewport] is enabled.
+     * Called by [MirrorViewportController] after a debounce when [com.stormpanda.megingiard.settings.MirrorSettings.rememberViewport] is enabled.
      * A no-op if no active layout is found or the values are unchanged.
      */
     fun saveMirrorViewport(scale: Float, offsetX: Float, offsetY: Float) {

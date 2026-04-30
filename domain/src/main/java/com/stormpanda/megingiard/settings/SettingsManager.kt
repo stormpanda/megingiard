@@ -9,7 +9,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -86,10 +85,7 @@ object SettingsManager {
     private val _showFullscreenExitHints = MutableStateFlow(true)
     val showFullscreenExitHints: StateFlow<Boolean> = _showFullscreenExitHints.asStateFlow()
 
-    // Mirror touch projection — pinch-to-zoom while projecting
-    private val _pinchWhileProjecting = MutableStateFlow(false)
-    val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
-
+    // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
     // Touchpad settings live in [TouchpadSettings].
 
@@ -100,16 +96,6 @@ object SettingsManager {
     // MacroPad gamepad recording — skip confirmation dialog after first use
     private val _skipGamepadRecordDialog = MutableStateFlow(false)
     val skipGamepadRecordDialog: StateFlow<Boolean> = _skipGamepadRecordDialog.asStateFlow()
-
-    // Mirror session state persistence — whether each aspect is remembered
-    private val _rememberViewport = MutableStateFlow(false)
-    val rememberViewport: StateFlow<Boolean> = _rememberViewport.asStateFlow()
-
-    private val _rememberLock = MutableStateFlow(false)
-    val rememberLock: StateFlow<Boolean> = _rememberLock.asStateFlow()
-
-    private val _rememberProjection = MutableStateFlow(false)
-    val rememberProjection: StateFlow<Boolean> = _rememberProjection.asStateFlow()
 
     // App language
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
@@ -136,6 +122,7 @@ object SettingsManager {
         KeyboardSettings.init(dataStore, scope)
         TouchpadSettings.init(dataStore, scope)
         AmbientSettings.init(dataStore, scope)
+        MirrorSettings.init(dataStore, scope)
 
         // Debounced MacroPad save — coalesces rapid drag-frame emissions into a
         // single DataStore write 500 ms after the last call to saveMacroPadData().
@@ -158,10 +145,7 @@ object SettingsManager {
                 _showNavigationCoachMarks.value = prefs[KEY_SHOW_NAVIGATION_COACH_MARKS] ?: true
                 _showMirrorControlLabels.value = prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] ?: false
                 _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
-                _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
-                _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
-                _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
-                _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
+                MirrorSettings.loadFrom(prefs)
                 KeyboardSettings.loadFrom(prefs)
                 TouchpadSettings.loadFrom(prefs)
                 _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
@@ -251,37 +235,7 @@ object SettingsManager {
         }
     }
 
-    fun setPinchWhileProjecting(value: Boolean) {
-        AppLog.d(TAG, "setPinchWhileProjecting($value)")
-        _pinchWhileProjecting.value = value
-        scope.launch {
-            dataStore.edit { prefs -> prefs[KEY_PINCH_WHILE_PROJECTING] = value }
-        }
-    }
-
-    fun setRememberViewport(value: Boolean) {
-        AppLog.d(TAG, "setRememberViewport($value)")
-        _rememberViewport.value = value
-        scope.launch {
-            dataStore.edit { prefs -> prefs[KEY_REMEMBER_VIEWPORT] = value }
-        }
-    }
-
-    fun setRememberLock(value: Boolean) {
-        AppLog.d(TAG, "setRememberLock($value)")
-        _rememberLock.value = value
-        scope.launch {
-            dataStore.edit { prefs -> prefs[KEY_REMEMBER_LOCK] = value }
-        }
-    }
-
-    fun setRememberProjection(value: Boolean) {
-        AppLog.d(TAG, "setRememberProjection($value)")
-        _rememberProjection.value = value
-        scope.launch {
-            dataStore.edit { prefs -> prefs[KEY_REMEMBER_PROJECTION] = value }
-        }
-    }
+    // Mirror setters + session save/restore live in [MirrorSettings].
 
     fun setAppLanguage(value: AppLanguage) {
         AppLog.d(TAG, "setAppLanguage($value)")
@@ -343,53 +297,7 @@ object SettingsManager {
         }
     }
 
-    /** Persists the current mirror session state for aspects the user opted to remember. */
-    fun saveMirrorSessionState() {
-        AppLog.d(TAG, "saveMirrorSessionState")
-        // Capture ALL values synchronously on the calling thread (main) BEFORE
-        // resetMirrorSessionState() zeroes them out — including the remember-flags,
-        // so the async lambda never reads stale StateFlow state.
-        val locked = ScreenCaptureManager.isLocked.value
-        val projection = ScreenCaptureManager.isTouchProjectionActive.value
-        val rememberLock = _rememberLock.value
-        val rememberProjection = _rememberProjection.value
-        scope.launch {
-            dataStore.edit { prefs ->
-                if (rememberLock) {
-                    prefs[KEY_SAVED_LOCKED] = locked
-                }
-                if (rememberProjection) {
-                    prefs[KEY_SAVED_PROJECTION] = projection
-                }
-            }
-        }
-    }
-
-    /**
-     * Restores previously saved mirror session state into [ScreenCaptureManager].
-     * Only restores aspects the user opted to remember.
-     * Viewport is NOT restored here — it is now stored per layout in [MacroPadState]
-     * and restored via [MirrorViewportController.restoreFromLayout].
-     *
-     * This is a **suspend** function so the caller can wait for the DataStore read
-     * to complete before syncing UI state (e.g. Animatable values).
-     */
-    suspend fun restoreMirrorSessionState() {
-        AppLog.i(TAG, "restoreMirrorSessionState")
-        // Read the entire prefs snapshot once and derive both the remember-flags
-        // and the saved values from it.  This avoids any race with the async init
-        // block that populates the in-memory StateFlows (_rememberViewport etc.),
-        // which may not have loaded yet when this is called on first capture start.
-        val prefs = dataStore.data
-            .catch { emit(emptyPreferences()) }
-            .first()
-        if (prefs[KEY_REMEMBER_LOCK] ?: false) {
-            prefs[KEY_SAVED_LOCKED]?.let { ScreenCaptureManager.setLocked(it) }
-        }
-        if (prefs[KEY_REMEMBER_PROJECTION] ?: false) {
-            prefs[KEY_SAVED_PROJECTION]?.let { ScreenCaptureManager.setTouchProjectionActive(it) }
-        }
-    }
+    // Mirror session state save/restore lives in [MirrorSettings].
 
     // ── Bulk export/import for config files ──────────────────────────────────
 

@@ -253,14 +253,14 @@ Users can opt in to persisting specific mirror session states across restarts vi
 **Save flow:**
 
 - **Viewport (scale, offsetX, offsetY):** All gesture paths (main pan/zoom and viewport-edit overlay) route through `MirrorViewportController.applyZoomPan()` / `setValues()`. The controller combines `_scale/_offsetX/_offsetY` with `activeLayout.id`, forwards every change to `ScreenCaptureManager` (immediate), and after a **300 ms debounce** calls `MacroPadState.saveMirrorViewport(layoutId, scale, offsetX, offsetY)` — which writes to that exact layout and triggers `SettingsManager.saveMacroPadData()`.
-- **Lock and touch-projection:** Tracked via `combine()` in a separate coroutine in `MirrorViewportController.startPersistence()`. **`distinctUntilChanged()`** prevents duplicate writes. **`drop(1)`** skips the initial emission. State is persisted immediately (no debounce) to `SettingsManager.saveMirrorSessionState()`.
-- **On Stop:** `SettingsManager.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()` to ensure lock/projection state is persisted before the flows reset. Viewport is already persisted via the debounce path.
+- **Lock and touch-projection:** Tracked via `combine()` in a separate coroutine in `MirrorViewportController.startPersistence()`. **`distinctUntilChanged()`** prevents duplicate writes. **`drop(1)`** skips the initial emission. State is persisted immediately (no debounce) to `MirrorSettings.saveMirrorSessionState()`.
+- **On Stop:** `MirrorSettings.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()` to ensure lock/projection state is persisted before the flows reset. Viewport is already persisted via the debounce path.
 
 `MirrorViewportController.startPersistence()` is started in `ScreenCaptureService` scope (not ViewModel scope), so persistence survives UI recomposition and works for the whole capture session.
 
 **Restore flow:** `ScreenCaptureService.onStartCommand()` launches a coroutine that:
 
-1. Calls `SettingsManager.restoreMirrorSessionState()` — restores lock/projection state into `ScreenCaptureManager`.
+1. Calls `MirrorSettings.restoreMirrorSessionState()` — restores lock/projection state into `ScreenCaptureManager`.
 2. Calls `MirrorViewportController.restoreFromLayout()` — reads the active `PadLayout.mirrorSaved*` fields and applies them to `MirrorViewportController` and `ScreenCaptureManager`.
 3. Calls `ScreenCaptureManager.setCapturing(true)` — signals the UI that capture is active with all values already in place.
 4. Calls `AppStateManager.setPromptInFlight(false)` and `presentation.show()`.

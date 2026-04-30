@@ -11,7 +11,7 @@ import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.mirror.MirrorViewportController
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,7 +40,7 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val frozenBitmap: StateFlow<Bitmap?> = ScreenCaptureManager.frozenBitmap
     val isLocked: StateFlow<Boolean> = ScreenCaptureManager.isLocked
     val isTouchProjectionActive: StateFlow<Boolean> = ScreenCaptureManager.isTouchProjectionActive
-    val pinchWhileProjecting: StateFlow<Boolean> = SettingsManager.pinchWhileProjecting
+    val pinchWhileProjecting: StateFlow<Boolean> = MirrorSettings.pinchWhileProjecting
 
     // ── Viewport state ──────────────────────────────────────────────────────
     val scale: StateFlow<Float> = MirrorViewportController.scale
