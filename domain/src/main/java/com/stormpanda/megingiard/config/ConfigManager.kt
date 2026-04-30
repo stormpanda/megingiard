@@ -13,9 +13,11 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -223,6 +225,20 @@ object ConfigManager {
     }
 
     // ── Import ───────────────────────────────────────────────────────────────
+
+    /**
+     * Suspend wrapper: reads and parses [uri] on [Dispatchers.IO].
+     * Logs success/failure and returns a [Result].
+     */
+    suspend fun parseImportUri(context: Context, uri: Uri): Result<MegingiardExport> {
+        AppLog.i(TAG, "parseImportUri uri=$uri")
+        return withContext(Dispatchers.IO) {
+            readFromUri(context, uri).also { result ->
+                if (result.isSuccess) AppLog.i(TAG, "parseImportUri succeeded")
+                else AppLog.w(TAG, "parseImportUri failed: ${result.exceptionOrNull()}")
+            }
+        }
+    }
 
     /**
      * Reads a `.mgrd` file from [uri], verifies checksum and schema version.
