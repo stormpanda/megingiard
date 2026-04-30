@@ -54,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
@@ -61,6 +62,7 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import java.time.LocalDate
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -90,17 +92,20 @@ private enum class SettingsSectionFilter {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GlobalSettingsScreen(onBack: () -> Unit) {
-    val accentColorArgb by SettingsManager.accentColor.collectAsState()
+fun GlobalSettingsScreen(
+    onBack: () -> Unit,
+    viewModel: GlobalSettingsViewModel = viewModel(),
+) {
+    val accentColorArgb by viewModel.accentColor.collectAsState()
     val accentColor = Color(accentColorArgb)
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val themeMode by SettingsManager.themeMode.collectAsState()
-    val appLanguage by SettingsManager.appLanguage.collectAsState()
-    val logLevel by SettingsManager.logLevel.collectAsState()
-    val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
-    val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
-    val showFullscreenExitHints by SettingsManager.showFullscreenExitHints.collectAsState()
-    val gamepadSwapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val appLanguage by viewModel.appLanguage.collectAsState()
+    val logLevel by viewModel.logLevel.collectAsState()
+    val showNavigationCoachMarks by viewModel.showNavigationCoachMarks.collectAsState()
+    val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
+    val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
+    val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
@@ -176,7 +181,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             overlayAtBottom = overlayAtBottom,
                             accentColor = effectiveAccent,
                             colors = colors,
-                            onChanged = { SettingsManager.setOverlayAtBottom(it) }
+                            onChanged = { viewModel.setOverlayAtBottom(it) }
                         )
                         HorizontalDivider(color = colors.divider)
                         RememberSettingRow(
@@ -184,7 +189,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             description = stringResource(R.string.settings_show_navigation_coach_marks_desc),
                             checked = showNavigationCoachMarks,
                             accentColor = effectiveAccent,
-                            onCheckedChange = { SettingsManager.setShowNavigationCoachMarks(it) },
+                            onCheckedChange = { viewModel.setShowNavigationCoachMarks(it) },
                         )
                         HorizontalDivider(color = colors.divider)
                         RememberSettingRow(
@@ -192,7 +197,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             description = stringResource(R.string.settings_show_mirror_control_labels_desc),
                             checked = showMirrorControlLabels,
                             accentColor = effectiveAccent,
-                            onCheckedChange = { SettingsManager.setShowMirrorControlLabels(it) },
+                            onCheckedChange = { viewModel.setShowMirrorControlLabels(it) },
                         )
                         HorizontalDivider(color = colors.divider)
                         RememberSettingRow(
@@ -200,21 +205,21 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
                             checked = showFullscreenExitHints,
                             accentColor = effectiveAccent,
-                            onCheckedChange = { SettingsManager.setShowFullscreenExitHints(it) },
+                            onCheckedChange = { viewModel.setShowFullscreenExitHints(it) },
                         )
                         HorizontalDivider(color = colors.divider)
                         LanguagePickerRow(
                             language = appLanguage,
                             accentColor = effectiveAccent,
                             colors = colors,
-                            onChanged = { SettingsManager.setAppLanguage(it) }
+                            onChanged = { viewModel.setAppLanguage(it) }
                         )
                         HorizontalDivider(color = colors.divider)
                         LogLevelPickerRow(
                             logLevel = logLevel,
                             accentColor = effectiveAccent,
                             colors = colors,
-                            onChanged = { SettingsManager.setLogLevel(it) }
+                            onChanged = { viewModel.setLogLevel(it) }
                         )
                         HorizontalDivider(color = colors.divider)
                         RememberSettingRow(
@@ -222,7 +227,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
                             checked = gamepadSwapFaceButtons,
                             accentColor = effectiveAccent,
-                            onCheckedChange = { MacroPadSettings.setGamepadSwapFaceButtons(it) },
+                            onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
                         )
                     }
                 }
@@ -237,7 +242,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
                             themeMode = themeMode,
                             accentColor = effectiveAccent,
                             colors = colors,
-                            onChanged = { SettingsManager.setThemeMode(it) }
+                            onChanged = { viewModel.setThemeMode(it) }
                         )
                         if (themeMode.supportsCustomAccent) {
                             HorizontalDivider(color = colors.divider)
@@ -287,7 +292,7 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
             ColorWheelPicker(
                 initialColor = accentColor,
                 onColorSelected = { color ->
-                    SettingsManager.setAccentColor(color.toArgb())
+                    viewModel.setAccentColor(color.toArgb())
                     showColorPicker = false
                 },
                 onDismiss = { showColorPicker = false }

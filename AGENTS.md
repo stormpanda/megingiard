@@ -116,7 +116,7 @@ com.stormpanda.megingiard [app module]
 ├── touchpad/
 │ └── FullscreenMouseOverlay.kt # Fullscreen relative-mouse overlay (triggered by FullScreenMouse action)
 ├── viewmodel/
-│ ├── MainViewModel.kt # Facade ViewModel: SwipeGestureProcessor, config import helpers
+│ ├── GlobalSettingsViewModel.kt # Settings VM facade (reads/writes SettingsManager + MacroPadSettings)
 │ ├── MirrorViewModel.kt # Mirror state exposure, viewport/touch-injector lifecycle
 │ ├── MacroPadViewModel.kt # Multi-injector lifecycle, MacroPadHitTestEngine factory
 │ └── KeyboardViewModel.kt # Key/mouse injector lifecycle, KeyRepeatController

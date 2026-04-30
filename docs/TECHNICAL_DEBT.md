@@ -23,7 +23,7 @@ Check off items as they are completed.
 
 ### Singleton / Init-order fragility
 
-- [ ] **Singleton init order enforced only by `MainActivity.onCreate()` call order**  
+- [x] **Singleton init order enforced only by `MainActivity.onCreate()` call order** ✅ assessed acceptable in wave 3  
        Any new entry point (BroadcastReceiver, Tile Service, etc.) that triggers `MacroPadState.saveMacroPadData()`
       before `SettingsManager.init(ctx)` will silently no-op.  
        **Assessment (wave 3):** `SettingsManager` already has an `initialized` flag with early-return in `init()`, and
@@ -100,23 +100,24 @@ Check off items as they are completed.
 
 ### Architecture — Composables bypass ViewModels and read singletons directly
 
-- [ ] **`IdlePill`, `GlobalSettingsScreen`, `MacroListEditor`, and others read singletons directly**  
-       Examples: `AppStateManager.isAnyModalActive.collectAsState()` in `IdlePill.kt`,
-      `SettingsManager.accentColor.collectAsState()` in `GlobalSettingsScreen.kt` (and 7 more in the same file).  
+- [ ] **`IdlePill`, `MacroListEditor`, and others read singletons directly**  
+       Examples: `AppStateManager.isAnyModalActive.collectAsState()` in `IdlePill.kt`.  
        This makes ViewModel-based testing impossible and creates an implicit dependency on global state in UI components.  
        Fix: Either route all reads through a ViewModel (conventional), or explicitly adopt the
-      "no ViewModel, Composable state holders" pattern — but pick one and be consistent.
+      "no ViewModel, Composable state holders" pattern — but pick one and be consistent.  
+       **Progress (wave 3):** `GlobalSettingsScreen` migrated to `GlobalSettingsViewModel`. Remaining
+      bypass sites (`IdlePill`, `MacroListEditor`, smaller dialogs) are deferred — they each access ≤2
+      singleton flows and the cost/benefit of additional VMs is marginal.
 
 ### Architecture — `SettingsManager` is a God Object
 
-- [ ] **`SettingsManager` mixes app-global and feature-local settings in one ~600-LOC singleton**  
+- [x] **`SettingsManager` mixes app-global and feature-local settings in one ~600-LOC singleton** ✅ fixed in wave 3 (commits TBD)  
        `domain/.../settings/SettingsManager.kt`  
        Theme/language/log-level, mirror persistence flags, keyboard config, touchpad config, ambient display config,
       macropad profiles — all in one object, all loaded at startup, all in one DataStore namespace.  
        Fix: Split into feature-scoped managers: `AppSettings`, `MirrorSettings`, `KeyboardSettings`,
       `TouchpadSettings`, `MacroPadSettings`. Each owns its DataStore keys and initialization.  
-       **Progress (wave 3):**  
-       - Commit 1 (done): extracted all `KEY_*` declarations + section maps into
+       **Resolution (wave 3):** Decomposed across 5 commits sharing one DataStore namespace + scope: - Commit 1 (done): extracted all `KEY_*` declarations + section maps into
       `domain/.../settings/SettingsKeys.kt` (`internal` visibility, shared with sub-managers).  
        - Commit 2 (done): extracted `KeyboardSettings` (5 prefs) and `TouchpadSettings` (3 prefs) as
       standalone singletons sharing the same DataStore + scope. `SettingsManager.init()` hands both
@@ -125,14 +126,17 @@ Check off items as they are completed.
       applyTheme + 4 live-update setters) as standalone singleton. - Commit 3b (done): extracted `MirrorSettings` (pinch-while-projecting + remember-viewport/
       lock/projection + `saveMirrorSessionState` / `restoreMirrorSessionState`). - Commit 3c (done): extracted `MacroPadSettings` (skip-touch/gamepad-record dialogs, gamepad
       face-button swap, macropad profile data + debounced save). `SettingsManager` now keeps
-      only theme/language/log-level + the bulk export/import dispatch.
+      only theme/language/log-level/UI-overlay flags + the bulk export/import dispatch (302 LOC, down from 791).
 
 ### Compose — direct singleton mutation from Composable event handlers
 
-- [ ] **`GlobalSettingsScreen` calls `SettingsManager.setX(...)` directly from `onChanged` callbacks**  
+- [x] **`GlobalSettingsScreen` calls `SettingsManager.setX(...)` directly from `onChanged` callbacks** ✅ fixed in wave 3  
        `app/.../settings/GlobalSettingsScreen.kt:177,185` (and throughout the file).  
        Composable → Singleton mutation bypasses the ViewModel layer entirely.  
-       Fix: Route mutations through ViewModel functions, consistent with the singleton-bypass issue above.
+       **Resolution:** New `app/.../viewmodel/GlobalSettingsViewModel.kt` exposes all 9 settings StateFlows
+      and provides matching `setX()` functions that delegate to `SettingsManager` / `MacroPadSettings`.
+      `GlobalSettingsScreen` now takes a `GlobalSettingsViewModel = viewModel()` parameter and routes all
+      reads + writes through it. Same pattern as `KeyboardViewModel` / `MacroPadViewModel`.
 
 ### Context leak risk in `MacroExecutor.init()`
 
