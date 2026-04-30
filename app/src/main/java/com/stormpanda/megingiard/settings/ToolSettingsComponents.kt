@@ -31,6 +31,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.SettingLabelColumn
 
 @Suppress("unused")
 private const val TAG = "ToolSettingsComponents"
@@ -63,18 +64,7 @@ internal fun RememberSettingRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = description,
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
+        SettingLabelColumn(label = label, subtitle = description, modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -94,18 +84,11 @@ internal fun LayoutDropdownRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_kb_layout),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.settings_kb_layout_desc),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_kb_layout),
+            subtitle = stringResource(R.string.settings_kb_layout_desc),
+            modifier = Modifier.weight(1f),
+        )
         Box {
             Row(
                 modifier = Modifier
@@ -159,18 +142,11 @@ internal fun MouseBtnPosDropdownRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_kb_mouse_btn_pos),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.settings_kb_mouse_btn_pos_desc),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_kb_mouse_btn_pos),
+            subtitle = stringResource(R.string.settings_kb_mouse_btn_pos_desc),
+            modifier = Modifier.weight(1f),
+        )
         Box {
             Row(
                 modifier = Modifier
@@ -225,10 +201,7 @@ internal fun InputMethodRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
-            Text(text = description, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-        }
+        SettingLabelColumn(label = label, subtitle = description, modifier = Modifier.weight(1f))
         Switch(
             checked = useMouse,
             onCheckedChange = onUseMouseChanged,
@@ -251,18 +224,11 @@ internal fun SliderSettingRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = formatLabel(value),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SettingLabelColumn(
+            label = label,
+            subtitle = formatLabel(value),
+            modifier = Modifier.weight(1f),
+        )
         Slider(
             modifier = Modifier.weight(2f),
             value = value,

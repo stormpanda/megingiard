@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.SettingLabelColumn
 import java.util.Locale
 
 @Suppress("unused")
@@ -120,18 +121,12 @@ internal fun ThemePickerRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_theme),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = stringResource(themeMode.displayNameResId()),
-                color = accentColor,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_theme),
+            subtitle = stringResource(themeMode.displayNameResId()),
+            subtitleColor = accentColor,
+            modifier = Modifier.weight(1f),
+        )
         Box {
             Icon(
                 imageVector = Icons.Rounded.ArrowDropDown,
@@ -225,18 +220,12 @@ internal fun LogLevelPickerRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_log_level),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = logLevel.displayName(),
-                color = accentColor,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_log_level),
+            subtitle = logLevel.displayName(),
+            subtitleColor = accentColor,
+            modifier = Modifier.weight(1f),
+        )
         Box {
             Icon(
                 imageVector = Icons.Rounded.ArrowDropDown,
@@ -285,18 +274,12 @@ internal fun LanguagePickerRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.settings_language),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = stringResource(language.displayNameResId()),
-                color = accentColor,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_language),
+            subtitle = stringResource(language.displayNameResId()),
+            subtitleColor = accentColor,
+            modifier = Modifier.weight(1f),
+        )
         Box {
             Icon(
                 imageVector = Icons.Rounded.ArrowDropDown,
@@ -353,18 +336,7 @@ internal fun ConfigActionRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text = description,
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        SettingLabelColumn(label = label, subtitle = description, modifier = Modifier.weight(1f))
         Icon(
             imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
             contentDescription = null,
