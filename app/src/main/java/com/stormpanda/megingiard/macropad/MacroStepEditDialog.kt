@@ -46,7 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
@@ -127,7 +127,7 @@ internal fun MacroStepEditDialog(
     onDismiss:   () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
     // ── Derive initial state from the existing step ───────────────────────────
     val initialType = when (step) {

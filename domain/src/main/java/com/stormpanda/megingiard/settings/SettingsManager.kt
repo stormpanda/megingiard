@@ -7,23 +7,15 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.PadProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -33,7 +25,6 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
-private const val MACROPAD_SAVE_DEBOUNCE_MS = 500L
 
 /** Per-app language preference. [SYSTEM] follows the device locale. */
 enum class AppLanguage { SYSTEM, EN, DE }
@@ -54,15 +45,6 @@ object SettingsManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
-
-    /** Receives save-trigger signals; debounced collector writes to DataStore. */
-    private val _macroPadSaveRequests = MutableSharedFlow<Unit>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
-
-    private val macropadJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val _autoStartCapture = MutableStateFlow(false)
     val autoStartCapture: StateFlow<Boolean> = _autoStartCapture.asStateFlow()
@@ -88,14 +70,8 @@ object SettingsManager {
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
     // Touchpad settings live in [TouchpadSettings].
-
-    // MacroPad touch recording — skip confirmation dialog after first use
-    private val _skipTouchRecordDialog = MutableStateFlow(false)
-    val skipTouchRecordDialog: StateFlow<Boolean> = _skipTouchRecordDialog.asStateFlow()
-
-    // MacroPad gamepad recording — skip confirmation dialog after first use
-    private val _skipGamepadRecordDialog = MutableStateFlow(false)
-    val skipGamepadRecordDialog: StateFlow<Boolean> = _skipGamepadRecordDialog.asStateFlow()
+    // MacroPad ambient display settings live in [AmbientSettings].
+    // MacroPad recording dialogs + gamepad-swap + macropad profile data live in [MacroPadSettings].
 
     // App language
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM)
@@ -105,13 +81,6 @@ object SettingsManager {
     private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
     val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
 
-    // MacroPad ambient display settings live in [AmbientSettings].
-
-    // Gamepad face-button label swap (display only — injected keycodes stay unchanged)
-    private val _gamepadSwapFaceButtons = MutableStateFlow(false)
-    val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
-
-    @OptIn(kotlinx.coroutines.FlowPreview::class)
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -123,14 +92,7 @@ object SettingsManager {
         TouchpadSettings.init(dataStore, scope)
         AmbientSettings.init(dataStore, scope)
         MirrorSettings.init(dataStore, scope)
-
-        // Debounced MacroPad save — coalesces rapid drag-frame emissions into a
-        // single DataStore write 500 ms after the last call to saveMacroPadData().
-        scope.launch {
-            _macroPadSaveRequests
-                .debounce(MACROPAD_SAVE_DEBOUNCE_MS)
-                .collect { writeMacroPadDataNow() }
-        }
+        MacroPadSettings.init(dataStore, scope)
 
         scope.launch {
             dataStore.data
@@ -148,23 +110,11 @@ object SettingsManager {
                 MirrorSettings.loadFrom(prefs)
                 KeyboardSettings.loadFrom(prefs)
                 TouchpadSettings.loadFrom(prefs)
-                _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
-                _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                 _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
                 AppLog.level = _logLevel.value
                 AmbientSettings.loadFrom(prefs)
-                _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
-
-                // MacroPad profiles
-                val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
-                if (macropadProfilesJson != null) {
-                    val profiles = runCatching {
-                        macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
-                    }.getOrElse { emptyList() }
-                    val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
-                    MacroPadState.loadFrom(profiles, activeId)
-                }
+                MacroPadSettings.loadFrom(prefs)
             }
         }
     }
@@ -252,50 +202,8 @@ object SettingsManager {
 
     // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].
 
-    fun setSkipTouchRecordDialog(value: Boolean) {
-        AppLog.d(TAG, "setSkipTouchRecordDialog($value)")
-        _skipTouchRecordDialog.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] = value } }
-    }
-
-    fun setSkipGamepadRecordDialog(value: Boolean) {
-        AppLog.d(TAG, "setSkipGamepadRecordDialog($value)")
-        _skipGamepadRecordDialog.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] = value } }
-    }
-
     // MacroPad ambient setters live in [AmbientSettings].
-
-    fun setGamepadSwapFaceButtons(value: Boolean) {
-        AppLog.d(TAG, "setGamepadSwapFaceButtons($value)")
-        _gamepadSwapFaceButtons.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] = value } }
-    }
-
-    /**
-     * Persists the current MacroPad profile list and active profile ID to DataStore.
-     * Called by [MacroPadState] mutators whenever the profile state changes.
-     */
-    /** Schedules a MacroPad data persist. Rapid consecutive calls are coalesced
-     *  — only the last write within [MACROPAD_SAVE_DEBOUNCE_MS] ms reaches DataStore.
-     *  Safe to call on every drag frame from [com.stormpanda.megingiard.macropad.MacroPadState]. */
-    fun saveMacroPadData() {
-        _macroPadSaveRequests.tryEmit(Unit)
-    }
-
-    /** Performs the actual DataStore write. Called exclusively from the debounce collector in [init]. */
-    private suspend fun writeMacroPadDataNow() {
-        val profiles = MacroPadState.profiles.value
-        val activeId = MacroPadState.activeProfileId.value
-        dataStore.edit { prefs ->
-            prefs[KEY_MACROPAD_PROFILES] = macropadJson.encodeToString(profiles)
-            if (activeId != null) {
-                prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID] = activeId
-            } else {
-                prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
-            }
-        }
-    }
+    // MacroPad recording-dialog flags + gamepad-swap setter + saveMacroPadData live in [MacroPadSettings].
 
     // Mirror session state save/restore lives in [MirrorSettings].
 
