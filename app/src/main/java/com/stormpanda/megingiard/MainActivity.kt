@@ -31,7 +31,6 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.macropad.MacroExecutor
-import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
 import androidx.compose.ui.graphics.Color
@@ -112,11 +111,6 @@ class MainActivity : ComponentActivity() {
         // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
-
-        // Initialise R.string resource IDs for the domain-layer MacroPadHitTestEngine.
-        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_KEYBOARD = R.string.macropad_device_disabled_keyboard
-        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_GAMEPAD = R.string.macropad_device_disabled_gamepad
-        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_MOUSE = R.string.macropad_device_disabled_mouse
 
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)

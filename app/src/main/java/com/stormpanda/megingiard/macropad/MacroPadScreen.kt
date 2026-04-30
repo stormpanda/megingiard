@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -72,7 +73,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val profile     by viewModel.activeProfile.collectAsState()
     val layout      by viewModel.activeLayout.collectAsState()
     val colors      = LocalAppColors.current
-    var disabledFeedbackResId by remember { mutableIntStateOf(0) }
+    var disabledFeedback by remember { mutableStateOf<DisabledReason?>(null) }
     var disabledFeedbackTrigger by remember { mutableIntStateOf(0) }
     var lastFeedbackAtMs by remember { mutableLongStateOf(0L) }
 
@@ -108,20 +109,26 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 profile     = p,
                 layout      = l,
                 accentColor = colors.accent,
-                onDisabledActionFeedback = { resId ->
+                onDisabledActionFeedback = { reason ->
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
                     lastFeedbackAtMs = now
-                    disabledFeedbackResId = resId
+                    disabledFeedback = reason
                     disabledFeedbackTrigger += 1
-                    AppLog.d(TAG, "show disabled action feedback: resId=$resId")
+                    AppLog.d(TAG, "show disabled action feedback: $reason")
                 },
             )
         }
 
-        if (disabledFeedbackResId != 0) {
+        val reason = disabledFeedback
+        if (reason != null) {
+            val feedbackText = when (reason) {
+                DisabledReason.KEYBOARD -> stringResource(R.string.macropad_device_disabled_keyboard)
+                DisabledReason.GAMEPAD  -> stringResource(R.string.macropad_device_disabled_gamepad)
+                DisabledReason.MOUSE    -> stringResource(R.string.macropad_device_disabled_mouse)
+            }
             Text(
-                text = stringResource(disabledFeedbackResId),
+                text = feedbackText,
                 color = colors.onSurface,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
@@ -138,7 +145,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(disabledFeedbackTrigger) {
         if (disabledFeedbackTrigger == 0) return@LaunchedEffect
         delay(MP_DISABLED_FEEDBACK_HIDE_MS)
-        disabledFeedbackResId = 0
+        disabledFeedback = null
     }
 }
 
@@ -154,7 +161,7 @@ internal fun PadSurface(
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
     neutralStyle: Boolean = false,
-    onDisabledActionFeedback: (Int) -> Unit = {},
+    onDisabledActionFeedback: (DisabledReason) -> Unit = {},
 ) {
     val viewModel: MacroPadViewModel = viewModel()
     val density      = LocalDensity.current
@@ -212,11 +219,11 @@ internal fun PadSurface(
                                                 w, h, layout.buttons, profile, isPeekActive
                                             )
                                             if (disabledBtn != null) {
-                                                val msgRes = MacroPadHitTestEngine.deviceDisabledMessageRes(
+                                                val reason = MacroPadHitTestEngine.deviceDisabledReason(
                                                     disabledBtn.action, profile
                                                 )
-                                                if (msgRes != null) {
-                                                    onDisabledActionFeedback(msgRes)
+                                                if (reason != null) {
+                                                    onDisabledActionFeedback(reason)
                                                 }
                                             }
                                         }

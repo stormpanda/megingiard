@@ -14,6 +14,13 @@ private const val MP_TRACKPOINT_SENSITIVITY = 3f
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
 
 /**
+ * Reason a MacroPad button tap was blocked — returned instead of an R.string resource ID
+ * so the `:domain` module never references Android resources directly.
+ * The UI layer maps this to a localised string.
+ */
+enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE }
+
+/**
  * Hit-test engine and multi-touch dispatch for MacroPad use-mode.
  *
  * Extracted from [MacroPadScreen.PadSurface]: handles button lookup,
@@ -210,17 +217,15 @@ class MacroPadHitTestEngine(
         }
 
         /**
-         * Returns the R.string resource ID for a "device disabled" toast,
-         * or null if the device is enabled.
-         * NOTE: this references R.string constants which are Int values — the caller
-         * must resolve them to actual strings via `context.getString()`.
+         * Returns the [DisabledReason] for a blocked button tap, or null if the device is enabled.
+         * The caller is responsible for mapping the reason to a localised message.
          */
-        fun deviceDisabledMessageRes(action: PadAction, profile: PadProfile): Int? = when (action) {
-            is PadAction.KeyboardKey -> if (!profile.enableKeyboard) MACROPAD_DEVICE_DISABLED_KEYBOARD else null
-            is PadAction.GamepadButton -> if (!profile.enableGamepad) MACROPAD_DEVICE_DISABLED_GAMEPAD else null
+        fun deviceDisabledReason(action: PadAction, profile: PadProfile): DisabledReason? = when (action) {
+            is PadAction.KeyboardKey -> if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
+            is PadAction.GamepadButton -> if (!profile.enableGamepad) DisabledReason.GAMEPAD else null
             is PadAction.MouseButton,
             is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
+            is PadAction.TrackpointMove -> if (!profile.enableMouse) DisabledReason.MOUSE else null
             is PadAction.Macro -> null
             is PadAction.AmbientPeek -> null
             is PadAction.LayoutNext,
@@ -230,13 +235,8 @@ class MacroPadHitTestEngine(
             is PadAction.MirrorFreeze,
             is PadAction.MirrorViewportEdit,
             is PadAction.MirrorTouchProjection -> null
-            is PadAction.FullScreenMouse -> if (!profile.enableMouse) MACROPAD_DEVICE_DISABLED_MOUSE else null
-            is PadAction.FullScreenKeyboard -> if (!profile.enableKeyboard) MACROPAD_DEVICE_DISABLED_KEYBOARD else null
+            is PadAction.FullScreenMouse -> if (!profile.enableMouse) DisabledReason.MOUSE else null
+            is PadAction.FullScreenKeyboard -> if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
         }
-
-        // These will be set by the app module at init time to match R.string values.
-        var MACROPAD_DEVICE_DISABLED_KEYBOARD = 0
-        var MACROPAD_DEVICE_DISABLED_GAMEPAD = 0
-        var MACROPAD_DEVICE_DISABLED_MOUSE = 0
     }
 }
