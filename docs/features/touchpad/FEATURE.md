@@ -117,7 +117,7 @@ The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY 
 
 ### Secondary Display Rendering (Ambient Mode)
 
-When the MacroPad is in **ambient mode** (`SettingsManager.macropadAmbientEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `AmbientMacroPadOverlay` — so it appears on the secondary display.
+When the MacroPad is in **ambient mode** (`AmbientSettings.macropadAmbientEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `AmbientMacroPadOverlay` — so it appears on the secondary display.
 
 `MainAppScreen` suppresses the `FullscreenMouseOverlay` instance on the primary display whenever ambient mode is active, ensuring only one instance of `MouseInjector` runs at a time.
 

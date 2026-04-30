@@ -60,6 +60,7 @@ import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
@@ -89,7 +90,7 @@ fun MainAppScreen() {
     val isAmbientSettingsActive by AppStateManager.isAmbientSettingsActive.collectAsState()
     val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
     val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
-    val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+    val ambientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
     val density = LocalDensity.current

@@ -20,6 +20,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
+import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -109,7 +110,7 @@ class ScreenCaptureService : Service() {
             presentation.onSurfaceReady = { surface ->
                 currentSurface = surface
                 virtualDisplay?.release()
-                val ambientEnabled = SettingsManager.macropadAmbientEnabled.value
+                val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
                 if (ambientEnabled) {
                     try {
                         val isFrozen = ScreenCaptureManager.isFrozen.value

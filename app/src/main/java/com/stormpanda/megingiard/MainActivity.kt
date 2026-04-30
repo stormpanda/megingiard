@@ -36,6 +36,7 @@ import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
 import androidx.compose.ui.graphics.Color
+import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -213,7 +214,7 @@ class MainActivity : ComponentActivity() {
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
 
-            val macropadAmbientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+            val macropadAmbientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
 
             // Auto-start capture when Ambient Display is enabled.
             // Declining within a session is respected until the next mode entry.

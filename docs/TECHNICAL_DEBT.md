@@ -121,9 +121,13 @@ Check off items as they are completed.
        - Commit 2 (done): extracted `KeyboardSettings` (5 prefs) and `TouchpadSettings` (3 prefs) as
       standalone singletons sharing the same DataStore + scope. `SettingsManager.init()` hands both
       the `dataStore` and `scope` and calls `loadFrom(prefs)` inside the existing collect block.  
-       - Commit 3 (todo): extract `MirrorSettings`, `MacroPadSettings`, `AmbientSettings`. After that
-      `SettingsManager` keeps only theme/language/log-level + macropad profile data + mirror session
-      state.
+       - Commit 3a (done): extracted `AmbientSettings` (10 ambient prefs incl. dim/vignette/preview/
+      applyTheme + 4 live-update setters) as standalone singleton.
+       - Commit 3b (todo): extract `MirrorSettings` (pinch-while-projecting, remember-viewport/lock/
+      projection, plus `saveMirrorSessionState` / `restoreMirrorSessionState`).
+       - Commit 3c (todo): extract `MacroPadSettings` (skip-touch/gamepad-record dialogs, gamepad
+      face-button swap, macropad profile data + debounced save). After that `SettingsManager` keeps
+      only theme/language/log-level + the bulk export/import dispatch.
 
 ### Compose — direct singleton mutation from Composable event handlers
 
