@@ -80,31 +80,34 @@ Check off items as they are completed.
 
 ### Testing
 
-- [ ] **Zero unit tests** — core algorithms cannot be regression-tested  
-       Highest-value targets (all are pure functions or easily isolatable):
+- [x] **Zero unit tests** — core algorithms cannot be regression-tested ✅ fixed in wave 3
+      Highest-value targets (all are pure functions or easily isolatable):
   - `domain/.../macropad/MacroPadHitTestEngine` — button hit-test with varied sizes/positions
   - `core/.../mirror/MirrorCoordinateTransform.projectCoordinates()` — viewport projection math
   - `domain/.../macropad/MacroExecutor.compileSteps()` — timing correctness
   - `domain/.../SwipeGestureProcessor` — gesture state machine
   - `domain/.../config/ConfigManager` — schema migration / UUID remap
 
-  **Progress (wave 3):** Bootstrapped JUnit 4 test source set in `:core` and added four test classes
-  (31 tests total):
-  - `core/.../mirror/MirrorCoordinateTransformTest` — 9 tests covering identity mapping, zoom/pan,
-    letterbox boundaries, out-of-bounds, and degenerate inputs.
-  - `core/.../mirror/ViewportMathTest` — 5 tests covering same-ratio, letterbox/pillarbox, square
-    source, and the AYN Thor portrait-into-landscape scenario.
-  - `core/.../keyboard/KeyboardLayoutTest` — 8 tests covering structural invariants for QWERTZ /
-    QWERTY / AZERTY (6 rows, unique IDs, linuxKeycode in 1..255 per AGENTS.md §9.8, trackpoint
-    sentinel, positive width weights, `findKeyInLayout` lookup, presence of MODIFIER keys).
-  - `core/.../macropad/MacroDataSerializationTest` — 9 tests covering JSON round-trips for all
-    four `MacroStep` subtypes, stability of `@SerialName` discriminators (on-disk schema guard),
-    mixed-step `Macro` round-trip, `endTimeMs` / `totalDurationMs` helpers, and forward-compatible
-    `ignoreUnknownKeys` decode.
+  **Resolution (wave 3):** Bootstrapped JUnit 4 test source sets in `:core` and `:domain`,
+  adding five test classes (50+ tests total):
+  - `core/.../mirror/MirrorCoordinateTransformTest` — 9 tests (viewport projection math)
+  - `core/.../mirror/ViewportMathTest` — 5 tests (aspect-ratio fit)
+  - `core/.../keyboard/KeyboardLayoutTest` — 8 tests (layout structural invariants + §9.8 keycode range)
+  - `core/.../macropad/MacroDataSerializationTest` — 9 tests (JSON round-trips + @SerialName schema guard)
+  - `core/.../macropad/MacroEventCompilerTest` — 13 tests (event compilation, sorting, joystick clamping)
+  - `domain/.../SwipeGestureProcessorTest` — 14 tests (gesture state machine: edge zone, threshold,
+    fire-once-per-gesture, post-release reset, isNearEdge)
 
-  Remaining targets either need refactor for testability (`MacroExecutor.buildEventList` is private;
-  `SwipeGestureProcessor` calls `AppStateManager` directly) or are deferred (`MacroPadHitTestEngine`,
-  `ConfigManager`).
+  `SwipeGestureProcessor` was refactored to accept `onTouchingChanged` and `onEdgeSwipe`
+  callbacks (defaulting to `AppStateManager` calls) so the state machine can be exercised
+  without loading `AppStateManager` or Android framework APIs.
+
+  `MacroExecutor.buildEventList` was extracted as `buildMacroEventList` into
+  `core/.../macropad/MacroEventCompiler.kt` — a pure function with no Android dependencies —
+  and the old private implementation in `:domain` removed.
+
+  Remaining deferred targets (require larger refactor or Android instrumentation):
+  `MacroPadHitTestEngine`, `ConfigManager`.
 
 ---
 
