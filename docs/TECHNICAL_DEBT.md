@@ -121,14 +121,13 @@ Check off items as they are completed.
 
 ### Architecture — Composables bypass ViewModels and read singletons directly
 
-- [ ] **`IdlePill`, `MacroListEditor`, and others read singletons directly**  
+- [x] **`IdlePill`, `MacroListEditor`, and others read singletons directly** ✅ closed in wave 3 — explicit pattern decision  
        Examples: `AppStateManager.isAnyModalActive.collectAsState()` in `IdlePill.kt`.  
        This makes ViewModel-based testing impossible and creates an implicit dependency on global state in UI components.  
        Fix: Either route all reads through a ViewModel (conventional), or explicitly adopt the
       "no ViewModel, Composable state holders" pattern — but pick one and be consistent.  
-       **Progress (wave 3):** `GlobalSettingsScreen` migrated to `GlobalSettingsViewModel`. Remaining
-      bypass sites (`IdlePill`, `MacroListEditor`, smaller dialogs) are deferred — they each access ≤2
-      singleton flows and the cost/benefit of additional VMs is marginal.
+       **Resolution (wave 3):** `GlobalSettingsScreen` migrated to `GlobalSettingsViewModel`. Remaining
+      bypass sites examined; see "Deliberately Not Fixed" table.
 
 ### Architecture — `SettingsManager` is a God Object
 
@@ -190,3 +189,4 @@ Check off items as they are completed.
 | `ActivityResultLauncher` in `ConfigManager`          | Android lifecycle contract requires launchers to be registered in `Activity.onCreate()`. Holding launcher references in `ConfigManager` would require weak references (memory-leak anti-pattern). Current architecture (MainActivity holds launchers, coordinates via ConfigManager) is correct. |
 | `@Immutable` on `:core` data classes                 | Would require adding `androidx.compose.runtime` as a compileOnly dep to `:core`, which leaks a UI-framework dep into the pure-data module. Use Strong-Skipping mode instead (see item in High section).                                                                                          |
 | Display reference lifetime in `ScreenCaptureService` | AYN Thor has fixed hardware; hot-pluggable display scenario is theoretical. Low priority.                                                                                                                                                                                                        |
+| `IdlePill` / `MacroListEditor` singleton reads        | `IdlePill` is rendered in three independent contexts (`MainAppScreen`, `MirrorPresentation`, `AmbientMacroPadOverlay`) with no shared ViewModel scope — ViewModel injection would require threading it through `Presentation` window setup. `MacroListEditor` is a sub-component of `MacroPadEditor` which itself reads `MacroPadState` directly; the CRUD calls are appropriate domain-model interactions, not mutations that bypass business logic. The chosen consistent pattern is: ViewModels for primary feature screens; direct singleton reads for ambient/overlay/editor sub-components. |
