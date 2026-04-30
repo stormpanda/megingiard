@@ -88,11 +88,19 @@ Check off items as they are completed.
   - `domain/.../SwipeGestureProcessor` — gesture state machine
   - `domain/.../config/ConfigManager` — schema migration / UUID remap
 
-  **Progress (wave 3):** Bootstrapped JUnit 4 test source set in `:core` and added two test classes:
+  **Progress (wave 3):** Bootstrapped JUnit 4 test source set in `:core` and added four test classes
+  (31 tests total):
   - `core/.../mirror/MirrorCoordinateTransformTest` — 9 tests covering identity mapping, zoom/pan,
     letterbox boundaries, out-of-bounds, and degenerate inputs.
   - `core/.../mirror/ViewportMathTest` — 5 tests covering same-ratio, letterbox/pillarbox, square
     source, and the AYN Thor portrait-into-landscape scenario.
+  - `core/.../keyboard/KeyboardLayoutTest` — 8 tests covering structural invariants for QWERTZ /
+    QWERTY / AZERTY (6 rows, unique IDs, linuxKeycode in 1..255 per AGENTS.md §9.8, trackpoint
+    sentinel, positive width weights, `findKeyInLayout` lookup, presence of MODIFIER keys).
+  - `core/.../macropad/MacroDataSerializationTest` — 9 tests covering JSON round-trips for all
+    four `MacroStep` subtypes, stability of `@SerialName` discriminators (on-disk schema guard),
+    mixed-step `Macro` round-trip, `endTimeMs` / `totalDurationMs` helpers, and forward-compatible
+    `ignoreUnknownKeys` decode.
 
   Remaining targets either need refactor for testability (`MacroExecutor.buildEventList` is private;
   `SwipeGestureProcessor` calls `AppStateManager` directly) or are deferred (`MacroPadHitTestEngine`,
