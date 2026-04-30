@@ -124,7 +124,19 @@ internal fun GamepadRecordingOverlay(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.appBackground),
+            .background(colors.appBackground)
+            .pointerInput(Unit) {
+                // Block pointer events on empty areas from passing through to
+                // the MacroTimelineEditor content behind this overlay.
+                awaitEachGesture {
+                    awaitFirstDown()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        event.changes.forEach { it.consume() }
+                        if (event.changes.none { it.pressed }) break
+                    }
+                }
+            },
     ) {
         // ── Title bar ──────────────────────────────────────────────────
         Row(
