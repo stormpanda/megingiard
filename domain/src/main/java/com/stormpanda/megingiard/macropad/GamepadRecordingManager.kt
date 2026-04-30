@@ -4,13 +4,11 @@ import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
 import kotlin.math.PI
 import kotlin.math.atan2
-import kotlin.math.sqrt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "GamepadRecordingManager"
-private const val JOYSTICK_DEAD_ZONE = 0.15f
 
 // Full-deflection canonical directions for each of the 8 joystick octants.
 // Index matches joystickOctant(): 0=left, 1=up-left, 2=up, 3=up-right,
@@ -150,9 +148,16 @@ object GamepadRecordingManager {
         updateRecordingState()
     }
 
-    fun setJoystick(stick: JoystickStick, x: Float, y: Float) {
+    /**
+     * Records a joystick movement and returns the snapped (full-deflection, octant-quantised)
+     * axis values that were actually stored. The caller must use these values for live injection
+     * so that the target app sees the same input during recording as it will during playback.
+     *
+     * Returns (0f, 0f) when the stick is at neutral or recording is not active.
+     */
+    fun setJoystick(stick: JoystickStick, x: Float, y: Float): Pair<Float, Float> {
         if (_state.value !is GamepadRecordingState.Recording) {
-            return
+            return 0f to 0f
         }
         val nowMs = relativeElapsedMs(SystemClock.elapsedRealtime())
         when (stick) {
@@ -186,6 +191,10 @@ object GamepadRecordingManager {
             }
         }
         updateRecordingState()
+        return when (stick) {
+            JoystickStick.LEFT -> leftCurrentX to leftCurrentY
+            JoystickStick.RIGHT -> rightCurrentX to rightCurrentY
+        }
     }
 
     private fun updateHat(nowMs: Long, nextX: Int, nextY: Int) {
@@ -225,8 +234,9 @@ object GamepadRecordingManager {
         currentX: Float,
         currentY: Float,
     ): JoystickGesture? {
-        val magnitude = magnitude(currentX, currentY)
-        if (magnitude <= JOYSTICK_DEAD_ZONE) {
+        // A touch surface returns exactly (0, 0) when the finger lifts — no physical drift,
+        // so no dead zone is needed. Only exact neutral ends the active gesture.
+        if (currentX == 0f && currentY == 0f) {
             if (activeGesture != null) {
                 emitJoystickStep(stick = stick, gesture = activeGesture, endMs = nowMs)
             }
@@ -320,8 +330,6 @@ object GamepadRecordingManager {
             rightStickY = rightCurrentY,
         )
     }
-
-    private fun magnitude(x: Float, y: Float): Float = sqrt((x * x) + (y * y))
 
     // Maps a continuous (x, y) stick position to one of 8 octants (0–7, clockwise from right).
     private fun joystickOctant(x: Float, y: Float): Int {

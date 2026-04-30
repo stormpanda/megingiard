@@ -541,16 +541,19 @@ internal fun MacroTimelineEditor(
                     GamepadInjector.hat(axis = 1, value = dirY)
                 },
                 onJoystickChanged = { stick, x, y ->
-                    GamepadRecordingManager.setJoystick(stick, x, y)
+                    // Use the snapped (octant-quantised) values returned by the manager for
+                    // live injection. This ensures the target app sees the same input during
+                    // recording as it will receive during macro playback.
+                    val (snapX, snapY) = GamepadRecordingManager.setJoystick(stick, x, y)
                     when (stick) {
                         JoystickStick.LEFT -> {
-                            GamepadInjector.joystick(GamepadKeycodes.ABS_X, normalizedAxisValue(x))
-                            GamepadInjector.joystick(GamepadKeycodes.ABS_Y, normalizedAxisValue(y))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_X, normalizedAxisValue(snapX))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_Y, normalizedAxisValue(snapY))
                         }
 
                         JoystickStick.RIGHT -> {
-                            GamepadInjector.joystick(GamepadKeycodes.ABS_Z, normalizedAxisValue(x))
-                            GamepadInjector.joystick(GamepadKeycodes.ABS_RZ, normalizedAxisValue(y))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_Z, normalizedAxisValue(snapX))
+                            GamepadInjector.joystick(GamepadKeycodes.ABS_RZ, normalizedAxisValue(snapY))
                         }
                     }
                 },
