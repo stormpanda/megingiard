@@ -19,7 +19,7 @@ internal sealed class MouseCommand {
     data class Wheel(val delta: Int) : MouseCommand()
 }
 
-object ShellMouseInjector : NativeBinaryInjector<MouseCommand>(
+internal object ShellMouseInjector : NativeBinaryInjector<MouseCommand>(
     workerThreadName = "MouseInjectorWriter",
 ) {
     override val tag = "ShellMouseInjector"

@@ -18,7 +18,7 @@ import com.stormpanda.megingiard.input.NativeBinaryInjector
  */
 internal data class KeyCommand(val action: KeyAction, val linuxKeycode: Int)
 
-object ShellKeyInjector : NativeBinaryInjector<KeyCommand>(
+internal object ShellKeyInjector : NativeBinaryInjector<KeyCommand>(
     workerThreadName = "KeyInjectorWriter",
 ) {
     override val tag = "ShellKeyInjector"

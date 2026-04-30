@@ -20,7 +20,7 @@ internal sealed class GamepadCommand {
     data class Joystick(val axisCode: Int, val value: Int) : GamepadCommand()
 }
 
-object ShellGamepadInjector : NativeBinaryInjector<GamepadCommand>(
+internal object ShellGamepadInjector : NativeBinaryInjector<GamepadCommand>(
     workerThreadName = "GamepadInjectorWriter",
 ) {
     override val tag = "ShellGamepadInjector"

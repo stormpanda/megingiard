@@ -19,7 +19,7 @@ package com.stormpanda.megingiard.input
  */
 internal data class TouchCommand(val action: TouchAction, val x: Int, val y: Int)
 
-object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
+internal object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
     workerThreadName = "TouchInjectorWriter",
 ) {
     override val tag = "ShellInputInjector"
