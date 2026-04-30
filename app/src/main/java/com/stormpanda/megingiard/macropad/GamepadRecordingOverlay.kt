@@ -49,7 +49,7 @@ import kotlin.math.sqrt
 
 private const val TAG = "GamepadRecordingOverlay"
 private val GRO_PADDING = 16.dp
-private val GRO_STICK_SIZE = 172.dp
+private val GRO_STICK_SIZE = 148.dp
 private val GRO_STICK_THUMB_SIZE = 52.dp
 private val GRO_DPAD_ARROW_SIZE = 48.dp
 private val GRO_FACE_BUTTON_SIZE = 52.dp
@@ -132,7 +132,7 @@ internal fun GamepadRecordingOverlay(
         Row(
             modifier = Modifier.offset(
                 x = maxWidth * 0.02f,
-                y = maxHeight * 0.12f,
+                y = maxHeight * 0.15f,
             ),
             horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING),
         ) {
@@ -156,7 +156,7 @@ internal fun GamepadRecordingOverlay(
             modifier = Modifier.offset(
                 x = (maxWidth * 0.5f - GRO_CENTER_BUTTON_WIDTH - GRO_CLUSTER_SPACING / 2)
                     .coerceAtLeast(0.dp),
-                y = maxHeight * 0.14f,
+                y = maxHeight * 0.15f,
             ),
             horizontalArrangement = Arrangement.spacedBy(GRO_CLUSTER_SPACING),
         ) {
@@ -180,7 +180,7 @@ internal fun GamepadRecordingOverlay(
             modifier = Modifier.offset(
                 x = (maxWidth * 0.98f - GRO_SHOULDER_BUTTON_WIDTH * 2 - GRO_SHOULDER_SPACING)
                     .coerceAtLeast(0.dp),
-                y = maxHeight * 0.12f,
+                y = maxHeight * 0.15f,
             ),
             horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING),
         ) {
@@ -199,11 +199,11 @@ internal fun GamepadRecordingOverlay(
                 onButtonUp = onButtonUp,
             )
         }
-        // ── Left stick — center at 22 % horizontal, 46 % vertical ──────
+        // ── Left stick — center at 15 % horizontal, 43 % vertical ──────
         Box(
             modifier = Modifier.offset(
-                x = (maxWidth * 0.22f - GRO_STICK_SIZE / 2).coerceAtLeast(GRO_PADDING),
-                y = (maxHeight * 0.46f - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
+                x = (maxWidth * 0.15f - GRO_STICK_SIZE / 2).coerceAtLeast(GRO_PADDING),
+                y = (maxHeight * 0.43f - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
             ),
         ) {
             StickSurface(
@@ -212,12 +212,12 @@ internal fun GamepadRecordingOverlay(
                 onChanged = { x, y -> onJoystickChanged(JoystickStick.LEFT, x, y) },
             )
         }
-        // ── Right stick — center at 78 % horizontal, 46 % vertical ─────
+        // ── Right stick — center at 85 % horizontal, 43 % vertical ─────
         Box(
             modifier = Modifier.offset(
-                x = (maxWidth * 0.78f - GRO_STICK_SIZE / 2)
+                x = (maxWidth * 0.85f - GRO_STICK_SIZE / 2)
                     .coerceAtMost(maxWidth - GRO_STICK_SIZE - GRO_PADDING),
-                y = (maxHeight * 0.46f - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
+                y = (maxHeight * 0.43f - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
             ),
         ) {
             StickSurface(
@@ -229,7 +229,7 @@ internal fun GamepadRecordingOverlay(
         // ── D-Pad group — lower-left, below stick centers ──────────────
         Box(
             modifier = Modifier.offset(
-                x = maxWidth * 0.04f,
+                x = maxWidth * 0.1f,
                 y = maxHeight * 0.62f,
             ),
         ) {
@@ -242,7 +242,7 @@ internal fun GamepadRecordingOverlay(
         // ── Face buttons group — lower-right, below stick centers ───────
         Box(
             modifier = Modifier.offset(
-                x = (maxWidth * 0.96f - GRO_FACE_CLUSTER_SIZE).coerceAtLeast(0.dp),
+                x = (maxWidth * 0.9f - GRO_FACE_CLUSTER_SIZE).coerceAtLeast(0.dp),
                 y = maxHeight * 0.60f,
             ),
         ) {
