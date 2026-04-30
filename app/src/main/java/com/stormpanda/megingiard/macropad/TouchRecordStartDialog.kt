@@ -9,7 +9,7 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppressprivate const val TAG = "TouchRecordStartDialog"
+private const val TAG = "TouchRecordStartDialog"
 
 /**
  * Confirmation dialog shown before the recording mirror is opened.

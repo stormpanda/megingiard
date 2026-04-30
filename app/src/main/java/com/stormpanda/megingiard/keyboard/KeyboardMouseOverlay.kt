@@ -42,7 +42,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppressprivate const val TAG = "KeyboardMouseOverlay"
+private const val TAG = "KeyboardMouseOverlay"
 
 // ---------------------------------------------------------------------------
 // Mouse overlay constants

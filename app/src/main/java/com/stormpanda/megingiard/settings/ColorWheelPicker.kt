@@ -48,7 +48,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-@Suppressprivate const val TAG = "ColorWheelPicker"
+private const val TAG = "ColorWheelPicker"
 
 private val PICKER_CORNER = 16.dp
 private val WHEEL_SIZE = 240.dp

@@ -67,7 +67,7 @@ private data class AmbientInjectorGate(
     val stopMouseAndGamepad: Boolean,
 )
 
-@Suppressprivate const val TAG = "AmbientMacroPadOverlay"
+private const val TAG = "AmbientMacroPadOverlay"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ambient MacroPad Overlay — renders MacroPad buttons over the screen mirror

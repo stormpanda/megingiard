@@ -37,7 +37,7 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
 import java.util.Locale
 
-@Suppressprivate const val TAG = "GlobalSettingsComponents"
+private const val TAG = "GlobalSettingsComponents"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

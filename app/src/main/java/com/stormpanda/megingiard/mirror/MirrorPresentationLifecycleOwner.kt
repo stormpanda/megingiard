@@ -15,7 +15,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
 
-@Suppressprivate const val TAG = "MPresentationLifecycle"
+private const val TAG = "MPresentationLifecycle"
 
 class MirrorPresentationLifecycleOwner(
     private val application: Application

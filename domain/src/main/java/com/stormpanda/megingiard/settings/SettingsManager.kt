@@ -20,10 +20,13 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
@@ -38,6 +41,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
+private const val MACROPAD_SAVE_DEBOUNCE_MS = 500L
 
 /** Per-app language preference. [SYSTEM] follows the device locale. */
 enum class AppLanguage { SYSTEM, EN, DE }
@@ -50,7 +54,7 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 
 private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 
-@Suppressprivate const val TAG = "SettingsManager"
+private const val TAG = "SettingsManager"
 
 object SettingsManager {
     private val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
@@ -167,6 +171,13 @@ object SettingsManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
+
+    /** Receives save-trigger signals; debounced collector writes to DataStore. */
+    private val _macroPadSaveRequests = MutableSharedFlow<Unit>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
 
     private val macropadJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -286,10 +297,19 @@ object SettingsManager {
     private val _gamepadSwapFaceButtons = MutableStateFlow(false)
     val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
 
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
     fun init(context: Context) {
         if (initialized) return
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
+
+        // Debounced MacroPad save — coalesces rapid drag-frame emissions into a
+        // single DataStore write 500 ms after the last call to saveMacroPadData().
+        scope.launch {
+            _macroPadSaveRequests
+                .debounce(MACROPAD_SAVE_DEBOUNCE_MS)
+                .collect { writeMacroPadDataNow() }
+        }
 
         scope.launch {
             dataStore.data
@@ -607,17 +627,23 @@ object SettingsManager {
      * Persists the current MacroPad profile list and active profile ID to DataStore.
      * Called by [MacroPadState] mutators whenever the profile state changes.
      */
+    /** Schedules a MacroPad data persist. Rapid consecutive calls are coalesced
+     *  — only the last write within [MACROPAD_SAVE_DEBOUNCE_MS] ms reaches DataStore.
+     *  Safe to call on every drag frame from [com.stormpanda.megingiard.macropad.MacroPadState]. */
     fun saveMacroPadData() {
+        _macroPadSaveRequests.tryEmit(Unit)
+    }
+
+    /** Performs the actual DataStore write. Called exclusively from the debounce collector in [init]. */
+    private suspend fun writeMacroPadDataNow() {
         val profiles = MacroPadState.profiles.value
         val activeId = MacroPadState.activeProfileId.value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_MACROPAD_PROFILES] = macropadJson.encodeToString(profiles)
-                if (activeId != null) {
-                    prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID] = activeId
-                } else {
-                    prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
-                }
+        dataStore.edit { prefs ->
+            prefs[KEY_MACROPAD_PROFILES] = macropadJson.encodeToString(profiles)
+            if (activeId != null) {
+                prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID] = activeId
+            } else {
+                prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
             }
         }
     }

@@ -11,13 +11,13 @@ Check off items as they are completed.
 ### Architecture / Module boundaries
 
 - [x] **`MacroPadHitTestEngine` stores `R.string.*` IDs as mutable statics** — breaks module boundaries ✅ fixed in commit bff0505
-       `domain/.../macropad/MacroPadHitTestEngine.kt` + `app/.../MainActivity.kt:117-119`  
+      `domain/.../macropad/MacroPadHitTestEngine.kt` + `app/.../MainActivity.kt:117-119`  
        `MainActivity.onCreate()` assigns R.string resource IDs to `var` fields on a `:domain` object.
       Fix: Replace with a sealed class result (e.g. `enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE }`);
       let the UI map `DisabledReason` → `stringResource(...)` at the display site.
 
 - [x] **File-level `mutableStateOf` outside Compose (`iconsFilledState`)** — shared global Compose state ✅ fixed in commit 30e4ca3
-       `app/.../macropad/IconPickerDialog.kt:64`  
+      `app/.../macropad/IconPickerDialog.kt:64`  
        `internal val iconsFilledState = mutableStateOf(true)` survives dialog reopens, is untestable, and is not persisted.
       Fix: Removed; `PadButtonEditDialog` now defaults to `button?.iconFilled ?: true` per dialog open.
 
@@ -26,7 +26,10 @@ Check off items as they are completed.
 - [ ] **Singleton init order enforced only by `MainActivity.onCreate()` call order**  
        Any new entry point (BroadcastReceiver, Tile Service, etc.) that triggers `MacroPadState.saveMacroPadData()`
       before `SettingsManager.init(ctx)` will silently no-op.  
-       Fix: Either guard with an initialised flag, or move to constructor-injected classes instantiated in `Application.onCreate()`.
+       **Assessment (wave 3):** `SettingsManager` already has an `initialized` flag with early-return in `init()`, and
+      `saveMacroPadData()` now emits to a `SharedFlow` whose debounce collector only starts after `init()`. New entry
+      points that skip `init()` will have their save-trigger dropped harmlessly. Risk is considered acceptable;
+      a custom `Application` subclass remains the long-term fix if new entry points are added.
 
 ---
 
@@ -34,44 +37,46 @@ Check off items as they are completed.
 
 ### Compose — state survival
 
-- [ ] **Zero uses of `rememberSaveable` in the entire codebase** — all editor state is lost on process death  
-       Highest-impact locations:
-  - `app/.../macropad/MacroTimelineEditor.kt` — `steps`, `undoStack`, `redoStack`, `loopEnabled`, `loopPauseMs`
-  - `app/.../settings/GlobalSettingsScreen.kt` — `showColorPicker`, `importError`, `importSuccess`, `showRestoreDefaultsConfirm`
-  - `app/.../settings/GlobalSettingsScreen.kt:558-560` — `author`, `description`, `tags` (export metadata dialog)  
-    Fix: Replace `remember { mutableStateOf(...) }` with `rememberSaveable(saver = ...)` for editor and dialog state.
-    UI-ephemeral state (e.g. `expanded` for a dropdown) can stay as `remember`.
+- [x] **Zero uses of `rememberSaveable` in the entire codebase** — all editor state is lost on process death ✅ partially fixed in wave 3  
+       Converted in `GlobalSettingsScreen`: `showColorPicker`, `showExportMetadataDialog`, `importError`,
+      `importSuccess`, `showRestoreDefaultsConfirm` (all primitive/String — no custom Saver needed). Also converted
+      `author`, `description`, `tags` in `ExportMetadataDialog`.  
+       Left as `remember` (require custom Saver or deferred):
+  - `showImportPreviewDialog: MegingiardExport?` — not Parcelable/Serializable
+  - `selectedSectionFilter: SettingsSectionFilter?` — private local enum, UI-ephemeral
+  - `MacroTimelineEditor` — `steps`, `undoStack`, `redoStack` require complex custom Savers; deferred.
 
 ### Compose — Stability
 
 - [x] **Activate Compose Compiler Strong-Skipping mode** ✅ fixed in commit 1419527
-       `app/build.gradle.kts` — added `composeCompiler { featureFlags.add(ComposeFeatureFlag.StrongSkipping) }`.
+      `app/build.gradle.kts` — added `composeCompiler { featureFlags.add(ComposeFeatureFlag.StrongSkipping) }`.
 
 ### Compose — `LaunchedEffect` correctness
 
 - [x] **`LaunchedEffect` with 4 combined keys in `MainActivity`** ✅ fixed in commit 3912c8b
-       Replaced with `LaunchedEffect(Unit) + snapshotFlow { condition }.collect { }` so the block
+      Replaced with `LaunchedEffect(Unit) + snapshotFlow { condition }.collect { }` so the block
       only fires when the combined boolean expression transitions to `true`.
 
 ### Lifecycle — Background collection without `repeatOnLifecycle`
 
 - [x] **`lifecycleScope.launch { .collect { } }` without `repeatOnLifecycle`** ✅ fixed in commit b64c653
-       `app/.../MainActivity.kt` — both ConfigManager collectors now wrapped with
+      `app/.../MainActivity.kt` — both ConfigManager collectors now wrapped with
       `lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED)` so they pause when the Activity is not visible.
 
 ### Event bus using `StateFlow`
 
 - [x] **`ConfigManager.exportRequest` / `importRequested` use `StateFlow` for one-shot commands** ✅ fixed in commit a9a839a
-       Replaced with `MutableSharedFlow(replay=0, extraBufferCapacity=1, DROP_OLDEST)`. Removed
+      Replaced with `MutableSharedFlow(replay=0, extraBufferCapacity=1, DROP_OLDEST)`. Removed
       `clearExportRequest()` and `clearImportRequest()`. Renamed `importRequested` → `importRequest`.
 
 ### DataStore write flood on slider drag
 
-- [ ] **DataStore writes are not debounced — every slider frame triggers a file write**  
-       `domain/.../settings/SettingsManager.kt` — every `setX(value)` calls `scope.launch { dataStore.edit { ... } }` immediately.
-      Slider drag at 60 fps = 60 DataStore writes/sec. `saveMacroPadData()` serializes the entire profile set on every button drag in the editor.  
-       Fix: Add a `debounce(150)` or `throttleLatest` upstream for all "live update" setters
-      (viewport pan/zoom, ambient dim/vignette sliders). Toggle-type setters can remain immediate.
+- [x] **DataStore writes are not debounced — every slider frame triggers a file write** ✅ fixed in wave 3  
+       `domain/.../settings/SettingsManager.kt` — `saveMacroPadData()` now emits to a `MutableSharedFlow<Unit>` with
+      `extraBufferCapacity=1, DROP_OLDEST`; a debounce collector in `init()` coalesces rapid emissions and performs
+      a single `dataStore.edit { }` call 500 ms after the last trigger. Button drag in `PadCanvas` is the primary
+      beneficiary (previously: one `dataStore.edit { }` per drag frame). Slider `updateXxxLive()` methods and
+      `MirrorViewportController.debounce(300ms)` were already correct and remain unchanged.
 
 ### Testing
 
@@ -90,7 +95,7 @@ Check off items as they are completed.
 ### Architecture — `MainViewModel` is pure delegation (no value)
 
 - [x] **`MainViewModel` is a zero-value pass-through** ✅ fixed in commit 730beea
-       `MainViewModel.kt` deleted. `parseImportUri` moved to `ConfigManager.parseImportUri()`.
+      `MainViewModel.kt` deleted. `parseImportUri` moved to `ConfigManager.parseImportUri()`.
       `MainAppScreen` now reads singletons directly.
 
 ### Architecture — Composables bypass ViewModels and read singletons directly
@@ -121,7 +126,7 @@ Check off items as they are completed.
 ### Context leak risk in `MacroExecutor.init()`
 
 - [x] **Verify `MacroExecutor.init(context)` stores `applicationContext`, not the `Activity`** ✅ already correct
-       `MacroExecutor.kt` correctly stores `ctx.applicationContext` — no leak present. No change needed.
+      `MacroExecutor.kt` correctly stores `ctx.applicationContext` — no leak present. No change needed.
 
 ---
 
@@ -130,10 +135,10 @@ Check off items as they are completed.
 ### Code quality
 
 - [x] **`@Suppress("unused")` on `TAG` constants is unnecessary** ✅ fixed in commit 05424f5
-       Removed from all 58 `.kt` files in a single `perl` pass.
+      Removed from all 58 `.kt` files in a single `perl` pass.
 
 - [x] **`LazyColumn` / `LazyRow` key audit** ✅ audited — all lists already have stable keys
-       `MacroPadEditor`, `PillMenu`, `MacroListEditor`, `IconPickerDialog` all use `key = { it.id }` or `key = { it }`.
+      `MacroPadEditor`, `PillMenu`, `MacroListEditor`, `IconPickerDialog` all use `key = { it.id }` or `key = { it }`.
       `PadCanvas` and `AmbientMacroPadOverlay` use no lazy layout. No fix needed.
 
 ---

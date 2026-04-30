@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +65,7 @@ import java.time.LocalDate
 import java.util.Locale
 import kotlinx.coroutines.launch
 
-@Suppressprivate const val TAG = "GlobalSettingsScreen"
+private const val TAG = "GlobalSettingsScreen"
 
 // ── In-tree dialog constants ──────────────────────────────────────────────────
 // Dialogs must NOT use Compose AlertDialog (which creates an Android sub-window)
@@ -103,20 +104,22 @@ fun GlobalSettingsScreen(onBack: () -> Unit) {
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
-    var showColorPicker by remember { mutableStateOf(false) }
+    var showColorPicker by rememberSaveable { mutableStateOf(false) }
     // Export-result feedback (set by ConfigManager after MainActivity writes the file)
     val exportResult by ConfigManager.exportResult.collectAsState()
     // All dialog states are hoisted here so they can be rendered at the top-level Box
     // (in-tree, covering the Scaffold). AlertDialog creates a new Android sub-window
     // whose token is null inside MirrorPresentation → BadTokenException crash.
     val context = LocalContext.current
-    var showExportMetadataDialog by remember { mutableStateOf(false) }
+    var showExportMetadataDialog by rememberSaveable { mutableStateOf(false) }
+    // MegingiardExport is not Parcelable/Serializable — cannot survive process death; keep as remember
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
-    var importError by remember { mutableStateOf<String?>(null) }
-    var importSuccess by remember { mutableStateOf(false) }
+    var importError by rememberSaveable { mutableStateOf<String?>(null) }
+    var importSuccess by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    var showRestoreDefaultsConfirm by remember { mutableStateOf(false) }
+    var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
+    // SettingsSectionFilter is a private local enum — not Parcelable; UI-ephemeral, keep as remember
     var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
 
     Box(
@@ -554,9 +557,9 @@ private fun ExportMetadataDialog(
     onConfirm: (ExportMetadata) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var author by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var tags by remember { mutableStateOf("") }
+    var author by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var tags by rememberSaveable { mutableStateOf("") }
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary,
         unfocusedBorderColor = colors.divider,

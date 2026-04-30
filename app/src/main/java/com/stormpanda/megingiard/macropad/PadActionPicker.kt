@@ -43,7 +43,7 @@ import com.stormpanda.megingiard.macropad.displayShortLabel
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppressprivate const val TAG = "PadActionPicker"
+private const val TAG = "PadActionPicker"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action category enum

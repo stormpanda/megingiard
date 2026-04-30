@@ -38,9 +38,6 @@ android {
     buildFeatures {
         compose = true
     }
-    composeCompiler {
-        featureFlags.add(ComposeFeatureFlag.StrongSkipping)
-    }
 }
 
 kotlin {

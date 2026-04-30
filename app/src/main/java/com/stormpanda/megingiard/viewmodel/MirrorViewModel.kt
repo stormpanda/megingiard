@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@Suppressprivate const val TAG = "MirrorViewModel"
+private const val TAG = "MirrorViewModel"
 private const val MIRROR_CONTROLS_AUTO_HIDE_MS = 5000L
 
 /**

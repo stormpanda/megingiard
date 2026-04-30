@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
-@Suppressprivate const val TAG = "AppStateManager"
+private const val TAG = "AppStateManager"
 
 /** Type of value being live-previewed in ambient settings preview mode. */
 enum class AmbientPreviewType { DIM, VIGNETTE_AREA, VIGNETTE_TRANSITION, VIGNETTE_OPACITY }

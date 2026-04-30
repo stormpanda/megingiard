@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.input
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 
-@Suppressprivate const val TAG = "TouchInjector"
+private const val TAG = "TouchInjector"
 
 /**
  * Shared touch injection facade used by both Touchpad and Mirror Touch Projection.

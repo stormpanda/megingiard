@@ -33,7 +33,7 @@ import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
 
-@Suppressprivate const val TAG = "ToolSettingsComponents"
+private const val TAG = "ToolSettingsComponents"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

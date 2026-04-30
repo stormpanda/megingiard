@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@Suppressprivate const val TAG = "KeyboardViewModel"
+private const val TAG = "KeyboardViewModel"
 
 /**
  * ViewModel for [KeyboardScreen] — manages injector lifecycle, key repeat,

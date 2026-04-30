@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@Suppressprivate const val TAG = "TouchProjectionCtrl"
+private const val TAG = "TouchProjectionCtrl"
 
 /**
  * Gesture state machine for mirror touch projection.

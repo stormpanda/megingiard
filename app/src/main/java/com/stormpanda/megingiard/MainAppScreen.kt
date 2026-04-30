@@ -69,7 +69,7 @@ import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-@Suppressprivate const val TAG = "MainAppScreen"
+private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
 private val MAS_ARROW_SIZE = 56.dp

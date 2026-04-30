@@ -48,7 +48,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
-@Suppressprivate const val TAG = "MainActivity"
+private const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
 

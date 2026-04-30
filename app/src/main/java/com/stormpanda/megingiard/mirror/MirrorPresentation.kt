@@ -82,7 +82,7 @@ import com.stormpanda.megingiard.input.TouchInjector
 
 private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
-@Suppressprivate const val TAG = "MirrorPresentation"
+private const val TAG = "MirrorPresentation"
 
 class MirrorPresentation(
     context: Context, 

@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.keyboard
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 
-@Suppressprivate const val TAG = "KeyInjector"
+private const val TAG = "KeyInjector"
 
 /**
  * Public facade for keyboard event injection.

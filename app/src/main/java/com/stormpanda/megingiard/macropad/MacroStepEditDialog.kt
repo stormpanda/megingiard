@@ -52,7 +52,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-@Suppressprivate const val TAG = "MacroStepEditDialog"
+private const val TAG = "MacroStepEditDialog"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

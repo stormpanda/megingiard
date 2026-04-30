@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@Suppressprivate const val TAG = "TouchRecordingManager"
+private const val TAG = "TouchRecordingManager"
 
 /**
  * Singleton that coordinates the touch-tap recording flow for macro steps.

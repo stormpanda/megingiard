@@ -28,7 +28,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
-@Suppressprivate const val TAG = "ConfigManager"
+private const val TAG = "ConfigManager"
 
 /** Safety cap — reject files larger than 10 MB to prevent OOM. */
 private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024

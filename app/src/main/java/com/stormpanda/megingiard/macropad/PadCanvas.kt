@@ -57,7 +57,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-@Suppressprivate const val TAG = "PadCanvas"
+private const val TAG = "PadCanvas"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

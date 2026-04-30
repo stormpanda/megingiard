@@ -48,7 +48,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppressprivate const val TAG = "IconPickerDialog"
+private const val TAG = "IconPickerDialog"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

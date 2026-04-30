@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.input
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 
-@Suppressprivate const val TAG = "MouseInjector"
+private const val TAG = "MouseInjector"
 
 /**
  * Public facade for mouse injection (clicks + relative pointer movement).

@@ -51,7 +51,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-@Suppressprivate const val TAG = "MacroPadButton"
+private const val TAG = "MacroPadButton"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

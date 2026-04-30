@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@Suppressprivate const val TAG = "MacroPadViewModel"
+private const val TAG = "MacroPadViewModel"
 
 /** Debounce window for injector restart to absorb rapid modal open→close→open sequences. */
 private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L

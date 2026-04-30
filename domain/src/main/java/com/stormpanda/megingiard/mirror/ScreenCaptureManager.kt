@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@Suppressprivate const val TAG = "ScreenCaptureManager"
+private const val TAG = "ScreenCaptureManager"
 
 object ScreenCaptureManager {
     private val _isCapturing = MutableStateFlow(false)

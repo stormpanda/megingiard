@@ -48,7 +48,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-@Suppressprivate const val TAG = "GamepadRecordingOverlay"
+private const val TAG = "GamepadRecordingOverlay"
 private val GRO_PADDING = 16.dp
 private val GRO_STICK_SIZE = 148.dp
 private val GRO_STICK_THUMB_SIZE = 52.dp

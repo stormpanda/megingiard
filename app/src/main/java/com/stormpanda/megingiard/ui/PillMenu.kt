@@ -79,7 +79,7 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
 import java.util.UUID
 
-@Suppressprivate const val TAG = "PillMenu"
+private const val TAG = "PillMenu"
 
 // ── Dimensions ──────────────────────────────────────────────────────────────
 private val PM_PANEL_H_PADDING = 8.dp

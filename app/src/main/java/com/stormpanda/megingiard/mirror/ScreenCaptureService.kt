@@ -27,7 +27,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-@Suppressprivate const val TAG = "ScreenCaptureService"
+private const val TAG = "ScreenCaptureService"
 
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
