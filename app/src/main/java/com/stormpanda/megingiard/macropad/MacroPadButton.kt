@@ -115,17 +115,21 @@ internal fun PadButton(
         animationSpec = tween(animDuration),
         label = "btnAlpha",
     )
-    val infiniteTransition = rememberInfiniteTransition(label = "btnPulse")
-    val runningAlpha by infiniteTransition.animateFloat(
-        initialValue = MP_BTN_RUNNING_PULSE_LOW,
-        targetValue  = MP_BTN_RUNNING_PULSE_HIGH,
-        animationSpec = infiniteRepeatable(
-            animation  = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "btnRunningAlpha",
-    )
-    val alpha = if (isRunning) runningAlpha else pressedAlpha
+    val alpha = if (isRunning) {
+        val infiniteTransition = rememberInfiniteTransition(label = "btnPulse")
+        val runningAlpha by infiniteTransition.animateFloat(
+            initialValue = MP_BTN_RUNNING_PULSE_LOW,
+            targetValue  = MP_BTN_RUNNING_PULSE_HIGH,
+            animationSpec = infiniteRepeatable(
+                animation  = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "btnRunningAlpha",
+        )
+        runningAlpha
+    } else {
+        pressedAlpha
+    }
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f

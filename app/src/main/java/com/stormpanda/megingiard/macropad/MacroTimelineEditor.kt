@@ -61,10 +61,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -78,10 +78,11 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
-import kotlin.math.roundToInt
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "MacroTimelineEditor"
@@ -104,6 +105,10 @@ private const val MT_VIEW_CHIP_V_PADDING = 6
 private const val MT_VIEW_CHIP_SPACING = 6
 private const val MT_TIMING_MAX_MS = 10_000L
 private const val MT_NEW_STEP_START_OFFSET_MS = 2_000L
+
+// Post-start delay before showing the recording overlay: waits for InputFlinger to register
+// the uinput device so early user taps are not silently dropped (mirrors MAC_GAMEPAD_INJECTOR_INIT_MS).
+private const val MT_GAMEPAD_INJECTOR_INIT_MS = 200L
 
 // Loop-pause slider config
 private const val MT_LOOP_PAUSE_INIT_MAX_MS  = 2_000
@@ -216,6 +221,8 @@ internal fun MacroTimelineEditor(
     var loopEnabled by remember { mutableStateOf(macro.loopEnabled) }
     var loopPauseMs by remember { mutableIntStateOf(macro.loopPauseMs) }
     var loopPauseMaxMs by remember { mutableIntStateOf(mtExpandLoopScale(MT_LOOP_PAUSE_INIT_MAX_MS, macro.loopPauseMs).coerceAtLeast(MT_LOOP_PAUSE_INIT_MAX_MS)) }
+    // Tracks whether the recording session started GamepadInjector; guards the matching stop() call.
+    var recordingStartedGamepad by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -230,6 +237,7 @@ internal fun MacroTimelineEditor(
     }
 
     fun startGamepadRecording() {
+        val wasAlreadyRunning = GamepadInjector.isRunning
         GamepadInjector.start(context)
         if (!GamepadInjector.isRunning) {
             AppLog.e(TAG, "gamepad recording overlay aborted because GamepadInjector failed to start")
@@ -238,9 +246,15 @@ internal fun MacroTimelineEditor(
             showGamepadRecordingOverlay = false
             return
         }
-        GamepadRecordingManager.startRecording()
-        showRecordGamepadDialog = false
-        showGamepadRecordingOverlay = true
+        recordingStartedGamepad = !wasAlreadyRunning
+        scope.launch {
+            // Wait for InputFlinger to register the uinput device before showing the overlay,
+            // so early user taps are not silently dropped.
+            delay(MT_GAMEPAD_INJECTOR_INIT_MS)
+            GamepadRecordingManager.startRecording()
+            showRecordGamepadDialog = false
+            showGamepadRecordingOverlay = true
+        }
     }
 
     fun requestTouchRecording() {
@@ -281,7 +295,8 @@ internal fun MacroTimelineEditor(
         pushUndo(steps)
         steps = steps + shiftedSteps
         AppLog.d(TAG, "recordedGamepadAdded count=${shiftedSteps.size} startMs=$nextStart")
-        GamepadInjector.stop()
+        if (recordingStartedGamepad) GamepadInjector.stop()
+        recordingStartedGamepad = false
         GamepadRecordingManager.resetState()
         showGamepadRecordingOverlay = false
     }
@@ -491,12 +506,14 @@ internal fun MacroTimelineEditor(
                         onRecordGamepad = { requestGamepadRecording() },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
+                            // Force loopEnabled=false for test runs: a looping macro would run
+                            // indefinitely in the editor with no obvious way to stop it.
                             MacroExecutor.execute(
                                 macro.copy(
                                     name = localName.trim().ifBlank { macro.name },
                                     steps = steps,
-                                    loopEnabled = loopEnabled,
-                                    loopPauseMs = loopPauseMs,
+                                    loopEnabled = false,
+                                    loopPauseMs = 0,
                                 ),
                             )
                         },
@@ -549,12 +566,14 @@ internal fun MacroTimelineEditor(
                         onRecordGamepad = { requestGamepadRecording() },
                         onRecordTouch = { requestTouchRecording() },
                         onTest = {
+                            // Force loopEnabled=false for test runs: a looping macro would run
+                            // indefinitely in the editor with no obvious way to stop it.
                             MacroExecutor.execute(
                                 macro.copy(
                                     name = localName.trim().ifBlank { macro.name },
                                     steps = steps,
-                                    loopEnabled = loopEnabled,
-                                    loopPauseMs = loopPauseMs,
+                                    loopEnabled = false,
+                                    loopPauseMs = 0,
                                 ),
                             )
                         },
@@ -613,7 +632,8 @@ internal fun MacroTimelineEditor(
                 },
                 onCancel = {
                     scope.launch { GamepadRecordingManager.cancelRecording() }
-                    GamepadInjector.stop()
+                    if (recordingStartedGamepad) GamepadInjector.stop()
+                    recordingStartedGamepad = false
                     showGamepadRecordingOverlay = false
                 },
             )

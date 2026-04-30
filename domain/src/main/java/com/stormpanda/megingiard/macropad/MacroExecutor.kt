@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -96,7 +97,9 @@ object MacroExecutor {
         if (macro.steps.isEmpty()) return
         val ctx = context ?: appContext
         // Cancel any existing execution for this macro before launching a new one.
-        runningJobs.remove(macro.id)?.cancel()
+        // Do NOT remove from the map here — the finally block handles removal via a job-identity
+        // check, preventing the old job's finally from corrupting the new job's state.
+        runningJobs[macro.id]?.cancel()
         AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size} loop=${macro.loopEnabled}")
         val job = scope.launch { executeSuspend(macro, ctx) }
         runningJobs[macro.id] = job
@@ -108,7 +111,8 @@ object MacroExecutor {
      */
     fun stop(macroId: String) {
         AppLog.d(TAG, "stop macroId=$macroId")
-        runningJobs.remove(macroId)?.cancel()
+        // Do NOT remove from the map — let the finally block do it via job-identity check.
+        runningJobs[macroId]?.cancel()
     }
 
     // -------------------------------------------------------------------------
@@ -116,6 +120,18 @@ object MacroExecutor {
     // -------------------------------------------------------------------------
 
     private suspend fun executeSuspend(macro: Macro, context: Context?) {
+        // Capture this coroutine's Job for race-safe map cleanup in finally.
+        val thisJob = coroutineContext[Job]!!
+
+        // Track every input that is currently "live" so we can release them all if execution
+        // is stopped or cancelled mid-sequence. Covers all virtual devices that MacroExecutor
+        // can drive: gamepad (buttons, axes, hat) and touch.
+        val pressedButtons = mutableSetOf<Int>()
+        val activeAxes = mutableMapOf<Int, Int>()    // axis code → last non-zero value
+        var liveHatX = 0
+        var liveHatY = 0
+        var liveTouchPos: Pair<Float, Float>? = null
+
         _runningMacroIds.update { it + macro.id }
         val events = buildEventList(macro)
         val hasTouchEvents = events.any { it.type == MacroEventType.TOUCH_DOWN || it.type == MacroEventType.TOUCH_UP }
@@ -153,7 +169,34 @@ object MacroExecutor {
                     val waitMs = event.timeMs - currentTimeMs
                     if (waitMs > 0L) delay(waitMs)
                     currentTimeMs = event.timeMs
-                    dispatch(event)
+                    // Dispatch and track live input state for cleanup on cancellation.
+                    when (event.type) {
+                        MacroEventType.BUTTON_DOWN -> {
+                            pressedButtons += event.code
+                            GamepadInjector.buttonDown(event.code)
+                        }
+                        MacroEventType.BUTTON_UP -> {
+                            pressedButtons -= event.code
+                            GamepadInjector.buttonUp(event.code)
+                        }
+                        MacroEventType.JOYSTICK_SET -> {
+                            if (event.value != 0) activeAxes[event.code] = event.value
+                            else activeAxes -= event.code
+                            GamepadInjector.joystick(event.code, event.value)
+                        }
+                        MacroEventType.HAT -> {
+                            if (event.code == 0) liveHatX = event.value else liveHatY = event.value
+                            GamepadInjector.hat(axis = event.code, value = event.value)
+                        }
+                        MacroEventType.TOUCH_DOWN -> {
+                            liveTouchPos = Pair(event.normX, event.normY)
+                            TouchInjector.injectTouch(TouchAction.DOWN, event.normX, event.normY)
+                        }
+                        MacroEventType.TOUCH_UP -> {
+                            liveTouchPos = null
+                            TouchInjector.injectTouch(TouchAction.UP, event.normX, event.normY)
+                        }
+                    }
                 }
                 AppLog.d(TAG, "macro '${macro.name}' iteration complete (${events.size} events) loop=${macro.loopEnabled}")
                 if (macro.loopEnabled && macro.loopPauseMs > 0) {
@@ -161,9 +204,16 @@ object MacroExecutor {
                 }
             } while (macro.loopEnabled)
         } finally {
-            AppLog.d(TAG, "macro '${macro.name}' done, cleaning up")
-            _runningMacroIds.update { it - macro.id }
-            runningJobs.remove(macro.id)
+            AppLog.d(TAG, "macro '${macro.name}' done (buttons=${pressedButtons.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${liveTouchPos != null})")
+            // Release all inputs that are still active. This handles early cancellation
+            // (user taps stop mid-sequence) in addition to the normal end-of-sequence reset.
+            pressedButtons.forEach { GamepadInjector.buttonUp(it) }
+            activeAxes.keys.forEach { GamepadInjector.joystick(it, 0) }
+            if (liveHatX != 0 || liveHatY != 0) {
+                GamepadInjector.hat(axis = 0, value = 0)
+                GamepadInjector.hat(axis = 1, value = 0)
+            }
+            liveTouchPos?.let { (x, y) -> TouchInjector.injectTouch(TouchAction.UP, x, y) }
             if (hasTouchEvents) {
                 AppLog.i(TAG, "macro done → stopping TouchInjector")
                 TouchInjector.stop()
@@ -171,6 +221,13 @@ object MacroExecutor {
             if (startedGamepad) {
                 AppLog.i(TAG, "macro done → stopping GamepadInjector")
                 GamepadInjector.stop()
+            }
+            // Race-safe state cleanup: only remove our map entry and running-ID if this job is
+            // still the one registered for this macro. A rapid execute()→execute() restart
+            // replaces the map entry before our finally runs — we must not remove the newer
+            // job or clear its running indicator.
+            if (runningJobs.remove(macro.id, thisJob)) {
+                _runningMacroIds.update { it - macro.id }
             }
         }
     }
@@ -209,14 +266,4 @@ object MacroExecutor {
         return events
     }
 
-    private fun dispatch(event: MacroEvent) {
-        when (event.type) {
-            MacroEventType.BUTTON_DOWN  -> GamepadInjector.buttonDown(event.code)
-            MacroEventType.BUTTON_UP    -> GamepadInjector.buttonUp(event.code)
-            MacroEventType.JOYSTICK_SET -> GamepadInjector.joystick(event.code, event.value)
-            MacroEventType.HAT          -> GamepadInjector.hat(axis = event.code, value = event.value)
-            MacroEventType.TOUCH_DOWN   -> TouchInjector.injectTouch(TouchAction.DOWN, event.normX, event.normY)
-            MacroEventType.TOUCH_UP     -> TouchInjector.injectTouch(TouchAction.UP,   event.normX, event.normY)
-        }
-    }
 }

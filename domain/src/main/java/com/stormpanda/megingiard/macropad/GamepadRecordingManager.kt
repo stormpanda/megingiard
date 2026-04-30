@@ -331,7 +331,7 @@ object GamepadRecordingManager {
         )
     }
 
-    // Maps a continuous (x, y) stick position to one of 8 octants (0–7, clockwise from right).
+    // Maps a continuous (x, y) stick position to one of 8 octants (0–7, clockwise from left).
     private fun joystickOctant(x: Float, y: Float): Int {
         val angle = atan2(y.toDouble(), x.toDouble())
         return (((angle + PI) / (PI / 4)).toInt() % 8).coerceIn(0, 7)

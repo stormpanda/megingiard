@@ -632,16 +632,19 @@ private fun PressableSurface(
                     val down = awaitFirstDown(requireUnconsumed = false)
                     latestOnPress()
                     down.consume()
-                    do {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id }
-                        if (change == null || !change.pressed) {
-                            latestOnRelease()
-                            change?.consume()
-                            break
-                        }
-                        change.consume()
-                    } while (true)
+                    try {
+                        do {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || !change.pressed) {
+                                change?.consume()
+                                break
+                            }
+                            change.consume()
+                        } while (true)
+                    } finally {
+                        latestOnRelease()
+                    }
                 }
             },
         contentAlignment = Alignment.Center,
