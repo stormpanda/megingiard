@@ -13,7 +13,7 @@ package com.stormpanda.megingiard.input
  * Consecutive MM commands are coalesced (keep-latest). Button and wheel
  * events are never dropped.
  */
-private sealed class MouseCommand {
+internal sealed class MouseCommand {
     data class Button(val side: Char, val down: Boolean) : MouseCommand()
     data class Move(val dx: Int, val dy: Int) : MouseCommand()
     data class Wheel(val delta: Int) : MouseCommand()

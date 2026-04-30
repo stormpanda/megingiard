@@ -17,7 +17,7 @@ package com.stormpanda.megingiard.input
  * Consecutive MOVE commands are coalesced (keep-latest) to prevent backlog.
  * DOWN and UP are never dropped.
  */
-private data class TouchCommand(val action: TouchAction, val x: Int, val y: Int)
+internal data class TouchCommand(val action: TouchAction, val x: Int, val y: Int)
 
 object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
     workerThreadName = "TouchInjectorWriter",

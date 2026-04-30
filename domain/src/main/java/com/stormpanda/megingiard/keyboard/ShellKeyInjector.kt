@@ -16,7 +16,7 @@ import com.stormpanda.megingiard.input.NativeBinaryInjector
  * The binary registers KEY bits 1–255 only; codes ≥ 256 (BTN_* device buttons)
  * are rejected so Android classifies the virtual device as KEYBOARD.
  */
-private data class KeyCommand(val action: KeyAction, val linuxKeycode: Int)
+internal data class KeyCommand(val action: KeyAction, val linuxKeycode: Int)
 
 object ShellKeyInjector : NativeBinaryInjector<KeyCommand>(
     workerThreadName = "KeyInjectorWriter",

@@ -14,7 +14,7 @@ import com.stormpanda.megingiard.input.NativeBinaryInjector
  *
  * Every event is delivered in order — no coalescing applied.
  */
-private sealed class GamepadCommand {
+internal sealed class GamepadCommand {
     data class Button(val down: Boolean, val btnCode: Int) : GamepadCommand()
     data class Hat(val axis: Int, val value: Int) : GamepadCommand()
     data class Joystick(val axisCode: Int, val value: Int) : GamepadCommand()
