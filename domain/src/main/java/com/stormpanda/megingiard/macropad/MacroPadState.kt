@@ -14,8 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-@Suppress("unused")
-private const val TAG = "MacroPadState"
+@Suppressprivate const val TAG = "MacroPadState"
 private const val MP_DEFAULT_PROFILE_NAME = "Profile"
 private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
 

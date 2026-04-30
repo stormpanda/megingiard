@@ -7,8 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.roundToInt
 
-@Suppress("unused")
-private const val TAG = "MacroPadHitTest"
+@Suppressprivate const val TAG = "MacroPadHitTest"
 
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
 private const val MP_SCROLL_SENSITIVITY_PX = 12f

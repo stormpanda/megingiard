@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard
 
-@Suppress("unused")
-private const val TAG = "SwipeGestureProcessor"
+@Suppressprivate const val TAG = "SwipeGestureProcessor"
 
 /**
  * Reusable edge-zone swipe detector for revealing the pill menu overlay.

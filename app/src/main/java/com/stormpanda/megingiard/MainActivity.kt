@@ -47,8 +47,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
-@Suppress("unused")
-private const val TAG = "MainActivity"
+@Suppressprivate const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
 

@@ -22,8 +22,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@Suppress("unused")
-private const val TAG = "MacroPadViewModel"
+@Suppressprivate const val TAG = "MacroPadViewModel"
 
 /** Debounce window for injector restart to absorb rapid modal open→close→open sequences. */
 private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L

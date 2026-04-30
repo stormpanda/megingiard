@@ -50,8 +50,7 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 
 private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 
-@Suppress("unused")
-private const val TAG = "SettingsManager"
+@Suppressprivate const val TAG = "SettingsManager"
 
 object SettingsManager {
     private val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")

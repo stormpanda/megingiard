@@ -27,8 +27,7 @@ private const val MAC_ABS_FULL_DEFLECTION = 32768
 // events before InputFlinger registers the device causes them to be silently dropped.
 private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
 
-@Suppress("unused")
-private const val TAG = "MacroExecutor"
+@Suppressprivate const val TAG = "MacroExecutor"
 
 private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_UP }
 

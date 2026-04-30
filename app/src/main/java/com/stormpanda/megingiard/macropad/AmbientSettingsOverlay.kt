@@ -64,8 +64,7 @@ import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
-@Suppress("unused")
-private const val TAG = "AmbientSettingsOverlay"
+@Suppressprivate const val TAG = "AmbientSettingsOverlay"
 
 // ── Slider bounds ───────────────────────────────────────────────────────────
 private const val ASO_DIM_MAX = 0.9f

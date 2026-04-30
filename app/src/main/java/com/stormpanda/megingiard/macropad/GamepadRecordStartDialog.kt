@@ -25,8 +25,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppress("unused")
-private const val TAG = "GamepadRecordStartDialog"
+@Suppressprivate const val TAG = "GamepadRecordStartDialog"
 
 /**
  * Confirmation dialog shown before gamepad macro recording starts.

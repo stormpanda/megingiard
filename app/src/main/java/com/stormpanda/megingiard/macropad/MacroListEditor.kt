@@ -57,8 +57,7 @@ import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-@Suppress("unused")
-private const val TAG = "MacroListEditor"
+@Suppressprivate const val TAG = "MacroListEditor"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

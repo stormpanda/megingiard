@@ -6,8 +6,7 @@ import android.view.Display // hardware abstraction, not a UI component — acce
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 
-@Suppress("unused")
-private const val TAG = "DisplayDetector"
+@Suppressprivate const val TAG = "DisplayDetector"
 
 /**
  * Utility for multi-display detection on the AYN Thor.

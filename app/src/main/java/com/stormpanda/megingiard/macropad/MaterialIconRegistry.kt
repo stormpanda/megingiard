@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
-@Suppress("unused")
-private const val TAG = "MaterialIconRegistry"
+@Suppressprivate const val TAG = "MaterialIconRegistry"
 
 /**
  * Registry for Material Symbol icon names used in the MacroPad feature.

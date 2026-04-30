@@ -9,8 +9,7 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppress("unused")
-private const val TAG = "TouchRecordStartDialog"
+@Suppressprivate const val TAG = "TouchRecordStartDialog"
 
 /**
  * Confirmation dialog shown before the recording mirror is opened.

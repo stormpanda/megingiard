@@ -13,8 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-@Suppress("unused")
-private const val TAG = "TouchpadGestureProc"
+@Suppressprivate const val TAG = "TouchpadGestureProc"
 
 private const val TP_MOUSE_SENSITIVITY = 2f
 private const val TP_TAP_TIMEOUT_MS = 200L

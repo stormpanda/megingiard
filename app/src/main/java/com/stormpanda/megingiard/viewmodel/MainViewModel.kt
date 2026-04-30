@@ -14,8 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 
-@Suppress("unused")
-private const val TAG = "MainViewModel"
+@Suppressprivate const val TAG = "MainViewModel"
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 

@@ -8,8 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@Suppress("unused")
-private const val TAG = "GamepadRecordingManager"
+@Suppressprivate const val TAG = "GamepadRecordingManager"
 
 // Full-deflection canonical directions for each of the 8 joystick octants.
 // Index matches joystickOctant(): 0=left, 1=up-left, 2=up, 3=up-right,

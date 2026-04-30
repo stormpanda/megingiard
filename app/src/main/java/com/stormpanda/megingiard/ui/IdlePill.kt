@@ -27,8 +27,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 
-@Suppress("unused")
-private const val TAG = "IdlePill"
+@Suppressprivate const val TAG = "IdlePill"
 
 // ── Dimensions ──────────────────────────────────────────────────────────────
 private val IP_PILL_TOP_PADDING = 6.dp

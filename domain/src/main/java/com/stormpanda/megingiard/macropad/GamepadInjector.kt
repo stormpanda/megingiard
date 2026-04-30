@@ -3,8 +3,7 @@ package com.stormpanda.megingiard.macropad
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 
-@Suppress("unused")
-private const val TAG = "GamepadInjector"
+@Suppressprivate const val TAG = "GamepadInjector"
 
 /**
  * Public facade for gamepad button injection.

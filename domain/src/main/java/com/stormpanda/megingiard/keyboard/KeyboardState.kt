@@ -5,8 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-@Suppress("unused")
-private const val TAG = "KeyboardState"
+@Suppressprivate const val TAG = "KeyboardState"
 
 /**
  * Three-state lifecycle for a modifier key:
