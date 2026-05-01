@@ -79,9 +79,9 @@ private const val MSD_TIMING_DELTA_BUTTON_V_PADDING = 2
 private const val MSD_TYPE_CHIP_CORNER      = 20
 private const val MSD_TYPE_CHIP_H_PADDING   = 12
 private const val MSD_TYPE_CHIP_V_PADDING   = 6
-private const val MSD_SHIFT_CHIP_CORNER     = 6
-private const val MSD_SHIFT_CHIP_H_PADDING  = 10
-private const val MSD_SHIFT_CHIP_V_PADDING  = 5
+private const val MSD_SHIFT_CHIP_CORNER     = 20
+private const val MSD_SHIFT_CHIP_H_PADDING  = 12
+private const val MSD_SHIFT_CHIP_V_PADDING  = 6
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step type (editor-internal)
@@ -450,13 +450,13 @@ internal fun MacroStepEditDialog(
                 onChange    = { durMs = it },
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(
                         ShiftMode.NONE        to stringResource(R.string.macropad_macro_editor_shift_none),
                         ShiftMode.START_DELTA to stringResource(R.string.macropad_macro_editor_shift_start_delta),
@@ -467,12 +467,12 @@ internal fun MacroStepEditDialog(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(MSD_SHIFT_CHIP_CORNER.dp))
                                 .background(
-                                    if (selected) accentColor.copy(alpha = 0.2f)
-                                    else Color.Transparent
+                                    if (selected) colors.accent.copy(alpha = 0.85f)
+                                    else colors.navPillBody.copy(alpha = 0.5f)
                                 )
                                 .border(
                                     1.dp,
-                                    if (selected) accentColor else accentColor.copy(alpha = 0.4f),
+                                    if (selected) colors.accent else colors.controlOverlayBorder,
                                     RoundedCornerShape(MSD_SHIFT_CHIP_CORNER.dp),
                                 )
                                 .clickable { shiftMode = mode }
@@ -483,7 +483,7 @@ internal fun MacroStepEditDialog(
                         ) {
                             Text(
                                 text       = label,
-                                color      = if (selected) accentColor else colors.onSurfaceSecondary,
+                                color      = if (selected) colors.onAccent else colors.onControlOverlay,
                                 style      = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                             )
