@@ -57,7 +57,6 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-@Suppress("unused")
 private const val TAG = "PadCanvas"
 
 // ─────────────────────────────────────────────────────────────────────────────

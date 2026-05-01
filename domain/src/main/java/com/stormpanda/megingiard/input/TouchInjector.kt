@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.input
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 
-@Suppress("unused")
 private const val TAG = "TouchInjector"
 
 /**

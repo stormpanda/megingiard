@@ -45,9 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppress("unused")
 private const val TAG = "IconPickerDialog"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,9 +60,6 @@ private val IP_PREVIEW_SIZE = 48.dp
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
-
-/** Process-level singleton: last chosen fill style — persists across dialog re-opens within the session. */
-internal val iconsFilledState = mutableStateOf(true)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon Picker Dialog
@@ -99,28 +96,10 @@ internal fun IconPickerDialog(
             .fillMaxSize()
             .background(colors.appBackground),
     ) {
-        // ── Top bar ────────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(colors.surface)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        FullScreenTopBar(
+            title = stringResource(R.string.macropad_icon_picker_title),
+            onDismiss = onDismiss,
         ) {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    stringResource(R.string.macropad_editor_cancel),
-                    color = colors.onSurfaceSecondary,
-                )
-            }
-            Text(
-                text = stringResource(R.string.macropad_icon_picker_title),
-                color = colors.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-            )
             IconButton(onClick = { onSelect(pendingIcon) }) {
                 Icon(
                     imageVector = Icons.Rounded.Check,

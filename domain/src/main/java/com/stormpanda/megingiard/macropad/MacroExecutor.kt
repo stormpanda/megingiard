@@ -17,40 +17,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Scale factor for float axis values (-1..1) → int16 (-32768..32767).
-// Using 32768 so -1.0 maps exactly to -32768; positive side is clamped below.
-private const val MAC_ABS_FULL_DEFLECTION = 32768
-
 // Wait after starting GamepadInjector before the first event dispatch, in milliseconds.
 // start() blocks until the native binary signals "R\n", meaning the uinput fd is opened,
 // but Android's InputFlinger discovers the new virtual device asynchronously. Dispatching
 // events before InputFlinger registers the device causes them to be silently dropped.
 private const val MAC_GAMEPAD_INJECTOR_INIT_MS = 200L
 
-@Suppress("unused")
 private const val TAG = "MacroExecutor"
-
-private enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_UP }
-
-private data class MacroEvent(
-    val timeMs: Long,
-    val type: MacroEventType,
-    val code: Int,
-    val value: Int,
-    val normX: Float = 0f,
-    val normY: Float = 0f,
-)
-
-// "Reset" events (BUTTON_UP, JOYSTICK_SET to 0, HAT to 0) should be dispatched
-// before "set" events that share the same timestamp, to avoid incorrect final state
-// when one step ends exactly as another begins.
-private val MacroEvent.isReset: Boolean get() = when (type) {
-    MacroEventType.BUTTON_UP   -> true
-    MacroEventType.TOUCH_UP    -> true
-    MacroEventType.BUTTON_DOWN -> false
-    MacroEventType.TOUCH_DOWN  -> false
-    MacroEventType.JOYSTICK_SET, MacroEventType.HAT -> value == 0
-}
 
 /**
  * Executes [Macro] sequences by compiling their overlapping [MacroStep] list into a
@@ -134,7 +107,7 @@ object MacroExecutor {
         var liveTouchPos: Pair<Float, Float>? = null
 
         _runningMacroIds.update { it + macro.id }
-        val events = buildEventList(macro)
+        val events = buildMacroEventList(macro)
         val hasTouchEvents = events.any { it.type == MacroEventType.TOUCH_DOWN || it.type == MacroEventType.TOUCH_UP }
         val hasGamepadEvents = events.any {
             it.type == MacroEventType.BUTTON_DOWN || it.type == MacroEventType.BUTTON_UP ||
@@ -231,40 +204,6 @@ object MacroExecutor {
                 _runningMacroIds.update { it - macro.id }
             }
         }
-    }
-
-    private fun buildEventList(macro: Macro): List<MacroEvent> {
-        val events = mutableListOf<MacroEvent>()
-        for (step in macro.steps) {
-            when (step) {
-                is MacroStep.GamepadButtonTap -> {
-                    events += MacroEvent(step.startTimeMs,               MacroEventType.BUTTON_DOWN, step.btnCode, 0)
-                    events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.BUTTON_UP, step.btnCode, 0)
-                }
-                is MacroStep.JoystickMove -> {
-                    val rawX = (step.x.coerceIn(-1f, 1f) * MAC_ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
-                    val rawY = (step.y.coerceIn(-1f, 1f) * MAC_ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
-                    val axisX = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
-                    val axisY = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
-                    events += MacroEvent(step.startTimeMs,               MacroEventType.JOYSTICK_SET, axisX, rawX)
-                    events += MacroEvent(step.startTimeMs,               MacroEventType.JOYSTICK_SET, axisY, rawY)
-                    events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisX, 0)
-                    events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisY, 0)
-                }
-                is MacroStep.DPadTap -> {
-                    events += MacroEvent(step.startTimeMs,               MacroEventType.HAT, 0, step.dirX)
-                    events += MacroEvent(step.startTimeMs,               MacroEventType.HAT, 1, step.dirY)
-                    events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.HAT, 0, 0)
-                    events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.HAT, 1, 0)
-                }
-                is MacroStep.TouchTap -> {
-                    events += MacroEvent(step.startTimeMs,                    MacroEventType.TOUCH_DOWN, 0, 0, step.normX, step.normY)
-                    events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.TOUCH_UP,   0, 0, step.normX, step.normY)
-                }
-            }
-        }
-        events.sortWith(compareBy({ it.timeMs }, { if (it.isReset) 0 else 1 }))
-        return events
     }
 
 }

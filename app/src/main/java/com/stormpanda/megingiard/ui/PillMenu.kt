@@ -79,7 +79,6 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
 import java.util.UUID
 
-@Suppress("unused")
 private const val TAG = "PillMenu"
 
 // ── Dimensions ──────────────────────────────────────────────────────────────

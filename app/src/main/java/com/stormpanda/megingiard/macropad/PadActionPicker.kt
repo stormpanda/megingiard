@@ -40,10 +40,9 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.macropad.displayShortLabel
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 
-@Suppress("unused")
 private const val TAG = "PadActionPicker"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -230,7 +229,7 @@ private fun ActionCategory.isEnabled(
 @Composable
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
-    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
     return when (this) {
         is PadAction.KeyboardKey -> {
             val modLabel = if (modifiers.isEmpty()) label else {
@@ -687,7 +686,7 @@ internal fun GamepadButtonPicker(
     var extra3          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(2)) }
     val colors          = LocalAppColors.current
     val noneLabel       = stringResource(R.string.macropad_modifier_none)
-    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
     val currentPreset = GamepadKeycodes.PRESETS.firstOrNull { it.code == current.btnCode }
         ?: GamepadKeycodes.PRESETS.first()

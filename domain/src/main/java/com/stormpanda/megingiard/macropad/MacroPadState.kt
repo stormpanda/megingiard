@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
-@Suppress("unused")
 private const val TAG = "MacroPadState"
 private const val MP_DEFAULT_PROFILE_NAME = "Profile"
 private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
@@ -59,10 +58,10 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
  * Manages profiles (each containing multiple [PadLayout]s and [Macro]s)
  * and the currently active profile + layout.
  *
- * Persistence is delegated to [SettingsManager] — all mutators trigger
- * [SettingsManager.saveMacroPadData] after updating the in-memory state.
+ * Persistence is delegated to [MacroPadSettings] — all mutators trigger
+ * [MacroPadSettings.saveMacroPadData] after updating the in-memory state.
  *
- * [SettingsManager] calls [loadFrom] once during its init phase to restore
+ * [MacroPadSettings] calls [loadFrom] once during its init phase to restore
  * previously persisted profiles.
  */
 object MacroPadState {
@@ -95,7 +94,7 @@ object MacroPadState {
         }.stateIn(scope, SharingStarted.Eagerly, null)
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Load hook (called by SettingsManager.init)
+    // Load hook (called by MacroPadSettings.loadFrom)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -137,7 +136,7 @@ object MacroPadState {
         _profiles.value = withFlags
         _activeProfileId.value = activeProfileId
         AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$activeProfileId, needsSave=$needsSave")
-        if (needsSave) SettingsManager.saveMacroPadData()
+        if (needsSave) MacroPadSettings.saveMacroPadData()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -155,14 +154,14 @@ object MacroPadState {
         AppLog.d(TAG, "addProfile id=${normalizedProfile.id} name='${normalizedProfile.name}'")
         _profiles.value = _profiles.value + normalizedProfile
         if (_activeProfileId.value == null) _activeProfileId.value = normalizedProfile.id
-        SettingsManager.saveMacroPadData()
+        MacroPadSettings.saveMacroPadData()
     }
 
     fun updateProfile(profile: PadProfile) {
         val synced = profile.withSyncedDeviceFlags()
         AppLog.d(TAG, "updateProfile id=${synced.id} (kb=${synced.enableKeyboard} gp=${synced.enableGamepad} ms=${synced.enableMouse})")
         _profiles.value = _profiles.value.map { if (it.id == synced.id) synced else it }
-        SettingsManager.saveMacroPadData()
+        MacroPadSettings.saveMacroPadData()
     }
 
     fun deleteProfile(profileId: String) {
@@ -172,7 +171,7 @@ object MacroPadState {
             _activeProfileId.value = remaining.firstOrNull()?.id
         }
         AppLog.d(TAG, "deleteProfile id=$profileId → activeId=${_activeProfileId.value}")
-        SettingsManager.saveMacroPadData()
+        MacroPadSettings.saveMacroPadData()
     }
 
     fun renameProfile(profileId: String, newName: String) {
@@ -188,13 +187,13 @@ object MacroPadState {
         _profiles.value = _profiles.value.map {
             if (it.id == profileId) it.copy(name = uniqueName) else it
         }
-        SettingsManager.saveMacroPadData()
+        MacroPadSettings.saveMacroPadData()
     }
 
     fun setActiveProfileId(id: String?) {
         AppLog.i(TAG, "setActiveProfileId: $id")
         _activeProfileId.value = id
-        SettingsManager.saveMacroPadData()
+        MacroPadSettings.saveMacroPadData()
     }
 
     /** Deletes all profiles and creates a single blank default profile. */
@@ -210,7 +209,7 @@ object MacroPadState {
         _profiles.value = listOf(defaultProfile)
         _activeProfileId.value = defaultId
         AppLog.i(TAG, "restoreDefaults: created default profile $defaultId")
-        SettingsManager.saveMacroPadData()
+        MacroPadSettings.saveMacroPadData()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -355,9 +354,9 @@ object MacroPadState {
 
     /**
      * Saves the current mirror viewport (scale and offsets) into the active layout's
-     * [PadLayout.mirrorSavedScale/X/Y] fields and persists via [SettingsManager.saveMacroPadData].
+     * [PadLayout.mirrorSavedScale/X/Y] fields and persists via [MacroPadSettings.saveMacroPadData].
      *
-     * Called by [MirrorViewportController] after a debounce when [SettingsManager.rememberViewport] is enabled.
+     * Called by [MirrorViewportController] after a debounce when [com.stormpanda.megingiard.settings.MirrorSettings.rememberViewport] is enabled.
      * A no-op if no active layout is found or the values are unchanged.
      */
     fun saveMirrorViewport(scale: Float, offsetX: Float, offsetY: Float) {
@@ -398,7 +397,7 @@ object MacroPadState {
         if (!changed) return
         AppLog.d(TAG, "saveMirrorViewport layoutId=$layoutId scale=$scale offset=($offsetX,$offsetY)")
         _profiles.value = updatedProfiles
-        SettingsManager.saveMacroPadData()
+        MacroPadSettings.saveMacroPadData()
     }
 
     // ─────────────────────────────────────────────────────────────────────────

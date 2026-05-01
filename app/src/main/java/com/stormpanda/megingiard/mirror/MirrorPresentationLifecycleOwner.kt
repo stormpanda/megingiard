@@ -15,7 +15,6 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
 
-@Suppress("unused")
 private const val TAG = "MPresentationLifecycle"
 
 class MirrorPresentationLifecycleOwner(

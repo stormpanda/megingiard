@@ -77,7 +77,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -85,7 +85,6 @@ import kotlin.math.sqrt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@Suppress("unused")
 private const val TAG = "MacroTimelineEditor"
 
 private const val MT_TOP_BAR_HEIGHT = 68
@@ -229,7 +228,7 @@ internal fun MacroTimelineEditor(
     val scope = rememberCoroutineScope()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
     val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
-    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
     fun pushUndo(previous: List<MacroStep>) {
         val bounded = (undoStack + listOf(previous)).takeLast(MT_UNDO_STACK_MAX)
@@ -259,7 +258,7 @@ internal fun MacroTimelineEditor(
     }
 
     fun requestTouchRecording() {
-        if (SettingsManager.skipTouchRecordDialog.value) {
+        if (MacroPadSettings.skipTouchRecordDialog.value) {
             if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
             TouchRecordingManager.requestRecording()
         } else {
@@ -268,7 +267,7 @@ internal fun MacroTimelineEditor(
     }
 
     fun requestGamepadRecording() {
-        if (SettingsManager.skipGamepadRecordDialog.value) {
+        if (MacroPadSettings.skipGamepadRecordDialog.value) {
             startGamepadRecording()
         } else {
             showRecordGamepadDialog = true
@@ -311,7 +310,7 @@ internal fun MacroTimelineEditor(
             },
             onCancel = { showRecordTouchDialog = false },
             onDontShowAgain = {
-                SettingsManager.setSkipTouchRecordDialog(true)
+                MacroPadSettings.setSkipTouchRecordDialog(true)
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording()
                 showRecordTouchDialog = false
@@ -324,7 +323,7 @@ internal fun MacroTimelineEditor(
             onStart = { startGamepadRecording() },
             onCancel = { showRecordGamepadDialog = false },
             onDontShowAgain = {
-                SettingsManager.setSkipGamepadRecordDialog(true)
+                MacroPadSettings.setSkipGamepadRecordDialog(true)
                 startGamepadRecording()
             },
         )
@@ -810,7 +809,7 @@ private fun MacroVerticalTimeline(
     val totalMs = remember(steps) { steps.totalDurationMs().coerceAtLeast(1000L) }
     val density = LocalDensity.current
     val colors = LocalAppColors.current
-    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
     val joystickColor = colors.actionColorGamepad
     val dpadColor = colors.actionColorSystem
     val touchColor = MaterialTheme.colorScheme.tertiary
@@ -1140,7 +1139,7 @@ private fun StepListItem(
     onDelete: () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
     val joystickColor = colors.actionColorGamepad
     val dpadColor = colors.actionColorSystem
     val touchColor = MaterialTheme.colorScheme.tertiary

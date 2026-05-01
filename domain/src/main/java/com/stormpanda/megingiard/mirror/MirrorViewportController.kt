@@ -2,7 +2,7 @@ package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
-@Suppress("unused")
 private const val TAG = "MirrorViewportCtrl"
 
 const val VIEWPORT_ZOOM_MIN = 1f
@@ -150,7 +149,7 @@ object MirrorViewportController {
                 .debounce(VIEWPORT_SAVE_DEBOUNCE_MS)
                 .collectLatest { snapshot ->
                     if (ScreenCaptureManager.isCapturing.value &&
-                        SettingsManager.rememberViewport.value
+                        MirrorSettings.rememberViewport.value
                     ) {
                         snapshot.layoutId?.let { layoutId ->
                             AppLog.d(
@@ -180,7 +179,7 @@ object MirrorViewportController {
                     if (oldLayoutId == null) return@collectLatest
 
                     if (ScreenCaptureManager.isCapturing.value &&
-                        SettingsManager.rememberViewport.value
+                        MirrorSettings.rememberViewport.value
                     ) {
                         AppLog.i(
                             TAG,
@@ -214,9 +213,9 @@ object MirrorViewportController {
                 .drop(1)
                 .collectLatest {
                     if (ScreenCaptureManager.isCapturing.value &&
-                        (SettingsManager.rememberLock.value || SettingsManager.rememberProjection.value)
+                        (MirrorSettings.rememberLock.value || MirrorSettings.rememberProjection.value)
                     ) {
-                        SettingsManager.saveMirrorSessionState()
+                        MirrorSettings.saveMirrorSessionState()
                     }
                 }
         }

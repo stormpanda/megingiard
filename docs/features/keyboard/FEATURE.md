@@ -222,7 +222,7 @@ When a full-screen UI overlay is visible:
 
 ### Secondary Display Rendering (Ambient Mode)
 
-When the MacroPad is in **ambient mode** (`SettingsManager.macropadAmbientEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `KeyboardScreen` is composed inside `MirrorPresentation` as **Layer 5** — above `AmbientMacroPadOverlay` — so it appears on the secondary display.
+When the MacroPad is in **ambient mode** (`AmbientSettings.macropadAmbientEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `KeyboardScreen` is composed inside `MirrorPresentation` as **Layer 5** — above `AmbientMacroPadOverlay` — so it appears on the secondary display.
 
 `MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever ambient mode is active, ensuring only one instance of `KeyInjector` runs at a time.
 

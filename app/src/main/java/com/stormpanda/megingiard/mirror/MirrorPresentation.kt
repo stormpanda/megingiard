@@ -45,6 +45,7 @@ import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
+import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
 import com.stormpanda.megingiard.ui.AppDimens
@@ -82,7 +83,6 @@ import com.stormpanda.megingiard.input.TouchInjector
 
 private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
-@Suppress("unused")
 private const val TAG = "MirrorPresentation"
 
 class MirrorPresentation(
@@ -233,7 +233,7 @@ class MirrorPresentation(
                         colorScheme = colorSchemeFor(appColors, themeMode),
                         typography = megingiardTypography
                     ) {
-                        val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+                        val ambientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
                         val capturing by ScreenCaptureManager.isCapturing.collectAsState()
                         val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
                         val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
@@ -479,7 +479,7 @@ class MirrorPresentation(
         scope.launch {
             combine(
                 AppStateManager.isOnValidScreen,
-                SettingsManager.macropadAmbientEnabled,
+                AmbientSettings.macropadAmbientEnabled,
                 ScreenCaptureManager.isCapturing,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,

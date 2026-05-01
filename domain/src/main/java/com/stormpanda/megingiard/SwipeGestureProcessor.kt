@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard
 
-@Suppress("unused")
 private const val TAG = "SwipeGestureProcessor"
 
 /**
@@ -19,13 +18,15 @@ class SwipeGestureProcessor(
     private val edgeZonePx: Float,
     private val swipeThresholdPx: Float,
     private val overlayAtBottom: Boolean,
+    private val onTouchingChanged: (Boolean) -> Unit = { AppStateManager.setTouching(it) },
+    private val onEdgeSwipe: () -> Unit = { AppStateManager.handleEdgeSwipe() },
 ) {
     private var swipeStartY = Float.NaN
     private var swipeTriggered = false
 
     /** Call on every Press event with the first pointer's Y and the container height. */
     fun onPress(pointerY: Float, containerHeight: Float) {
-        AppStateManager.setTouching(true)
+        onTouchingChanged(true)
         val nearEdge = if (overlayAtBottom) {
             pointerY >= containerHeight - edgeZonePx
         } else {
@@ -45,7 +46,7 @@ class SwipeGestureProcessor(
             }
             if (delta >= swipeThresholdPx) {
                 AppLog.d(TAG, "edge swipe detected (delta=${delta.toInt()}px, bottom=$overlayAtBottom)")
-                AppStateManager.handleEdgeSwipe()
+                onEdgeSwipe()
                 swipeTriggered = true
             }
         }
@@ -54,7 +55,7 @@ class SwipeGestureProcessor(
     /** Call on Release when all pointers are up. */
     fun onRelease(allPointersUp: Boolean) {
         if (allPointersUp) {
-            AppStateManager.setTouching(false)
+            onTouchingChanged(false)
         }
         swipeStartY = Float.NaN
         swipeTriggered = false

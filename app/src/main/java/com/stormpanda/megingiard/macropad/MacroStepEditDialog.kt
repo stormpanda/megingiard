@@ -46,12 +46,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-@Suppress("unused")
 private const val TAG = "MacroStepEditDialog"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ internal fun MacroStepEditDialog(
     onDismiss:   () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val swapFaceButtons by SettingsManager.gamepadSwapFaceButtons.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
     // ── Derive initial state from the existing step ───────────────────────────
     val initialType = when (step) {
@@ -205,28 +205,11 @@ internal fun MacroStepEditDialog(
             .fillMaxSize()
             .background(colors.appBackground),
     ) {
-        // ── Top bar ────────────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(colors.surface)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-            Text(
-                text = stringResource(
-                    if (step == null) R.string.macropad_macro_step_new
-                    else             R.string.macropad_macro_step_edit
-                ),
-                color      = colors.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                modifier   = Modifier.weight(1f),
-                textAlign  = TextAlign.Center,
-            )
+        val topBarTitle = stringResource(
+            if (step == null) R.string.macropad_macro_step_new
+            else             R.string.macropad_macro_step_edit
+        )
+        FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
             TextButton(
                 onClick = {
                     val builtStep = when (stepType) {

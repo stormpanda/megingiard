@@ -27,7 +27,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 
-@Suppress("unused")
 private const val TAG = "IdlePill"
 
 // ── Dimensions ──────────────────────────────────────────────────────────────

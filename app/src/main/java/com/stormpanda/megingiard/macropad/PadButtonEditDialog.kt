@@ -43,11 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 import java.util.UUID
 
-@Suppress("unused")
 private const val TAG = "PadButtonEditDialog"
 
 /**
@@ -105,7 +105,7 @@ internal fun ButtonEditDialog(
     var buttonSize        by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
     var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
-    var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: iconsFilledState.value) }
+    var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
     val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -157,28 +157,13 @@ internal fun ButtonEditDialog(
             .fillMaxSize()
             .background(colors.surface),
     ) {
-        // ── Top bar ────────────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(colors.surface)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-            Text(
-                text = if (button == null) stringResource(R.string.macropad_editor_add_button)
-                       else if (button.action is PadAction.TrackpointMove) stringResource(R.string.macropad_action_trackpoint)
-                       else if (button.action is PadAction.AmbientPeek) stringResource(R.string.macropad_action_ambient_peek)
-                       else button.label,
-                color      = colors.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                modifier   = Modifier.weight(1f),
-                textAlign  = TextAlign.Center,
-            )
+        val topBarTitle = when {
+            button == null -> stringResource(R.string.macropad_editor_add_button)
+            button.action is PadAction.TrackpointMove -> stringResource(R.string.macropad_action_trackpoint)
+            button.action is PadAction.AmbientPeek -> stringResource(R.string.macropad_action_ambient_peek)
+            else -> button.label
+        }
+        FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
             TextButton(
                 onClick = {
                     if (isConfirmEnabled) {
@@ -446,7 +431,7 @@ internal fun ButtonEditDialog(
                 selectedIcon   = iconName,
                 accentColor    = accentColor,
                 filled         = iconFilled,
-                onFilledChange = { iconFilled = it; iconsFilledState.value = it },
+                onFilledChange = { iconFilled = it },
                 onSelect       = { name -> iconName = name; showIconPicker = false },
                 onDismiss      = { showIconPicker = false },
                 modifier       = Modifier.fillMaxSize(),

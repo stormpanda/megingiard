@@ -19,22 +19,24 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.macropad.MacroExecutor
-import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
 import androidx.compose.ui.graphics.Color
+import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -47,7 +49,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
-@Suppress("unused")
 private const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
@@ -84,7 +85,6 @@ class MainActivity : ComponentActivity() {
     ) { uri ->
         AppStateManager.setFilePickerOpen(false)
         if (uri == null) {
-            ConfigManager.clearImportRequest()
             return@registerForActivityResult
         }
         ConfigManager.setPendingInAppUri(uri)
@@ -113,36 +113,29 @@ class MainActivity : ComponentActivity() {
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
 
-        // Initialise R.string resource IDs for the domain-layer MacroPadHitTestEngine.
-        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_KEYBOARD = R.string.macropad_device_disabled_keyboard
-        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_GAMEPAD = R.string.macropad_device_disabled_gamepad
-        MacroPadHitTestEngine.MACROPAD_DEVICE_DISABLED_MOUSE = R.string.macropad_device_disabled_mouse
-
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
 
         // Collect export/import requests posted by GlobalSettingsScreen (which may be
         // inside MirrorPresentation and thus cannot hold ActivityResultLaunchers itself).
         lifecycleScope.launch {
-            ConfigManager.exportRequest.collect { meta ->
-                if (meta != null) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ConfigManager.exportRequest.collect { meta ->
                     pendingExportMetadata = meta
                     AppStateManager.setFilePickerOpen(true)
                     createDocumentLauncher.launch(ConfigManager.exportFilename.value)
-                    ConfigManager.clearExportRequest()
                 }
             }
         }
         lifecycleScope.launch {
-            ConfigManager.importRequested.collect { requested ->
-                if (requested) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ConfigManager.importRequest.collect {
                     AppStateManager.setFilePickerOpen(true)
                     // Use "*/*" instead of the custom MGRD MIME type: the Android file
                     // picker (DocumentsUI) does not know the custom MIME type and would
                     // show an empty list. With "*/*" all files are visible and the user
                     // can navigate to their .mgrd file.
                     openDocumentLauncher.launch(arrayOf("*/*"))
-                    ConfigManager.clearImportRequest()
                 }
             }
         }
@@ -221,7 +214,7 @@ class MainActivity : ComponentActivity() {
 
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
 
-            val macropadAmbientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+            val macropadAmbientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
 
             // Auto-start capture when Ambient Display is enabled.
             // Declining within a session is respected until the next mode entry.
@@ -238,17 +231,20 @@ class MainActivity : ComponentActivity() {
             // With autoStartCapture=false (default) the user must tap "Start mirroring" manually.
             // With autoStartCapture=true the prompt fires once per app session (on resume);
             // declining within a session is respected — the dialog will not re-appear until the next resume.
-            LaunchedEffect(isCapturing, promptInFlight, isOnValidScreenLocal, userDeclinedCapture) {
-                if (!promptInFlight && isOnValidScreenLocal && !isCapturing && !userDeclinedCapture) {
-                    AppLog.i(TAG, "launching CaptureRequestActivity on display DEFAULT")
-                    AppStateManager.setPromptInFlight(true)
-                    val options = ActivityOptions.makeBasic()
-                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                    val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            LaunchedEffect(Unit) {
+                snapshotFlow { !promptInFlight && isOnValidScreenLocal && !isCapturing && !userDeclinedCapture }
+                    .collect { shouldLaunch ->
+                        if (shouldLaunch) {
+                            AppLog.i(TAG, "launching CaptureRequestActivity on display DEFAULT")
+                            AppStateManager.setPromptInFlight(true)
+                            val options = ActivityOptions.makeBasic()
+                            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                            val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                            }
+                            startActivity(intent, options.toBundle())
+                        }
                     }
-                    startActivity(intent, options.toBundle())
-                }
             }
 
             // ── Mirror button signals from MacroPad ───────────────────────────────

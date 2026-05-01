@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-@Suppress("unused")
 private const val TAG = "KeyRepeatController"
 
 private const val KB_REPEAT_INITIAL_DELAY_MS = 500L

@@ -51,8 +51,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientSettingsOverlay
@@ -60,16 +60,16 @@ import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.viewmodel.MainViewModel
+import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-@Suppress("unused")
 private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
@@ -79,9 +79,8 @@ private const val MAS_ARROW_BOUNCE_MS = 800
 
 @Composable
 fun MainAppScreen() {
-    val viewModel: MainViewModel = viewModel()
-    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
-    val isValidScreen by viewModel.isOnValidScreen.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val isValidScreen by AppStateManager.isOnValidScreen.collectAsState()
     val colors = LocalAppColors.current
 
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
@@ -91,7 +90,7 @@ fun MainAppScreen() {
     val isAmbientSettingsActive by AppStateManager.isAmbientSettingsActive.collectAsState()
     val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
     val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
-    val ambientEnabled by SettingsManager.macropadAmbientEnabled.collectAsState()
+    val ambientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
     val density = LocalDensity.current
@@ -101,21 +100,21 @@ fun MainAppScreen() {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val pendingImportUri by viewModel.pendingUri.collectAsState()
-    val pendingImport by viewModel.pendingParsedImport.collectAsState()
-    val pendingInAppUri by viewModel.pendingInAppUri.collectAsState()
+    val pendingImportUri by ConfigManager.pendingUri.collectAsState()
+    val pendingImport by ConfigManager.pendingParsedImport.collectAsState()
+    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsState()
     var importError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         AppLog.d(TAG, "Parsing SAF import URI")
-        viewModel.parseImportUri(context, uri)
+        ConfigManager.parseImportUri(context, uri)
             .onSuccess { export ->
                 AppLog.i(TAG, "SAF import parsed: ${export.profiles.size} profile(s)")
-                viewModel.setParsedImport(export)
+                ConfigManager.setParsedImport(export)
             }.onFailure { err ->
                 AppLog.e(TAG, "SAF import parse failed: ${err.message}")
-                viewModel.clearPendingImport()
+                ConfigManager.clearPendingImport()
                 importError = err.message ?: context.getString(R.string.config_error_unknown)
             }
     }
@@ -123,13 +122,13 @@ fun MainAppScreen() {
     LaunchedEffect(pendingInAppUri) {
         val uri = pendingInAppUri ?: return@LaunchedEffect
         AppLog.d(TAG, "Parsing in-app import URI")
-        viewModel.parseImportUri(context, uri)
+        ConfigManager.parseImportUri(context, uri)
             .onSuccess { export ->
                 AppLog.i(TAG, "In-app import parsed: ${export.profiles.size} profile(s)")
-                viewModel.setInAppParsedImport(export)
+                ConfigManager.setInAppParsedImport(export)
             }.onFailure { err ->
                 AppLog.e(TAG, "In-app import parse failed: ${err.message}")
-                viewModel.clearInAppPendingImport()
+                ConfigManager.clearInAppPendingImport()
                 importError = err.message ?: context.getString(R.string.config_error_unknown)
             }
     }
@@ -140,7 +139,7 @@ fun MainAppScreen() {
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(overlayAtBottom, isValidScreen) {
-                val swipe = viewModel.createSwipeProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+                val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -233,11 +232,11 @@ fun MainAppScreen() {
             export = export,
             onConfirm = {
                 coroutineScope.launch {
-                    viewModel.applyImport(export)
-                    viewModel.clearPendingImport()
+                    ConfigManager.applyImport(export)
+                    ConfigManager.clearPendingImport()
                 }
             },
-            onDismiss = { viewModel.clearPendingImport() },
+            onDismiss = { ConfigManager.clearPendingImport() },
         )
     }
 

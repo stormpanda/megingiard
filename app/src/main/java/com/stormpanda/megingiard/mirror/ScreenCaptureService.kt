@@ -20,14 +20,14 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.AmbientSettings
+import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-@Suppress("unused")
 private const val TAG = "ScreenCaptureService"
 
 class ScreenCaptureService : Service() {
@@ -110,7 +110,7 @@ class ScreenCaptureService : Service() {
             presentation.onSurfaceReady = { surface ->
                 currentSurface = surface
                 virtualDisplay?.release()
-                val ambientEnabled = SettingsManager.macropadAmbientEnabled.value
+                val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
                 if (ambientEnabled) {
                     try {
                         val isFrozen = ScreenCaptureManager.isFrozen.value
@@ -137,7 +137,7 @@ class ScreenCaptureService : Service() {
             // promptInFlight remains true throughout the restore, so there is no window where
             // isCapturing=false && promptInFlight=false could re-trigger the capture prompt.
             scope.launch {
-                SettingsManager.restoreMirrorSessionState()
+                MirrorSettings.restoreMirrorSessionState()
                 MirrorViewportController.restoreFromLayout()
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
