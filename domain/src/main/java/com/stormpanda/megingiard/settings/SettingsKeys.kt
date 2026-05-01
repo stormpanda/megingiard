@@ -10,9 +10,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  * DataStore preference keys for [SettingsManager], extracted to a separate file
  * to keep the manager focused on state + persistence logic.
  *
- * All keys are `internal` so they remain accessible only within the
- * `:domain` module's `settings` package — exactly as before, when they lived
- * inside `object SettingsManager` as `private val`s.
+ * All keys are `internal` — they are hidden from other modules (`:app`, `:core`)
+ * but accessible to **any file within `:domain`**, not just the `settings` package.
+ * This is a slight relaxation of the original visibility: the keys previously lived
+ * as `private val`s inside `object SettingsManager`, which restricted access to
+ * that single object. The `internal` modifier preserves the module boundary but
+ * widens access within `:domain`.
  */
 
 internal val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")

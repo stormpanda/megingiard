@@ -63,7 +63,11 @@ abstract class NativeBinaryInjector<T>(
             process = p
             writer = BufferedWriter(OutputStreamWriter(p.outputStream))
             if (!waitForReady(p)) {
+                AppLog.w(tag, "Binary did not signal ready — tearing down")
+                try { writer?.close() } catch (_: Exception) {}
+                writer = null
                 p.destroy()
+                process = null
                 return
             }
             queue.clear()
