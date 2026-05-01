@@ -59,7 +59,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -92,9 +91,6 @@ private val PM_SECTION_SPACING = 10.dp
 private val PM_ACTION_BUTTON_CORNER = 10.dp
 private val PM_ACTION_BUTTON_H_PADDING = 12.dp
 private val PM_ACTION_BUTTON_V_PADDING = 8.dp
-private val PM_CHIP_CORNER = 20.dp
-private val PM_CHIP_H_PADDING = 12.dp
-private val PM_CHIP_V_PADDING = 6.dp
 private val PM_CHIP_SPACING = 6.dp
 private val PM_NAV_ICON_SIZE = 20.dp
 private val PM_MIRROR_ICON_SIZE = 22.dp
@@ -624,32 +620,12 @@ private fun SelectableChip(
     contentDescription: String? = null,
     onClick: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .semantics {
-                this[SemanticsProperties.Selected] = isSelected
-                this.contentDescription = contentDescription ?: text
-            }
-            .clip(RoundedCornerShape(PM_CHIP_CORNER))
-            .background(
-                if (isSelected) colors.accent.copy(alpha = 0.85f)
-                else colors.navPillBody.copy(alpha = 0.5f),
-            )
-            .border(
-                PM_BORDER_WIDTH,
-                if (isSelected) colors.accent else colors.controlOverlayBorder,
-                RoundedCornerShape(PM_CHIP_CORNER),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = PM_CHIP_H_PADDING, vertical = PM_CHIP_V_PADDING),
-    ) {
-        Text(
-            text = text,
-            color = if (isSelected) colors.onAccent else colors.onControlOverlay,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-        )
-    }
+    AppSelectableChip(
+        text               = text,
+        selected           = isSelected,
+        onClick            = onClick,
+        contentDescription = contentDescription,
+    )
 }
 
 @Composable

@@ -78,6 +78,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -99,9 +100,6 @@ private const val MT_VERTICAL_AXIS_WIDTH = 52
 private const val MT_VERTICAL_BAR_PADDING = 3f
 private const val MT_BAR_LABEL_TEXT_SIZE_SP = 10
 private const val MT_TIMELINE_SIDE_PADDING = 10
-private const val MT_VIEW_CHIP_CORNER = 20
-private const val MT_VIEW_CHIP_H_PADDING = 12
-private const val MT_VIEW_CHIP_V_PADDING = 6
 private const val MT_VIEW_CHIP_SPACING = 6
 private const val MT_TIMING_MAX_MS = 10_000L
 private const val MT_NEW_STEP_START_OFFSET_MS = 2_000L
@@ -381,18 +379,32 @@ internal fun MacroTimelineEditor(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.width(8.dp))
-                MacroViewModeChip(
+                AppSelectableChip(
                     text = stringResource(R.string.macropad_macro_editor_view_list),
-                    icon = Icons.AutoMirrored.Rounded.FormatListBulleted,
                     selected = viewMode == MacroEditorViewMode.LIST,
                     onClick = { viewMode = MacroEditorViewMode.LIST },
+                    leadingIcon = { color ->
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.FormatListBulleted,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
                 )
                 Spacer(Modifier.width(MT_VIEW_CHIP_SPACING.dp))
-                MacroViewModeChip(
+                AppSelectableChip(
                     text = stringResource(R.string.macropad_macro_editor_view_timeline),
-                    icon = Icons.Rounded.Timeline,
                     selected = viewMode == MacroEditorViewMode.TIMELINE,
                     onClick = { viewMode = MacroEditorViewMode.TIMELINE },
+                    leadingIcon = { color ->
+                        Icon(
+                            imageVector = Icons.Rounded.Timeline,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
                 )
             }
 
@@ -450,7 +462,7 @@ internal fun MacroTimelineEditor(
                 Spacer(Modifier.width(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(MT_VIEW_CHIP_SPACING.dp)) {
                     ShiftMode.entries.forEach { mode ->
-                        ShiftModeChip(
+                        AppSelectableChip(
                             text = stringResource(
                                 when (mode) {
                                     ShiftMode.NONE        -> R.string.macropad_macro_editor_shift_none
@@ -738,86 +750,6 @@ internal fun MacroTimelineEditor(
                     )
                 }
             },
-        )
-    }
-}
-
-@Composable
-private fun MacroViewModeChip(
-    text: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp))
-            .background(
-                if (selected) colors.accent.copy(alpha = 0.85f)
-                else colors.navPillBody.copy(alpha = 0.5f),
-            )
-            .border(
-                1.dp,
-                if (selected) colors.accent else colors.controlOverlayBorder,
-                RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(
-                horizontal = MT_VIEW_CHIP_H_PADDING.dp,
-                vertical = MT_VIEW_CHIP_V_PADDING.dp,
-            ),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected) colors.onAccent else colors.onControlOverlay,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = text,
-                color = if (selected) colors.onAccent else colors.onControlOverlay,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ShiftModeChip(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp))
-            .background(
-                if (selected) colors.accent.copy(alpha = 0.85f)
-                else colors.navPillBody.copy(alpha = 0.5f),
-            )
-            .border(
-                1.dp,
-                if (selected) colors.accent else colors.controlOverlayBorder,
-                RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(
-                horizontal = MT_VIEW_CHIP_H_PADDING.dp,
-                vertical   = MT_VIEW_CHIP_V_PADDING.dp,
-            ),
-    ) {
-        Text(
-            text       = text,
-            color      = if (selected) colors.onAccent else colors.onControlOverlay,
-            style      = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
 }

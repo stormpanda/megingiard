@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +50,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,6 +58,7 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -77,12 +76,7 @@ private const val GS_DIALOG_SCRIM_ALPHA = 0.5f
 private val GS_DIALOG_WIDTH_FRACTION = 0.85f
 private val GS_DIALOG_CORNER = 16.dp
 private val GS_DIALOG_PADDING = 20.dp
-private val GS_SECTION_CHIP_CORNER = 20.dp
-private val GS_SECTION_CHIP_H_PADDING = 12.dp
-private val GS_SECTION_CHIP_V_PADDING = 6.dp
 private val GS_SECTION_CHIP_SPACING = 8.dp
-private val GS_SECTION_CHIP_BORDER = 1.dp
-private const val GS_SECTION_CHIP_SELECTED_ALPHA = 0.85f
 private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
@@ -465,23 +459,10 @@ private fun SectionJumpChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Text(
-        text = label,
-        color = if (selected) colors.onAccent else colors.onControlOverlay,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        modifier = Modifier
-            .background(
-                color = if (selected) accentColor.copy(alpha = GS_SECTION_CHIP_SELECTED_ALPHA) else colors.navPillBody.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
-            )
-            .border(
-                width = GS_SECTION_CHIP_BORDER,
-                color = if (selected) accentColor else colors.controlOverlayBorder,
-                shape = RoundedCornerShape(GS_SECTION_CHIP_CORNER),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = GS_SECTION_CHIP_H_PADDING, vertical = GS_SECTION_CHIP_V_PADDING),
+    AppSelectableChip(
+        text     = label,
+        selected = selected,
+        onClick  = onClick,
     )
 }
 

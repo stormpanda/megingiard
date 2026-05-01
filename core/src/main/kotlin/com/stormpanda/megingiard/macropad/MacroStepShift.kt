@@ -8,7 +8,7 @@ package com.stormpanda.megingiard.macropad
  * Controls how subsequent steps are shifted when an existing macro step is edited.
  *
  * The "subsequent" threshold is always `>= oldStep.endTimeMs()`: only steps that start
- * strictly after the edited step's old end time are eligible for shifting. Steps that
+ * at or after the edited step's old end time are eligible for shifting. Steps that
  * overlap or run concurrently with the edited step are **never** moved in any mode.
  */
 enum class ShiftMode {
@@ -52,6 +52,9 @@ fun applyShiftSubsequent(
     mode: ShiftMode,
     maxTimeMs: Long = DEFAULT_MAX_TIME_MS,
 ): List<MacroStep> {
+    require(steps.getOrNull(editedIndex) == oldStep) {
+        "oldStep must match steps[editedIndex]"
+    }
     if (mode == ShiftMode.NONE) {
         return steps.toMutableList().also { it[editedIndex] = newStep }
     }

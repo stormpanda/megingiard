@@ -343,5 +343,20 @@ class MacroStepShiftTest {
                 newEdited, result[0])
         }
     }
+
+    // ── require guard ─────────────────────────────────────────────────────────
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `require guard throws when oldStep does not match steps at editedIndex`() {
+        val actual = gamepad(startMs = 100L)
+        val wrong  = gamepad(startMs = 999L)
+        applyShiftSubsequent(
+            steps       = listOf(actual),
+            editedIndex = 0,
+            oldStep     = wrong,
+            newStep     = actual.copy(startTimeMs = 200L),
+            mode        = ShiftMode.END_DELTA,
+        )
+    }
 }
 

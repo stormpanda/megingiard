@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -76,13 +77,6 @@ private const val MSD_TIMING_DELTA_BUTTON_MIN_WIDTH = 30
 private const val MSD_TIMING_DELTA_BUTTON_MIN_HEIGHT = 28
 private const val MSD_TIMING_DELTA_BUTTON_H_PADDING = 4
 private const val MSD_TIMING_DELTA_BUTTON_V_PADDING = 2
-private const val MSD_TYPE_CHIP_CORNER      = 20
-private const val MSD_TYPE_CHIP_H_PADDING   = 12
-private const val MSD_TYPE_CHIP_V_PADDING   = 6
-private const val MSD_SHIFT_CHIP_CORNER     = 20
-private const val MSD_SHIFT_CHIP_H_PADDING  = 12
-private const val MSD_SHIFT_CHIP_V_PADDING  = 6
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Step type (editor-internal)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -462,32 +456,11 @@ internal fun MacroStepEditDialog(
                         ShiftMode.START_DELTA to stringResource(R.string.macropad_macro_editor_shift_start_delta),
                         ShiftMode.END_DELTA   to stringResource(R.string.macropad_macro_editor_shift_end_delta),
                     ).forEach { (mode, label) ->
-                        val selected = shiftMode == mode
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(MSD_SHIFT_CHIP_CORNER.dp))
-                                .background(
-                                    if (selected) colors.accent.copy(alpha = 0.85f)
-                                    else colors.navPillBody.copy(alpha = 0.5f)
-                                )
-                                .border(
-                                    1.dp,
-                                    if (selected) colors.accent else colors.controlOverlayBorder,
-                                    RoundedCornerShape(MSD_SHIFT_CHIP_CORNER.dp),
-                                )
-                                .clickable { shiftMode = mode }
-                                .padding(
-                                    horizontal = MSD_SHIFT_CHIP_H_PADDING.dp,
-                                    vertical   = MSD_SHIFT_CHIP_V_PADDING.dp,
-                                ),
-                        ) {
-                            Text(
-                                text       = label,
-                                color      = if (selected) colors.onAccent else colors.onControlOverlay,
-                                style      = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            )
-                        }
+                        AppSelectableChip(
+                            text     = label,
+                            selected = shiftMode == mode,
+                            onClick  = { shiftMode = mode },
+                        )
                     }
                 }
             }
@@ -503,40 +476,20 @@ private fun StepTypeChip(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val colors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(MSD_TYPE_CHIP_CORNER.dp))
-            .background(
-                if (selected) colors.accent.copy(alpha = 0.85f)
-                else colors.navPillBody.copy(alpha = 0.5f),
-            )
-            .border(
-                1.dp,
-                if (selected) colors.accent else colors.controlOverlayBorder,
-                RoundedCornerShape(MSD_TYPE_CHIP_CORNER.dp),
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = MSD_TYPE_CHIP_H_PADDING.dp, vertical = MSD_TYPE_CHIP_V_PADDING.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+    AppSelectableChip(
+        text    = text,
+        selected = selected,
+        enabled  = enabled,
+        onClick  = onClick,
+        leadingIcon = { color ->
             MaterialSymbol(
                 name = symbolName,
                 size = 18.dp,
-                tint = if (selected) colors.onAccent else colors.onControlOverlay,
+                tint = color,
                 modifier = Modifier.size(18.dp),
             )
-            Text(
-                text = text,
-                color = if (selected) colors.onAccent else colors.onControlOverlay,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            )
-        }
-    }
+        },
+    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
