@@ -78,6 +78,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -99,9 +100,6 @@ private const val MT_VERTICAL_AXIS_WIDTH = 52
 private const val MT_VERTICAL_BAR_PADDING = 3f
 private const val MT_BAR_LABEL_TEXT_SIZE_SP = 10
 private const val MT_TIMELINE_SIDE_PADDING = 10
-private const val MT_VIEW_CHIP_CORNER = 20
-private const val MT_VIEW_CHIP_H_PADDING = 12
-private const val MT_VIEW_CHIP_V_PADDING = 6
 private const val MT_VIEW_CHIP_SPACING = 6
 private const val MT_TIMING_MAX_MS = 10_000L
 private const val MT_NEW_STEP_START_OFFSET_MS = 2_000L
@@ -137,16 +135,6 @@ private fun assignLanes(steps: List<MacroStep>): List<Int> {
     }
     return result.toList()
 }
-
-private fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
-    is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.JoystickMove -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.DPadTap -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs)
-}
-
-private fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
-    map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
 
 private fun dirArrow(dirX: Int, dirY: Int): String = when {
     dirX > 0 && dirY < 0 -> "↗"
@@ -215,7 +203,7 @@ internal fun MacroTimelineEditor(
     var showGamepadRecordingOverlay by remember { mutableStateOf(false) }
     var gamepadRecordingError by remember { mutableStateOf<String?>(null) }
     var viewMode by remember { mutableStateOf(MacroEditorViewMode.LIST) }
-    var shiftSubsequentDefault by remember { mutableStateOf(true) }
+    var shiftModeDefault by remember { mutableStateOf(ShiftMode.END_DELTA) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var loopEnabled by remember { mutableStateOf(macro.loopEnabled) }
@@ -391,18 +379,32 @@ internal fun MacroTimelineEditor(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.width(8.dp))
-                MacroViewModeChip(
+                AppSelectableChip(
                     text = stringResource(R.string.macropad_macro_editor_view_list),
-                    icon = Icons.AutoMirrored.Rounded.FormatListBulleted,
                     selected = viewMode == MacroEditorViewMode.LIST,
                     onClick = { viewMode = MacroEditorViewMode.LIST },
+                    leadingIcon = { color ->
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.FormatListBulleted,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
                 )
                 Spacer(Modifier.width(MT_VIEW_CHIP_SPACING.dp))
-                MacroViewModeChip(
+                AppSelectableChip(
                     text = stringResource(R.string.macropad_macro_editor_view_timeline),
-                    icon = Icons.Rounded.Timeline,
                     selected = viewMode == MacroEditorViewMode.TIMELINE,
                     onClick = { viewMode = MacroEditorViewMode.TIMELINE },
+                    leadingIcon = { color ->
+                        Icon(
+                            imageVector = Icons.Rounded.Timeline,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
                 )
             }
 
@@ -458,10 +460,21 @@ internal fun MacroTimelineEditor(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.width(6.dp))
-                Switch(
-                    checked = shiftSubsequentDefault,
-                    onCheckedChange = { shiftSubsequentDefault = it },
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(MT_VIEW_CHIP_SPACING.dp)) {
+                    ShiftMode.entries.forEach { mode ->
+                        AppSelectableChip(
+                            text = stringResource(
+                                when (mode) {
+                                    ShiftMode.NONE        -> R.string.macropad_macro_editor_shift_none
+                                    ShiftMode.START_DELTA -> R.string.macropad_macro_editor_shift_start_delta
+                                    ShiftMode.END_DELTA   -> R.string.macropad_macro_editor_shift_end_delta
+                                }
+                            ),
+                            selected = shiftModeDefault == mode,
+                            onClick  = { shiftModeDefault = mode },
+                        )
+                    }
+                }
             }
 
             HorizontalDivider(color = colors.divider)
@@ -647,34 +660,24 @@ internal fun MacroTimelineEditor(
             step = stepToEdit,
             accentColor = accentColor,
             suggestedStartTimeMs = suggestedStartTimeMs,
-            initialShiftSubsequent = shiftSubsequentDefault,
-            onConfirm = { newStep, applyShift ->
+            initialShiftMode = shiftModeDefault,
+            onConfirm = { newStep, shiftMode ->
                 if (editingStepIndex != null) {
                     val idx = editingStepIndex!!
                     val oldStep = steps[idx]
-                    val updated = if (!applyShift) {
-                        steps.toMutableList().also { it[idx] = newStep }
-                    } else {
-                        val oldStepEndTimeMs = oldStep.endTimeMs()
-                        val endDelta = newStep.endTimeMs() - oldStepEndTimeMs
-                        steps.mapIndexed { i, step ->
-                            when {
-                                i == idx -> newStep
-                                endDelta == 0L -> step
-                                step.startTimeMs >= oldStepEndTimeMs -> {
-                                    step.withStartTime(
-                                        (step.startTimeMs + endDelta).coerceIn(0L, MT_TIMING_MAX_MS),
-                                    )
-                                }
-                                else -> step
-                            }
-                        }
-                    }
+                    val updated = applyShiftSubsequent(
+                        steps       = steps,
+                        editedIndex = idx,
+                        oldStep     = oldStep,
+                        newStep     = newStep,
+                        mode        = shiftMode,
+                        maxTimeMs   = MT_TIMING_MAX_MS,
+                    )
                     pushUndo(steps)
                     steps = updated
                     editingStepIndex = null
                 } else {
-                    val updated = if (!applyShift) {
+                    val updated = if (shiftMode == ShiftMode.NONE) {
                         steps + newStep
                     } else {
                         val shifted = steps.map { existing ->
@@ -748,52 +751,6 @@ internal fun MacroTimelineEditor(
                 }
             },
         )
-    }
-}
-
-@Composable
-private fun MacroViewModeChip(
-    text: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp))
-            .background(
-                if (selected) colors.accent.copy(alpha = 0.85f)
-                else colors.navPillBody.copy(alpha = 0.5f),
-            )
-            .border(
-                1.dp,
-                if (selected) colors.accent else colors.controlOverlayBorder,
-                RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(
-                horizontal = MT_VIEW_CHIP_H_PADDING.dp,
-                vertical = MT_VIEW_CHIP_V_PADDING.dp,
-            ),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected) colors.onAccent else colors.onControlOverlay,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = text,
-                color = if (selected) colors.onAccent else colors.onControlOverlay,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            )
-        }
     }
 }
 

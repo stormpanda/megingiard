@@ -99,6 +99,18 @@ sealed class MacroStep {
 /** Computes the total macro duration = end time of the last step. */
 fun List<MacroStep>.totalDurationMs(): Long = maxOfOrNull { it.endTimeMs() } ?: 0L
 
+/** Returns a copy of this step with [startTimeMs] replaced by [newStartTimeMs]. */
+fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
+    is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs)
+    is MacroStep.JoystickMove     -> copy(startTimeMs = newStartTimeMs)
+    is MacroStep.DPadTap          -> copy(startTimeMs = newStartTimeMs)
+    is MacroStep.TouchTap         -> copy(startTimeMs = newStartTimeMs)
+}
+
+/** Returns a new list where every step's start time is shifted by [offsetMs]. */
+fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
+    map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Macro — a named sequence of timed steps
 // ─────────────────────────────────────────────────────────────────────────────
