@@ -138,16 +138,6 @@ private fun assignLanes(steps: List<MacroStep>): List<Int> {
     return result.toList()
 }
 
-private fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
-    is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.JoystickMove -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.DPadTap -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs)
-}
-
-private fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
-    map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
-
 private fun dirArrow(dirX: Int, dirY: Int): String = when {
     dirX > 0 && dirY < 0 -> "↗"
     dirX > 0 && dirY == 0 -> "→"
@@ -655,20 +645,13 @@ internal fun MacroTimelineEditor(
                     val updated = if (!applyShift) {
                         steps.toMutableList().also { it[idx] = newStep }
                     } else {
-                        val oldStepEndTimeMs = oldStep.endTimeMs()
-                        val endDelta = newStep.endTimeMs() - oldStepEndTimeMs
-                        steps.mapIndexed { i, step ->
-                            when {
-                                i == idx -> newStep
-                                endDelta == 0L -> step
-                                step.startTimeMs >= oldStepEndTimeMs -> {
-                                    step.withStartTime(
-                                        (step.startTimeMs + endDelta).coerceIn(0L, MT_TIMING_MAX_MS),
-                                    )
-                                }
-                                else -> step
-                            }
-                        }
+                        applyShiftSubsequent(
+                            steps = steps,
+                            editedIndex = idx,
+                            oldStep = oldStep,
+                            newStep = newStep,
+                            maxTimeMs = MT_TIMING_MAX_MS,
+                        )
                     }
                     pushUndo(steps)
                     steps = updated
