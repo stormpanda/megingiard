@@ -25,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -80,6 +79,9 @@ private const val MSD_TIMING_DELTA_BUTTON_V_PADDING = 2
 private const val MSD_TYPE_CHIP_CORNER      = 20
 private const val MSD_TYPE_CHIP_H_PADDING   = 12
 private const val MSD_TYPE_CHIP_V_PADDING   = 6
+private const val MSD_SHIFT_CHIP_CORNER     = 6
+private const val MSD_SHIFT_CHIP_H_PADDING  = 10
+private const val MSD_SHIFT_CHIP_V_PADDING  = 5
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step type (editor-internal)
@@ -122,8 +124,8 @@ internal fun MacroStepEditDialog(
     step:        MacroStep?,
     accentColor: Color,
     suggestedStartTimeMs: Long,
-    initialShiftSubsequent: Boolean,
-    onConfirm:   (MacroStep, Boolean) -> Unit,
+    initialShiftMode: ShiftMode,
+    onConfirm:   (MacroStep, ShiftMode) -> Unit,
     onDismiss:   () -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -189,7 +191,7 @@ internal fun MacroStepEditDialog(
     // DPadTap state
     var dpadDirX by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirX else 0) }
     var dpadDirY by remember { mutableIntStateOf(if (step is MacroStep.DPadTap) step.dirY else -1) }
-    var shiftSubsequent by remember { mutableStateOf(initialShiftSubsequent) }
+    var shiftMode by remember { mutableStateOf(initialShiftMode) }
 
     // ── Confirm guard ─────────────────────────────────────────────────────────
     val isConfirmEnabled = durMs > 0 && when (stepType) {
@@ -240,7 +242,7 @@ internal fun MacroStepEditDialog(
                             durationMs  = durMs.toLong().coerceAtLeast(1L),
                         )
                     }
-                    onConfirm(builtStep, shiftSubsequent)
+                    onConfirm(builtStep, shiftMode)
                 },
                 enabled = isConfirmEnabled,
             ) {
@@ -448,20 +450,46 @@ internal fun MacroStepEditDialog(
                 onChange    = { durMs = it },
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
                     color = colors.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Switch(
-                    checked = shiftSubsequent,
-                    onCheckedChange = { shiftSubsequent = it },
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        ShiftMode.NONE        to stringResource(R.string.macropad_macro_editor_shift_none),
+                        ShiftMode.START_DELTA to stringResource(R.string.macropad_macro_editor_shift_start_delta),
+                        ShiftMode.END_DELTA   to stringResource(R.string.macropad_macro_editor_shift_end_delta),
+                    ).forEach { (mode, label) ->
+                        val selected = shiftMode == mode
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(MSD_SHIFT_CHIP_CORNER.dp))
+                                .background(
+                                    if (selected) accentColor.copy(alpha = 0.2f)
+                                    else Color.Transparent
+                                )
+                                .border(
+                                    1.dp,
+                                    if (selected) accentColor else accentColor.copy(alpha = 0.4f),
+                                    RoundedCornerShape(MSD_SHIFT_CHIP_CORNER.dp),
+                                )
+                                .clickable { shiftMode = mode }
+                                .padding(
+                                    horizontal = MSD_SHIFT_CHIP_H_PADDING.dp,
+                                    vertical   = MSD_SHIFT_CHIP_V_PADDING.dp,
+                                ),
+                        ) {
+                            Text(
+                                text       = label,
+                                color      = if (selected) accentColor else colors.onSurfaceSecondary,
+                                style      = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                            )
+                        }
+                    }
+                }
             }
         }
     }

@@ -205,7 +205,7 @@ internal fun MacroTimelineEditor(
     var showGamepadRecordingOverlay by remember { mutableStateOf(false) }
     var gamepadRecordingError by remember { mutableStateOf<String?>(null) }
     var viewMode by remember { mutableStateOf(MacroEditorViewMode.LIST) }
-    var shiftSubsequentDefault by remember { mutableStateOf(true) }
+    var shiftModeDefault by remember { mutableStateOf(ShiftMode.END_DELTA) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var loopEnabled by remember { mutableStateOf(macro.loopEnabled) }
@@ -448,10 +448,21 @@ internal fun MacroTimelineEditor(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.width(6.dp))
-                Switch(
-                    checked = shiftSubsequentDefault,
-                    onCheckedChange = { shiftSubsequentDefault = it },
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(MT_VIEW_CHIP_SPACING.dp)) {
+                    ShiftMode.entries.forEach { mode ->
+                        ShiftModeChip(
+                            text = stringResource(
+                                when (mode) {
+                                    ShiftMode.NONE        -> R.string.macropad_macro_editor_shift_none
+                                    ShiftMode.START_DELTA -> R.string.macropad_macro_editor_shift_start_delta
+                                    ShiftMode.END_DELTA   -> R.string.macropad_macro_editor_shift_end_delta
+                                }
+                            ),
+                            selected = shiftModeDefault == mode,
+                            onClick  = { shiftModeDefault = mode },
+                        )
+                    }
+                }
             }
 
             HorizontalDivider(color = colors.divider)
@@ -637,27 +648,24 @@ internal fun MacroTimelineEditor(
             step = stepToEdit,
             accentColor = accentColor,
             suggestedStartTimeMs = suggestedStartTimeMs,
-            initialShiftSubsequent = shiftSubsequentDefault,
-            onConfirm = { newStep, applyShift ->
+            initialShiftMode = shiftModeDefault,
+            onConfirm = { newStep, shiftMode ->
                 if (editingStepIndex != null) {
                     val idx = editingStepIndex!!
                     val oldStep = steps[idx]
-                    val updated = if (!applyShift) {
-                        steps.toMutableList().also { it[idx] = newStep }
-                    } else {
-                        applyShiftSubsequent(
-                            steps = steps,
-                            editedIndex = idx,
-                            oldStep = oldStep,
-                            newStep = newStep,
-                            maxTimeMs = MT_TIMING_MAX_MS,
-                        )
-                    }
+                    val updated = applyShiftSubsequent(
+                        steps       = steps,
+                        editedIndex = idx,
+                        oldStep     = oldStep,
+                        newStep     = newStep,
+                        mode        = shiftMode,
+                        maxTimeMs   = MT_TIMING_MAX_MS,
+                    )
                     pushUndo(steps)
                     steps = updated
                     editingStepIndex = null
                 } else {
-                    val updated = if (!applyShift) {
+                    val updated = if (shiftMode == ShiftMode.NONE) {
                         steps + newStep
                     } else {
                         val shifted = steps.map { existing ->
@@ -777,6 +785,40 @@ private fun MacroViewModeChip(
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             )
         }
+    }
+}
+
+@Composable
+private fun ShiftModeChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp))
+            .background(
+                if (selected) colors.accent.copy(alpha = 0.85f)
+                else colors.navPillBody.copy(alpha = 0.5f),
+            )
+            .border(
+                1.dp,
+                if (selected) colors.accent else colors.controlOverlayBorder,
+                RoundedCornerShape(MT_VIEW_CHIP_CORNER.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(
+                horizontal = MT_VIEW_CHIP_H_PADDING.dp,
+                vertical   = MT_VIEW_CHIP_V_PADDING.dp,
+            ),
+    ) {
+        Text(
+            text       = text,
+            color      = if (selected) colors.onAccent else colors.onControlOverlay,
+            style      = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
     }
 }
 

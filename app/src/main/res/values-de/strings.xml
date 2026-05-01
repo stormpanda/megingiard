@@ -404,6 +404,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_editor_view_list">Liste</string>
     <string name="macropad_macro_editor_view_timeline">Zeit</string>
     <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
+    <string name="macropad_macro_editor_shift_none">Aus</string>
+    <string name="macropad_macro_editor_shift_start_delta">Start &#916;</string>
+    <string name="macropad_macro_editor_shift_end_delta">Ende &#916;</string>
     <string name="macropad_macro_record_gamepad">Aufzeichnen</string>
     <string name="macropad_macro_record_gamepad_title">Gamepad-Eingabe aufnehmen</string>
     <string name="macropad_macro_record_gamepad_hint">Berühre den eingeblendeten Controller. Eingaben werden aufgenommen und live an den oberen Bildschirm weitergegeben.</string>

@@ -101,16 +101,16 @@ Each button supports one of the following actions:
 - Both editor modes expose the same action row: **"Step"**, **"Record"** (gamepad), **"Record"** (touch), and **"Test Run"** (when steps are present). All four buttons have equal width (`Modifier.weight(1f)`) and equal height. Below the action row a **Loop toggle** and (when enabled) a **Pause between repetitions** slider are shown.
 - The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion).
 - Mode switching is exposed as two always-visible chips (**List/Liste** / **Time/Zeit**) with a leading **View/Ansicht** label, and the chips use the same visual style as the Idle Pill Profile/Layout selector chips.
-- The control header uses compact vertical spacing to preserve more vertical space for the step list/timeline area, and the global **Shift subsequent steps** toggle is right-aligned.
-- The editor includes a global **"Shift subsequent steps"** toggle (enabled by default) that defines the default for the per-step toggle in `MacroStepEditDialog`.
-- `MacroStepEditDialog` now contains its own **"Shift subsequent steps"** toggle. The state of this per-step toggle is what is actually applied when saving the step.
+- The control header uses compact vertical spacing to preserve more vertical space for the step list/timeline area, and the global **Shift mode** 3-chip selector is right-aligned.
+- The editor includes a global **Shift mode** selector (default: **End Δ**) whose value pre-fills the per-step selector in `MacroStepEditDialog`.
+- `MacroStepEditDialog` contains its own **Shift mode** 3-chip selector. The mode selected here is what is actually applied when saving the step.
 - In `MacroStepEditDialog`, step-type chips use the same visual style as Idle Pill selector chips and include leading icons (controller icon for Gamepad, stick icon for Joystick, and D-pad-like grid icon for D-Pad).
-- Shift behavior (implemented in `applyShiftSubsequent()` in `:core`):
-  - **Editing an existing step** with shift enabled applies a dual-delta transform to all other steps:
-    - Steps whose `startTimeMs` is **≥ oldStep.startTimeMs** are shifted by `startDelta = newStart − oldStart`.
-    - Steps whose `startTimeMs` is additionally **≥ oldStep.endTimeMs** are also shifted by `durationDelta = newDuration − oldDuration`.
-    - Net effect: concurrent/overlapping steps follow the edited step's start-time move; steps after the old end follow the full end-time change (= `startDelta + durationDelta`); steps before the old start are never touched.
-  - **Adding a new step** with shift enabled moves existing steps at/after the new start time by the new step's duration.
+- Shift behavior (implemented in `applyShiftSubsequent()` in `:core`, governed by `ShiftMode`):
+  - **`ShiftMode.NONE`** — only the edited step is replaced; no other step moves.
+  - **`ShiftMode.START_DELTA`** — steps whose `startTimeMs ≥ oldStep.endTimeMs` are shifted by `newStart − oldStart`. A pure duration change produces a zero start-delta, so nothing else moves.
+  - **`ShiftMode.END_DELTA`** — steps whose `startTimeMs ≥ oldStep.endTimeMs` are shifted by `newEnd − oldEnd`. Handles duration changes, start moves, or both; the delta reflects the full change in the edited step's end time.
+  - **Key invariant for both non-NONE modes:** the eligibility threshold is always `≥ oldStep.endTimeMs`. Steps that start before the edited step's old end — including concurrent or overlapping steps — are never shifted regardless of mode.
+  - **Adding a new step** when mode ≠ NONE shifts existing steps at/after the new step's start time by the new step's duration.
   - Shifted start times are clamped to `[0, 10 000 ms]`.
 - Steps are configured in **`MacroStepEditDialog`** which provides: step-type chips (Gamepad / Joystick / D-Pad; Touch Tap shown read-only when editing), gamepad button dropdown, 3×3 direction grid for joystick/D-Pad, a magnitude slider (0–1, default 1) for joystick, and timing controls for start/duration.
 - New-step timing defaults and controls:

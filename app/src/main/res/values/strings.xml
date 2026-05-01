@@ -378,6 +378,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_editor_view_list">List</string>
     <string name="macropad_macro_editor_view_timeline">Time</string>
     <string name="macropad_macro_editor_shift_subsequent">Shift subsequent steps</string>
+    <string name="macropad_macro_editor_shift_none">Off</string>
+    <string name="macropad_macro_editor_shift_start_delta">Start &#916;</string>
+    <string name="macropad_macro_editor_shift_end_delta">End &#916;</string>
     <!-- MacroStepEditDialog -->
     <string name="macropad_macro_step_new">Add Step</string>
     <string name="macropad_macro_step_edit">Edit Step</string>
