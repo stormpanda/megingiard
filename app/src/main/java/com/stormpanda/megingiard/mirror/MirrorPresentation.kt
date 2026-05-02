@@ -486,14 +486,16 @@ class MirrorPresentation(
     private fun bindStateFlows(sv: SurfaceView) {
         scope.launch {
             combine(
+                AppStateManager.isFullscreenKeyboardActive,
                 AppStateManager.isPillMenuOpen,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isAmbientSettingsActive,
-            ) { pillMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
+            ) { fullscreenKeyboard, pillMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = true,
+                        isFullscreenKeyboardActive = fullscreenKeyboard,
                         isPillMenuOpen = pillMenuOpen,
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,

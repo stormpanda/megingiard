@@ -83,4 +83,32 @@ class MacroPadFocusPolicyTest {
             )
         )
     }
+
+    @Test
+    fun `fullscreen keyboard on presentation keeps primary game focus even without macropad active`() {
+        // Regression guard: MirrorPresentation passes isMacroPadSurfaceActive=true always,
+        // but the flag combination with keyboard active must still keep game focus.
+        assertTrue(
+            shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(
+                    isMacroPadSurfaceActive = true,
+                    isFullscreenKeyboardActive = true,
+                )
+            )
+        )
+    }
+
+    @Test
+    fun `interactive overlay takes priority over fullscreen keyboard in clearing focus`() {
+        // PillMenu open + keyboard active: interactive overlay wins, app needs focus.
+        assertFalse(
+            shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(
+                    isMacroPadSurfaceActive = true,
+                    isFullscreenKeyboardActive = false,
+                    isPillMenuOpen = true,
+                )
+            )
+        )
+    }
 }

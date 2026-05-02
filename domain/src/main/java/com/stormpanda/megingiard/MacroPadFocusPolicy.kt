@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard
 
+private const val TAG = "MacroPadFocusPolicy"
+
 data class MacroPadFocusPolicyState(
     val isMacroPadSurfaceActive: Boolean,
     val isFullscreenKeyboardActive: Boolean = false,
