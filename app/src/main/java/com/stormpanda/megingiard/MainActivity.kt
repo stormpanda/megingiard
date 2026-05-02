@@ -159,8 +159,16 @@ class MainActivity : ComponentActivity() {
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
-                fullscreenKeyboard ||
-                    (onValidScreen && !pillMenuOpen && !filePickerOpen && !editorActive && !ambientSettingsActive)
+                shouldKeepPrimaryGameFocus(
+                    MacroPadFocusPolicyState(
+                        isMacroPadSurfaceActive = onValidScreen,
+                        isFullscreenKeyboardActive = fullscreenKeyboard,
+                        isPillMenuOpen = pillMenuOpen,
+                        isFilePickerOpen = filePickerOpen,
+                        isEditorActive = editorActive,
+                        isAmbientSettingsActive = ambientSettingsActive,
+                    )
+                )
             }
                 .distinctUntilChanged()
                 .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }

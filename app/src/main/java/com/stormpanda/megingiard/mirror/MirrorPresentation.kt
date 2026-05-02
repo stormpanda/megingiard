@@ -39,7 +39,9 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
+import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
@@ -121,7 +123,11 @@ class MirrorPresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x${srcHeight}")
-        setPresentationFocusMode(keepPrimaryFocus = true)
+        setPresentationFocusMode(
+            keepPrimaryFocus = shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(isMacroPadSurfaceActive = true)
+            )
+        )
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             onBackCallback
@@ -485,7 +491,15 @@ class MirrorPresentation(
                 AppStateManager.isEditorActive,
                 AppStateManager.isAmbientSettingsActive,
             ) { pillMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
-                !pillMenuOpen && !filePickerOpen && !editorActive && !ambientSettingsActive
+                shouldKeepPrimaryGameFocus(
+                    MacroPadFocusPolicyState(
+                        isMacroPadSurfaceActive = true,
+                        isPillMenuOpen = pillMenuOpen,
+                        isFilePickerOpen = filePickerOpen,
+                        isEditorActive = editorActive,
+                        isAmbientSettingsActive = ambientSettingsActive,
+                    )
+                )
             }
                 .distinctUntilChanged()
                 .collect { keepPrimaryFocus -> setPresentationFocusMode(keepPrimaryFocus) }
