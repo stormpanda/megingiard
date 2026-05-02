@@ -39,7 +39,9 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
+import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
@@ -59,6 +61,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -120,6 +123,11 @@ class MirrorPresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x${srcHeight}")
+        setPresentationFocusMode(
+            keepPrimaryFocus = shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(isMacroPadSurfaceActive = true)
+            )
+        )
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
             onBackCallback
@@ -478,6 +486,28 @@ class MirrorPresentation(
     private fun bindStateFlows(sv: SurfaceView) {
         scope.launch {
             combine(
+                AppStateManager.isFullscreenKeyboardActive,
+                AppStateManager.isPillMenuOpen,
+                AppStateManager.isFilePickerOpen,
+                AppStateManager.isEditorActive,
+                AppStateManager.isAmbientSettingsActive,
+            ) { fullscreenKeyboard, pillMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
+                shouldKeepPrimaryGameFocus(
+                    MacroPadFocusPolicyState(
+                        isMacroPadSurfaceActive = true,
+                        isFullscreenKeyboardActive = fullscreenKeyboard,
+                        isPillMenuOpen = pillMenuOpen,
+                        isFilePickerOpen = filePickerOpen,
+                        isEditorActive = editorActive,
+                        isAmbientSettingsActive = ambientSettingsActive,
+                    )
+                )
+            }
+                .distinctUntilChanged()
+                .collect { keepPrimaryFocus -> setPresentationFocusMode(keepPrimaryFocus) }
+        }
+        scope.launch {
+            combine(
                 AppStateManager.isOnValidScreen,
                 AmbientSettings.macropadAmbientEnabled,
                 ScreenCaptureManager.isCapturing,
@@ -558,6 +588,16 @@ class MirrorPresentation(
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }
+        }
+    }
+
+    private fun setPresentationFocusMode(keepPrimaryFocus: Boolean) {
+        if (keepPrimaryFocus) {
+            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (ambient presentation surface)")
+            window?.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        } else {
+            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive presentation overlay)")
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
     }
 }
