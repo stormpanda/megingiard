@@ -62,6 +62,7 @@ Each button supports one of the following actions:
 - Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
 - When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
+- During normal MacroPad use on the secondary display, the hosting Activity window is marked `FLAG_NOT_FOCUSABLE` so touch input on the MacroPad does not steal focus from a primary-display game that owns Android pointer capture. The flag is cleared while PillMenu, file picker, editor, or ambient settings overlays are open because those screens may need focused app input.
 
 ### FR-P5: Trackpoint Button
 
@@ -422,6 +423,8 @@ Supported button codes: `BTN_SOUTH (304)`, `BTN_EAST (305)`, `BTN_NORTH (308)`, 
 - `R\n` on stdout when ready
 
 MOVE events (`MM`) are coalesced in the writer thread (keep-latest) to avoid latency backlog during trackpoint drag.
+
+When the MacroPad is rendered as an ambient overlay inside `MirrorPresentation`, the Presentation window follows the same focus policy. This preserves pointer capture both with and without active mirroring.
 
 ### State Management
 

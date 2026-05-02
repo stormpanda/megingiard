@@ -46,6 +46,8 @@ import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -139,20 +141,29 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // FLAG_NOT_FOCUSABLE must only be active when the fullscreen keyboard overlay is
-        // shown so that uinput key events are delivered to the focused app (the game) rather
-        // than to Megingiard. Keeping it active otherwise would break in-app text fields
-        // (e.g. MacroPad profile name inputs).
+        // Keep the normal MacroPad use surface non-focusable on the secondary display so
+        // touch input does not steal focus from a primary-display game that owns pointer
+        // capture. Focus is restored for app overlays that need text/input focus.
         lifecycleScope.launch {
-            AppStateManager.isFullscreenKeyboardActive.collect { active ->
-                if (active) {
-                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (fullscreen keyboard active)")
-                    window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-                } else {
-                    AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared")
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-                }
+            combine(
+                AppStateManager.isFullscreenKeyboardActive,
+                AppStateManager.isOnValidScreen,
+                AppStateManager.isPillMenuOpen,
+                AppStateManager.isFilePickerOpen,
+                AppStateManager.isEditorActive,
+                AppStateManager.isAmbientSettingsActive,
+            ) { values ->
+                val fullscreenKeyboard = values[0] as Boolean
+                val onValidScreen = values[1] as Boolean
+                val pillMenuOpen = values[2] as Boolean
+                val filePickerOpen = values[3] as Boolean
+                val editorActive = values[4] as Boolean
+                val ambientSettingsActive = values[5] as Boolean
+                fullscreenKeyboard ||
+                    (onValidScreen && !pillMenuOpen && !filePickerOpen && !editorActive && !ambientSettingsActive)
             }
+                .distinctUntilChanged()
+                .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
         }
         SettingsManager.init(this)
         lifecycleScope.launch {
@@ -292,6 +303,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun setActivityFocusMode(keepPrimaryFocus: Boolean) {
+        if (keepPrimaryFocus) {
+            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (macropad use surface)")
+            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        } else {
+            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive app overlay)")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
     }
 
