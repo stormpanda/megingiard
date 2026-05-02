@@ -117,6 +117,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_trackpoint_size_small">Klein</string>
     <string name="macropad_trackpoint_size_medium">Mittel</string>
     <string name="macropad_trackpoint_size_large">Groß</string>
+    <string name="macropad_editor_section_haptic">Haptisches Feedback</string>
+    <string name="macropad_haptic_off">Aus</string>
+    <string name="macropad_haptic_light">Leicht</string>
+    <string name="macropad_haptic_medium">Mittel</string>
+    <string name="macropad_haptic_strong">Stark</string>
     <string name="macropad_editor_devices">Simulierte Geräte</string>
     <string name="macropad_editor_device_keyboard">Tastatur</string>
     <string name="macropad_editor_device_gamepad">Gamepad</string>

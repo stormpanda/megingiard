@@ -5,7 +5,9 @@ import com.stormpanda.megingiard.input.MouseInjector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 private const val TAG = "MacroPadHitTest"
 
@@ -31,9 +33,20 @@ enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE }
  *
  * @param buttonUnitDpToPx  conversion function: `(dp: Float) -> Float`
  *                          for calculating button chip sizes from dp units
+ * @param onHapticFeedback  optional callback invoked by the engine when haptic
+ *                          feedback should be triggered. The UI layer owns the
+ *                          [android.os.Vibrator] and performs the actual vibration.
+ *                          Invoked on the calling thread (Main).
+ *                          The second parameter is the movement magnitude:
+ *                          - `0f` for a discrete button press (fire immediately)
+ *                          - `sqrt(dx²+dy²)` for [PadAction.TrackpointMove]
+ *                          - `abs(units)` for [PadAction.ScrollWheel]
+ *                          The caller uses the magnitude to compute a dynamic
+ *                          rate-limit interval (faster movement → shorter interval).
  */
 class MacroPadHitTestEngine(
     private val buttonUnitDpToPx: (Float) -> Float,
+    private val onHapticFeedback: ((HapticStrength, Float) -> Unit)? = null,
 ) {
     private val _pressedIds = MutableStateFlow(emptySet<String>())
     /** Set of currently pressed button IDs (for visual highlighting). */
@@ -105,6 +118,10 @@ class MacroPadHitTestEngine(
             else -> {
                 _pressedIds.value = _pressedIds.value + hitButton.id
                 injectActionDown(hitButton.action)
+                if (hitButton.hapticStrength != HapticStrength.OFF) {
+                    AppLog.d(TAG, "haptic on press: button=${hitButton.id} strength=${hitButton.hapticStrength}")
+                    onHapticFeedback?.invoke(hitButton.hapticStrength, 0f)
+                }
             }
         }
         return null // null = no toast needed
@@ -138,7 +155,13 @@ class MacroPadHitTestEngine(
                 if (lastTpPos != null) {
                     val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
                     val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                    if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
+                    if (dx != 0 || dy != 0) {
+                        MouseInjector.moveMouse(dx, dy)
+                        if (mappedBtn.hapticStrength != HapticStrength.OFF) {
+                            val mag = sqrt((dx * dx + dy * dy).toFloat())
+                            onHapticFeedback?.invoke(mappedBtn.hapticStrength, mag)
+                        }
+                    }
                 }
                 lastTpPos = Pair(px, py)
             }
@@ -149,6 +172,10 @@ class MacroPadHitTestEngine(
                 if (units != 0) {
                     MouseInjector.scrollWheel(units)
                     scrollStartY[pointerId] = py
+                    if (mappedBtn.hapticStrength != HapticStrength.OFF) {
+                        AppLog.d(TAG, "haptic on scroll: button=${mappedBtn.id} units=$units strength=${mappedBtn.hapticStrength}")
+                        onHapticFeedback?.invoke(mappedBtn.hapticStrength, abs(units).toFloat())
+                    }
                 }
             }
         }

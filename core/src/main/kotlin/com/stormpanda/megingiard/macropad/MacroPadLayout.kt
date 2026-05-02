@@ -46,6 +46,26 @@ enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Haptic feedback strength — used by PadButton
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Haptic feedback intensity for a MacroPad button.
+ *
+ * - [OFF]    — no vibration.
+ * - [LIGHT]  — minimal detectable tick (5 ms, amplitude 1).
+ * - [MEDIUM] — slightly stronger tick (7 ms, amplitude 10).
+ * - [STRONG] — most prominent tick (9 ms, amplitude 25).
+ *
+ * For [PadAction.TrackpointMove] the vibration repeats on every move event
+ * while the finger is dragging (continuous haptic, rate-limited to ≈60 Hz).
+ * For [PadAction.ScrollWheel] the vibration fires once per discrete scroll unit.
+ * For all other action types the vibration fires once on button-down.
+ */
+@Serializable
+enum class HapticStrength { OFF, LIGHT, MEDIUM, STRONG }
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -235,6 +255,7 @@ data class PadButton(
     val buttonSize: ButtonSize = ButtonSize.SIZE_1X1,
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
+    val hapticStrength: HapticStrength = HapticStrength.OFF,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

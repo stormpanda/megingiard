@@ -236,6 +236,21 @@ Each button supports one of the following actions:
 - The setting is persisted in DataStore under the `macropad_settings` export section (`gamepad_swap_face_buttons` key) and therefore included in config export/import.
 - Implementation: `SettingsManager` exposes `gamepadSwapFaceButtons` as read-only `StateFlow<Boolean>`. `PadActionPicker.kt` provides shared label helpers (`gamepadCodeDisplayLabel`, `gamepadCodeDisplayShortLabel`, `localizedDisplayLabel`) that are consumed by button picker, macro step editor, and macro timeline UI.
 
+### FR-P14: Per-Button Haptic Feedback
+
+- Each `PadButton` carries a `hapticStrength: HapticStrength` field (serialised; default `OFF` — existing profiles load without migration).
+- Four strength levels are available: `OFF`, `LIGHT`, `MEDIUM`, `STRONG`.
+- The strength selector is displayed in `ButtonEditDialog` as a row of four chips (same visual language as the shape/size pickers). The selector is hidden for `AmbientPeek` buttons; it is shown for all other action types including `TrackpointMove` and `ScrollWheel`.
+- **Button-down (all non-trackpoint / non-scroll actions):** A single short vibration tick fires on button press. Duration / amplitude:
+  - `LIGHT` — 5 ms, amplitude 1 (minimum detectable pulse).
+  - `MEDIUM` — 7 ms, amplitude 10.
+  - `STRONG` — 9 ms, amplitude 25.
+- **TrackpointMove:** Vibration fires continuously while the finger moves, with a **speed-adaptive rate**: the faster the trackpoint moves, the shorter the interval between pulses. The engine passes `sqrt(dx² + dy²)` as a magnitude to the callback; `PadSurface` computes `interval = clamp(500 / magnitude, 50 ms, 500 ms)`. Slow movement (magnitude ≈ 1) → ~500 ms interval; fast movement (magnitude ≥ 10) → 50 ms minimum.
+- **ScrollWheel:** One tick fires per discrete scroll batch. The engine passes `abs(units)` as the magnitude, so the same speed-adaptive interval applies (faster scrolling → more frequent pulses).
+- **Discrete button press:** magnitude is always `0f`; the interval guard evaluates to 0 ms so the pulse fires immediately regardless of prior activity.
+- **Disabled-device buttons:** No haptic is triggered — the engine returns early before the callback is invoked.
+- **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((HapticStrength, Float) -> Unit)?` constructor parameter (second argument = movement magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:app`) performs the `VibrationEffect.createOneShot()` call. The `:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:core`) crosses the boundary.
+
 ---
 
 ## Technical Implementation
@@ -345,12 +360,13 @@ PadProfile
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
         ├── buttonShape: ButtonShape (SQUARE | CIRCLE)
-        └── action: PadAction   (sealed)
-              KeyboardKey(keycode, label)
-              GamepadButton(btnCode, label)
-              MouseButton(button: MouseButton enum)
-              ScrollWheel
-              TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
+        ├── action: PadAction   (sealed)
+        │     KeyboardKey(keycode, label)
+        │     GamepadButton(btnCode, label)
+        │     MouseButton(button: MouseButton enum)
+        │     ScrollWheel
+        │     TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
+        └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG, default OFF)
 ```
 
 ### Icon Rendering — Material Symbols Font

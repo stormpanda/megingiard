@@ -106,6 +106,7 @@ internal fun ButtonEditDialog(
     var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
     var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
+    var hapticStrength    by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
     val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -168,22 +169,24 @@ internal fun ButtonEditDialog(
                 onClick = {
                     if (isConfirmEnabled) {
                         val result = button?.copy(
-                            label       = label,
-                            iconName    = iconName,
-                            iconFilled  = iconFilled,
-                            buttonShape = buttonShape,
-                            buttonSize  = buttonSize,
-                            action      = action,
+                            label          = label,
+                            iconName       = iconName,
+                            iconFilled     = iconFilled,
+                            buttonShape    = buttonShape,
+                            buttonSize     = buttonSize,
+                            action         = action,
+                            hapticStrength = hapticStrength,
                         ) ?: PadButton(
-                            id          = UUID.randomUUID().toString(),
-                            label       = label,
-                            iconName    = iconName,
-                            iconFilled  = iconFilled,
-                            posX        = 0.5f,
-                            posY        = 0.5f,
-                            buttonShape = buttonShape,
-                            buttonSize  = buttonSize,
-                            action      = action,
+                            id             = UUID.randomUUID().toString(),
+                            label          = label,
+                            iconName       = iconName,
+                            iconFilled     = iconFilled,
+                            posX           = 0.5f,
+                            posY           = 0.5f,
+                            buttonShape    = buttonShape,
+                            buttonSize     = buttonSize,
+                            action         = action,
+                            hapticStrength = hapticStrength,
                         )
                         onConfirm(result)
                     }
@@ -412,6 +415,43 @@ internal fun ButtonEditDialog(
                 }
 
                 // Action picker
+                SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
+                // Haptic feedback strength picker — hidden for AmbientPeek only
+                if (action !is PadAction.AmbientPeek) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        HapticStrength.entries.forEach { strength ->
+                            val selected = strength == hapticStrength
+                            val strengthLabel = when (strength) {
+                                HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
+                                HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
+                                HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                                HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                            }
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
+                                    .border(
+                                        width = if (selected) 2.dp else 1.dp,
+                                        color = if (selected) accentColor else colors.accentBorder,
+                                        shape = RoundedCornerShape(8.dp),
+                                    )
+                                    .clickable { hapticStrength = strength }
+                                    .padding(vertical = 10.dp),
+                            ) {
+                                Text(
+                                    text  = strengthLabel,
+                                    color = if (selected) accentColor else colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
+                }
+
                 SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
                 ActionPicker(
                     current        = action,
