@@ -110,8 +110,25 @@ internal fun ButtonEditDialog(
     var action            by remember { mutableStateOf(initAction) }
     var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
     var hapticStrength         by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
-    var hapticCustomDurationMs  by remember { mutableIntStateOf(button?.hapticCustomDurationMs ?: 10) }
-    var hapticCustomAmplitude   by remember { mutableIntStateOf(button?.hapticCustomAmplitude ?: 25) }
+    // Sliders always reflect the active preset or the stored custom values on open
+    var hapticCustomDurationMs  by remember {
+        mutableIntStateOf(
+            when (button?.hapticStrength) {
+                HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG -> 15
+                else -> button?.hapticCustomDurationMs ?: 10
+            }
+        )
+    }
+    var hapticCustomAmplitude   by remember {
+        mutableIntStateOf(
+            when (button?.hapticStrength) {
+                HapticStrength.LIGHT  -> 25
+                HapticStrength.MEDIUM -> 50
+                HapticStrength.STRONG -> 100
+                else -> button?.hapticCustomAmplitude ?: 25
+            }
+        )
+    }
     val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -449,14 +466,12 @@ internal fun ButtonEditDialog(
                                         shape = RoundedCornerShape(8.dp),
                                     )
                                     .clickable {
-                                        if (strength == HapticStrength.CUSTOM && hapticStrength != HapticStrength.CUSTOM) {
-                                            // Pre-fill sliders with the values of the currently selected preset
-                                            when (hapticStrength) {
-                                                HapticStrength.LIGHT  -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 25 }
-                                                HapticStrength.MEDIUM -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 50 }
-                                                HapticStrength.STRONG -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 100 }
-                                                else                  -> { /* OFF or CUSTOM → keep existing values */ }
-                                            }
+                                        // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
+                                        when (strength) {
+                                            HapticStrength.LIGHT  -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 25 }
+                                            HapticStrength.MEDIUM -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 50 }
+                                            HapticStrength.STRONG -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 100 }
+                                            else                  -> { /* OFF / CUSTOM → keep current slider values */ }
                                         }
                                         hapticStrength = strength
                                     }
@@ -471,8 +486,8 @@ internal fun ButtonEditDialog(
                             }
                         }
                     }
-                    // Custom sliders — shown only when CUSTOM is selected
-                    if (hapticStrength == HapticStrength.CUSTOM) {
+                    // Sliders always visible; dragging either slider auto-selects CUSTOM
+                    if (hapticStrength != HapticStrength.OFF) {
                         Column(
                             modifier = Modifier.padding(top = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -496,7 +511,10 @@ internal fun ButtonEditDialog(
                                 Slider(
                                     modifier = Modifier.weight(1f),
                                     value    = hapticCustomDurationMs.toFloat(),
-                                    onValueChange = { hapticCustomDurationMs = it.toInt() },
+                                    onValueChange = {
+                                        hapticCustomDurationMs = it.toInt()
+                                        hapticStrength = HapticStrength.CUSTOM
+                                    },
                                     valueRange = 1f..200f,
                                     steps = 198, // 1..200 → 200 values = 198 interior steps
                                 )
@@ -520,7 +538,10 @@ internal fun ButtonEditDialog(
                                 Slider(
                                     modifier = Modifier.weight(1f),
                                     value    = hapticCustomAmplitude.toFloat(),
-                                    onValueChange = { hapticCustomAmplitude = (it / 5).toInt() * 5 },
+                                    onValueChange = {
+                                        hapticCustomAmplitude = (it / 5).toInt() * 5
+                                        hapticStrength = HapticStrength.CUSTOM
+                                    },
                                     valueRange = 5f..100f,
                                     steps = 18, // 5,10,15,…,100 → 20 values = 18 interior steps
                                 )
@@ -533,8 +554,8 @@ internal fun ButtonEditDialog(
                                 TextButton(
                                     onClick = {
                                         triggerHaptic(
-                                            vibrator     = vibrator,
-                                            strength     = HapticStrength.CUSTOM,
+                                            vibrator         = vibrator,
+                                            strength         = HapticStrength.CUSTOM,
                                             customDurationMs = hapticCustomDurationMs,
                                             customAmplitude  = hapticCustomAmplitude,
                                         )
@@ -546,7 +567,8 @@ internal fun ButtonEditDialog(
                                         style = MaterialTheme.typography.labelLarge,
                                     )
                                 }
-                            }                        }
+                            }
+                        }
                     }
                 }
 
