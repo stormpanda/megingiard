@@ -55,7 +55,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
 
     fun createHitTestEngine(
         buttonUnitDpToPx: (Float) -> Float,
-        onHapticFeedback: ((HapticStrength, Float) -> Unit)? = null,
+        onHapticFeedback: ((HapticStrength, Int, Int, Float) -> Unit)? = null,
     ) = MacroPadHitTestEngine(buttonUnitDpToPx, onHapticFeedback)
 
     /**

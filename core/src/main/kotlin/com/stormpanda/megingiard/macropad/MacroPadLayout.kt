@@ -63,7 +63,7 @@ enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGH
  * For all other action types the vibration fires once on button-down.
  */
 @Serializable
-enum class HapticStrength { OFF, LIGHT, MEDIUM, STRONG }
+enum class HapticStrength { OFF, LIGHT, MEDIUM, STRONG, CUSTOM }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
@@ -256,6 +256,10 @@ data class PadButton(
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
     val hapticStrength: HapticStrength = HapticStrength.OFF,
+    /** Duration in milliseconds for [HapticStrength.CUSTOM] pulses. Range: 1–200. */
+    val hapticCustomDurationMs: Int = 10,
+    /** Amplitude for [HapticStrength.CUSTOM] pulses. Range: 5–100 in steps of 5. */
+    val hapticCustomAmplitude: Int = 25,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

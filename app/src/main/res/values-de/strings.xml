@@ -122,6 +122,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_haptic_light">Leicht</string>
     <string name="macropad_haptic_medium">Mittel</string>
     <string name="macropad_haptic_strong">Stark</string>
+    <string name="macropad_haptic_custom">Eigene</string>
+    <string name="macropad_haptic_custom_duration">Dauer</string>
+    <string name="macropad_haptic_custom_amplitude">Stärke</string>
     <string name="macropad_editor_devices">Simulierte Geräte</string>
     <string name="macropad_editor_device_keyboard">Tastatur</string>
     <string name="macropad_editor_device_gamepad">Gamepad</string>

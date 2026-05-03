@@ -184,7 +184,7 @@ internal fun PadSurface(
     val engine = remember(profile, layout) {
         viewModel.createHitTestEngine(
             buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
-            onHapticFeedback = { strength, magnitude ->
+            onHapticFeedback = { strength, customDurationMs, customAmplitude, magnitude ->
                 if (strength == HapticStrength.OFF) return@createHitTestEngine
                 val now = SystemClock.elapsedRealtime()
                 // magnitude == 0f → discrete button press, fire immediately
@@ -194,7 +194,7 @@ internal fun PadSurface(
                         .coerceIn(MP_HAPTIC_MIN_INTERVAL_MS, MP_HAPTIC_MAX_INTERVAL_MS)
                 if (now - lastTrackpointHapticMs >= intervalMs) {
                     lastTrackpointHapticMs = now
-                    triggerHaptic(vibrator, strength)
+                    triggerHaptic(vibrator, strength, customDurationMs, customAmplitude)
                 }
             },
         )

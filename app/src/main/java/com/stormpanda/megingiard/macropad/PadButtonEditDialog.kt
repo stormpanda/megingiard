@@ -26,10 +26,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -106,7 +108,9 @@ internal fun ButtonEditDialog(
     var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
     var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
-    var hapticStrength    by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
+    var hapticStrength         by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
+    var hapticCustomDurationMs  by remember { mutableIntStateOf(button?.hapticCustomDurationMs ?: 10) }
+    var hapticCustomAmplitude   by remember { mutableIntStateOf(button?.hapticCustomAmplitude ?: 25) }
     val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -169,24 +173,28 @@ internal fun ButtonEditDialog(
                 onClick = {
                     if (isConfirmEnabled) {
                         val result = button?.copy(
-                            label          = label,
-                            iconName       = iconName,
-                            iconFilled     = iconFilled,
-                            buttonShape    = buttonShape,
-                            buttonSize     = buttonSize,
-                            action         = action,
-                            hapticStrength = hapticStrength,
+                            label                 = label,
+                            iconName              = iconName,
+                            iconFilled            = iconFilled,
+                            buttonShape           = buttonShape,
+                            buttonSize            = buttonSize,
+                            action                = action,
+                            hapticStrength        = hapticStrength,
+                            hapticCustomDurationMs = hapticCustomDurationMs,
+                            hapticCustomAmplitude  = hapticCustomAmplitude,
                         ) ?: PadButton(
-                            id             = UUID.randomUUID().toString(),
-                            label          = label,
-                            iconName       = iconName,
-                            iconFilled     = iconFilled,
-                            posX           = 0.5f,
-                            posY           = 0.5f,
-                            buttonShape    = buttonShape,
-                            buttonSize     = buttonSize,
-                            action         = action,
-                            hapticStrength = hapticStrength,
+                            id                    = UUID.randomUUID().toString(),
+                            label                 = label,
+                            iconName              = iconName,
+                            iconFilled            = iconFilled,
+                            posX                  = 0.5f,
+                            posY                  = 0.5f,
+                            buttonShape           = buttonShape,
+                            buttonSize            = buttonSize,
+                            action                = action,
+                            hapticStrength        = hapticStrength,
+                            hapticCustomDurationMs = hapticCustomDurationMs,
+                            hapticCustomAmplitude  = hapticCustomAmplitude,
                         )
                         onConfirm(result)
                     }
@@ -426,6 +434,7 @@ internal fun ButtonEditDialog(
                                 HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
                                 HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
                                 HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                                HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
                             }
                             Box(
                                 contentAlignment = Alignment.Center,
@@ -446,6 +455,62 @@ internal fun ButtonEditDialog(
                                     color = if (selected) accentColor else colors.onSurfaceSecondary,
                                     style = MaterialTheme.typography.bodySmall,
                                     textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
+                    // Custom sliders — shown only when CUSTOM is selected
+                    if (hapticStrength == HapticStrength.CUSTOM) {
+                        Column(
+                            modifier = Modifier.padding(top = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.width(96.dp)) {
+                                    Text(
+                                        text  = stringResource(R.string.macropad_haptic_custom_duration),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text  = "$hapticCustomDurationMs ms",
+                                        color = accentColor,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                                Slider(
+                                    modifier = Modifier.weight(1f),
+                                    value    = hapticCustomDurationMs.toFloat(),
+                                    onValueChange = { hapticCustomDurationMs = it.toInt() },
+                                    valueRange = 1f..200f,
+                                    steps = 198, // 1..200 → 200 values = 198 interior steps
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.width(96.dp)) {
+                                    Text(
+                                        text  = stringResource(R.string.macropad_haptic_custom_amplitude),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text  = "$hapticCustomAmplitude",
+                                        color = accentColor,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                                Slider(
+                                    modifier = Modifier.weight(1f),
+                                    value    = hapticCustomAmplitude.toFloat(),
+                                    onValueChange = { hapticCustomAmplitude = (it / 5).toInt() * 5 },
+                                    valueRange = 5f..100f,
+                                    steps = 18, // 5,10,15,…,100 → 20 values = 18 interior steps
                                 )
                             }
                         }
