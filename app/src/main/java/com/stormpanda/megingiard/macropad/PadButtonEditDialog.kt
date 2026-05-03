@@ -448,7 +448,18 @@ internal fun ButtonEditDialog(
                                         color = if (selected) accentColor else colors.accentBorder,
                                         shape = RoundedCornerShape(8.dp),
                                     )
-                                    .clickable { hapticStrength = strength }
+                                    .clickable {
+                                        if (strength == HapticStrength.CUSTOM && hapticStrength != HapticStrength.CUSTOM) {
+                                            // Pre-fill sliders with the values of the currently selected preset
+                                            when (hapticStrength) {
+                                                HapticStrength.LIGHT  -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 25 }
+                                                HapticStrength.MEDIUM -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 50 }
+                                                HapticStrength.STRONG -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 100 }
+                                                else                  -> { /* OFF or CUSTOM → keep existing values */ }
+                                            }
+                                        }
+                                        hapticStrength = strength
+                                    }
                                     .padding(vertical = 10.dp),
                             ) {
                                 Text(
