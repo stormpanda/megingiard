@@ -64,7 +64,7 @@ private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
 
 // Dynamic haptic interval bounds: faster movement → shorter interval
 private const val MP_HAPTIC_MIN_INTERVAL_MS = 50L
-private const val MP_HAPTIC_MAX_INTERVAL_MS = 500L
+private const val MP_HAPTIC_MAX_INTERVAL_MS = 1000L
 private const val MP_HAPTIC_BASE_SPEED = 500f
 
 private const val TAG = "MacroPadScreen"
