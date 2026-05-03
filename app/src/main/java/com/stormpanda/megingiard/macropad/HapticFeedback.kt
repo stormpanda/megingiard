@@ -11,13 +11,13 @@ private const val TAG = "HapticFeedback"
 // MEDIUM = slightly more present without being intrusive.
 // STRONG = most prominent — still a short click, not a buzz.
 
-private const val HF_LIGHT_DURATION_MS  = 5L
-private const val HF_MEDIUM_DURATION_MS = 7L
-private const val HF_STRONG_DURATION_MS = 9L
+private const val HF_LIGHT_DURATION_MS  = 15L
+private const val HF_MEDIUM_DURATION_MS = 15L
+private const val HF_STRONG_DURATION_MS = 15L
 
-private const val HF_LIGHT_AMPLITUDE  = 1
-private const val HF_MEDIUM_AMPLITUDE = 10
-private const val HF_STRONG_AMPLITUDE = 25
+private const val HF_LIGHT_AMPLITUDE  = 64   // 25 % of 255
+private const val HF_MEDIUM_AMPLITUDE = 128  // 50 % of 255
+private const val HF_STRONG_AMPLITUDE = 255  // 100 % of 255
 
 /** Minimum custom amplitude clamped at call-site to prevent silent zero. */
 private const val HF_CUSTOM_AMPLITUDE_MIN = 5
