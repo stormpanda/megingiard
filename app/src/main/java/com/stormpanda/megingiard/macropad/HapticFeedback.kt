@@ -21,8 +21,10 @@ private const val HF_STRONG_AMPLITUDE = 25
 
 /** Minimum custom amplitude clamped at call-site to prevent silent zero. */
 private const val HF_CUSTOM_AMPLITUDE_MIN = 5
-/** Maximum custom amplitude (Android accepts 1–255; 100 is the user-facing ceiling). */
+/** Maximum custom amplitude on the user-facing scale (maps to Android's 255). */
 private const val HF_CUSTOM_AMPLITUDE_MAX = 100
+/** Android's maximum amplitude value. User-facing 100 maps to this. */
+private const val HF_CUSTOM_AMPLITUDE_ANDROID_MAX = 255
 /** Minimum custom duration clamped to avoid zero-length vibrations. */
 private const val HF_CUSTOM_DURATION_MIN_MS = 1L
 /** Maximum custom duration clamped to the user-facing ceiling. */
@@ -51,7 +53,10 @@ fun triggerHaptic(
         HapticStrength.STRONG -> HF_STRONG_DURATION_MS to HF_STRONG_AMPLITUDE
         HapticStrength.CUSTOM -> {
             val dur = customDurationMs.toLong().coerceIn(HF_CUSTOM_DURATION_MIN_MS, HF_CUSTOM_DURATION_MAX_MS)
-            val amp = customAmplitude.coerceIn(HF_CUSTOM_AMPLITUDE_MIN, HF_CUSTOM_AMPLITUDE_MAX)
+            val userAmp = customAmplitude.coerceIn(HF_CUSTOM_AMPLITUDE_MIN, HF_CUSTOM_AMPLITUDE_MAX)
+            // Map user-facing 5–100 linearly to Android's 1–255
+            val amp = (userAmp * HF_CUSTOM_AMPLITUDE_ANDROID_MAX / HF_CUSTOM_AMPLITUDE_MAX)
+                .coerceIn(1, HF_CUSTOM_AMPLITUDE_ANDROID_MAX)
             dur to amp
         }
     }
