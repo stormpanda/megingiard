@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import android.os.Vibrator
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -513,7 +514,28 @@ internal fun ButtonEditDialog(
                                     steps = 18, // 5,10,15,…,100 → 20 values = 18 interior steps
                                 )
                             }
-                        }
+                            val vibrator = LocalContext.current.getSystemService(Vibrator::class.java)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        triggerHaptic(
+                                            vibrator     = vibrator,
+                                            strength     = HapticStrength.CUSTOM,
+                                            customDurationMs = hapticCustomDurationMs,
+                                            customAmplitude  = hapticCustomAmplitude,
+                                        )
+                                    },
+                                ) {
+                                    Text(
+                                        text  = stringResource(R.string.macropad_haptic_custom_test),
+                                        color = accentColor,
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                }
+                            }                        }
                     }
                 }
 

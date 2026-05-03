@@ -120,6 +120,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_haptic_custom">Custom</string>
     <string name="macropad_haptic_custom_duration">Duration</string>
     <string name="macropad_haptic_custom_amplitude">Amplitude</string>
+    <string name="macropad_haptic_custom_test">Test vibration</string>
     <string name="macropad_editor_devices">Simulated Devices</string>
     <string name="macropad_editor_device_keyboard">Keyboard</string>
     <string name="macropad_editor_device_gamepad">Gamepad</string>

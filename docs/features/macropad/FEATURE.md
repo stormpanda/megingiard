@@ -245,6 +245,7 @@ Each button supports one of the following actions:
   - **Duration** — 1 to 200 ms (integer steps)
   - **Amplitude** — 5 to 100 in steps of 5 (20 discrete values; Android accepts 1–255, the cap of 100 is the user-facing ceiling)
   - The values are stored in `PadButton.hapticCustomDurationMs` (default 10) and `PadButton.hapticCustomAmplitude` (default 25).
+  - A **"Test vibration"** `TextButton` appears below the sliders and immediately fires `triggerHaptic()` using the current slider values, allowing the user to feel the selected pulse before saving.
 - **Button-down (all non-trackpoint / non-scroll actions):** A single short vibration tick fires on button press. Duration / amplitude:
   - `LIGHT` — 5 ms, amplitude 1 (minimum detectable pulse).
   - `MEDIUM` — 7 ms, amplitude 10.
