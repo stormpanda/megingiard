@@ -53,13 +53,15 @@ enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGH
  * Haptic feedback intensity for a MacroPad button.
  *
  * - [OFF]    — no vibration.
- * - [LIGHT]  — minimal detectable tick (5 ms, amplitude 1).
- * - [MEDIUM] — slightly stronger tick (7 ms, amplitude 10).
- * - [STRONG] — most prominent tick (9 ms, amplitude 25).
+ * - [LIGHT]  — minimal detectable tick (15 ms, amplitude 64 / 255 ≈ 25 %).
+ * - [MEDIUM] — slightly stronger tick (15 ms, amplitude 128 / 255 ≈ 50 %).
+ * - [STRONG] — most prominent tick (15 ms, amplitude 255 / 255 = 100 %).
+ * - [CUSTOM] — user-configured duration (1–200 ms) and amplitude (5–100 user scale).
  *
- * For [PadAction.TrackpointMove] the vibration repeats on every move event
- * while the finger is dragging (continuous haptic, rate-limited to ≈60 Hz).
- * For [PadAction.ScrollWheel] the vibration fires once per discrete scroll unit.
+ * For [PadAction.TrackpointMove] the vibration repeats while the finger moves with a
+ * speed-adaptive interval: `interval = clamp(2000 / magnitude, 50 ms, 333 ms)` where
+ * `magnitude = sqrt(dx²+dy²)` in mouse-delta units. Slow movement → ~333 ms; fast → 50 ms.
+ * For [PadAction.ScrollWheel] one tick fires per discrete scroll batch (no throttle).
  * For all other action types the vibration fires once on button-down.
  */
 @Serializable

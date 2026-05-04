@@ -109,23 +109,25 @@ internal fun ButtonEditDialog(
     var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
     var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
-    var hapticStrength         by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
+    var hapticStrength         by remember { mutableStateOf(
+        button?.hapticStrength?.takeUnless { button.action is PadAction.AmbientPeek } ?: HapticStrength.OFF
+    ) }
     // Sliders always reflect the active preset or the stored custom values on open
     var hapticCustomDurationMs  by remember {
         mutableIntStateOf(
             when (button?.hapticStrength) {
-                HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG -> 15
-                else -> button?.hapticCustomDurationMs ?: 10
+                HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG -> HF_PRESET_DURATION_MS
+                else -> button?.hapticCustomDurationMs ?: HF_PRESET_DURATION_MS
             }
         )
     }
     var hapticCustomAmplitude   by remember {
         mutableIntStateOf(
             when (button?.hapticStrength) {
-                HapticStrength.LIGHT  -> 25
-                HapticStrength.MEDIUM -> 50
-                HapticStrength.STRONG -> 100
-                else -> button?.hapticCustomAmplitude ?: 25
+                HapticStrength.LIGHT  -> HF_LIGHT_AMPLITUDE_USER
+                HapticStrength.MEDIUM -> HF_MEDIUM_AMPLITUDE_USER
+                HapticStrength.STRONG -> HF_STRONG_AMPLITUDE_USER
+                else -> button?.hapticCustomAmplitude ?: HF_LIGHT_AMPLITUDE_USER
             }
         )
     }
@@ -150,6 +152,7 @@ internal fun ButtonEditDialog(
             iconName = null
             buttonShape = ButtonShape.CIRCLE
             buttonSize = ButtonSize.SIZE_1X1
+            hapticStrength = HapticStrength.OFF
             return
         }
         // For Macro: fill label from the macro name if the label field is still blank.
@@ -468,9 +471,9 @@ internal fun ButtonEditDialog(
                                     .clickable {
                                         // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
                                         when (strength) {
-                                            HapticStrength.LIGHT  -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 25 }
-                                            HapticStrength.MEDIUM -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 50 }
-                                            HapticStrength.STRONG -> { hapticCustomDurationMs = 15; hapticCustomAmplitude = 100 }
+                                            HapticStrength.LIGHT  -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER }
+                                            HapticStrength.MEDIUM -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER }
+                                            HapticStrength.STRONG -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER }
                                             else                  -> { /* OFF / CUSTOM → keep current slider values */ }
                                         }
                                         hapticStrength = strength

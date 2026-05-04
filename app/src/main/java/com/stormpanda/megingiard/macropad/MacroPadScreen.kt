@@ -178,22 +178,23 @@ internal fun PadSurface(
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
     val isPillMenuOpen      by viewModel.isPillMenuOpen.collectAsState()
     val isPillMenuOpenState  = rememberUpdatedState(isPillMenuOpen)
-    var lastTrackpointHapticMs by remember { mutableLongStateOf(0L) }
+    val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine = remember(profile, layout) {
         viewModel.createHitTestEngine(
             buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
-            onHapticFeedback = { strength, customDurationMs, customAmplitude, magnitude ->
+            onHapticFeedback = { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
                 if (strength == HapticStrength.OFF) return@createHitTestEngine
                 val now = SystemClock.elapsedRealtime()
-                // magnitude == 0f → discrete button press, fire immediately
-                // magnitude  > 0f → continuous motion, interval shrinks with speed
+                // magnitude == 0f → discrete event (button press or scroll batch), fire immediately.
+                // magnitude  > 0f → continuous trackpoint motion, interval shrinks with speed.
                 val intervalMs = if (magnitude <= 0f) 0L
                     else (MP_HAPTIC_BASE_SPEED / magnitude).toLong()
                         .coerceIn(MP_HAPTIC_MIN_INTERVAL_MS, MP_HAPTIC_MAX_INTERVAL_MS)
-                if (now - lastTrackpointHapticMs >= intervalMs) {
-                    lastTrackpointHapticMs = now
+                val last = hapticLastMsByButton[buttonId] ?: 0L
+                if (now - last >= intervalMs) {
+                    hapticLastMsByButton[buttonId] = now
                     triggerHaptic(vibrator, strength, customDurationMs, customAmplitude)
                 }
             },

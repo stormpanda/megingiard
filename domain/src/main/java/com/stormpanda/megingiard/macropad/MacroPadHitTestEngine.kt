@@ -5,7 +5,6 @@ import com.stormpanda.megingiard.input.MouseInjector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -37,17 +36,20 @@ enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE }
  *                          feedback should be triggered. The UI layer owns the
  *                          [android.os.Vibrator] and performs the actual vibration.
  *                          Invoked on the calling thread (Main).
- *                          Parameters: (strength, customDurationMs, customAmplitude, magnitude)
+ *                          Parameters: (buttonId, strength, customDurationMs, customAmplitude, magnitude)
+ *                          - `buttonId`: the [PadButton.id] of the button that triggered feedback;
+ *                            used by the UI for per-button rate-limiting so simultaneous controls
+ *                            do not suppress each other.
  *                          - `customDurationMs` / `customAmplitude`: values from the button's
  *                            [PadButton.hapticCustomDurationMs] / [PadButton.hapticCustomAmplitude]
  *                            fields; only meaningful when strength == CUSTOM.
- *                          - `magnitude`: `0f` for a discrete button press (fire immediately),
- *                            `sqrt(dx²+dy²)` for [PadAction.TrackpointMove],
- *                            `abs(units)` for [PadAction.ScrollWheel].
+ *                          - `magnitude`: `0f` for a discrete event (button press or scroll batch —
+ *                            fire immediately), `sqrt(dx²+dy²)` for [PadAction.TrackpointMove]
+ *                            (speed-adaptive rate limiting applied by the UI layer).
  */
 class MacroPadHitTestEngine(
     private val buttonUnitDpToPx: (Float) -> Float,
-    private val onHapticFeedback: ((HapticStrength, Int, Int, Float) -> Unit)? = null,
+    private val onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)? = null,
 ) {
     private val _pressedIds = MutableStateFlow(emptySet<String>())
     /** Set of currently pressed button IDs (for visual highlighting). */
@@ -122,6 +124,7 @@ class MacroPadHitTestEngine(
                 if (hitButton.hapticStrength != HapticStrength.OFF) {
                     AppLog.d(TAG, "haptic on press: button=${hitButton.id} strength=${hitButton.hapticStrength}")
                     onHapticFeedback?.invoke(
+                        hitButton.id,
                         hitButton.hapticStrength,
                         hitButton.hapticCustomDurationMs,
                         hitButton.hapticCustomAmplitude,
@@ -166,6 +169,7 @@ class MacroPadHitTestEngine(
                         if (mappedBtn.hapticStrength != HapticStrength.OFF) {
                             val mag = sqrt((dx * dx + dy * dy).toFloat())
                             onHapticFeedback?.invoke(
+                                mappedBtn.id,
                                 mappedBtn.hapticStrength,
                                 mappedBtn.hapticCustomDurationMs,
                                 mappedBtn.hapticCustomAmplitude,
@@ -184,12 +188,12 @@ class MacroPadHitTestEngine(
                     MouseInjector.scrollWheel(units)
                     scrollStartY[pointerId] = py
                     if (mappedBtn.hapticStrength != HapticStrength.OFF) {
-                        AppLog.d(TAG, "haptic on scroll: button=${mappedBtn.id} units=$units strength=${mappedBtn.hapticStrength}")
                         onHapticFeedback?.invoke(
+                            mappedBtn.id,
                             mappedBtn.hapticStrength,
                             mappedBtn.hapticCustomDurationMs,
                             mappedBtn.hapticCustomAmplitude,
-                            abs(units).toFloat(),
+                            0f, // discrete batch → fire immediately, no speed-adaptive throttle
                         )
                     }
                 }

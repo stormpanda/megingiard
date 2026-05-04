@@ -247,12 +247,12 @@ Each button supports one of the following actions:
   - The values are stored in `PadButton.hapticCustomDurationMs` (default 10) and `PadButton.hapticCustomAmplitude` (default 25).
   - A **"Test vibration"** `TextButton` appears below the sliders and immediately fires `triggerHaptic()` using the current slider values, allowing the user to feel the selected pulse before saving.
 - **Button-down (all non-trackpoint / non-scroll actions):** A single short vibration tick fires on button press. Duration / amplitude:
-  - `LIGHT` — 5 ms, amplitude 1 (minimum detectable pulse).
-  - `MEDIUM` — 7 ms, amplitude 10.
-  - `STRONG` — 9 ms, amplitude 25.
-  - `CUSTOM` — user-configured duration (1–200 ms) and amplitude (5–100), clamped in `triggerHaptic()`.
-- **TrackpointMove:** Vibration fires continuously while the finger moves, with a **speed-adaptive rate**: the faster the trackpoint moves, the shorter the interval between pulses. The engine passes `sqrt(dx² + dy²)` as a magnitude to the callback; `PadSurface` computes `interval = clamp(500 / magnitude, 50 ms, 500 ms)`. Slow movement (magnitude ≈ 1) → ~500 ms interval; fast movement (magnitude ≥ 10) → 50 ms minimum.
-- **ScrollWheel:** One tick fires per discrete scroll batch. The engine passes `abs(units)` as the magnitude, so the same speed-adaptive interval applies (faster scrolling → more frequent pulses).
+  - `LIGHT` — 15 ms, amplitude 64 (≈ 25 % of 255).
+  - `MEDIUM` — 15 ms, amplitude 128 (≈ 50 % of 255).
+  - `STRONG` — 15 ms, amplitude 255 (100 % of 255).
+  - `CUSTOM` — user-configured duration (1–200 ms) and amplitude (5–100 user scale, mapped linearly to 1–255), clamped in `triggerHaptic()`.
+- **TrackpointMove:** Vibration fires continuously while the finger moves, with a **speed-adaptive rate**: the faster the trackpoint moves, the shorter the interval between pulses. The engine passes `sqrt(dx² + dy²)` as a magnitude to the callback; `PadSurface` computes `interval = clamp(2000 / magnitude, 50 ms, 333 ms)`. Slow movement (magnitude ≈ 6) → ~333 ms interval; fast movement (magnitude ≥ 40) → 50 ms minimum.
+- **ScrollWheel:** One tick fires per discrete scroll batch (no speed-adaptive throttle). Each batch represents a fixed number of scroll units dispatched in one gesture step.
 - **Discrete button press:** magnitude is always `0f`; the interval guard evaluates to 0 ms so the pulse fires immediately regardless of prior activity.
 - **Disabled-device buttons:** No haptic is triggered — the engine returns early before the callback is invoked.
 - **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((HapticStrength, Int, Int, Float) -> Unit)?` constructor parameter (args: strength, customDurationMs, customAmplitude, magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:app`) performs the `VibrationEffect.createOneShot()` call, clamping custom params to safe ranges. The `:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:core`) crosses the boundary.
@@ -372,7 +372,7 @@ PadProfile
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
         │     TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
-        └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG, default OFF)
+        └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
 ### Icon Rendering — Material Symbols Font

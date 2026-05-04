@@ -15,11 +15,11 @@ import kotlin.math.sqrt
  * Verifies that [MacroPadHitTestEngine] invokes its `onHapticFeedback` callback
  * with the correct arguments for each action type:
  *
- * Callback signature: (strength: HapticStrength, customDurationMs: Int, customAmplitude: Int, magnitude: Float)
+ * Callback signature: (buttonId: String, strength: HapticStrength, customDurationMs: Int, customAmplitude: Int, magnitude: Float)
  *
  * - Regular button press → magnitude = 0f (fire immediately); custom params from button
  * - TrackpointMove       → magnitude = sqrt(dx² + dy²) of the rounded injector delta
- * - ScrollWheel          → magnitude = abs(scrollUnits).toFloat()
+ * - ScrollWheel          → magnitude = 0f (discrete batch, fire immediately)
  * - CUSTOM strength      → customDurationMs and customAmplitude are forwarded from PadButton
  *
  * The native injectors (MouseInjector, KeyInjector, …) are safe to call here
@@ -33,6 +33,7 @@ class MacroPadHapticCallbackTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     private data class HapticCall(
+        val buttonId: String,
         val strength: HapticStrength,
         val customDurationMs: Int,
         val customAmplitude: Int,
@@ -77,8 +78,8 @@ class MacroPadHapticCallbackTest {
 
     private fun captureEngine(): Pair<MutableList<HapticCall>, MacroPadHitTestEngine> {
         val captured = mutableListOf<HapticCall>()
-        val engine = MacroPadHitTestEngine(dummyDpToPx) { strength, customDurationMs, customAmplitude, magnitude ->
-            captured += HapticCall(strength, customDurationMs, customAmplitude, magnitude)
+        val engine = MacroPadHitTestEngine(dummyDpToPx) { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
+            captured += HapticCall(buttonId, strength, customDurationMs, customAmplitude, magnitude)
         }
         return captured to engine
     }
@@ -95,6 +96,7 @@ class MacroPadHapticCallbackTest {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
 
         assertEquals(1, captured.size)
+        assertEquals("btn-test", captured[0].buttonId)
         assertEquals(HapticStrength.LIGHT, captured[0].strength)
         assertEquals(0f, captured[0].magnitude, 0.001f)
     }
@@ -102,7 +104,7 @@ class MacroPadHapticCallbackTest {
     @Test
     fun `button press with haptic OFF does not fire callback`() {
         var called = false
-        val engine = MacroPadHitTestEngine(dummyDpToPx) { _, _, _, _ -> called = true }
+        val engine = MacroPadHitTestEngine(dummyDpToPx) { _, _, _, _, _ -> called = true }
         val button = centeredButton(PadAction.KeyboardKey(keycode = 28, label = "Enter"), HapticStrength.OFF)
 
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
@@ -127,6 +129,7 @@ class MacroPadHapticCallbackTest {
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
 
         assertEquals(1, captured.size)
+        assertEquals("btn-test", captured[0].buttonId)
         assertEquals(HapticStrength.CUSTOM, captured[0].strength)
         assertEquals(42, captured[0].customDurationMs)
         assertEquals(75, captured[0].customAmplitude)
@@ -151,6 +154,7 @@ class MacroPadHapticCallbackTest {
         engine.onMove(0L, 505f, 500f, 5f, 0f, listOf(button), enabledProfile)
 
         assertEquals(1, captured.size)
+        assertEquals("btn-test", captured[0].buttonId)
         assertEquals(HapticStrength.MEDIUM, captured[0].strength)
         assertEquals(sqrt(15f * 15f), captured[0].magnitude, 0.001f)
     }
@@ -158,7 +162,7 @@ class MacroPadHapticCallbackTest {
     @Test
     fun `trackpoint move with zero delta does not fire callback`() {
         var called = false
-        val engine = MacroPadHitTestEngine(dummyDpToPx) { _, _, _, _ -> called = true }
+        val engine = MacroPadHitTestEngine(dummyDpToPx) { _, _, _, _, _ -> called = true }
         val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM), HapticStrength.STRONG)
 
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
@@ -169,11 +173,11 @@ class MacroPadHapticCallbackTest {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ScrollWheel — magnitude = abs(units).toFloat()
+    // ScrollWheel — magnitude = 0f (discrete batch, fires immediately)
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
-    fun `scroll wheel fires callback with unit magnitude`() {
+    fun `scroll wheel fires callback with magnitude 0 for immediate fire`() {
         val (captured, engine) = captureEngine()
         // ScrollWheel default size is SIZE_1X1; chip = 60×60px, center at (500,500)
         // MP_SCROLL_SENSITIVITY_PX = 12f → need totalDeltaY = 12f for 1 unit
@@ -184,14 +188,15 @@ class MacroPadHapticCallbackTest {
         engine.onMove(0L, 500f, 488f, 0f, -12f, listOf(button), enabledProfile)
 
         assertEquals(1, captured.size)
+        assertEquals("btn-test", captured[0].buttonId)
         assertEquals(HapticStrength.STRONG, captured[0].strength)
-        assertEquals(1f, captured[0].magnitude, 0.001f)
+        assertEquals(0f, captured[0].magnitude, 0.001f)
     }
 
     @Test
     fun `scroll wheel with haptic OFF does not fire callback`() {
         var called = false
-        val engine = MacroPadHitTestEngine(dummyDpToPx) { _, _, _, _ -> called = true }
+        val engine = MacroPadHitTestEngine(dummyDpToPx) { _, _, _, _, _ -> called = true }
         val button = centeredButton(PadAction.ScrollWheel, HapticStrength.OFF)
 
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)

@@ -19,6 +19,14 @@ private const val HF_LIGHT_AMPLITUDE  = 64   // 25 % of 255
 private const val HF_MEDIUM_AMPLITUDE = 128  // 50 % of 255
 private const val HF_STRONG_AMPLITUDE = 255  // 100 % of 255
 
+// User-facing scale (5–100) — shared with PadButtonEditDialog for the "snap to preset" UI.
+// These must remain consistent with the Android-scale values above:
+//   LIGHT  25/100 * 255 ≈ 64, MEDIUM 50/100 * 255 ≈ 128, STRONG 100/100 * 255 = 255.
+internal const val HF_PRESET_DURATION_MS       = 15  // same for all strength presets
+internal const val HF_LIGHT_AMPLITUDE_USER     = 25  // user scale 5–100
+internal const val HF_MEDIUM_AMPLITUDE_USER    = 50
+internal const val HF_STRONG_AMPLITUDE_USER    = 100
+
 /** Minimum custom amplitude clamped at call-site to prevent silent zero. */
 private const val HF_CUSTOM_AMPLITUDE_MIN = 5
 /** Maximum custom amplitude on the user-facing scale (maps to Android's 255). */
