@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -198,7 +199,8 @@ internal fun ButtonEditDialog(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.surface),
+            .background(colors.surface)
+            .blockPointerEvents(),
     ) {
         val topBarTitle = when {
             button == null -> stringResource(R.string.macropad_editor_add_button)

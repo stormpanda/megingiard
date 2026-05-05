@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -175,7 +176,8 @@ private fun MacroListView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.appBackground),
+            .background(colors.appBackground)
+            .blockPointerEvents(),
     ) {
         // ── Top bar ──────────────────────────────────────────────────────────
         val profile by MacroPadState.activeProfile.collectAsState()

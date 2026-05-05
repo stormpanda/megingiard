@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -125,18 +126,7 @@ internal fun GamepadRecordingOverlay(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.appBackground)
-            .pointerInput(Unit) {
-                // Block pointer events on empty areas from passing through to
-                // the MacroTimelineEditor content behind this overlay.
-                awaitEachGesture {
-                    awaitFirstDown()
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { it.consume() }
-                        if (event.changes.none { it.pressed }) break
-                    }
-                }
-            },
+            .blockPointerEvents(),
     ) {
         // ── Title bar ──────────────────────────────────────────────────
         Row(
