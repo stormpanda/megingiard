@@ -355,7 +355,7 @@ internal fun ConfigActionRow(
 internal fun GyroOutput.displayNameResId(): Int = when (this) {
     GyroOutput.OFF                -> R.string.settings_gyro_output_off
     GyroOutput.GAMEPAD_LEFT_STICK -> R.string.settings_gyro_output_gamepad_left
-    GyroOutput.GAMEPAD_RIGHT_STICK-> R.string.settings_gyro_output_gamepad_right
+    GyroOutput.GAMEPAD_RIGHT_STICK -> R.string.settings_gyro_output_gamepad_right
     GyroOutput.MOUSE              -> R.string.settings_gyro_output_mouse
 }
 

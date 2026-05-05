@@ -52,7 +52,10 @@ private const val GYRO_MOUSE_SCALE = 2f
 object GyroProcessor : SensorEventListener {
 
     private var sensorManager: SensorManager? = null
-    private val mainHandler = Handler(Looper.getMainLooper())
+
+    // Handler is created lazily on first use and reused; the main looper lives for
+    // the process lifetime so no explicit cleanup is needed.
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
 
     val isRunning: Boolean get() = sensorManager != null
 
@@ -125,8 +128,8 @@ object GyroProcessor : SensorEventListener {
         val rawY = event.values[1]  // horizontal axis: positive = aim right (negated below)
 
         // Apply dead zone independently per axis
-        val filteredX = if (abs(rawX) < deadZone) 0f else rawX
-        val filteredY = if (abs(rawY) < deadZone) 0f else rawY
+        val filteredX = applyDeadZone(rawX, deadZone)
+        val filteredY = applyDeadZone(rawY, deadZone)
 
         // Scale and negate Y so tilting right → aim right
         val scaledX =  filteredX * sensitivity
@@ -137,18 +140,14 @@ object GyroProcessor : SensorEventListener {
 
             GyroOutput.GAMEPAD_LEFT_STICK -> {
                 if (!GamepadInjector.isRunning) return
-                val stickX = (scaledY * GYRO_GAMEPAD_SCALE).coerceIn(-32768f, 32767f).toInt()
-                val stickY = (scaledX * GYRO_GAMEPAD_SCALE).coerceIn(-32768f, 32767f).toInt()
-                GamepadInjector.joystick(GamepadKeycodes.ABS_X, stickX)
-                GamepadInjector.joystick(GamepadKeycodes.ABS_Y, stickY)
+                GamepadInjector.joystick(GamepadKeycodes.ABS_X, toStickValue(scaledY))
+                GamepadInjector.joystick(GamepadKeycodes.ABS_Y, toStickValue(scaledX))
             }
 
             GyroOutput.GAMEPAD_RIGHT_STICK -> {
                 if (!GamepadInjector.isRunning) return
-                val stickX = (scaledY * GYRO_GAMEPAD_SCALE).coerceIn(-32768f, 32767f).toInt()
-                val stickY = (scaledX * GYRO_GAMEPAD_SCALE).coerceIn(-32768f, 32767f).toInt()
-                GamepadInjector.joystick(GamepadKeycodes.ABS_Z, stickX)
-                GamepadInjector.joystick(GamepadKeycodes.ABS_RZ, stickY)
+                GamepadInjector.joystick(GamepadKeycodes.ABS_Z,  toStickValue(scaledY))
+                GamepadInjector.joystick(GamepadKeycodes.ABS_RZ, toStickValue(scaledX))
             }
 
             GyroOutput.MOUSE -> {
@@ -184,4 +183,18 @@ object GyroProcessor : SensorEventListener {
             GyroOutput.OFF -> Unit
         }
     }
+
+    /**
+     * Returns [value] unchanged when its absolute value exceeds [threshold]; returns 0
+     * otherwise (dead zone).
+     */
+    private fun applyDeadZone(value: Float, threshold: Float): Float =
+        if (abs(value) < threshold) 0f else value
+
+    /**
+     * Converts a scaled gyro axis value (rad/s × sensitivity) to a clamped int16
+     * gamepad stick unit.
+     */
+    private fun toStickValue(scaled: Float): Int =
+        (scaled * GYRO_GAMEPAD_SCALE).coerceIn(-32768f, 32767f).toInt()
 }

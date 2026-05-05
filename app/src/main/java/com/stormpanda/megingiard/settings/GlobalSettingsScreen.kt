@@ -320,7 +320,6 @@ fun GlobalSettingsScreen(
                             formatValue = { "%.1f×".format(it) },
                             accentColor = effectiveAccent,
                             colors = colors,
-                            onValueChangeFinished = { viewModel.setGyroSensitivity(gyroSensitivity) },
                             onValueChange = { viewModel.setGyroSensitivity(it) },
                         )
                         HorizontalDivider(color = colors.divider)
@@ -332,7 +331,6 @@ fun GlobalSettingsScreen(
                             formatValue = { "%.2f rad/s".format(it) },
                             accentColor = effectiveAccent,
                             colors = colors,
-                            onValueChangeFinished = { viewModel.setGyroDeadZone(gyroDeadZone) },
                             onValueChange = { viewModel.setGyroDeadZone(it) },
                         )
                     }
