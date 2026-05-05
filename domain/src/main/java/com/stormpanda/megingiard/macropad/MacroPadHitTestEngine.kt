@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 private const val TAG = "MacroPadHitTest"
 
@@ -31,9 +32,24 @@ enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE }
  *
  * @param buttonUnitDpToPx  conversion function: `(dp: Float) -> Float`
  *                          for calculating button chip sizes from dp units
+ * @param onHapticFeedback  optional callback invoked by the engine when haptic
+ *                          feedback should be triggered. The UI layer owns the
+ *                          [android.os.Vibrator] and performs the actual vibration.
+ *                          Invoked on the calling thread (Main).
+ *                          Parameters: (buttonId, strength, customDurationMs, customAmplitude, magnitude)
+ *                          - `buttonId`: the [PadButton.id] of the button that triggered feedback;
+ *                            used by the UI for per-button rate-limiting so simultaneous controls
+ *                            do not suppress each other.
+ *                          - `customDurationMs` / `customAmplitude`: values from the button's
+ *                            [PadButton.hapticCustomDurationMs] / [PadButton.hapticCustomAmplitude]
+ *                            fields; only meaningful when strength == CUSTOM.
+ *                          - `magnitude`: `0f` for a discrete event (button press or scroll batch —
+ *                            fire immediately), `sqrt(dx²+dy²)` for [PadAction.TrackpointMove]
+ *                            (speed-adaptive rate limiting applied by the UI layer).
  */
 class MacroPadHitTestEngine(
     private val buttonUnitDpToPx: (Float) -> Float,
+    private val onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)? = null,
 ) {
     private val _pressedIds = MutableStateFlow(emptySet<String>())
     /** Set of currently pressed button IDs (for visual highlighting). */
@@ -105,6 +121,16 @@ class MacroPadHitTestEngine(
             else -> {
                 _pressedIds.value = _pressedIds.value + hitButton.id
                 injectActionDown(hitButton.action)
+                if (hitButton.hapticStrength != HapticStrength.OFF) {
+                    AppLog.d(TAG, "haptic on press: button=${hitButton.id} strength=${hitButton.hapticStrength}")
+                    onHapticFeedback?.invoke(
+                        hitButton.id,
+                        hitButton.hapticStrength,
+                        hitButton.hapticCustomDurationMs,
+                        hitButton.hapticCustomAmplitude,
+                        0f,
+                    )
+                }
             }
         }
         return null // null = no toast needed
@@ -138,7 +164,19 @@ class MacroPadHitTestEngine(
                 if (lastTpPos != null) {
                     val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
                     val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                    if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
+                    if (dx != 0 || dy != 0) {
+                        MouseInjector.moveMouse(dx, dy)
+                        if (mappedBtn.hapticStrength != HapticStrength.OFF) {
+                            val mag = sqrt((dx * dx + dy * dy).toFloat())
+                            onHapticFeedback?.invoke(
+                                mappedBtn.id,
+                                mappedBtn.hapticStrength,
+                                mappedBtn.hapticCustomDurationMs,
+                                mappedBtn.hapticCustomAmplitude,
+                                mag,
+                            )
+                        }
+                    }
                 }
                 lastTpPos = Pair(px, py)
             }
@@ -149,6 +187,15 @@ class MacroPadHitTestEngine(
                 if (units != 0) {
                     MouseInjector.scrollWheel(units)
                     scrollStartY[pointerId] = py
+                    if (mappedBtn.hapticStrength != HapticStrength.OFF) {
+                        onHapticFeedback?.invoke(
+                            mappedBtn.id,
+                            mappedBtn.hapticStrength,
+                            mappedBtn.hapticCustomDurationMs,
+                            mappedBtn.hapticCustomAmplitude,
+                            0f, // discrete batch → fire immediately, no speed-adaptive throttle
+                        )
+                    }
                 }
             }
         }

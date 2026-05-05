@@ -236,6 +236,27 @@ Each button supports one of the following actions:
 - The setting is persisted in DataStore under the `macropad_settings` export section (`gamepad_swap_face_buttons` key) and therefore included in config export/import.
 - Implementation: `SettingsManager` exposes `gamepadSwapFaceButtons` as read-only `StateFlow<Boolean>`. `PadActionPicker.kt` provides shared label helpers (`gamepadCodeDisplayLabel`, `gamepadCodeDisplayShortLabel`, `localizedDisplayLabel`) that are consumed by button picker, macro step editor, and macro timeline UI.
 
+### FR-P14: Per-Button Haptic Feedback
+
+- Each `PadButton` carries a `hapticStrength: HapticStrength` field (serialised; default `OFF` — existing profiles load without migration).
+- Five strength levels are available: `OFF`, `LIGHT`, `MEDIUM`, `STRONG`, `CUSTOM`.
+- The strength selector is displayed in `ButtonEditDialog` as a row of five chips (same visual language as the shape/size pickers). It is shown for all action types, including `AmbientPeek`, `TrackpointMove`, and `ScrollWheel`.
+- When haptics are enabled (`LIGHT`, `MEDIUM`, `STRONG`, or `CUSTOM`), two sliders appear beneath the chip row:
+  - **Duration** — 1 to 200 ms (integer steps)
+  - **Amplitude** — 5 to 100 in steps of 5 (20 discrete user-facing values; the value is mapped proportionally to Android's 1–255 amplitude range, so 100 maps to 255)
+  - The values are stored in `PadButton.hapticCustomDurationMs` (default 10) and `PadButton.hapticCustomAmplitude` (default 25).
+  - A **"Test vibration"** `TextButton` appears below the sliders and immediately fires `triggerHaptic()` using the current slider values, allowing the user to feel the selected pulse before saving.
+- **Button-down (all non-trackpoint / non-scroll actions):** A single short vibration tick fires on button press. Duration / amplitude:
+  - `LIGHT` — 15 ms, amplitude 64 (≈ 25 % of 255).
+  - `MEDIUM` — 15 ms, amplitude 128 (≈ 50 % of 255).
+  - `STRONG` — 15 ms, amplitude 255 (100 % of 255).
+  - `CUSTOM` — user-configured duration (1–200 ms) and amplitude (5–100 user scale, mapped linearly to 1–255), clamped in `triggerHaptic()`.
+- **TrackpointMove:** Vibration fires continuously while the finger moves, with a **speed-adaptive rate**: the faster the trackpoint moves, the shorter the interval between pulses. The engine passes `sqrt(dx² + dy²)` as a magnitude to the callback; `PadSurface` computes `interval = clamp(2000 / magnitude, 50 ms, 333 ms)`. Slow movement (magnitude ≈ 6) → ~333 ms interval; fast movement (magnitude ≥ 40) → 50 ms minimum.
+- **ScrollWheel:** One tick fires per discrete scroll batch (no speed-adaptive throttle). Each batch represents a fixed number of scroll units dispatched in one gesture step.
+- **Discrete button press:** magnitude is always `0f`; the interval guard evaluates to 0 ms so the pulse fires immediately regardless of prior activity.
+- **Disabled-device buttons:** No haptic is triggered — the engine returns early before the callback is invoked.
+- **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)?` constructor parameter (args: buttonId, strength, customDurationMs, customAmplitude, magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a per-button rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:app`) performs the `VibrationEffect.createOneShot()` call, clamping custom params to safe ranges. The `:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:core`) crosses the boundary.
+
 ---
 
 ## Technical Implementation
@@ -345,12 +366,13 @@ PadProfile
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
         ├── buttonShape: ButtonShape (SQUARE | CIRCLE)
-        └── action: PadAction   (sealed)
-              KeyboardKey(keycode, label)
-              GamepadButton(btnCode, label)
-              MouseButton(button: MouseButton enum)
-              ScrollWheel
-              TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
+        ├── action: PadAction   (sealed)
+        │     KeyboardKey(keycode, label)
+        │     GamepadButton(btnCode, label)
+        │     MouseButton(button: MouseButton enum)
+        │     ScrollWheel
+        │     TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
+        └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
 ### Icon Rendering — Material Symbols Font

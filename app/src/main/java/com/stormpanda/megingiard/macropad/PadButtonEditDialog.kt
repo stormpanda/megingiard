@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.os.Vibrator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,10 +27,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,13 +52,23 @@ import java.util.Locale
 import java.util.UUID
 
 private const val TAG = "PadButtonEditDialog"
+private const val PBD_ICON_LAYOUT_NEXT = "arrow_forward"
+private const val PBD_ICON_LAYOUT_PREVIOUS = "arrow_back"
+private const val PBD_ICON_MIRROR_PLAY_STOP = "cast"
+private const val PBD_ICON_MIRROR_FREEZE = "pause_circle"
+private const val PBD_ICON_MIRROR_VIEWPORT_EDIT = "crop_free"
+private const val PBD_ICON_MIRROR_TOUCH_PROJECTION = "touch_app"
+private const val PBD_ICON_FULLSCREEN_MOUSE = "mouse"
+private const val PBD_ICON_FULLSCREEN_KEYBOARD = "keyboard"
+private const val PBD_ICON_MACRO = "smart_button"
+private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
+private const val PBD_ICON_AMBIENT_PEEK = "visibility"
 
 /**
  * Maps a [PadAction] type to its localised label string resource.
  * Returns `null` for action types that manage their own label
  * ([PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.MouseButton])
- * or have fixed rendering ([PadAction.ScrollWheel], [PadAction.TrackpointMove],
- * [PadAction.AmbientPeek]).
+ * or have fixed rendering ([PadAction.ScrollWheel], [PadAction.TrackpointMove]).
  */
 private fun PadAction.defaultLabelRes(): Int? = when (this) {
     is PadAction.LayoutNext            -> R.string.macropad_action_layout_next
@@ -68,6 +81,23 @@ private fun PadAction.defaultLabelRes(): Int? = when (this) {
     is PadAction.FullScreenMouse       -> R.string.macropad_action_fullscreen_mouse
     is PadAction.FullScreenKeyboard    -> R.string.macropad_action_fullscreen_keyboard
     is PadAction.Macro                 -> R.string.macropad_action_macro
+    is PadAction.AmbientPeek           -> R.string.macropad_action_ambient_peek
+    else                               -> null
+}
+
+/** Default Material Symbols icon name for actions that behave like regular buttons in the editor. */
+private fun PadAction.defaultIconName(): String? = when (this) {
+    is PadAction.LayoutNext            -> PBD_ICON_LAYOUT_NEXT
+    is PadAction.LayoutPrevious        -> PBD_ICON_LAYOUT_PREVIOUS
+    is PadAction.ProfileSwitcher       -> PBD_ICON_PROFILE_SWITCHER
+    is PadAction.MirrorPlayStop        -> PBD_ICON_MIRROR_PLAY_STOP
+    is PadAction.MirrorFreeze          -> PBD_ICON_MIRROR_FREEZE
+    is PadAction.MirrorViewportEdit    -> PBD_ICON_MIRROR_VIEWPORT_EDIT
+    is PadAction.MirrorTouchProjection -> PBD_ICON_MIRROR_TOUCH_PROJECTION
+    is PadAction.FullScreenMouse       -> PBD_ICON_FULLSCREEN_MOUSE
+    is PadAction.FullScreenKeyboard    -> PBD_ICON_FULLSCREEN_KEYBOARD
+    is PadAction.Macro                 -> PBD_ICON_MACRO
+    is PadAction.AmbientPeek           -> PBD_ICON_AMBIENT_PEEK
     else                               -> null
 }
 
@@ -106,6 +136,26 @@ internal fun ButtonEditDialog(
     var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
     var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
+    var hapticStrength         by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
+    // Sliders always reflect the active preset or the stored custom values on open
+    var hapticCustomDurationMs  by remember {
+        mutableIntStateOf(
+            when (button?.hapticStrength) {
+                HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG -> HF_PRESET_DURATION_MS
+                else -> button?.hapticCustomDurationMs ?: HF_PRESET_DURATION_MS
+            }
+        )
+    }
+    var hapticCustomAmplitude   by remember {
+        mutableIntStateOf(
+            when (button?.hapticStrength) {
+                HapticStrength.LIGHT  -> HF_LIGHT_AMPLITUDE_USER
+                HapticStrength.MEDIUM -> HF_MEDIUM_AMPLITUDE_USER
+                HapticStrength.STRONG -> HF_STRONG_AMPLITUDE_USER
+                else -> button?.hapticCustomAmplitude ?: HF_LIGHT_AMPLITUDE_USER
+            }
+        )
+    }
     val colors            = LocalAppColors.current
 
     fun onActionChanged(newAction: PadAction) {
@@ -120,13 +170,6 @@ internal fun ButtonEditDialog(
             label = ""
             iconName = null
             buttonShape = ButtonShape.CIRCLE
-            return
-        }
-        if (newAction is PadAction.AmbientPeek) {
-            label = ""
-            iconName = null
-            buttonShape = ButtonShape.CIRCLE
-            buttonSize = ButtonSize.SIZE_1X1
             return
         }
         // For Macro: fill label from the macro name if the label field is still blank.
@@ -145,7 +188,7 @@ internal fun ButtonEditDialog(
     }
 
     val isConfirmEnabled = when {
-        action is PadAction.ScrollWheel || action is PadAction.TrackpointMove || action is PadAction.AmbientPeek -> true
+        action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
         action is PadAction.Macro -> label.isNotBlank() &&
             MacroPadState.activeProfile.value?.macros?.any { it.id == (action as PadAction.Macro).macroId } == true
         else -> label.isNotBlank()
@@ -160,7 +203,6 @@ internal fun ButtonEditDialog(
         val topBarTitle = when {
             button == null -> stringResource(R.string.macropad_editor_add_button)
             button.action is PadAction.TrackpointMove -> stringResource(R.string.macropad_action_trackpoint)
-            button.action is PadAction.AmbientPeek -> stringResource(R.string.macropad_action_ambient_peek)
             else -> button.label
         }
         FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
@@ -168,22 +210,28 @@ internal fun ButtonEditDialog(
                 onClick = {
                     if (isConfirmEnabled) {
                         val result = button?.copy(
-                            label       = label,
-                            iconName    = iconName,
-                            iconFilled  = iconFilled,
-                            buttonShape = buttonShape,
-                            buttonSize  = buttonSize,
-                            action      = action,
+                            label                 = label,
+                            iconName              = iconName,
+                            iconFilled            = iconFilled,
+                            buttonShape           = buttonShape,
+                            buttonSize            = buttonSize,
+                            action                = action,
+                            hapticStrength        = hapticStrength,
+                            hapticCustomDurationMs = hapticCustomDurationMs,
+                            hapticCustomAmplitude  = hapticCustomAmplitude,
                         ) ?: PadButton(
-                            id          = UUID.randomUUID().toString(),
-                            label       = label,
-                            iconName    = iconName,
-                            iconFilled  = iconFilled,
-                            posX        = 0.5f,
-                            posY        = 0.5f,
-                            buttonShape = buttonShape,
-                            buttonSize  = buttonSize,
-                            action      = action,
+                            id                    = UUID.randomUUID().toString(),
+                            label                 = label,
+                            iconName              = iconName,
+                            iconFilled            = iconFilled,
+                            posX                  = 0.5f,
+                            posY                  = 0.5f,
+                            buttonShape           = buttonShape,
+                            buttonSize            = buttonSize,
+                            action                = action,
+                            hapticStrength        = hapticStrength,
+                            hapticCustomDurationMs = hapticCustomDurationMs,
+                            hapticCustomAmplitude  = hapticCustomAmplitude,
                         )
                         onConfirm(result)
                     }
@@ -219,7 +267,7 @@ internal fun ButtonEditDialog(
                 val iconsFilled = iconFilled
 
                 // Label input and shape — hidden for ScrollWheel and TrackpointMove
-                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AmbientPeek) {
+                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
                     // ── Label + Icon selector row ──────────────────────────────────────────
                     Row(
                         verticalAlignment = Alignment.Bottom,
@@ -375,43 +423,137 @@ internal fun ButtonEditDialog(
                         color    = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                } else {
-                    // ── AmbientPeek: size dropdown ──────────────────────────────────────────
-                    SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
-                    Box {
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(colors.surface)
-                                .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
-                                .clickable { showSizeMenu = true }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(buttonSize.displayLabel(), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
-                            Icon(
-                                imageVector = Icons.Rounded.ArrowDropDown,
-                                contentDescription = null,
-                                tint = colors.onSurfaceSecondary,
-                            )
-                        }
-                        DropdownMenu(
-                            expanded         = showSizeMenu,
-                            onDismissRequest = { showSizeMenu = false },
-                            modifier         = Modifier.background(colors.surface),
-                        ) {
-                            ButtonSize.entries.forEach { size ->
-                                DropdownMenuItem(
-                                    text    = { Text(size.displayLabel(), color = colors.onSurface) },
-                                    onClick = { buttonSize = size; showSizeMenu = false },
-                                )
-                            }
-                        }
-                    }
                 }
 
                 // Action picker
+                SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    HapticStrength.entries.forEach { strength ->
+                        val selected = strength == hapticStrength
+                        val strengthLabel = when (strength) {
+                            HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
+                            HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
+                            HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                            HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                            HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+                        }
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
+                                .border(
+                                    width = if (selected) 2.dp else 1.dp,
+                                    color = if (selected) accentColor else colors.accentBorder,
+                                    shape = RoundedCornerShape(8.dp),
+                                )
+                                .clickable {
+                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
+                                    when (strength) {
+                                        HapticStrength.LIGHT  -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER }
+                                        HapticStrength.MEDIUM -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER }
+                                        HapticStrength.STRONG -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER }
+                                        else                  -> { /* OFF / CUSTOM → keep current slider values */ }
+                                    }
+                                    hapticStrength = strength
+                                }
+                                .padding(vertical = 10.dp),
+                        ) {
+                            Text(
+                                text  = strengthLabel,
+                                color = if (selected) accentColor else colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+                // Sliders always visible; dragging either slider auto-selects CUSTOM
+                if (hapticStrength != HapticStrength.OFF) {
+                    Column(
+                        modifier = Modifier.padding(top = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.width(96.dp)) {
+                                    Text(
+                                        text  = stringResource(R.string.macropad_haptic_custom_duration),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text  = "$hapticCustomDurationMs ms",
+                                        color = accentColor,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                                Slider(
+                                    modifier = Modifier.weight(1f),
+                                    value    = hapticCustomDurationMs.toFloat(),
+                                    onValueChange = {
+                                        hapticCustomDurationMs = it.toInt()
+                                        hapticStrength = HapticStrength.CUSTOM
+                                    },
+                                    valueRange = 1f..200f,
+                                    steps = 198, // 1..200 → 200 values = 198 interior steps
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.width(96.dp)) {
+                                    Text(
+                                        text  = stringResource(R.string.macropad_haptic_custom_amplitude),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text  = "$hapticCustomAmplitude",
+                                        color = accentColor,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                                Slider(
+                                    modifier = Modifier.weight(1f),
+                                    value    = hapticCustomAmplitude.toFloat(),
+                                    onValueChange = {
+                                        hapticCustomAmplitude = (it / 5).toInt() * 5
+                                        hapticStrength = HapticStrength.CUSTOM
+                                    },
+                                    valueRange = 5f..100f,
+                                    steps = 18, // 5,10,15,…,100 → 20 values = 18 interior steps
+                                )
+                            }
+                            val vibrator = LocalContext.current.getSystemService(Vibrator::class.java)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        triggerHaptic(
+                                            vibrator         = vibrator,
+                                            strength         = HapticStrength.CUSTOM,
+                                            customDurationMs = hapticCustomDurationMs,
+                                            customAmplitude  = hapticCustomAmplitude,
+                                        )
+                                    },
+                                ) {
+                                    Text(
+                                        text  = stringResource(R.string.macropad_haptic_custom_test),
+                                        color = accentColor,
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                 SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
                 ActionPicker(
                     current        = action,
@@ -423,7 +565,6 @@ internal fun ButtonEditDialog(
                     onChange       = ::onActionChanged,
                 )
             }
-        }
 
         // ── Icon picker overlay ──────────────────────────────────────────────
         if (showIconPicker) {
@@ -438,6 +579,7 @@ internal fun ButtonEditDialog(
             )
         }
     }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // Section label helper
 // ─────────────────────────────────────────────────────────────────────────────

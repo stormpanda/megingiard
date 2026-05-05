@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
+import android.content.Context
 import android.os.SystemClock
+import android.os.Vibrator
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
@@ -58,6 +61,11 @@ private const val MP_TRACKPOINT_SENSITIVITY = 3f
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
 private const val MP_DISABLED_FEEDBACK_HIDE_MS = 1800L
 private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
+
+// Dynamic haptic interval bounds: faster movement → shorter interval
+private const val MP_HAPTIC_MIN_INTERVAL_MS = 50L
+private const val MP_HAPTIC_MAX_INTERVAL_MS = 333L
+private const val MP_HAPTIC_BASE_SPEED = 2000f
 
 private const val TAG = "MacroPadScreen"
 
@@ -165,13 +173,32 @@ internal fun PadSurface(
     val viewModel: MacroPadViewModel = viewModel()
     val density      = LocalDensity.current
     val colors       = LocalAppColors.current
+    val context      = LocalContext.current
+    val vibrator     = remember { context.getSystemService(Vibrator::class.java) }
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
     val isPillMenuOpen      by viewModel.isPillMenuOpen.collectAsState()
     val isPillMenuOpenState  = rememberUpdatedState(isPillMenuOpen)
+    val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
-    // Create hit-test engine with density-aware dp→px converter
+    // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine = remember(profile, layout) {
-        viewModel.createHitTestEngine { dpValue -> with(density) { dpValue.dp.toPx() } }
+        viewModel.createHitTestEngine(
+            buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
+            onHapticFeedback = { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
+                if (strength == HapticStrength.OFF) return@createHitTestEngine
+                val now = SystemClock.elapsedRealtime()
+                // magnitude == 0f → discrete event (button press or scroll batch), fire immediately.
+                // magnitude  > 0f → continuous trackpoint motion, interval shrinks with speed.
+                val intervalMs = if (magnitude <= 0f) 0L
+                    else (MP_HAPTIC_BASE_SPEED / magnitude).toLong()
+                        .coerceIn(MP_HAPTIC_MIN_INTERVAL_MS, MP_HAPTIC_MAX_INTERVAL_MS)
+                val last = hapticLastMsByButton[buttonId] ?: 0L
+                if (now - last >= intervalMs) {
+                    hapticLastMsByButton[buttonId] = now
+                    triggerHaptic(vibrator, strength, customDurationMs, customAmplitude)
+                }
+            },
+        )
     }
 
     // Track which button IDs are currently pressed (from engine)

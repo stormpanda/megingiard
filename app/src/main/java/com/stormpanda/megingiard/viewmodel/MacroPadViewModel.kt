@@ -9,6 +9,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.GamepadInjector
+import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadHitTestEngine
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
@@ -52,8 +53,10 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
     val activeLayout: StateFlow<PadLayout?> = MacroPadState.activeLayout
     val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
 
-    fun createHitTestEngine(buttonUnitDpToPx: (Float) -> Float) =
-        MacroPadHitTestEngine(buttonUnitDpToPx)
+    fun createHitTestEngine(
+        buttonUnitDpToPx: (Float) -> Float,
+        onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)? = null,
+    ) = MacroPadHitTestEngine(buttonUnitDpToPx, onHapticFeedback)
 
     /**
      * Starts a long-lived watcher that reacts to menu/modal/prompt flags.

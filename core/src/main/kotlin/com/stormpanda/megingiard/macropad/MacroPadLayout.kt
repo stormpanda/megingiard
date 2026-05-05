@@ -46,6 +46,28 @@ enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Haptic feedback strength — used by PadButton
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Haptic feedback intensity for a MacroPad button.
+ *
+ * - [OFF]    — no vibration.
+ * - [LIGHT]  — minimal detectable tick (15 ms, amplitude 64 / 255 ≈ 25 %).
+ * - [MEDIUM] — slightly stronger tick (15 ms, amplitude 128 / 255 ≈ 50 %).
+ * - [STRONG] — most prominent tick (15 ms, amplitude 255 / 255 = 100 %).
+ * - [CUSTOM] — user-configured duration (1–200 ms) and amplitude (5–100 user scale).
+ *
+ * For [PadAction.TrackpointMove] the vibration repeats while the finger moves with a
+ * speed-adaptive interval: `interval = clamp(2000 / magnitude, 50 ms, 333 ms)` where
+ * `magnitude = sqrt(dx²+dy²)` in mouse-delta units. Slow movement → ~333 ms; fast → 50 ms.
+ * For [PadAction.ScrollWheel] one tick fires per discrete scroll batch (no throttle).
+ * For all other action types the vibration fires once on button-down.
+ */
+@Serializable
+enum class HapticStrength { OFF, LIGHT, MEDIUM, STRONG, CUSTOM }
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -235,6 +257,11 @@ data class PadButton(
     val buttonSize: ButtonSize = ButtonSize.SIZE_1X1,
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
+    val hapticStrength: HapticStrength = HapticStrength.OFF,
+    /** Duration in milliseconds for [HapticStrength.CUSTOM] pulses. Range: 1–200. */
+    val hapticCustomDurationMs: Int = 10,
+    /** Amplitude for [HapticStrength.CUSTOM] pulses. Range: 5–100 in steps of 5. */
+    val hapticCustomAmplitude: Int = 25,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
