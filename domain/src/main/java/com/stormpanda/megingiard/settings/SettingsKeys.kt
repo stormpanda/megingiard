@@ -67,6 +67,12 @@ internal val KEY_SKIP_GAMEPAD_RECORD_DIALOG = booleanPreferencesKey("skip_gamepa
 // MacroPad — gamepad face-button label swap (display only, keycodes unchanged)
 internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
 
+// Gyro settings
+internal val KEY_GYRO_ENABLED     = booleanPreferencesKey("gyro_enabled")
+internal val KEY_GYRO_OUTPUT      = stringPreferencesKey("gyro_output")
+internal val KEY_GYRO_SENSITIVITY = floatPreferencesKey("gyro_sensitivity")
+internal val KEY_GYRO_DEAD_ZONE   = floatPreferencesKey("gyro_dead_zone")
+
 // MacroPad ambient display settings
 internal val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
 internal val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
@@ -108,6 +114,9 @@ private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
     KEY_GAMEPAD_SWAP_FACE_BUTTONS,
 )
+private val GYRO_KEYS: Set<Preferences.Key<*>> = setOf(
+    KEY_GYRO_ENABLED, KEY_GYRO_OUTPUT, KEY_GYRO_SENSITIVITY, KEY_GYRO_DEAD_ZONE,
+)
 
 internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(
     "global" to GLOBAL_KEYS,
@@ -115,6 +124,7 @@ internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(
     "touchpad" to TOUCHPAD_KEYS,
     "keyboard" to KEYBOARD_KEYS,
     "macropad_settings" to MACROPAD_SETTINGS_KEYS,
+    "gyro" to GYRO_KEYS,
 )
 
 /** Reverse lookup: DataStore key name → section name. */

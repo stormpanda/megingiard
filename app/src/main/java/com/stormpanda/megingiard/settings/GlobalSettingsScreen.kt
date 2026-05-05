@@ -68,6 +68,12 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "GlobalSettingsScreen"
 
+// Gyro slider range constants — must match GyroSettings domain values.
+private const val GS_GYRO_SENSITIVITY_MIN = 0.1f
+private const val GS_GYRO_SENSITIVITY_MAX = 10.0f
+private const val GS_GYRO_DEAD_ZONE_MIN   = 0.0f
+private const val GS_GYRO_DEAD_ZONE_MAX   = 2.0f
+
 // ── In-tree dialog constants ──────────────────────────────────────────────────
 // Dialogs must NOT use Compose AlertDialog (which creates an Android sub-window)
 // because MirrorPresentation has no valid Activity window token for sub-windows.
@@ -81,7 +87,7 @@ private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 private enum class SettingsSectionFilter {
-    GENERAL, APPEARANCE, DATA, CONFIGURATION
+    GENERAL, APPEARANCE, DATA, CONFIGURATION, GYRO
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,6 +106,10 @@ fun GlobalSettingsScreen(
     val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
+    val gyroEnabled by viewModel.gyroEnabled.collectAsState()
+    val gyroOutput by viewModel.gyroOutput.collectAsState()
+    val gyroSensitivity by viewModel.gyroSensitivity.collectAsState()
+    val gyroDeadZone by viewModel.gyroDeadZone.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
@@ -164,6 +174,7 @@ fun GlobalSettingsScreen(
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
+                    onSelectGyro = { selectedSectionFilter = SettingsSectionFilter.GYRO },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
                     SettingsSection(
@@ -276,6 +287,53 @@ fun GlobalSettingsScreen(
                             accentColor = effectiveAccent,
                             onShowExportDialog = { showExportMetadataDialog = true },
                             onImportPreviewReady = { showImportPreviewDialog = it },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GYRO) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_gyro),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_gyro_enabled),
+                            description = stringResource(R.string.settings_gyro_enabled_desc),
+                            checked = gyroEnabled,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { viewModel.setGyroEnabled(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        GyroOutputPickerRow(
+                            gyroOutput = gyroOutput,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { viewModel.setGyroOutput(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        GyroSliderRow(
+                            label = stringResource(R.string.settings_gyro_sensitivity),
+                            description = stringResource(R.string.settings_gyro_sensitivity_desc),
+                            value = gyroSensitivity,
+                            valueRange = GS_GYRO_SENSITIVITY_MIN..GS_GYRO_SENSITIVITY_MAX,
+                            formatValue = { "%.1f×".format(it) },
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onValueChangeFinished = { viewModel.setGyroSensitivity(gyroSensitivity) },
+                            onValueChange = { viewModel.setGyroSensitivity(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        GyroSliderRow(
+                            label = stringResource(R.string.settings_gyro_dead_zone),
+                            description = stringResource(R.string.settings_gyro_dead_zone_desc),
+                            value = gyroDeadZone,
+                            valueRange = GS_GYRO_DEAD_ZONE_MIN..GS_GYRO_DEAD_ZONE_MAX,
+                            formatValue = { "%.2f rad/s".format(it) },
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onValueChangeFinished = { viewModel.setGyroDeadZone(gyroDeadZone) },
+                            onValueChange = { viewModel.setGyroDeadZone(it) },
                         )
                     }
                 }
@@ -398,6 +456,7 @@ private fun SectionJumpRow(
     onSelectAppearance: () -> Unit,
     onSelectData: () -> Unit,
     onSelectConfig: () -> Unit,
+    onSelectGyro: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -447,6 +506,13 @@ private fun SectionJumpRow(
             accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
             onClick = onSelectConfig,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_gyro),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.GYRO,
+            onClick = onSelectGyro,
         )
     }
 }
@@ -708,6 +774,9 @@ private fun ImportPreviewDialog(
             }
             if ("macropad_settings" in export.settings) {
                 Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+            }
+            if ("gyro" in export.settings) {
+                Text("\u2022 ${stringResource(R.string.config_import_section_gyro)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
             }
             if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                 Text(

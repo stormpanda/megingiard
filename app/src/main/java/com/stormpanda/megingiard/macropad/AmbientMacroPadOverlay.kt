@@ -32,6 +32,7 @@ import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.gyro.GyroProcessor
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
@@ -132,11 +133,13 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
                     KeyInjector.stop()
                     GamepadInjector.stop()
                     MouseInjector.stop()
+                    GyroProcessor.stop()
                 }
                 gate.stopMouseAndGamepad -> {
                     AppLog.d(TAG, "pill menu open → stopping gamepad/mouse injectors")
                     GamepadInjector.stop()
                     MouseInjector.stop()
+                    GyroProcessor.stop()
                 }
                 else -> {
                     delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
@@ -146,6 +149,7 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
                         if (ap?.enableKeyboard == true) KeyInjector.start(context)
                         if (ap?.enableGamepad == true) GamepadInjector.start(context)
                         if (ap?.enableMouse == true) MouseInjector.start(context)
+                        GyroProcessor.start(context)
                     }
                 }
             }
@@ -159,6 +163,7 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()
+            GyroProcessor.stop()
             MacroPadState.resetPeek()
         }
     }

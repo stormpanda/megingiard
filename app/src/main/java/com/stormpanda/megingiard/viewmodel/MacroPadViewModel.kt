@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.gyro.GyroProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.GamepadInjector
@@ -84,11 +85,13 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                         KeyInjector.stop()
                         GamepadInjector.stop()
                         MouseInjector.stop()
+                        GyroProcessor.stop()
                     }
                     gate.stopMouseAndGamepad -> {
                         AppLog.i(TAG, "pill menu open \u2192 stopping gamepad/mouse injectors")
                         GamepadInjector.stop()
                         MouseInjector.stop()
+                        GyroProcessor.stop()
                     }
                     else -> {
                         // Absorb rapid transitions (e.g. PillMenu closes then Editor opens
@@ -103,6 +106,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                             if (ap?.enableKeyboard == true) KeyInjector.start(context)
                             if (ap?.enableGamepad == true) GamepadInjector.start(context)
                             if (ap?.enableMouse == true) MouseInjector.start(context)
+                            GyroProcessor.start(context)
                         }
                     }
                 }
@@ -115,6 +119,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
+        GyroProcessor.stop()
         MacroPadState.resetPeek()
     }
 
@@ -124,6 +129,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
+        GyroProcessor.stop()
         MacroPadState.resetPeek()
     }
 }

@@ -182,6 +182,7 @@ Open Settings to create a layout.</string>
     <string name="config_import_section_keyboard">Keyboard settings</string>
     <string name="config_import_section_macropad">MacroPad (%1$d profiles, %2$d macros)</string>
     <string name="config_import_section_macropad_settings">MacroPad settings</string>
+    <string name="config_import_section_gyro">Gyro input settings</string>
     <string name="config_import_section_settings">Settings (global / tool settings)</string>
     <string name="config_import_meta_author">Author: %1$s</string>
     <string name="config_import_warning">New profiles and macros will be added alongside existing ones.</string>
@@ -444,4 +445,19 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_profile">Profile</string>
     <string name="macropad_action_group_other">Overlays</string>
     <string name="macropad_picker_label_group">Group</string>
+
+    <!-- Gyro-to-input settings -->
+    <string name="settings_section_gyro">Gyro Input</string>
+    <string name="settings_jump_gyro">Gyro</string>
+    <string name="settings_gyro_enabled">Gyroscope input</string>
+    <string name="settings_gyro_enabled_desc">Use the device gyroscope to emulate analog stick or mouse movement</string>
+    <string name="settings_gyro_output">Output target</string>
+    <string name="settings_gyro_output_off">Off</string>
+    <string name="settings_gyro_output_gamepad_left">Gamepad — Left Stick</string>
+    <string name="settings_gyro_output_gamepad_right">Gamepad — Right Stick</string>
+    <string name="settings_gyro_output_mouse">Mouse</string>
+    <string name="settings_gyro_sensitivity">Sensitivity</string>
+    <string name="settings_gyro_sensitivity_desc">Scale applied to gyro rotation speed</string>
+    <string name="settings_gyro_dead_zone">Dead zone</string>
+    <string name="settings_gyro_dead_zone_desc">Minimum rotation (rad/s) before movement is registered</string>
 </resources>

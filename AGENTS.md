@@ -31,6 +31,7 @@
 | `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation    |
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
 | `docs/features/keyboard/FEATURE.md` | Virtual Keyboard — functional requirements & technical implementation |
+| `docs/features/gyro/FEATURE.md`     | Gyroscope Input — gyro-to-analog-stick/mouse mapping, settings, lifecycle |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                |
 | `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge  |
 
