@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ private val CHIP_V_PADDING = 6.dp
  * @param leadingIcon      Optional leading icon slot. The lambda receives the resolved content
  *                         color (onAccent when selected, onControlOverlay otherwise) so callers
  *                         can tint icons without knowing about selection state.
+ * @param trailingContent  Optional trailing content slot, resolved like [leadingIcon].
  */
 @Composable
 fun AppSelectableChip(
@@ -56,6 +58,7 @@ fun AppSelectableChip(
     enabled: Boolean = true,
     contentDescription: String? = null,
     leadingIcon: (@Composable (contentColor: Color) -> Unit)? = null,
+    trailingContent: (@Composable (contentColor: Color) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val contentColor = if (selected) colors.onAccent else colors.onControlOverlay
@@ -82,18 +85,21 @@ fun AppSelectableChip(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
     ) {
-        if (leadingIcon != null) {
+        if (leadingIcon != null || trailingContent != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                leadingIcon(contentColor.copy(alpha = effectiveAlpha))
+                leadingIcon?.invoke(contentColor.copy(alpha = effectiveAlpha))
                 Text(
                     text = text,
                     color = contentColor.copy(alpha = effectiveAlpha),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                trailingContent?.invoke(contentColor.copy(alpha = effectiveAlpha))
             }
         } else {
             Text(
@@ -101,6 +107,8 @@ fun AppSelectableChip(
                 color = contentColor.copy(alpha = effectiveAlpha),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

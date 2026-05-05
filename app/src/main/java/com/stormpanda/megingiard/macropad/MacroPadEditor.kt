@@ -78,7 +78,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
@@ -658,7 +658,6 @@ private fun EditorLayoutBar(
     onNewLayout:             () -> Unit,
     modifier:                Modifier = Modifier,
 ) {
-    val colors    = LocalAppColors.current
     val canDelete = profile.layouts.size > 1
     val latestLayouts by rememberUpdatedState(profile.layouts)
 
@@ -689,14 +688,12 @@ private fun EditorLayoutBar(
                     val isActive = layout.id == activeLayoutId ||
                         (activeLayoutId == null && profile.layouts.firstOrNull()?.id == layout.id)
                     LayoutChip(
-                        layout     = layout,
-                        isActive   = isActive,
-                        accentColor = accentColor,
-                        canDelete  = canDelete,
-                        colors     = colors,
-                        onSelect   = { onSelectLayout(layout.id) },
-                        onToggle   = { onToggleEnabled(layout.id, !layout.enabled) },
-                        onDelete   = { onDeleteLayoutRequested(layout) },
+                        layout       = layout,
+                        isActive     = isActive,
+                        canDelete    = canDelete,
+                        onSelect     = { onSelectLayout(layout.id) },
+                        onToggle     = { onToggleEnabled(layout.id, !layout.enabled) },
+                        onDelete     = { onDeleteLayoutRequested(layout) },
                         dragModifier = Modifier.longPressDraggableHandle(),
                     )
                 }
@@ -721,64 +718,49 @@ private fun EditorLayoutBar(
 private fun LayoutChip(
     layout:       PadLayout,
     isActive:     Boolean,
-    accentColor:  Color,
     canDelete:    Boolean,
-    colors:       AppColors,
     onSelect:     () -> Unit,
     onToggle:     () -> Unit,
     onDelete:     () -> Unit,
     dragModifier: Modifier = Modifier,
 ) {
-    val bgColor    = if (isActive) accentColor.copy(alpha = 0.85f) else colors.surface
-    val textColor  = if (isActive) Color.White else colors.onSurface
-    val chipAlpha  = if (layout.enabled) 1f else 0.45f
+    val chipAlpha = if (layout.enabled) 1f else 0.45f
 
-    Row(
+    AppSelectableChip(
+        text     = layout.name,
+        selected = isActive,
+        onClick  = onSelect,
         modifier = Modifier
             .alpha(chipAlpha)
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor)
-            .border(1.dp, if (isActive) accentColor else colors.divider, RoundedCornerShape(8.dp))
-            .clickable(onClick = onSelect)
-            .then(dragModifier)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text       = layout.name,
-            color      = textColor,
-            style      = MaterialTheme.typography.bodySmall,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines   = 1,
-            overflow   = TextOverflow.Ellipsis,
-        )
-        IconButton(
-            onClick  = onToggle,
-            modifier = Modifier.size(20.dp),
-        ) {
-            Icon(
-                imageVector        = if (layout.enabled) Icons.Rounded.CheckCircle
-                                     else Icons.Rounded.RadioButtonUnchecked,
-                contentDescription = stringResource(R.string.cd_layout_enable_toggle),
-                tint               = textColor.copy(alpha = 0.75f),
-                modifier           = Modifier.size(14.dp),
-            )
-        }
-        if (canDelete) {
+            .then(dragModifier),
+        trailingContent = { contentColor ->
             IconButton(
-                onClick  = onDelete,
+                onClick  = onToggle,
                 modifier = Modifier.size(20.dp),
             ) {
                 Icon(
-                    imageVector        = Icons.Rounded.Close,
-                    contentDescription = stringResource(R.string.macropad_editor_delete_layout),
-                    tint               = textColor.copy(alpha = 0.75f),
+                    imageVector        = if (layout.enabled) Icons.Rounded.CheckCircle
+                                         else Icons.Rounded.RadioButtonUnchecked,
+                    contentDescription = stringResource(R.string.cd_layout_enable_toggle),
+                    tint               = contentColor.copy(alpha = 0.75f),
                     modifier           = Modifier.size(14.dp),
                 )
             }
-        }
-    }
+            if (canDelete) {
+                IconButton(
+                    onClick  = onDelete,
+                    modifier = Modifier.size(20.dp),
+                ) {
+                    Icon(
+                        imageVector        = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.macropad_editor_delete_layout),
+                        tint               = contentColor.copy(alpha = 0.75f),
+                        modifier           = Modifier.size(14.dp),
+                    )
+                }
+            }
+        },
+    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

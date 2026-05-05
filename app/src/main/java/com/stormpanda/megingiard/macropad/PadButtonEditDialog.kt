@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
@@ -44,9 +43,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
@@ -326,29 +325,15 @@ internal fun ButtonEditDialog(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 ButtonShape.entries.forEach { shape ->
                                     val selected = shape == buttonShape
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp))
-                                            .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
-                                            .border(
-                                                width = if (selected) 2.dp else 1.dp,
-                                                color = if (selected) accentColor else colors.accentBorder,
-                                                shape = if (shape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp),
-                                            )
-                                            .clickable { buttonShape = shape },
-                                    ) {
-                                        Text(
-                                            text  = if (shape == ButtonShape.CIRCLE)
-                                                stringResource(R.string.macropad_editor_shape_circle)
-                                            else
-                                                stringResource(R.string.macropad_editor_shape_square),
-                                            color = if (selected) accentColor else colors.onSurfaceSecondary,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            textAlign = TextAlign.Center,
-                                        )
-                                    }
+                                    val shapeLabel = if (shape == ButtonShape.CIRCLE)
+                                        stringResource(R.string.macropad_editor_shape_circle)
+                                    else
+                                        stringResource(R.string.macropad_editor_shape_square)
+                                    AppSelectableChip(
+                                        text     = shapeLabel,
+                                        selected = selected,
+                                        onClick  = { buttonShape = shape },
+                                    )
                                 }
                             }
                         }
@@ -400,20 +385,15 @@ internal fun ButtonEditDialog(
                                 TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
                             }
                             Box(
-                                contentAlignment = Alignment.Center,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
-                                    .border(
-                                        width = if (selected) 2.dp else 1.dp,
-                                        color = if (selected) accentColor else colors.accentBorder,
-                                        shape = RoundedCornerShape(8.dp),
-                                    )
-                                    .clickable { action = PadAction.TrackpointMove(sz) }
-                                    .padding(vertical = 10.dp),
                             ) {
-                                Text(szLabel, color = if (selected) accentColor else colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                                AppSelectableChip(
+                                    text     = szLabel,
+                                    selected = selected,
+                                    onClick  = { action = PadAction.TrackpointMove(sz) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
                         }
                     }
@@ -440,17 +420,13 @@ internal fun ButtonEditDialog(
                             HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
                         }
                         Box(
-                            contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (selected) accentColor.copy(alpha = 0.3f) else colors.surface)
-                                .border(
-                                    width = if (selected) 2.dp else 1.dp,
-                                    color = if (selected) accentColor else colors.accentBorder,
-                                    shape = RoundedCornerShape(8.dp),
-                                )
-                                .clickable {
+                                .weight(1f),
+                        ) {
+                            AppSelectableChip(
+                                text     = strengthLabel,
+                                selected = selected,
+                                onClick  = {
                                     // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
                                     when (strength) {
                                         HapticStrength.LIGHT  -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER }
@@ -459,14 +435,8 @@ internal fun ButtonEditDialog(
                                         else                  -> { /* OFF / CUSTOM → keep current slider values */ }
                                     }
                                     hapticStrength = strength
-                                }
-                                .padding(vertical = 10.dp),
-                        ) {
-                            Text(
-                                text  = strengthLabel,
-                                color = if (selected) accentColor else colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodySmall,
-                                textAlign = TextAlign.Center,
+                                },
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }
