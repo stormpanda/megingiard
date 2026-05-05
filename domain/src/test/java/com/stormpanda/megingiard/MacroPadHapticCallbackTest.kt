@@ -112,6 +112,28 @@ class MacroPadHapticCallbackTest {
         assertTrue("callback must not fire when hapticStrength is OFF", !called)
     }
 
+    @Test
+    fun `disabled device button with haptic enabled does not fire callback`() {
+        var called = false
+        val engine = MacroPadHitTestEngine(dummyDpToPx) { _, _, _, _, _ -> called = true }
+        val keyboardDisabledProfile = enabledProfile.copy(enableKeyboard = false)
+        val button = centeredButton(PadAction.KeyboardKey(keycode = 28, label = "Enter"), HapticStrength.LIGHT)
+
+        val disabledButton = engine.onPress(
+            pointerId = 0L,
+            px = 500f,
+            py = 500f,
+            canvasW = canvasW,
+            canvasH = canvasH,
+            buttons = listOf(button),
+            profile = keyboardDisabledProfile,
+            isPeekActive = false,
+        )
+
+        assertEquals("btn-test", disabledButton?.id)
+        assertTrue("callback must not fire when required device is disabled", !called)
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // CUSTOM strength — custom params forwarded correctly
     // ─────────────────────────────────────────────────────────────────────────

@@ -240,10 +240,10 @@ Each button supports one of the following actions:
 
 - Each `PadButton` carries a `hapticStrength: HapticStrength` field (serialised; default `OFF` — existing profiles load without migration).
 - Five strength levels are available: `OFF`, `LIGHT`, `MEDIUM`, `STRONG`, `CUSTOM`.
-- The strength selector is displayed in `ButtonEditDialog` as a row of five chips (same visual language as the shape/size pickers). The selector is hidden for `AmbientPeek` buttons; it is shown for all other action types including `TrackpointMove` and `ScrollWheel`.
-- When **CUSTOM** is selected, two sliders appear beneath the chip row:
+- The strength selector is displayed in `ButtonEditDialog` as a row of five chips (same visual language as the shape/size pickers). It is shown for all action types, including `AmbientPeek`, `TrackpointMove`, and `ScrollWheel`.
+- When haptics are enabled (`LIGHT`, `MEDIUM`, `STRONG`, or `CUSTOM`), two sliders appear beneath the chip row:
   - **Duration** — 1 to 200 ms (integer steps)
-  - **Amplitude** — 5 to 100 in steps of 5 (20 discrete values; Android accepts 1–255, the cap of 100 is the user-facing ceiling)
+  - **Amplitude** — 5 to 100 in steps of 5 (20 discrete user-facing values; the value is mapped proportionally to Android's 1–255 amplitude range, so 100 maps to 255)
   - The values are stored in `PadButton.hapticCustomDurationMs` (default 10) and `PadButton.hapticCustomAmplitude` (default 25).
   - A **"Test vibration"** `TextButton` appears below the sliders and immediately fires `triggerHaptic()` using the current slider values, allowing the user to feel the selected pulse before saving.
 - **Button-down (all non-trackpoint / non-scroll actions):** A single short vibration tick fires on button press. Duration / amplitude:
@@ -255,7 +255,7 @@ Each button supports one of the following actions:
 - **ScrollWheel:** One tick fires per discrete scroll batch (no speed-adaptive throttle). Each batch represents a fixed number of scroll units dispatched in one gesture step.
 - **Discrete button press:** magnitude is always `0f`; the interval guard evaluates to 0 ms so the pulse fires immediately regardless of prior activity.
 - **Disabled-device buttons:** No haptic is triggered — the engine returns early before the callback is invoked.
-- **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((HapticStrength, Int, Int, Float) -> Unit)?` constructor parameter (args: strength, customDurationMs, customAmplitude, magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:app`) performs the `VibrationEffect.createOneShot()` call, clamping custom params to safe ranges. The `:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:core`) crosses the boundary.
+- **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)?` constructor parameter (args: buttonId, strength, customDurationMs, customAmplitude, magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a per-button rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:app`) performs the `VibrationEffect.createOneShot()` call, clamping custom params to safe ranges. The `:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:core`) crosses the boundary.
 
 ---
 
