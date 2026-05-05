@@ -93,6 +93,7 @@ object SettingsManager {
         AmbientSettings.init(dataStore, scope)
         MirrorSettings.init(dataStore, scope)
         MacroPadSettings.init(dataStore, scope)
+        GyroSettings.init(dataStore, scope)
 
         scope.launch {
             dataStore.data
@@ -115,6 +116,7 @@ object SettingsManager {
                 AppLog.level = _logLevel.value
                 AmbientSettings.loadFrom(prefs)
                 MacroPadSettings.loadFrom(prefs)
+                GyroSettings.loadFrom(prefs)
             }
         }
     }

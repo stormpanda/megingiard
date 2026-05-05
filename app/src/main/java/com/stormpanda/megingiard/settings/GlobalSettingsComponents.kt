@@ -18,6 +18,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.gyro.GyroOutput
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
 import java.util.Locale
@@ -341,6 +343,126 @@ internal fun ConfigActionRow(
             contentDescription = null,
             tint = accentColor,
             modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gyro settings components
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maps a [GyroOutput] value to its string resource ID. */
+internal fun GyroOutput.displayNameResId(): Int = when (this) {
+    GyroOutput.OFF                -> R.string.settings_gyro_output_off
+    GyroOutput.GAMEPAD_LEFT_STICK -> R.string.settings_gyro_output_gamepad_left
+    GyroOutput.GAMEPAD_RIGHT_STICK -> R.string.settings_gyro_output_gamepad_right
+    GyroOutput.MOUSE              -> R.string.settings_gyro_output_mouse
+}
+
+/**
+ * Dropdown row that lets the user choose the [GyroOutput] target.
+ * Follows the same visual pattern as [ThemePickerRow].
+ */
+@Composable
+internal fun GyroOutputPickerRow(
+    gyroOutput: GyroOutput,
+    accentColor: Color,
+    colors: AppColors,
+    onChanged: (GyroOutput) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .clickable { expanded = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_gyro_output),
+            subtitle = stringResource(gyroOutput.displayNameResId()),
+            subtitleColor = accentColor,
+            modifier = Modifier.weight(1f),
+        )
+        Box {
+            Icon(
+                imageVector = Icons.Rounded.ArrowDropDown,
+                contentDescription = null,
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE),
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(colors.surface),
+            ) {
+                GyroOutput.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(option.displayNameResId()),
+                                color = if (option == gyroOutput) accentColor else colors.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            if (option != gyroOutput) onChanged(option)
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Slider row for gyro float settings (sensitivity, dead zone).
+ * Follows the surface-background pattern used by other rows in this file.
+ */
+@Composable
+internal fun GyroSliderRow(
+    label: String,
+    description: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    formatValue: (Float) -> String,
+    accentColor: Color,
+    colors: AppColors,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingLabelColumn(
+                label = label,
+                subtitle = description,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = formatValue(value),
+                color = accentColor,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        Slider(
+            modifier = Modifier.fillMaxWidth(),
+            value = value,
+            onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
+            valueRange = valueRange,
+            steps = steps,
         )
     }
 }

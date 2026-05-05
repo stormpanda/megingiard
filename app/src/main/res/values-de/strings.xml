@@ -383,6 +383,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_import_section_keyboard">Tastatur-Einstellungen</string>
     <string name="config_import_section_macropad">MacroPad (%1$d Profile, %2$d Makros)</string>
     <string name="config_import_section_macropad_settings">MacroPad-Einstellungen</string>
+    <string name="config_import_section_gyro">Gyro-Eingabe-Einstellungen</string>
     <string name="config_import_section_settings">Einstellungen (global / werkzeugspezifisch)</string>
     <string name="config_import_meta_author">Autor: %1$s</string>
     <string name="config_import_warning">Neue Profile und Makros werden zu den vorhandenen hinzugefügt.</string>
@@ -452,4 +453,19 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_group_profile">Profil</string>
     <string name="macropad_action_group_other">Overlays</string>
     <string name="macropad_picker_label_group">Gruppe</string>
+
+    <!-- Gyro-zu-Eingabe-Einstellungen -->
+    <string name="settings_section_gyro">Gyroskop-Eingabe</string>
+    <string name="settings_jump_gyro">Gyro</string>
+    <string name="settings_gyro_enabled">Gyroskop-Eingabe</string>
+    <string name="settings_gyro_enabled_desc">Gyroskop des Geräts zur Emulation von Analogstick- oder Mausbewegungen nutzen</string>
+    <string name="settings_gyro_output">Ausgabeziel</string>
+    <string name="settings_gyro_output_off">Aus</string>
+    <string name="settings_gyro_output_gamepad_left">Gamepad — Linker Stick</string>
+    <string name="settings_gyro_output_gamepad_right">Gamepad — Rechter Stick</string>
+    <string name="settings_gyro_output_mouse">Maus</string>
+    <string name="settings_gyro_sensitivity">Empfindlichkeit</string>
+    <string name="settings_gyro_sensitivity_desc">Skalierungsfaktor für die Gyro-Rotationsgeschwindigkeit</string>
+    <string name="settings_gyro_dead_zone">Totzone</string>
+    <string name="settings_gyro_dead_zone_desc">Mindestdrehrate (rad/s), bevor Bewegung registriert wird</string>
 </resources>
