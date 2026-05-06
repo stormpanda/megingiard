@@ -177,21 +177,24 @@ object PrivdClient {
     /** Must be invoked from a synchronized block. */
     private fun cleanupLocked() {
         running = false
+        queue.clear()
+        pingDeferred?.complete(false)
+        pingDeferred = null
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null
         readerThread = null
-        queue.clear()
-        // Close the socket FIRST so the reader thread's blocking readLine() throws
-        // immediately and releases the BufferedReader's internal lock. Without this,
-        // reader.close() deadlocks with the reader thread for several seconds (ANR).
+        // shutdownInput() sends SHUT_RD to the socket fd, which immediately unblocks
+        // any reader thread stuck in readLine(). close() then frees the fd.
+        // We intentionally skip reader.close() and writer.close(): both acquire
+        // internal BufferedReader/Writer locks that the I/O threads may hold,
+        // causing the main thread to block for several seconds (ANR). Since
+        // socket.close() frees the underlying fd, the stream wrappers have no
+        // independent resources to clean up.
+        try { socket?.shutdownInput() } catch (_: Exception) {}
         try { socket?.close() } catch (_: Exception) {}
-        try { writer?.close() } catch (_: Exception) {}
-        try { reader?.close() } catch (_: Exception) {}
         writer = null
         reader = null
         socket = null
-        pingDeferred?.complete(false)
-        pingDeferred = null
     }
 }
