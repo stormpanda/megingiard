@@ -313,9 +313,10 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_intro">1. Enable Developer Options if you have not already. 2. Open Developer Options → Wireless debugging and turn it ON. 3. Tap “Pair device with pairing code”. Keep the pairing dialog open and continue here.</string>
     <string name="privd_wizard_step1_open">Open Developer Options</string>
 
-    <string name="privd_wizard_step2_intro">Enter the IP address, port, and 6-digit pairing code shown in the Wireless Debugging pairing dialog. Pairing happens entirely on this device — no internet required.</string>
+    <string name="privd_wizard_step2_intro">From the main "Wireless debugging" screen, note the IP address and the port shown next to it (Connect port). Then tap "Pair device with pairing code", enter that pairing port and 6-digit code here. Everything stays on-device — no internet required.</string>
     <string name="privd_wizard_field_host">IP address</string>
-    <string name="privd_wizard_field_port">Port</string>
+    <string name="privd_wizard_field_connect_port">Connect port (from "Wireless debugging" main screen)</string>
+    <string name="privd_wizard_field_pair_port">Pairing port (from "Pair device" dialog)</string>
     <string name="privd_wizard_field_code">Pairing code (6 digits)</string>
     <string name="privd_wizard_step2_pair">Pair</string>
     <string name="privd_wizard_step2_error">Pairing failed. Double-check the address, port, and code, then try again.</string>

@@ -13,7 +13,7 @@ import java.util.Base64
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val DAEMON_REMOTE_PATH = "/data/local/tmp/megingiard_privd"
-private const val ADB_AUTO_CONNECT_TIMEOUT_MS = 10_000L
+private const val ADB_CONNECT_TIMEOUT_MS = 10_000L
 private const val PUSH_OK_MARKER = "MGRD_PUSH_OK"
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
@@ -83,19 +83,23 @@ object PrivdBootstrapper {
      * Push the daemon binary, spawn it, then call [PrivdManager.connect] to verify.
      * Caller must have completed [pair] (or have a previously-paired device).
      *
+     * @param host        The device's IP address (same value entered during pairing).
+     * @param connectPort The ADB Wireless-Debugging connect port shown on the
+     *                    main "Wireless debugging" screen (not the pairing port).
+     *
      * Blocking — call on `Dispatchers.IO`. Returns `true` on success.
      * Failure modes are reported through [PrivdManager.reportBootstrapFailure].
      */
-    fun bootstrapAndConnect(context: Context): Boolean {
-        AppLog.i(TAG, "bootstrapAndConnect()")
+    fun bootstrapAndConnect(context: Context, host: String, connectPort: Int): Boolean {
+        AppLog.i(TAG, "bootstrapAndConnect(host=$host connectPort=$connectPort)")
         PrivdManager.reportBootstrapStart()
         val mgr = PrivdAdbConnectionManager.getInstance(context)
-        // Connect via mDNS auto-discovery
+        // Connect directly to adbd — mDNS self-discovery is unreliable on-device.
         _stage.value = BootstrapStage.CONNECTING_ADB
         val connected = try {
-            mgr.autoConnect(context.applicationContext, ADB_AUTO_CONNECT_TIMEOUT_MS)
+            mgr.connect(host, connectPort)
         } catch (e: Exception) {
-            AppLog.w(TAG, "autoConnect() threw: $e")
+            AppLog.w(TAG, "connect($host:$connectPort) threw: $e")
             false
         }
         if (!connected) {

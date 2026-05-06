@@ -275,9 +275,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_step1_intro">1. Aktiviere die Entwickleroptionen, falls noch nicht geschehen. 2. Öffne Entwickleroptionen → Drahtloses Debugging und schalte es EIN. 3. Tippe auf „Gerät über Kopplungscode koppeln”. Lass diesen Dialog offen und fahre hier fort.</string>
     <string name="privd_wizard_step1_open">Entwickleroptionen öffnen</string>
 
-    <string name="privd_wizard_step2_intro">Gib die IP-Adresse, den Port und den 6-stelligen Kopplungscode aus dem Drahtloses-Debugging-Dialog ein. Die Kopplung erfolgt komplett auf diesem Gerät — keine Internetverbindung nötig.</string>
+    <string name="privd_wizard_step2_intro">Notiere auf dem Hauptbildschirm "Drahtloses Debugging" die IP-Adresse und den danebenstehenden Port (Verbindungsport). Tippe dann auf "Gerät über Kopplungscode koppeln" und trage den Kopplungsport sowie den 6-stelligen Code hier ein. Alles läuft auf dem Gerät — keine Internetverbindung nötig.</string>
     <string name="privd_wizard_field_host">IP-Adresse</string>
-    <string name="privd_wizard_field_port">Port</string>
+    <string name="privd_wizard_field_connect_port">Verbindungsport (aus dem Hauptbildschirm "Drahtloses Debugging")</string>
+    <string name="privd_wizard_field_pair_port">Kopplungsport (aus dem Dialog "Gerät koppeln")</string>
     <string name="privd_wizard_field_code">Kopplungscode (6 Ziffern)</string>
     <string name="privd_wizard_step2_pair">Koppeln</string>
     <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Adresse, Port und Code und versuche es erneut.</string>

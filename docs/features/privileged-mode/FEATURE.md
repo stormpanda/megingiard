@@ -127,9 +127,12 @@ Flow:
 3. **Wizard step 3** triggers `PrivdBootstrapper.bootstrapAndConnect()`
    which goes through the `BootstrapStage` machine:
    `CONNECTING_ADB → PUSHING_BINARY → SPAWNING_DAEMON → VERIFYING → DONE`.
-   - `CONNECTING_ADB` calls `AbsAdbConnectionManager.autoConnect()` which
-     uses mDNS (`_adb-tls-connect._tcp.`) to discover the live ADB shell
-     endpoint.
+   - `CONNECTING_ADB` calls `AbsAdbConnectionManager.connect(host, connectPort)`
+     using the IP address and connect port the user entered in wizard step 2
+     (the port shown next to the IP on the main "Wireless debugging" screen —
+     distinct from the pairing port). Direct connect is used instead of mDNS
+     (`autoConnect()`) because mDNS self-discovery is unreliable on-device on
+     the AYN Thor.
    - `PUSHING_BINARY` opens an `adbStream("shell:base64 -d > /data/local/tmp/megingiard_privd && chmod 755 ... && echo MGRD_PUSH_OK")`,
      pipes the base64-encoded daemon asset bytes into stdin, closes the
      output stream, and reads the `MGRD_PUSH_OK` marker.
@@ -255,7 +258,7 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 | `domain/.../privd/PrivdConnectionState.kt`      | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                              |
 | `domain/.../privd/PrivdGamepadInjector.kt`      | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                            |
 | `domain/.../privd/PrivdManager.kt`              | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum |
-| `domain/.../privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`autoConnect`    |
+| `domain/.../privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`         |
 | `domain/.../privd/PrivdBootstrapper.kt`         | `BootstrapStage` state flow + pair / push (base64-pipe) / spawn (detached) / verify orchestration          |
 | `app/.../privd/PrivdSettingsCard.kt`            | Compose card: status badge, connect/test buttons, wizard toggle, auto-connect Switch, feature toggles      |
 | `app/.../privd/PrivdSetupWizard.kt`             | 4-step Compose wizard (Developer Options → pair → bootstrap → done)                                        |

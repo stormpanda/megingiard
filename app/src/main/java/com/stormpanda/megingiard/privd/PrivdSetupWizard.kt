@@ -68,6 +68,7 @@ internal fun PrivdSetupWizard(
     var step by rememberSaveable { mutableStateOf(0) }
     var pairHost by rememberSaveable { mutableStateOf("") }
     var pairPort by rememberSaveable { mutableStateOf(SW_DEFAULT_PORT) }
+    var connectPort by rememberSaveable { mutableStateOf("") }
     var pairCode by rememberSaveable { mutableStateOf("") }
     var pairError by remember { mutableStateOf(false) }
     var pairBusy by remember { mutableStateOf(false) }
@@ -103,12 +104,14 @@ internal fun PrivdSetupWizard(
 
             1 -> StepPair(
                 host = pairHost,
-                port = pairPort,
+                pairPort = pairPort,
+                connectPort = connectPort,
                 code = pairCode,
                 busy = pairBusy,
                 error = pairError,
                 onHostChange = { pairHost = it },
-                onPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
+                onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
+                onConnectPortChange = { connectPort = it.filter { ch -> ch.isDigit() }.take(5) },
                 onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
                 onSubmit = {
                     val portInt = pairPort.toIntOrNull() ?: return@StepPair
@@ -130,8 +133,9 @@ internal fun PrivdSetupWizard(
                 stage = stage,
                 busy = bootstrapBusy,
                 onStart = {
+                    val cPort = connectPort.toIntOrNull() ?: return@StepBootstrap
                     bootstrapBusy = true
-                    viewModel.privdBootstrap(context) { ok ->
+                    viewModel.privdBootstrap(context, pairHost.trim(), cPort) { ok ->
                         bootstrapBusy = false
                         if (ok) step = 3
                     }
@@ -181,12 +185,14 @@ private fun StepEnableWireless(
 @Composable
 private fun StepPair(
     host: String,
-    port: String,
+    pairPort: String,
+    connectPort: String,
     code: String,
     busy: Boolean,
     error: Boolean,
     onHostChange: (String) -> Unit,
-    onPortChange: (String) -> Unit,
+    onPairPortChange: (String) -> Unit,
+    onConnectPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onBack: () -> Unit,
@@ -207,9 +213,19 @@ private fun StepPair(
     )
     Spacer(Modifier.height(SW_GAP))
     OutlinedTextField(
-        value = port,
-        onValueChange = onPortChange,
-        label = { Text(stringResource(R.string.privd_wizard_field_port)) },
+        value = connectPort,
+        onValueChange = onConnectPortChange,
+        label = { Text(stringResource(R.string.privd_wizard_field_connect_port)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !busy,
+    )
+    Spacer(Modifier.height(SW_GAP))
+    OutlinedTextField(
+        value = pairPort,
+        onValueChange = onPairPortChange,
+        label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
@@ -242,7 +258,8 @@ private fun StepPair(
             onClick = onSubmit,
             enabled = !busy &&
                 host.isNotBlank() &&
-                port.toIntOrNull() != null &&
+                connectPort.toIntOrNull() != null &&
+                pairPort.toIntOrNull() != null &&
                 code.length == 6,
         ) {
             Text(
