@@ -29,8 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -66,13 +64,10 @@ internal fun PrivdSettingsCard(
     val mergeEnabled by viewModel.privdGamepadMergeEnabled.collectAsState()
     val autoConnect by viewModel.privdAutoConnect.collectAsState()
     val colors = LocalAppColors.current
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var showWizard by remember { mutableStateOf(false) }
     var pingResult by remember { mutableStateOf<Boolean?>(null) }
-    var isDeletingDaemon by remember { mutableStateOf(false) }
-    val setupRequiredMsg = stringResource(R.string.privd_toast_setup_required)
 
     Column(
         modifier = Modifier
@@ -151,36 +146,10 @@ internal fun PrivdSettingsCard(
                 }
             } else {
                 Button(
-                    onClick = {
-                        if (!autoConnect) {
-                            Toast.makeText(context, setupRequiredMsg, Toast.LENGTH_LONG).show()
-                        } else {
-                            viewModel.privdConnect()
-                        }
-                    },
+                    onClick = { viewModel.privdConnect() },
                     enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
                 ) {
                     Text(stringResource(R.string.privd_action_connect))
-                }
-                // Show Delete button only when the daemon was previously installed
-                // (autoConnect is set to true after a successful bootstrap).
-                if (autoConnect) {
-                    OutlinedButton(
-                        onClick = {
-                            if (!isDeletingDaemon) {
-                                isDeletingDaemon = true
-                                viewModel.privdCleanupDaemon(context) { isDeletingDaemon = false }
-                            }
-                        },
-                        enabled = !isDeletingDaemon,
-                    ) {
-                        Text(
-                            stringResource(
-                                if (isDeletingDaemon) R.string.privd_action_deleting_daemon
-                                else R.string.privd_action_delete_daemon
-                            )
-                        )
-                    }
                 }
             }
             TextButton(onClick = { showWizard = !showWizard }) {

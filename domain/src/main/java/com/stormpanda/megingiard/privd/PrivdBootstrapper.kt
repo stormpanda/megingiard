@@ -17,7 +17,6 @@ private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val DAEMON_REMOTE_PATH = "/data/local/tmp/megingiard_privd"
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
-private const val CLEANUP_DONE_MARKER = "MGRD_CLEAN_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
@@ -77,10 +76,6 @@ object PrivdBootstrapper {
     private val _stage = MutableStateFlow(BootstrapStage.IDLE)
     val stage: StateFlow<BootstrapStage> = _stage.asStateFlow()
 
-    /** Stored on each successful bootstrapAndConnect() call; used by cleanupLastDaemon(). */
-    private var lastHost = ""
-    private var lastConnectPort = 0
-
     /**
      * Pair with the device's ADB pairing service. Blocking — call on `Dispatchers.IO`.
      *
@@ -115,8 +110,6 @@ object PrivdBootstrapper {
      */
     fun bootstrapAndConnect(context: Context, host: String, connectPort: Int): Boolean {
         AppLog.i(TAG, "bootstrapAndConnect(host=$host connectPort=$connectPort)")
-        lastHost = host
-        lastConnectPort = connectPort
         PrivdManager.reportBootstrapStart()
         val mgr = PrivdAdbConnectionManager.getInstance(context)
         // Connect directly to adbd — mDNS self-discovery is unreliable on-device.
@@ -312,45 +305,6 @@ object PrivdBootstrapper {
         }
         AppLog.w(TAG, "readUntilMarker timeout waiting for '$marker'")
         return false
-    }
-
-    /**
-     * Connects via ADB, kills any running daemon process, and removes the
-     * binary from /data/local/tmp. Uses the host/port stored during the
-     * last [bootstrapAndConnect] call. Safe to call if no bootstrap was
-     * ever performed — returns false immediately.
-     */
-    fun cleanupLastDaemon(context: Context): Boolean {
-        val host = lastHost
-        val port = lastConnectPort
-        if (host.isEmpty() || port == 0) {
-            AppLog.d(TAG, "cleanupLastDaemon: no stored credentials, skipping")
-            return false
-        }
-        AppLog.d(TAG, "cleanupLastDaemon($host:$port)")
-        val mgr = PrivdAdbConnectionManager.getInstance(context)
-        val connected = try {
-            mgr.connect(host, port)
-        } catch (e: Exception) {
-            AppLog.w(TAG, "cleanupLastDaemon: connect failed: $e")
-            return false
-        }
-        if (!connected) {
-            AppLog.w(TAG, "cleanupLastDaemon: connect() returned false")
-            return false
-        }
-        val cmd = "shell:pkill -f $DAEMON_ASSET_NAME 2>/dev/null; rm -f $DAEMON_REMOTE_PATH; echo $CLEANUP_DONE_MARKER"
-        val stream = mgr.openStream(cmd)
-        val ok = if (stream != null) {
-            stream.use { s -> readUntilMarker(s, CLEANUP_DONE_MARKER) }
-        } else {
-            AppLog.w(TAG, "cleanupLastDaemon: openStream() returned null")
-            false
-        }
-        disconnectQuietly(mgr)
-        if (ok) lastHost = "" // clear stored credentials after successful cleanup
-        AppLog.d(TAG, "cleanupLastDaemon done: ok=$ok")
-        return ok
     }
 
     private fun disconnectQuietly(mgr: PrivdAdbConnectionManager) {

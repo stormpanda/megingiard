@@ -67,22 +67,6 @@ class GlobalSettingsViewModel : ViewModel() {
      */
     fun privdDisconnect() = PrivdManager.disconnect()
 
-    /**
-     * Reconnects via ADB Wireless Debugging, kills the daemon process, and
-     * removes the binary from /data/local/tmp. Result is delivered via [onResult]
-     * on the main thread (true = success).
-     */
-    fun privdCleanupDaemon(context: Context, onResult: (Boolean) -> Unit) {
-        val appContext = context.applicationContext
-        viewModelScope.launch {
-            val ok = withContext(Dispatchers.IO) {
-                PrivdBootstrapper.cleanupLastDaemon(appContext)
-            }
-            if (ok) setPrivdAutoConnect(false)
-            onResult(ok)
-        }
-    }
-
     fun setPrivdGamepadMergeEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadMergeEnabled(value)
     fun setPrivdAutoConnect(value: Boolean) = MacroPadSettings.setPrivdAutoConnect(value)
     fun privdResetBootstrapStage() = PrivdBootstrapper.resetStage()

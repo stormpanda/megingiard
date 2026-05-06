@@ -255,9 +255,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_action_test">Verbindung testen</string>
     <string name="privd_action_show_wizard">Einrichten…</string>
     <string name="privd_action_hide_wizard">Einrichtung ausblenden</string>
-    <string name="privd_action_delete_daemon">Daemon löschen</string>
-    <string name="privd_action_deleting_daemon">Wird gelöscht…</string>
-    <string name="privd_toast_setup_required">Bitte zuerst Privileged Mode einrichten.</string>
     <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
     <string name="privd_ping_fail">Keine Antwort vom Daemon. Die Verbindung ist möglicherweise abgebrochen.</string>
 
