@@ -18,6 +18,9 @@ private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val DAEMON_REMOTE_PATH = "/data/local/tmp/megingiard_privd"
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
+private const val VERIFY_INITIAL_DELAY_MS = 500L
+private const val VERIFY_RETRY_COUNT = 20
+private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
 private const val SYNC_DATA = "DATA"
@@ -149,16 +152,14 @@ object PrivdBootstrapper {
             _stage.value = BootstrapStage.IDLE
             return false
         }
-        // Verify via abstract-socket round-trip
+        // Verify via abstract-socket round-trip.
+        // Give the daemon time to setsid() and bind the socket before the first attempt.
         _stage.value = BootstrapStage.VERIFYING
-        // Daemon's R\n + setsid takes a few ms; retry a couple times.
+        Thread.sleep(VERIFY_INITIAL_DELAY_MS)
         var ok = false
-        repeat(5) {
-            if (PrivdManager.connect()) {
-                ok = true
-                return@repeat
-            }
-            Thread.sleep(200)
+        for (i in 0 until VERIFY_RETRY_COUNT) {
+            if (PrivdManager.connect()) { ok = true; break }
+            Thread.sleep(VERIFY_RETRY_DELAY_MS)
         }
         disconnectQuietly(mgr)
         return if (ok) {
