@@ -7,16 +7,34 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.BufferedReader
+import java.io.InputStream
 import java.io.InputStreamReader
-import java.util.Base64
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets
 
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val DAEMON_REMOTE_PATH = "/data/local/tmp/megingiard_privd"
-private const val ADB_CONNECT_TIMEOUT_MS = 10_000L
-private const val PUSH_OK_MARKER = "MGRD_PUSH_OK"
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
+private const val SYNC_SERVICE = "sync:"
+private const val SYNC_SEND = "SEND"
+private const val SYNC_DATA = "DATA"
+private const val SYNC_DONE = "DONE"
+private const val SYNC_OKAY = "OKAY"
+private const val SYNC_FAIL = "FAIL"
+private const val SYNC_STAT = "STAT"
+private const val SYNC_ID_SIZE = 4
+private const val SYNC_HEADER_SIZE = 8
+private const val SYNC_VALUE_OFFSET = 4
+private const val SYNC_STAT_RESPONSE_SIZE = 16
+private const val SYNC_DATA_MAX = 64 * 1024
+private const val UNIX_FILE_TYPE_REGULAR = 32768
+private const val UNIX_MODE_755 = 493
+private const val REMOTE_FILE_MODE = UNIX_FILE_TYPE_REGULAR + UNIX_MODE_755
+private const val MS_PER_SECOND = 1_000L
+private const val UINT_MASK = 0xffffffffL
 
 /**
  * Stages of the on-device ADB Wireless-Debugging bootstrap flow.
@@ -39,9 +57,9 @@ enum class BootstrapStage {
  * 1. **Pair** with the device's ADB pairing service (host / port / 6-digit code from
  *    `Settings → Developer options → Wireless debugging → Pair device with pairing code`).
  *    Only required once per fresh install or after the user revokes the pairing.
- * 2. **Auto-connect** via mDNS to the connect endpoint (`_adb-tls-connect._tcp`).
- * 3. **Push** the bundled `megingiard_privd_arm64` asset to `/data/local/tmp/` as
- *    base64-piped data, then `chmod 755`.
+ * 2. **Connect** directly to the host + connect port shown by Wireless Debugging.
+ * 3. **Push** the bundled `megingiard_privd_arm64` asset to `/data/local/tmp/`
+ *    via the ADB `sync:` protocol, then verify the remote byte size.
  * 4. **Spawn** the daemon as a detached background process; closing the shell
  *    stream is safe because the daemon `setsid()`s and ignores `SIGHUP`.
  * 5. **Verify** by calling [PrivdManager.connect] which opens the abstract socket.
@@ -167,20 +185,99 @@ object PrivdBootstrapper {
 
     private fun pushDaemon(context: Context, mgr: PrivdAdbConnectionManager): Boolean {
         val binaryBytes = context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }
-        val cmd = "shell:base64 -d > $DAEMON_REMOTE_PATH && " +
-                "chmod 755 $DAEMON_REMOTE_PATH && echo $PUSH_OK_MARKER"
-        AppLog.d(TAG, "push: ${binaryBytes.size} bytes → $DAEMON_REMOTE_PATH")
-        val stream = mgr.openStream(cmd) ?: return false
+        AppLog.d(TAG, "push: ${binaryBytes.size} bytes -> $DAEMON_REMOTE_PATH")
+        val stream = mgr.openStream(SYNC_SERVICE) ?: return false
         return stream.use { s ->
-            val out = s.openOutputStream()
-            // Base64 with newlines per 76 chars (default) is fine for `base64 -d`.
-            val encoded = Base64.getMimeEncoder().encode(binaryBytes)
-            out.write(encoded)
-            out.flush()
-            out.close() // EOF → base64 -d completes
-            readUntilMarker(s, PUSH_OK_MARKER)
+            syncSendFile(s, binaryBytes, DAEMON_REMOTE_PATH, REMOTE_FILE_MODE) &&
+                verifyRemoteSize(s, DAEMON_REMOTE_PATH, binaryBytes.size)
         }
     }
+
+    private fun syncSendFile(
+        stream: AdbStream,
+        bytes: ByteArray,
+        remotePath: String,
+        mode: Int,
+    ): Boolean {
+        val out = stream.openOutputStream()
+        val input = stream.openInputStream()
+        val sendTarget = "$remotePath,$mode".toByteArray(StandardCharsets.UTF_8)
+        out.write(syncHeader(SYNC_SEND, sendTarget.size))
+        out.write(sendTarget)
+        var offset = 0
+        while (offset < bytes.size) {
+            val chunkSize = minOf(SYNC_DATA_MAX, bytes.size - offset)
+            out.write(syncHeader(SYNC_DATA, chunkSize))
+            out.write(bytes, offset, chunkSize)
+            offset += chunkSize
+        }
+        out.write(syncHeader(SYNC_DONE, currentEpochSeconds()))
+        out.flush()
+        return readSyncStatus(input)
+    }
+
+    private fun verifyRemoteSize(stream: AdbStream, remotePath: String, expectedSize: Int): Boolean {
+        val out = stream.openOutputStream()
+        val input = stream.openInputStream()
+        val pathBytes = remotePath.toByteArray(StandardCharsets.UTF_8)
+        out.write(syncHeader(SYNC_STAT, pathBytes.size))
+        out.write(pathBytes)
+        out.flush()
+        val response = readFully(input, SYNC_STAT_RESPONSE_SIZE)
+        val id = syncId(response, 0)
+        if (id != SYNC_STAT) {
+            AppLog.w(TAG, "sync STAT returned unexpected id=$id")
+            return false
+        }
+        val buffer = ByteBuffer.wrap(response).order(ByteOrder.LITTLE_ENDIAN)
+        buffer.position(SYNC_HEADER_SIZE)
+        val mode = buffer.int
+        val actualSize = buffer.int
+        AppLog.d(TAG, "sync STAT $remotePath mode=$mode size=$actualSize expected=$expectedSize")
+        return actualSize == expectedSize
+    }
+
+    private fun readSyncStatus(input: InputStream): Boolean {
+        val header = readFully(input, SYNC_HEADER_SIZE)
+        val id = syncId(header, 0)
+        val value = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN).getInt(SYNC_VALUE_OFFSET)
+        return when (id) {
+            SYNC_OKAY -> true
+            SYNC_FAIL -> {
+                val message = readFully(input, value).toString(StandardCharsets.UTF_8)
+                AppLog.w(TAG, "sync SEND failed: $message")
+                false
+            }
+            else -> {
+                AppLog.w(TAG, "sync SEND returned unexpected id=$id")
+                false
+            }
+        }
+    }
+
+    private fun syncHeader(id: String, value: Int): ByteArray = ByteBuffer
+        .allocate(SYNC_HEADER_SIZE)
+        .order(ByteOrder.LITTLE_ENDIAN)
+        .put(id.toByteArray(StandardCharsets.US_ASCII))
+        .putInt(value)
+        .array()
+
+    private fun syncId(bytes: ByteArray, offset: Int): String = bytes
+        .copyOfRange(offset, offset + SYNC_ID_SIZE)
+        .toString(StandardCharsets.US_ASCII)
+
+    private fun readFully(input: InputStream, size: Int): ByteArray {
+        val bytes = ByteArray(size)
+        var offset = 0
+        while (offset < size) {
+            val read = input.read(bytes, offset, size - offset)
+            if (read < 0) error("ADB sync stream closed while reading $size bytes")
+            offset += read
+        }
+        return bytes
+    }
+
+    private fun currentEpochSeconds(): Int = ((System.currentTimeMillis() / MS_PER_SECOND) and UINT_MASK).toInt()
 
     private fun spawnDaemon(mgr: PrivdAdbConnectionManager): Boolean {
         val cmd = "shell:$DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"

@@ -133,9 +133,9 @@ Flow:
      distinct from the pairing port). Direct connect is used instead of mDNS
      (`autoConnect()`) because mDNS self-discovery is unreliable on-device on
      the AYN Thor.
-   - `PUSHING_BINARY` opens an `adbStream("shell:base64 -d > /data/local/tmp/megingiard_privd && chmod 755 ... && echo MGRD_PUSH_OK")`,
-     pipes the base64-encoded daemon asset bytes into stdin, closes the
-     output stream, and reads the `MGRD_PUSH_OK` marker.
+   - `PUSHING_BINARY` opens the ADB `sync:` service, sends the daemon asset
+     with `SEND` / `DATA` / `DONE`, waits for `OKAY`, then issues `STAT` and
+     verifies the remote byte size matches the bundled asset before continuing.
    - `SPAWNING_DAEMON` opens a fresh stream and runs
      `/data/local/tmp/megingiard_privd </dev/null >/dev/null 2>&1 &` — the
      daemon detaches via `setsid()` + `signal(SIGHUP, SIG_IGN)` and
@@ -249,20 +249,20 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 ### Source Files
 
-| File                                            | Responsibility                                                                                             |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `app/src/main/cpp/megingiard_privd.c`           | Native daemon source (abstract-socket server + evdev writer)                                               |
-| `app/src/main/assets/megingiard_privd_arm64`    | Pre-built static daemon binary                                                                             |
-| `build_megingiard_privd.sh`                     | NDK build script                                                                                           |
-| `domain/.../privd/PrivdClient.kt`               | LocalSocket transport singleton (writer + reader threads, ping support)                                    |
-| `domain/.../privd/PrivdConnectionState.kt`      | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                              |
-| `domain/.../privd/PrivdGamepadInjector.kt`      | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                            |
-| `domain/.../privd/PrivdManager.kt`              | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum |
-| `domain/.../privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`         |
-| `domain/.../privd/PrivdBootstrapper.kt`         | `BootstrapStage` state flow + pair / push (base64-pipe) / spawn (detached) / verify orchestration          |
-| `app/.../privd/PrivdSettingsCard.kt`            | Compose card: status badge, connect/test buttons, wizard toggle, auto-connect Switch, feature toggles      |
-| `app/.../privd/PrivdSetupWizard.kt`             | 4-step Compose wizard (Developer Options → pair → bootstrap → done)                                        |
-| `app/.../MainActivity.kt`                       | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                            |
-| `domain/.../macropad/GamepadInjector.kt`        | Strategy router between virtual uinput and Privd merge backends                                            |
-| `domain/.../settings/MacroPadSettings.kt`       | `privdGamepadMergeEnabled` + `privdAutoConnect` per-feature flags                                          |
-| `domain/.../settings/SettingsKeys.kt`           | `KEY_PRIVD_GAMEPAD_MERGE_ENABLED`, `KEY_PRIVD_AUTO_CONNECT` DataStore keys                                 |
+| File                                            | Responsibility                                                                                                         |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `app/src/main/cpp/megingiard_privd.c`           | Native daemon source (abstract-socket server + evdev writer)                                                           |
+| `app/src/main/assets/megingiard_privd_arm64`    | Pre-built static daemon binary                                                                                         |
+| `build_megingiard_privd.sh`                     | NDK build script                                                                                                       |
+| `domain/.../privd/PrivdClient.kt`               | LocalSocket transport singleton (writer + reader threads, ping support)                                                |
+| `domain/.../privd/PrivdConnectionState.kt`      | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                          |
+| `domain/.../privd/PrivdGamepadInjector.kt`      | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                        |
+| `domain/.../privd/PrivdManager.kt`              | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum             |
+| `domain/.../privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                    |
+| `domain/.../privd/PrivdBootstrapper.kt`         | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration |
+| `app/.../privd/PrivdSettingsCard.kt`            | Compose card: status badge, connect/test buttons, wizard toggle, auto-connect Switch, feature toggles                  |
+| `app/.../privd/PrivdSetupWizard.kt`             | 4-step Compose wizard (Developer Options → pair → bootstrap → done)                                                    |
+| `app/.../MainActivity.kt`                       | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                        |
+| `domain/.../macropad/GamepadInjector.kt`        | Strategy router between virtual uinput and Privd merge backends                                                        |
+| `domain/.../settings/MacroPadSettings.kt`       | `privdGamepadMergeEnabled` + `privdAutoConnect` per-feature flags                                                      |
+| `domain/.../settings/SettingsKeys.kt`           | `KEY_PRIVD_GAMEPAD_MERGE_ENABLED`, `KEY_PRIVD_AUTO_CONNECT` DataStore keys                                             |
