@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.libadb.android)
     implementation(libs.sun.security.android)
+    implementation(libs.conscrypt.android)
 
     testImplementation(libs.junit)
 }

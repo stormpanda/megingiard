@@ -15,6 +15,7 @@ datastorePreferences = "1.1.1"
 reorderable = "2.4.0"
 libadbAndroid = "3.1.1"
 sunSecurityAndroid = "1.1"
+conscrypt = "2.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,7 @@ kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 libadb-android = { group = "com.github.MuntashirAkon", name = "libadb-android", version.ref = "libadbAndroid" }
 sun-security-android = { group = "com.github.MuntashirAkon", name = "sun-security-android", version.ref = "sunSecurityAndroid" }
+conscrypt-android = { group = "org.conscrypt", name = "conscrypt-android", version.ref = "conscrypt" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
