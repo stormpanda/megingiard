@@ -70,6 +70,9 @@ internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap
 // Privileged Mode — per-feature enable flags (only effective while PrivdManager is RUNNING)
 internal val KEY_PRIVD_GAMEPAD_MERGE_ENABLED = booleanPreferencesKey("privd_gamepad_merge_enabled")
 
+// Privileged Mode — auto-connect on app start once the user has bootstrapped at least once.
+internal val KEY_PRIVD_AUTO_CONNECT = booleanPreferencesKey("privd_auto_connect")
+
 // MacroPad ambient display settings
 internal val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
 internal val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
@@ -111,6 +114,7 @@ private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
     KEY_GAMEPAD_SWAP_FACE_BUTTONS,
     KEY_PRIVD_GAMEPAD_MERGE_ENABLED,
+    KEY_PRIVD_AUTO_CONNECT,
 )
 
 internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(

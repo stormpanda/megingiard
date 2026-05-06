@@ -59,6 +59,14 @@ object MacroPadSettings {
     /** Per-feature flag for [com.stormpanda.megingiard.privd.PrivdFeature.GAMEPAD_MERGE]. */
     val privdGamepadMergeEnabled: StateFlow<Boolean> = _privdGamepadMergeEnabled.asStateFlow()
 
+    private val _privdAutoConnect = MutableStateFlow(false)
+    /**
+     * When true, the app silently calls `PrivdManager.connect()` on startup
+     * (assumes the daemon was previously bootstrapped and is still running).
+     * Set to true automatically after a successful first-time bootstrap.
+     */
+    val privdAutoConnect: StateFlow<Boolean> = _privdAutoConnect.asStateFlow()
+
     internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
         this.dataStore = dataStore
         this.scope = scope
@@ -77,6 +85,7 @@ object MacroPadSettings {
         _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
         _privdGamepadMergeEnabled.value = prefs[KEY_PRIVD_GAMEPAD_MERGE_ENABLED] ?: false
+        _privdAutoConnect.value = prefs[KEY_PRIVD_AUTO_CONNECT] ?: false
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -111,6 +120,12 @@ object MacroPadSettings {
         AppLog.d(TAG, "setPrivdGamepadMergeEnabled($value)")
         _privdGamepadMergeEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_GAMEPAD_MERGE_ENABLED] = value } }
+    }
+
+    fun setPrivdAutoConnect(value: Boolean) {
+        AppLog.d(TAG, "setPrivdAutoConnect($value)")
+        _privdAutoConnect.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_AUTO_CONNECT] = value } }
     }
 
     /**

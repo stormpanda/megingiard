@@ -32,8 +32,8 @@ every device since Android 11 (API 30).
 
 ### FR-PV2: Status Visibility
 
-- The Settings card MUST show one of four states: `OFF`, `CONNECTING`,
-  `RUNNING`, `FAILED`.
+- The Settings card MUST show one of five states: `OFF`, `BOOTSTRAPPING`,
+  `CONNECTING`, `RUNNING`, `FAILED`.
 - A `Test connection` button MUST round-trip a `PING` to the daemon and
   display the result, so the user can verify the link is alive.
 
@@ -47,10 +47,20 @@ every device since Android 11 (API 30).
 
 ### FR-PV4: Setup Discoverability
 
-- The card MUST expose a "How to set up" expander that displays the exact
-  shell command needed for one-time bootstrap, with a copy-to-clipboard
-  button. (Meilenstein A only — Meilenstein B will replace this with an
-  in-app pairing wizard.)
+- The card MUST expose a "Set up…" button that opens a fully on-device
+  setup wizard. The wizard MUST guide the user through: enabling Wireless
+  Debugging in Developer Options → entering host/port/code from the system
+  pairing dialog → pushing and starting the daemon binary → verifying the
+  connection. No external computer or USB cable is required.
+
+### FR-PV6: Auto-Connect On App Start
+
+- After a successful first-time setup, the app MUST silently re-open the
+  daemon socket on every cold start so users do not need to re-run the
+  wizard after each reboot.
+- The auto-connect toggle MUST be exposed as a Switch row in the settings
+  card and MUST be settable manually as well as automatically after a
+  successful bootstrap.
 
 ### FR-PV5: No Always-Connected Requirement
 
@@ -99,26 +109,67 @@ every device since Android 11 (API 30).
 └──────────────────────────────────────────────────┘
 ```
 
-### Bootstrap (Meilenstein A — manual)
+### Bootstrap (Meilenstein B — on-device wizard)
 
-The user runs **once** on a paired computer:
+The wizard performs the entire bootstrap on the device itself, using
+[libadb-android](https://github.com/MuntashirAkon/libadb-android) and an
+in-app generated RSA 2048 / X.509 self-signed certificate.
 
-```bash
-adb push app/src/main/assets/megingiard_privd_arm64 \
-        /data/local/tmp/megingiard_privd
-adb shell chmod 755 /data/local/tmp/megingiard_privd
-adb shell '/data/local/tmp/megingiard_privd </dev/null >/dev/null 2>&1 &'
+Flow:
+
+1. **Wizard step 1** opens `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS`
+   so the user can enable Wireless Debugging and tap “Pair device with
+   pairing code”.
+2. **Wizard step 2** collects host (IP), port (5-digit), and 6-digit
+   pairing code from the system dialog and calls
+   `PrivdAdbConnectionManager.pair(host, port, code)`. Pairing speaks the
+   ADB pairing protocol over TLS, no internet involved.
+3. **Wizard step 3** triggers `PrivdBootstrapper.bootstrapAndConnect()`
+   which goes through the `BootstrapStage` machine:
+   `CONNECTING_ADB → PUSHING_BINARY → SPAWNING_DAEMON → VERIFYING → DONE`.
+   - `CONNECTING_ADB` calls `AbsAdbConnectionManager.autoConnect()` which
+     uses mDNS (`_adb-tls-connect._tcp.`) to discover the live ADB shell
+     endpoint.
+   - `PUSHING_BINARY` opens an `adbStream("shell:base64 -d > /data/local/tmp/megingiard_privd && chmod 755 ... && echo MGRD_PUSH_OK")`,
+     pipes the base64-encoded daemon asset bytes into stdin, closes the
+     output stream, and reads the `MGRD_PUSH_OK` marker.
+   - `SPAWNING_DAEMON` opens a fresh stream and runs
+     `/data/local/tmp/megingiard_privd </dev/null >/dev/null 2>&1 &` — the
+     daemon detaches via `setsid()` + `signal(SIGHUP, SIG_IGN)` and
+     survives the AdbStream close.
+   - `VERIFYING` retries `PrivdManager.connect()` up to 5 times with 200 ms
+     backoff to absorb the race between the daemon's `bind()` and the
+     app's `LocalSocket.connect()`.
+4. **Wizard step 4** confirms success and toggles `privdAutoConnect = true`.
+
+The RSA key (PKCS#8) and X.509 certificate are persisted as raw bytes in
+`filesDir/privd_adb_key.bin` and `filesDir/privd_adb_cert.bin`. They are
+generated once via `android.sun.security.x509.*` (SHA512withRSA, ~30-year
+validity, CN=Megingiard) and reused on every subsequent pair / connect.
+
+The daemon binary in `/data/local/tmp` survives until reboot; thereafter
+the push step is replayed on the next launch (cold-boot recovery is the
+responsibility of the auto-connect retry path or a fresh wizard run).
+
+### Auto-Connect Hook
+
+`MainActivity.onCreate()` installs a long-lived collector:
+
+```kotlin
+combine(MacroPadSettings.privdAutoConnect, PrivdManager.state) { auto, state ->
+    auto && state == PrivdState.OFF
+}.collect { shouldAutoConnect ->
+    if (shouldAutoConnect && !triggered) {
+        triggered = true
+        withContext(Dispatchers.IO) { PrivdManager.connect() }
+    }
+}
 ```
 
-The daemon detaches from the spawning shell (`setsid()` + redirect FDs to
-`/dev/null`), discovers the physical gamepad evdev node by scanning
-`/dev/input/event*` for capabilities `BTN_SOUTH ∧ ABS_X`, opens it `O_RDWR`,
-binds the abstract Unix socket `@megingiard.privd`, and stays alive until
-`SIGTERM` or device reboot.
-
-> Meilenstein B will replace this with on-device libadb-android pairing +
-> automatic bootstrap via Wireless Debugging. The state machine and wire
-> protocol below are designed to outlive that change.
+The `triggered` guard ensures the auto-connect runs at most once per
+process; failure does not retry — the user-visible state ends up at
+`FAILED` with `PrivdError.DAEMON_UNREACHABLE`, prompting them to re-run
+the wizard.
 
 ### Wire Protocol
 
@@ -149,17 +200,22 @@ bootstrapper can verify success:
 
 ```
        [user taps Connect]
-OFF ──────────────────────▶ CONNECTING
+OFF ──────────────────────▶ CONNECTING ─── socket accept ✓ ──▶ RUNNING
  ▲                              │
- │                              ├── socket accept ✓ ──▶ RUNNING
- │                              │
  │                              └── socket refused ──▶ FAILED
- │                                                       │
- └─────────[user taps Connect again, or daemon restarted]┘
+ │
+ │   [wizard: pair → push → spawn → verify]
+ OFF ──────────────────────▶ BOOTSTRAPPING ── verify ✓ ──▶ RUNNING
+                                  │
+                                  └── any stage failed ──▶ FAILED
 ```
 
 `PrivdClient.isConnected` is the source of truth for the running status.
-`PrivdManager.state` is the user-visible projection.
+`PrivdManager.state` is the user-visible projection. The `BOOTSTRAPPING`
+state covers the entire wizard flow; the finer-grained `BootstrapStage`
+enum (IDLE / PAIRING / CONNECTING_ADB / PUSHING_BINARY / SPAWNING_DAEMON /
+VERIFYING / DONE) is exposed by `PrivdBootstrapper.stage` for the wizard
+UI.
 
 ### Threading
 
@@ -190,16 +246,20 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 ### Source Files
 
-| File                                         | Responsibility                                                          |
-| -------------------------------------------- | ----------------------------------------------------------------------- |
-| `app/src/main/cpp/megingiard_privd.c`        | Native daemon source (abstract-socket server + evdev writer)            |
-| `app/src/main/assets/megingiard_privd_arm64` | Pre-built static daemon binary                                          |
-| `build_megingiard_privd.sh`                  | NDK build script                                                        |
-| `domain/.../privd/PrivdClient.kt`            | LocalSocket transport singleton (writer + reader threads, ping support) |
-| `domain/.../privd/PrivdConnectionState.kt`   | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)           |
-| `domain/.../privd/PrivdGamepadInjector.kt`   | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`         |
-| `domain/.../privd/PrivdManager.kt`           | Top-level state machine + `PrivdFeature` enum                           |
-| `app/.../privd/PrivdSettingsCard.kt`         | Compose card: status badge, connect/test/setup buttons, feature toggles |
-| `domain/.../macropad/GamepadInjector.kt`     | Strategy router between virtual uinput and Privd merge backends         |
-| `domain/.../settings/MacroPadSettings.kt`    | `privdGamepadMergeEnabled` per-feature flag                             |
-| `domain/.../settings/SettingsKeys.kt`        | `KEY_PRIVD_GAMEPAD_MERGE_ENABLED` DataStore key                         |
+| File                                            | Responsibility                                                                                             |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `app/src/main/cpp/megingiard_privd.c`           | Native daemon source (abstract-socket server + evdev writer)                                               |
+| `app/src/main/assets/megingiard_privd_arm64`    | Pre-built static daemon binary                                                                             |
+| `build_megingiard_privd.sh`                     | NDK build script                                                                                           |
+| `domain/.../privd/PrivdClient.kt`               | LocalSocket transport singleton (writer + reader threads, ping support)                                    |
+| `domain/.../privd/PrivdConnectionState.kt`      | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                              |
+| `domain/.../privd/PrivdGamepadInjector.kt`      | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                            |
+| `domain/.../privd/PrivdManager.kt`              | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum |
+| `domain/.../privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`autoConnect`    |
+| `domain/.../privd/PrivdBootstrapper.kt`         | `BootstrapStage` state flow + pair / push (base64-pipe) / spawn (detached) / verify orchestration          |
+| `app/.../privd/PrivdSettingsCard.kt`            | Compose card: status badge, connect/test buttons, wizard toggle, auto-connect Switch, feature toggles      |
+| `app/.../privd/PrivdSetupWizard.kt`             | 4-step Compose wizard (Developer Options → pair → bootstrap → done)                                        |
+| `app/.../MainActivity.kt`                       | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                            |
+| `domain/.../macropad/GamepadInjector.kt`        | Strategy router between virtual uinput and Privd merge backends                                            |
+| `domain/.../settings/MacroPadSettings.kt`       | `privdGamepadMergeEnabled` + `privdAutoConnect` per-feature flags                                          |
+| `domain/.../settings/SettingsKeys.kt`           | `KEY_PRIVD_GAMEPAD_MERGE_ENABLED`, `KEY_PRIVD_AUTO_CONNECT` DataStore keys                                 |

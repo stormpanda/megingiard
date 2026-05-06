@@ -48,6 +48,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.libadb.android)
+    implementation(libs.sun.security.android)
 
     testImplementation(libs.junit)
 }

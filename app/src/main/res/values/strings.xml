@@ -285,21 +285,60 @@ Open Settings to create a layout.</string>
     <string name="privd_description">Lets Megingiard write directly to system input devices that the regular app sandbox cannot reach. Required for some advanced features (see below). Connection runs over the device\'s own ADB shell — no root, no external server.</string>
     <string name="privd_status_off">Off</string>
     <string name="privd_status_connecting">Connecting…</string>
+    <string name="privd_status_bootstrapping">Bootstrapping…</string>
     <string name="privd_status_running">Running</string>
     <string name="privd_status_failed">Failed</string>
     <string name="privd_action_connect">Connect</string>
     <string name="privd_action_disconnect">Disconnect</string>
     <string name="privd_action_test">Test connection</string>
-    <string name="privd_action_show_setup">How to set up</string>
-    <string name="privd_action_hide_setup">Hide setup</string>
+    <string name="privd_action_show_wizard">Set up…</string>
+    <string name="privd_action_hide_wizard">Hide setup</string>
     <string name="privd_ping_ok">Daemon responded — connection is healthy.</string>
     <string name="privd_ping_fail">No response from daemon. The connection may be stale.</string>
-    <string name="privd_setup_title">One-time setup</string>
-    <string name="privd_setup_intro">Enable Wireless Debugging in Developer Options, connect once via USB or pair, then run this command on your computer to start the helper daemon. Tap Connect afterwards. The daemon stays alive until you reboot.</string>
-    <string name="privd_setup_copy">Copy command</string>
+
+    <string name="privd_auto_connect">Auto-connect on app start</string>
+    <string name="privd_auto_connect_desc">When enabled, Megingiard silently re-opens the daemon socket on launch. Set automatically after a successful first-time setup.</string>
+
     <string name="privd_feature_gamepad_merge">Gamepad merge</string>
     <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the legacy virtual gamepad.</string>
-    <string name="privd_error_daemon_unreachable">Daemon is not reachable. Make sure you ran the setup command.</string>
+
+    <!-- Privileged Mode — setup wizard -->
+    <string name="privd_wizard_title">Set up Privileged Mode</string>
+    <string name="privd_wizard_next">Next</string>
+    <string name="privd_wizard_back">Back</string>
+    <string name="privd_wizard_close">Done</string>
+    <string name="privd_wizard_pairing">Pairing…</string>
+    <string name="privd_wizard_bootstrapping">Bootstrapping…</string>
+
+    <string name="privd_wizard_step1_intro">1. Enable Developer Options if you have not already. 2. Open Developer Options → Wireless debugging and turn it ON. 3. Tap “Pair device with pairing code”. Keep the pairing dialog open and continue here.</string>
+    <string name="privd_wizard_step1_open">Open Developer Options</string>
+
+    <string name="privd_wizard_step2_intro">Enter the IP address, port, and 6-digit pairing code shown in the Wireless Debugging pairing dialog. Pairing happens entirely on this device — no internet required.</string>
+    <string name="privd_wizard_field_host">IP address</string>
+    <string name="privd_wizard_field_port">Port</string>
+    <string name="privd_wizard_field_code">Pairing code (6 digits)</string>
+    <string name="privd_wizard_step2_pair">Pair</string>
+    <string name="privd_wizard_step2_error">Pairing failed. Double-check the address, port, and code, then try again.</string>
+
+    <string name="privd_wizard_step3_intro">Megingiard will now push the helper daemon binary to /data/local/tmp and start it. The daemon runs as the ADB shell user and survives until you reboot.</string>
+    <string name="privd_wizard_step3_start">Push and start daemon</string>
+
+    <string name="privd_wizard_step4_done">Privileged Mode is set up. Future app starts will reconnect automatically.</string>
+
+    <string name="privd_wizard_stage_idle">Idle</string>
+    <string name="privd_wizard_stage_pairing">Pairing with ADB…</string>
+    <string name="privd_wizard_stage_connecting">Connecting to ADB…</string>
+    <string name="privd_wizard_stage_pushing">Pushing daemon binary…</string>
+    <string name="privd_wizard_stage_spawning">Starting daemon…</string>
+    <string name="privd_wizard_stage_verifying">Verifying connection…</string>
+    <string name="privd_wizard_stage_done">Done</string>
+
+    <string name="privd_error_daemon_unreachable">Daemon is not reachable. Run the setup wizard.</string>
+    <string name="privd_error_pairing_failed">Pairing failed. Verify the address, port, and 6-digit code from the system pairing dialog.</string>
+    <string name="privd_error_adb_discovery_failed">Could not discover the ADB Wireless-Debugging endpoint via mDNS. Make sure Wireless Debugging is enabled.</string>
+    <string name="privd_error_adb_connect_failed">Could not connect to ADB. Try re-pairing if you previously revoked the pairing.</string>
+    <string name="privd_error_bootstrap_push_failed">Failed to push the daemon binary. Check available storage in /data/local/tmp.</string>
+    <string name="privd_error_bootstrap_spawn_failed">Failed to start the daemon process.</string>
     <string name="settings_jump_all">All</string>
     <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">General</string>

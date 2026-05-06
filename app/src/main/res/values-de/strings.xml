@@ -247,21 +247,60 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_description">Erlaubt Megingiard, direkt in System-Eingabegeräte zu schreiben, die die normale App-Sandbox nicht erreicht. Wird für einige erweiterte Funktionen benötigt (siehe unten). Die Verbindung läuft über die geräteeigene ADB-Shell — kein Root, kein externer Server.</string>
     <string name="privd_status_off">Aus</string>
     <string name="privd_status_connecting">Verbinde…</string>
+    <string name="privd_status_bootstrapping">Einrichten…</string>
     <string name="privd_status_running">Aktiv</string>
     <string name="privd_status_failed">Fehlgeschlagen</string>
     <string name="privd_action_connect">Verbinden</string>
     <string name="privd_action_disconnect">Trennen</string>
     <string name="privd_action_test">Verbindung testen</string>
-    <string name="privd_action_show_setup">Einrichtung anzeigen</string>
-    <string name="privd_action_hide_setup">Einrichtung ausblenden</string>
+    <string name="privd_action_show_wizard">Einrichten…</string>
+    <string name="privd_action_hide_wizard">Einrichtung ausblenden</string>
     <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
     <string name="privd_ping_fail">Keine Antwort vom Daemon. Die Verbindung ist möglicherweise abgebrochen.</string>
-    <string name="privd_setup_title">Einmalige Einrichtung</string>
-    <string name="privd_setup_intro">Aktiviere Drahtloses Debugging in den Entwickleroptionen, verbinde einmalig per USB oder Pairing, und führe diesen Befehl auf deinem Computer aus, um den Helfer-Daemon zu starten. Tippe danach auf Verbinden. Der Daemon bleibt bis zum Neustart aktiv.</string>
-    <string name="privd_setup_copy">Befehl kopieren</string>
+
+    <string name="privd_auto_connect">Beim App-Start automatisch verbinden</string>
+    <string name="privd_auto_connect_desc">Wenn aktiviert, öffnet Megingiard den Daemon-Socket beim Start lautlos erneut. Wird nach erfolgreicher Erst-Einrichtung automatisch gesetzt.</string>
+
     <string name="privd_feature_gamepad_merge">Gamepad-Merge</string>
     <string name="privd_feature_gamepad_merge_desc">Sendet MacroPad-Gamepad-Aktionen direkt an den verbundenen physischen Controller, sodass Spiele nur ein Gerät sehen. Deaktivieren, um das klassische virtuelle Gamepad zu verwenden.</string>
-    <string name="privd_error_daemon_unreachable">Daemon ist nicht erreichbar. Stelle sicher, dass du den Einrichtungs-Befehl ausgeführt hast.</string>
+
+    <!-- Privilegierter Modus — Einrichtungs-Assistent -->
+    <string name="privd_wizard_title">Privilegierten Modus einrichten</string>
+    <string name="privd_wizard_next">Weiter</string>
+    <string name="privd_wizard_back">Zurück</string>
+    <string name="privd_wizard_close">Fertig</string>
+    <string name="privd_wizard_pairing">Koppeln…</string>
+    <string name="privd_wizard_bootstrapping">Einrichten…</string>
+
+    <string name="privd_wizard_step1_intro">1. Aktiviere die Entwickleroptionen, falls noch nicht geschehen. 2. Öffne Entwickleroptionen → Drahtloses Debugging und schalte es EIN. 3. Tippe auf „Gerät über Kopplungscode koppeln”. Lass diesen Dialog offen und fahre hier fort.</string>
+    <string name="privd_wizard_step1_open">Entwickleroptionen öffnen</string>
+
+    <string name="privd_wizard_step2_intro">Gib die IP-Adresse, den Port und den 6-stelligen Kopplungscode aus dem Drahtloses-Debugging-Dialog ein. Die Kopplung erfolgt komplett auf diesem Gerät — keine Internetverbindung nötig.</string>
+    <string name="privd_wizard_field_host">IP-Adresse</string>
+    <string name="privd_wizard_field_port">Port</string>
+    <string name="privd_wizard_field_code">Kopplungscode (6 Ziffern)</string>
+    <string name="privd_wizard_step2_pair">Koppeln</string>
+    <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Adresse, Port und Code und versuche es erneut.</string>
+
+    <string name="privd_wizard_step3_intro">Megingiard kopiert jetzt die Helfer-Daemon-Binary nach /data/local/tmp und startet sie. Der Daemon läuft als ADB-Shell-Benutzer und bleibt bis zum Neustart aktiv.</string>
+    <string name="privd_wizard_step3_start">Daemon übertragen und starten</string>
+
+    <string name="privd_wizard_step4_done">Privilegierter Modus ist eingerichtet. Künftige App-Starts verbinden automatisch.</string>
+
+    <string name="privd_wizard_stage_idle">Bereit</string>
+    <string name="privd_wizard_stage_pairing">ADB-Kopplung läuft…</string>
+    <string name="privd_wizard_stage_connecting">ADB-Verbindung wird aufgebaut…</string>
+    <string name="privd_wizard_stage_pushing">Daemon-Binary wird übertragen…</string>
+    <string name="privd_wizard_stage_spawning">Daemon wird gestartet…</string>
+    <string name="privd_wizard_stage_verifying">Verbindung wird geprüft…</string>
+    <string name="privd_wizard_stage_done">Fertig</string>
+
+    <string name="privd_error_daemon_unreachable">Daemon ist nicht erreichbar. Führe den Einrichtungs-Assistenten aus.</string>
+    <string name="privd_error_pairing_failed">Kopplung fehlgeschlagen. Prüfe Adresse, Port und 6-stelligen Code aus dem System-Dialog.</string>
+    <string name="privd_error_adb_discovery_failed">Konnte den ADB-Drahtloses-Debugging-Endpunkt nicht via mDNS finden. Stelle sicher, dass Drahtloses Debugging aktiviert ist.</string>
+    <string name="privd_error_adb_connect_failed">Verbindung zu ADB fehlgeschlagen. Falls du die Kopplung widerrufen hast, kopple erneut.</string>
+    <string name="privd_error_bootstrap_push_failed">Daemon-Binary konnte nicht übertragen werden. Prüfe den verfügbaren Speicher unter /data/local/tmp.</string>
+    <string name="privd_error_bootstrap_spawn_failed">Daemon-Prozess konnte nicht gestartet werden.</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Megingiard beenden</string>

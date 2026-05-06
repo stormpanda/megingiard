@@ -29,6 +29,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
@@ -37,6 +39,7 @@ import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
 import androidx.compose.ui.graphics.Color
 import com.stormpanda.megingiard.settings.AmbientSettings
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -50,6 +53,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "MainActivity"
 
@@ -174,6 +178,25 @@ class MainActivity : ComponentActivity() {
                 .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
         }
         SettingsManager.init(this)
+        // Auto-connect Privileged Mode if the user previously bootstrapped the daemon.
+        // The daemon survives app restarts (it's a separate shell-UID process); we just
+        // re-open the abstract socket. Failure is silent: the user can re-bootstrap from
+        // Settings if needed.
+        lifecycleScope.launch {
+            var triggered = false
+            combine(
+                MacroPadSettings.privdAutoConnect,
+                PrivdManager.state,
+            ) { auto, state ->
+                auto && state == PrivdState.OFF
+            }.collect { shouldAutoConnect ->
+                if (shouldAutoConnect && !triggered) {
+                    triggered = true
+                    AppLog.i(TAG, "Auto-connecting Privileged Mode")
+                    withContext(Dispatchers.IO) { PrivdManager.connect() }
+                }
+            }
+        }
         lifecycleScope.launch {
             SettingsManager.appLanguage.drop(1).collect { lang ->
                 AppLog.d(TAG, "appLanguage changed to $lang → applying locales")

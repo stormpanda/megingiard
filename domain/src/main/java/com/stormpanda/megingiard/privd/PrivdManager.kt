@@ -38,6 +38,9 @@ enum class PrivdState {
     /** Privileged Mode is off (no connection, no in-flight bootstrap). */
     OFF,
 
+    /** Pairing / pushing the binary / spawning the daemon over ADB Wireless Debugging. */
+    BOOTSTRAPPING,
+
     /** Connection attempt in progress. */
     CONNECTING,
 
@@ -57,6 +60,21 @@ private const val TAG = "PrivdManager"
 enum class PrivdError {
     /** The abstract socket is not reachable — daemon is probably not running. */
     DAEMON_UNREACHABLE,
+
+    /** ADB Wireless-Debugging pairing rejected the entered code or timed out. */
+    PAIRING_FAILED,
+
+    /** Could not auto-discover an ADB Wireless-Debugging endpoint via mDNS. */
+    ADB_DISCOVERY_FAILED,
+
+    /** ADB connect after pairing failed (peer offline, key mismatch, …). */
+    ADB_CONNECT_FAILED,
+
+    /** Pushing the daemon binary into /data/local/tmp failed. */
+    BOOTSTRAP_PUSH_FAILED,
+
+    /** Spawning the daemon process via `adb shell` failed. */
+    BOOTSTRAP_SPAWN_FAILED,
 }
 
 /**
@@ -120,4 +138,21 @@ object PrivdManager {
     @Suppress("UNUSED_PARAMETER")
     fun isAvailable(feature: PrivdFeature): Boolean =
         _state.value == PrivdState.RUNNING && PrivdClient.isConnected
+
+    /**
+     * Internal hooks used by [PrivdBootstrapper] to drive the BOOTSTRAPPING /
+     * FAILED state transitions while the wizard pushes the binary and spawns
+     * the daemon over ADB Wireless Debugging.
+     */
+    internal fun reportBootstrapStart() {
+        AppLog.i(TAG, "bootstrap started")
+        _state.value = PrivdState.BOOTSTRAPPING
+        _lastError.value = null
+    }
+
+    internal fun reportBootstrapFailure(error: PrivdError) {
+        AppLog.w(TAG, "bootstrap failed: $error")
+        _state.value = PrivdState.FAILED
+        _lastError.value = error
+    }
 }
