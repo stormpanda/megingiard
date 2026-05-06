@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -64,6 +65,7 @@ internal fun PrivdSettingsCard(
     val mergeEnabled by viewModel.privdGamepadMergeEnabled.collectAsState()
     val autoConnect by viewModel.privdAutoConnect.collectAsState()
     val colors = LocalAppColors.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var showWizard by remember { mutableStateOf(false) }
@@ -132,7 +134,7 @@ internal fun PrivdSettingsCard(
         // ── Action buttons ──────────────────────────────────────────────────
         Row(horizontalArrangement = Arrangement.spacedBy(PR_BUTTON_GAP)) {
             if (state == PrivdState.RUNNING) {
-                OutlinedButton(onClick = { viewModel.privdDisconnect() }) {
+                OutlinedButton(onClick = { viewModel.privdDisconnect(context) }) {
                     Text(stringResource(R.string.privd_action_disconnect))
                 }
                 Button(onClick = {

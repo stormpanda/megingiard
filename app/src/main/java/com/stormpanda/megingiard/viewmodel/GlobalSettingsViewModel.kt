@@ -61,7 +61,19 @@ class GlobalSettingsViewModel : ViewModel() {
 
     // Privileged Mode actions
     fun privdConnect(): Boolean = PrivdManager.connect()
-    fun privdDisconnect() = PrivdManager.disconnect()
+
+    /**
+     * Disconnects from the daemon and asynchronously removes the daemon binary
+     * from the device via ADB using the credentials from the last bootstrap.
+     */
+    fun privdDisconnect(context: Context) {
+        PrivdManager.disconnect()
+        val appContext = context.applicationContext
+        viewModelScope.launch(Dispatchers.IO) {
+            PrivdBootstrapper.cleanupLastDaemon(appContext)
+        }
+    }
+
     fun setPrivdGamepadMergeEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadMergeEnabled(value)
     fun setPrivdAutoConnect(value: Boolean) = MacroPadSettings.setPrivdAutoConnect(value)
     fun privdResetBootstrapStage() = PrivdBootstrapper.resetStage()
