@@ -242,6 +242,27 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_gamepad_swap_face_buttons">Face-Button-Beschriftung tauschen (A/B und X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Zeigt Nintendo-Layout-Beschriftungen im Gamepad-Picker (A↔B und X↔Y). Die gesendeten Keycodes bleiben unverändert.</string>
 
+    <!-- Privilegierter Modus -->
+    <string name="privd_title">Privilegierter Modus</string>
+    <string name="privd_description">Erlaubt Megingiard, direkt in System-Eingabegeräte zu schreiben, die die normale App-Sandbox nicht erreicht. Wird für einige erweiterte Funktionen benötigt (siehe unten). Die Verbindung läuft über die geräteeigene ADB-Shell — kein Root, kein externer Server.</string>
+    <string name="privd_status_off">Aus</string>
+    <string name="privd_status_connecting">Verbinde…</string>
+    <string name="privd_status_running">Aktiv</string>
+    <string name="privd_status_failed">Fehlgeschlagen</string>
+    <string name="privd_action_connect">Verbinden</string>
+    <string name="privd_action_disconnect">Trennen</string>
+    <string name="privd_action_test">Verbindung testen</string>
+    <string name="privd_action_show_setup">Einrichtung anzeigen</string>
+    <string name="privd_action_hide_setup">Einrichtung ausblenden</string>
+    <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
+    <string name="privd_ping_fail">Keine Antwort vom Daemon. Die Verbindung ist möglicherweise abgebrochen.</string>
+    <string name="privd_setup_title">Einmalige Einrichtung</string>
+    <string name="privd_setup_intro">Aktiviere Drahtloses Debugging in den Entwickleroptionen, verbinde einmalig per USB oder Pairing, und führe diesen Befehl auf deinem Computer aus, um den Helfer-Daemon zu starten. Tippe danach auf Verbinden. Der Daemon bleibt bis zum Neustart aktiv.</string>
+    <string name="privd_setup_copy">Befehl kopieren</string>
+    <string name="privd_feature_gamepad_merge">Gamepad-Merge</string>
+    <string name="privd_feature_gamepad_merge_desc">Sendet MacroPad-Gamepad-Aktionen direkt an den verbundenen physischen Controller, sodass Spiele nur ein Gerät sehen. Deaktivieren, um das klassische virtuelle Gamepad zu verwenden.</string>
+    <string name="privd_error_daemon_unreachable">Daemon ist nicht erreichbar. Stelle sicher, dass du den Einrichtungs-Befehl ausgeführt hast.</string>
+
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Megingiard beenden</string>
     <string name="exit_dialog_message">Möchtest du die App schließen?</string>

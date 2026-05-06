@@ -279,6 +279,27 @@ Open Settings to create a layout.</string>
     <string name="settings_log_level">Log Level</string>
     <string name="settings_gamepad_swap_face_buttons">Swap face button labels (A/B and X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Display Nintendo-style labels in the gamepad picker (A↔B and X↔Y). Injected keycodes remain unchanged.</string>
+
+    <!-- Privileged Mode -->
+    <string name="privd_title">Privileged Mode</string>
+    <string name="privd_description">Lets Megingiard write directly to system input devices that the regular app sandbox cannot reach. Required for some advanced features (see below). Connection runs over the device\'s own ADB shell — no root, no external server.</string>
+    <string name="privd_status_off">Off</string>
+    <string name="privd_status_connecting">Connecting…</string>
+    <string name="privd_status_running">Running</string>
+    <string name="privd_status_failed">Failed</string>
+    <string name="privd_action_connect">Connect</string>
+    <string name="privd_action_disconnect">Disconnect</string>
+    <string name="privd_action_test">Test connection</string>
+    <string name="privd_action_show_setup">How to set up</string>
+    <string name="privd_action_hide_setup">Hide setup</string>
+    <string name="privd_ping_ok">Daemon responded — connection is healthy.</string>
+    <string name="privd_ping_fail">No response from daemon. The connection may be stale.</string>
+    <string name="privd_setup_title">One-time setup</string>
+    <string name="privd_setup_intro">Enable Wireless Debugging in Developer Options, connect once via USB or pair, then run this command on your computer to start the helper daemon. Tap Connect afterwards. The daemon stays alive until you reboot.</string>
+    <string name="privd_setup_copy">Copy command</string>
+    <string name="privd_feature_gamepad_merge">Gamepad merge</string>
+    <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the legacy virtual gamepad.</string>
+    <string name="privd_error_daemon_unreachable">Daemon is not reachable. Make sure you ran the setup command.</string>
     <string name="settings_jump_all">All</string>
     <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">General</string>

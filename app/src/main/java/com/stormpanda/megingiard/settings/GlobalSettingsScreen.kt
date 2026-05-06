@@ -58,6 +58,7 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -223,6 +224,8 @@ fun GlobalSettingsScreen(
                             accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
                         )
+                        HorizontalDivider(color = colors.divider)
+                        PrivdSettingsCard(viewModel = viewModel)
                     }
                 }
 

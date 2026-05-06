@@ -2,6 +2,9 @@ package com.stormpanda.megingiard.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.privd.PrivdError
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -32,6 +35,11 @@ class GlobalSettingsViewModel : ViewModel() {
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
 
+    // Privileged Mode
+    val privdState: StateFlow<PrivdState> = PrivdManager.state
+    val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
+    val privdGamepadMergeEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadMergeEnabled
+
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
     fun setThemeMode(mode: ThemeMode) = SettingsManager.setThemeMode(mode)
     fun setOverlayAtBottom(value: Boolean) = SettingsManager.setOverlayAtBottom(value)
@@ -41,4 +49,9 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
+
+    // Privileged Mode actions
+    fun privdConnect(): Boolean = PrivdManager.connect()
+    fun privdDisconnect() = PrivdManager.disconnect()
+    fun setPrivdGamepadMergeEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadMergeEnabled(value)
 }
