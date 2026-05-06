@@ -63,14 +63,23 @@ class GlobalSettingsViewModel : ViewModel() {
     fun privdConnect(): Boolean = PrivdManager.connect()
 
     /**
-     * Disconnects from the daemon and asynchronously removes the daemon binary
-     * from the device via ADB using the credentials from the last bootstrap.
+     * Disconnects from the daemon socket. The daemon binary stays on the device.
      */
-    fun privdDisconnect(context: Context) {
-        PrivdManager.disconnect()
+    fun privdDisconnect() = PrivdManager.disconnect()
+
+    /**
+     * Reconnects via ADB Wireless Debugging, kills the daemon process, and
+     * removes the binary from /data/local/tmp. Result is delivered via [onResult]
+     * on the main thread (true = success).
+     */
+    fun privdCleanupDaemon(context: Context, onResult: (Boolean) -> Unit) {
         val appContext = context.applicationContext
-        viewModelScope.launch(Dispatchers.IO) {
-            PrivdBootstrapper.cleanupLastDaemon(appContext)
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                PrivdBootstrapper.cleanupLastDaemon(appContext)
+            }
+            if (ok) setPrivdAutoConnect(false)
+            onResult(ok)
         }
     }
 
