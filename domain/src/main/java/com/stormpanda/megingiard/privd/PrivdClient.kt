@@ -182,9 +182,12 @@ object PrivdClient {
         writerThread = null
         readerThread = null
         queue.clear()
+        // Close the socket FIRST so the reader thread's blocking readLine() throws
+        // immediately and releases the BufferedReader's internal lock. Without this,
+        // reader.close() deadlocks with the reader thread for several seconds (ANR).
+        try { socket?.close() } catch (_: Exception) {}
         try { writer?.close() } catch (_: Exception) {}
         try { reader?.close() } catch (_: Exception) {}
-        try { socket?.close() } catch (_: Exception) {}
         writer = null
         reader = null
         socket = null
