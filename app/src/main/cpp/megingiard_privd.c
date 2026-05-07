@@ -319,6 +319,21 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
             if (!g_reader_active) {
+                /* Drain any events that accumulated in the kernel buffer while the
+                 * reader was inactive. These include stale physical presses and
+                 * synthetic events written by previous GD/GU/JS injection sessions;
+                 * delivering them to the app would create spurious steps at the very
+                 * beginning of the recording. */
+                int fl = fcntl(g_gamepad_fd, F_GETFL);
+                fcntl(g_gamepad_fd, F_SETFL, fl | O_NONBLOCK);
+                struct input_event drain_ev;
+                while (read(g_gamepad_fd, &drain_ev, sizeof(drain_ev)) > 0) {}
+                fcntl(g_gamepad_fd, F_SETFL, fl);
+
+                /* Re-publish the client fd. stop_reader_thread() resets it to -1,
+                 * so a second SUB GAMEPAD on the same connection would silently
+                 * discard every event without this assignment. */
+                g_client_fd_for_reader = client_fd;
                 g_reader_active = 1;
                 pthread_create(&g_reader_thread, NULL, evdev_reader_thread, NULL);
             }
