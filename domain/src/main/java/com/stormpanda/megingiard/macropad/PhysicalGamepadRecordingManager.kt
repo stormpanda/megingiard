@@ -25,10 +25,10 @@ private const val ABS_HAT0X = 16
 private const val ABS_HAT0Y = 17
 
 /** Normalised dead zone radius. Stick movements below this magnitude do not start a gesture. */
-private const val JOYSTICK_DEAD_ZONE = 0.08f
+private const val JOYSTICK_DEAD_ZONE = 0f  // TEST: dead zone disabled
 
 /** RDP simplification tolerance in normalised axis units (0–1 scale). */
-private const val RDP_EPSILON = 0.02f
+private const val RDP_EPSILON = 0f  // TEST: decimation disabled — all samples preserved
 
 /**
  * Records buttons, D-Pad taps, and analog stick gestures from the physical gamepad
