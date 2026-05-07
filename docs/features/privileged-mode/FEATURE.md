@@ -152,9 +152,10 @@ Display.DEFAULT_DISPLAY)` so it opens on the primary screen.
 4. **Wizard step 4** confirms success and toggles `privdAutoConnect = true`.
 
 The RSA key (PKCS#8) and X.509 certificate are persisted as raw bytes in
-`filesDir/privd_adb_key.bin` and `filesDir/privd_adb_cert.bin`. They are
-generated once via `android.sun.security.x509.*` (SHA512withRSA, ~30-year
-validity, CN=Megingiard) and reused on every subsequent pair / connect.
+`noBackupFilesDir/privd_adb_key.bin` and `noBackupFilesDir/privd_adb_cert.bin`
+(using `Context.noBackupFilesDir` to exclude them from Auto Backup / device-to-device
+transfer). They are generated once via `android.sun.security.x509.*` (SHA512withRSA,
+~30-year validity, CN=Megingiard) and reused on every subsequent pair / connect.
 
 Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`
@@ -201,13 +202,20 @@ the existing protocol.
 | App → D   | `JS <axis> <val>\n` | Analog stick (axis ABS_X=0…ABS_RZ=5, int16) |
 
 On startup the daemon prints exactly one line on **stdout** so the
-bootstrapper can verify success:
+spawn command can detect success:
 
-| Line  | Meaning                                                    |
-| ----- | ---------------------------------------------------------- |
-| `R\n` | Listening + gamepad node opened — ready                    |
-| `N\n` | No suitable gamepad found, daemon exits 1                  |
-| `E\n` | Generic startup failure (e.g. socket bind), daemon exits 1 |
+| Line  | Meaning                                                       |
+| ----- | ------------------------------------------------------------- |
+| `R\n` | Listening socket bound + physical gamepad node opened — ready |
+| `N\n` | No suitable gamepad found, daemon exits 1                     |
+| `E\n` | Generic startup failure (e.g. socket bind), daemon exits 1    |
+
+> **Note:** The spawn command redirects the daemon's stdout/stderr to
+> `/dev/null` before it detaches, so `R/N/E` is only readable during the
+> brief window before `setsid()`. The bootstrapper reads stdout via the ADB
+> shell stream using a separate `echo MGRD_SPAWN_OK` marker to confirm the
+> spawn command itself completed; actual daemon readiness is verified by the
+> subsequent LocalSocket retry loop (`PrivdManager.verifyConnect()`).
 
 ### State Machine
 
@@ -222,6 +230,14 @@ OFF ──────────────────────▶ CONNEC
                                   │
                                   └── any stage failed ──▶ FAILED
 ```
+
+During the VERIFYING phase of bootstrap, `PrivdBootstrapper` calls
+`PrivdManager.verifyConnect()` (not the public `connect()`) for each retry.
+`verifyConnect()` attempts `PrivdClient.connect()` without publishing
+`CONNECTING` or `FAILED` state transitions, so the UI stays in `BOOTSTRAPPING`
+throughout all retries. Only on success does state advance to `RUNNING`;
+if all retries are exhausted, `reportBootstrapFailure(DAEMON_UNREACHABLE)`
+explicitly sets `FAILED`.
 
 `PrivdClient.isConnected` is the source of truth for the running status.
 `PrivdManager.state` is the user-visible projection. The `BOOTSTRAPPING`

@@ -1,9 +1,14 @@
 package com.stormpanda.megingiard.privd
 
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.GamepadKeycodes
 
 private const val TAG = "PrivdGamepadInjector"
+private val VALID_JOYSTICK_AXES = setOf(
+    GamepadKeycodes.ABS_X,
+    GamepadKeycodes.ABS_Y,
+    GamepadKeycodes.ABS_Z,
+    GamepadKeycodes.ABS_RZ,
+)
 
 /**
  * Routes gamepad events to the privileged daemon's physical-evdev path.
@@ -30,12 +35,10 @@ internal object PrivdGamepadInjector {
     val isConnected: Boolean get() = PrivdClient.isConnected
 
     fun buttonDown(btnCode: Int) {
-        AppLog.d(TAG, "buttonDown($btnCode)")
         PrivdClient.send("GD $btnCode\n")
     }
 
     fun buttonUp(btnCode: Int) {
-        AppLog.d(TAG, "buttonUp($btnCode)")
         PrivdClient.send("GU $btnCode\n")
     }
 
@@ -53,12 +56,7 @@ internal object PrivdGamepadInjector {
      * [value]: raw int16, range −32768…+32767.
      */
     fun joystick(axisCode: Int, value: Int) {
-        require(axisCode in setOf(
-            GamepadKeycodes.ABS_X,
-            GamepadKeycodes.ABS_Y,
-            GamepadKeycodes.ABS_Z,
-            GamepadKeycodes.ABS_RZ,
-        )) { "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)" }
+        require(axisCode in VALID_JOYSTICK_AXES) { "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)" }
         require(value in -32768..32767) { "value must be in int16 range -32768..32767" }
         PrivdClient.send("JS $axisCode $value\n")
     }

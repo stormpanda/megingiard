@@ -25,7 +25,7 @@
  *   exit without killing the daemon.
  *
  * Wire protocol (ASCII, newline-terminated, on the LocalSocket):
- *   Feature prefix "GP" (gamepad merge):
+ *   Gamepad commands:
  *     GD <btn>\n         button DOWN   (Linux BTN_* code, 0x100..0x1FF)
  *     GU <btn>\n         button UP
  *     HD <axis> <val>\n  D-Pad hat     (axis 0=X 1=Y, val -1/0/+1)

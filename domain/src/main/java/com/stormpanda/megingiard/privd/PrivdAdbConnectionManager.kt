@@ -72,8 +72,8 @@ internal class PrivdAdbConnectionManager private constructor(
         }
 
         private fun loadOrCreateCredentials(context: Context): Pair<PrivateKey, Certificate> {
-            val keyFile = File(context.filesDir, KEY_FILE)
-            val certFile = File(context.filesDir, CERT_FILE)
+            val keyFile = File(context.noBackupFilesDir, KEY_FILE)
+            val certFile = File(context.noBackupFilesDir, CERT_FILE)
             if (keyFile.exists() && certFile.exists()) {
                 runCatching {
                     val keyBytes = keyFile.readBytes()

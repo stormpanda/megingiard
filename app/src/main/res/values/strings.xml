@@ -292,7 +292,6 @@ Open Settings to create a layout.</string>
     <string name="privd_action_disconnect">Disconnect</string>
     <string name="privd_action_test">Test connection</string>
     <string name="privd_action_show_wizard">Set up…</string>
-    <string name="privd_action_hide_wizard">Hide setup</string>
     <string name="privd_ping_ok">Daemon responded — connection is healthy.</string>
     <string name="privd_ping_fail">No response from daemon. The connection may be stale.</string>
 

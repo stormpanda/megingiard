@@ -110,7 +110,10 @@ internal fun PrivdSetupWizardDialog(
     )
     val focusManager = LocalFocusManager.current
 
-    BackHandler(onBack = onDismiss)
+    BackHandler(onBack = {
+        viewModel.privdResetBootstrapStage()
+        onDismiss()
+    })
 
     Box(
         modifier = Modifier
@@ -365,8 +368,8 @@ private fun StepPair(
             onClick = onSubmit,
             enabled = !busy &&
                 host.isNotBlank() &&
-                connectPort.toIntOrNull() != null &&
-                pairPort.toIntOrNull() != null &&
+                connectPort.toIntOrNull()?.let { it in 1..65535 } == true &&
+                pairPort.toIntOrNull()?.let { it in 1..65535 } == true &&
                 code.length == 6,
         ) {
             Text(

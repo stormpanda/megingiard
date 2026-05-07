@@ -150,6 +150,26 @@ object PrivdManager {
     fun isAvailable(feature: PrivdFeature): Boolean =
         _state.value == PrivdState.RUNNING && PrivdClient.isConnected
 
+    /**
+     * Used during the VERIFYING phase of bootstrap. Attempts a raw socket
+     * connect without publishing CONNECTING/FAILED state transitions, to avoid
+     * UI flicker on each retry. On success, transitions state to RUNNING and
+     * starts the client observer. The caller is responsible for calling
+     * [reportBootstrapFailure] if all retries are exhausted.
+     *
+     * @return `true` if the daemon socket was reached and `PrivdClient` is now
+     * connected.
+     */
+    internal fun verifyConnect(): Boolean {
+        val ok = PrivdClient.connect()
+        if (ok) {
+            _state.value = PrivdState.RUNNING
+            AppLog.i(TAG, "verifyConnect() succeeded — Privileged Mode is RUNNING")
+            startClientObserver()
+        }
+        return ok
+    }
+
     internal fun reportBootstrapStart() {
         AppLog.i(TAG, "bootstrap started")
         _state.value = PrivdState.BOOTSTRAPPING

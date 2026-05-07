@@ -154,11 +154,13 @@ object PrivdBootstrapper {
         }
         // Verify via abstract-socket round-trip.
         // Give the daemon time to setsid() and bind the socket before the first attempt.
+        // Use verifyConnect() instead of connect() to avoid CONNECTING→FAILED UI flicker
+        // on each retry while PrivdManager.state is still BOOTSTRAPPING.
         _stage.value = BootstrapStage.VERIFYING
         Thread.sleep(VERIFY_INITIAL_DELAY_MS)
         var ok = false
         for (i in 0 until VERIFY_RETRY_COUNT) {
-            if (PrivdManager.connect()) { ok = true; break }
+            if (PrivdManager.verifyConnect()) { ok = true; break }
             Thread.sleep(VERIFY_RETRY_DELAY_MS)
         }
         disconnectQuietly(mgr)
@@ -166,7 +168,7 @@ object PrivdBootstrapper {
             _stage.value = BootstrapStage.DONE
             true
         } else {
-            // PrivdManager.connect() already set FAILED + DAEMON_UNREACHABLE.
+            PrivdManager.reportBootstrapFailure(PrivdError.DAEMON_UNREACHABLE)
             _stage.value = BootstrapStage.IDLE
             false
         }
