@@ -91,7 +91,7 @@ Each button supports one of the following actions:
 
 - A **macro** is a named, **per-profile** sequence of timed input steps stored in `PadProfile.macros`. Each profile maintains its own macro list; macros are not shared across profiles.
 - Macros are managed via the **Macro Library** editor (opened from the "Macros…" chip in the layout editor toolbar).
-- Each macro contains a list of **`MacroStep`** subtypes: `GamepadButtonTap`, `JoystickMove`, `DPadTap`, and `TouchTap`. Each step has `startTimeMs` and `durationMs` fields that allow overlapping parallel steps within the same macro.
+- Each macro contains a list of **`MacroStep`** subtypes: `GamepadButtonTap`, `JoystickMove`, `JoystickPath`, `DPadTap`, and `TouchTap`. Each step has `startTimeMs` and `durationMs` fields that allow overlapping parallel steps within the same macro.
 - A **`PadAction.Macro(macroId)`** button action MUST reference a macro by ID. Pressing the button is **tap-to-toggle**: the first tap starts the macro; a second tap stops it by cancelling its coroutine. The button pulses with an infinite alpha animation while the macro is running (driven by `MacroExecutor.runningMacroIds` StateFlow).
 - Macros support a **Loop** mode (`Macro.loopEnabled = true`): the step sequence repeats until the user stops it with a second tap. An optional `Macro.loopPauseMs` (0–2000 ms, in 100 ms steps, auto-extending scale) controls the delay between loop iterations.
 - The MacroPad editor toolbar exposes two chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
@@ -103,6 +103,7 @@ Each button supports one of the following actions:
     - A small horizontal inset is applied so the timeline content is not flush against the screen edges.
     - Each step block contains a short action label (for example gamepad short code, joystick stick+direction, D-Pad direction, or Tap).
 - Both editor modes expose the same action row: **"Step"**, **"Record"** (gamepad), **"Record"** (touch), and **"Test Run"** (when steps are present). All four buttons have equal width (`Modifier.weight(1f)`) and equal height. Below the action row a **Loop toggle** and (when enabled) a **Pause between repetitions** slider are shown.
+- Gamepad recording has two strategies. Without Privileged Mode gamepad recording enabled, it uses the on-screen virtual controller overlay and records `GamepadButtonTap`, `JoystickMove`, and `DPadTap` steps. With Privileged Mode gamepad recording enabled and the daemon running, it records the physical controller's pass-through evdev stream while the target game still receives the same input; button presses become `GamepadButtonTap`, hat changes become `DPadTap`, and analog stick movement becomes RDP-decimated `JoystickPath` steps.
 - The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion).
 - Mode switching is exposed as two always-visible chips (**List/Liste** / **Time/Zeit**) with a leading **View/Ansicht** label, and the chips use the same visual style as the Idle Pill Profile/Layout selector chips.
 - The control header uses compact vertical spacing to preserve more vertical space for the step list/timeline area, and the global **Shift mode** 3-chip selector is right-aligned.

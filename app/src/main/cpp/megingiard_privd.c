@@ -155,13 +155,6 @@ static void stop_reader_thread(void) {
     g_reader_active = 0;
     pthread_join(g_reader_thread, NULL);
     g_client_fd_for_reader = -1;
-    /*
-     * Release the exclusive grab so Android's EventHub can resume delivering
-     * physical gamepad events to games and other apps.
-     * EVIOCGRAB(0) on a non-grabbed fd is a no-op (errno EINVAL), so it is
-     * safe to call even if the grab was never acquired.
-     */
-    ioctl(g_gamepad_fd, EVIOCGRAB, 0);
 }
 
 static void signal_handler(int sig) {
@@ -320,14 +313,6 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
             if (!g_reader_active) {
-                /*
-                 * Take exclusive ownership of the gamepad evdev node.
-                 * Android's EventHub holds EVIOCGRAB on this fd; we must steal
-                 * it so our reader thread can receive physical events.
-                 * While grabbed, the device's events are delivered only to this
-                 * fd — games / InputReader stop receiving input until we release.
-                 */
-                ioctl(g_gamepad_fd, EVIOCGRAB, 1);
                 g_reader_active = 1;
                 pthread_create(&g_reader_thread, NULL, evdev_reader_thread, NULL);
             }

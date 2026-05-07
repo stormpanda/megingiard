@@ -1,13 +1,23 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.macropad.GamepadKeycodes
+import com.stormpanda.megingiard.macropad.JoystickStick
+import com.stormpanda.megingiard.macropad.MacroStep
+import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
 import com.stormpanda.megingiard.privd.BootstrapStage
+import com.stormpanda.megingiard.privd.EvdevEvent
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdFeature
 import com.stormpanda.megingiard.privd.PrivdState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+
+private const val EV_KEY = 1
+private const val EV_ABS = 3
+private const val ABS_HAT0X = 16
 
 /**
  * Sanity tests for the Privileged Mode subsystem.
@@ -45,6 +55,81 @@ class PrivdSubsystemTest {
         assertNotNull(PrivdFeature.valueOf("GAMEPAD_MERGE"))
         assertNotNull(PrivdFeature.valueOf("GAMEPAD_RECORDING"))
         assertEquals(2, PrivdFeature.entries.size)
+    }
+
+    @Test
+    fun `physical gamepad recording converts button events into tap steps`() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 1_000L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 1),
+            nowElapsedMs = 1_010L,
+        )
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 0),
+            nowElapsedMs = 1_050L,
+        )
+
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 1_060L)
+
+        assertEquals(1, steps.size)
+        val step = steps.single() as MacroStep.GamepadButtonTap
+        assertEquals(0L, step.startTimeMs)
+        assertEquals(40L, step.durationMs)
+        assertEquals(GamepadKeycodes.BTN_SOUTH, step.btnCode)
+        PhysicalGamepadRecordingManager.resetState()
+    }
+
+    @Test
+    fun `physical gamepad recording converts hat events into dpad steps`() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 2_000L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, ABS_HAT0X, 1),
+            nowElapsedMs = 2_020L,
+        )
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, ABS_HAT0X, 0),
+            nowElapsedMs = 2_090L,
+        )
+
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 2_100L)
+
+        assertEquals(1, steps.size)
+        val step = steps.single() as MacroStep.DPadTap
+        assertEquals(0L, step.startTimeMs)
+        assertEquals(70L, step.durationMs)
+        assertEquals(1, step.dirX)
+        assertEquals(0, step.dirY)
+        PhysicalGamepadRecordingManager.resetState()
+    }
+
+    @Test
+    fun `physical gamepad recording converts analog events into joystick path steps`() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 3_000L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
+            nowElapsedMs = 3_010L,
+        )
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Y, 16_384),
+            nowElapsedMs = 3_040L,
+        )
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 0),
+            nowElapsedMs = 3_080L,
+        )
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Y, 0),
+            nowElapsedMs = 3_100L,
+        )
+
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 3_120L)
+
+        assertEquals(1, steps.size)
+        val step = steps.single() as MacroStep.JoystickPath
+        assertEquals(0L, step.startTimeMs)
+        assertEquals(JoystickStick.LEFT, step.stick)
+        assertTrue(step.samples.isNotEmpty())
+        PhysicalGamepadRecordingManager.resetState()
     }
 
     @Test
