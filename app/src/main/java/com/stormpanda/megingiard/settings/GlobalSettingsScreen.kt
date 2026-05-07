@@ -58,6 +58,8 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.privd.PrivdSettingsCard
+import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -81,7 +83,7 @@ private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 private enum class SettingsSectionFilter {
-    GENERAL, APPEARANCE, DATA, CONFIGURATION
+    GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,6 +113,7 @@ fun GlobalSettingsScreen(
     // whose token is null inside MirrorPresentation → BadTokenException crash.
     val context = LocalContext.current
     var showExportMetadataDialog by rememberSaveable { mutableStateOf(false) }
+    var showPrivdWizard by rememberSaveable { mutableStateOf(false) }
     // MegingiardExport is not Parcelable/Serializable — cannot survive process death; keep as remember
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -164,6 +167,7 @@ fun GlobalSettingsScreen(
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
+                    onSelectPrivilegedMode = { selectedSectionFilter = SettingsSectionFilter.PRIVILEGED_MODE },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
                     SettingsSection(
@@ -279,9 +283,28 @@ fun GlobalSettingsScreen(
                         )
                     }
                 }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_privileged_mode),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        PrivdSettingsCard(
+                            viewModel = viewModel,
+                            onShowWizard = { showPrivdWizard = true },
+                        )
+                    }
+                }
             }
         }
         // ── In-tree overlays (work in Activity and MirrorPresentation contexts) ─────
+        if (showPrivdWizard) {
+            PrivdSetupWizardDialog(
+                viewModel = viewModel,
+                onDismiss = { showPrivdWizard = false },
+            )
+        }
         if (showColorPicker) {
             ColorWheelPicker(
                 initialColor = accentColor,
@@ -398,6 +421,7 @@ private fun SectionJumpRow(
     onSelectAppearance: () -> Unit,
     onSelectData: () -> Unit,
     onSelectConfig: () -> Unit,
+    onSelectPrivilegedMode: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -447,6 +471,13 @@ private fun SectionJumpRow(
             accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
             onClick = onSelectConfig,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_privileged_mode),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE,
+            onClick = onSelectPrivilegedMode,
         )
     }
 }

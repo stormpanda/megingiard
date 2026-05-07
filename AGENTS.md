@@ -22,17 +22,18 @@
 
 ## 2 Documentation Map
 
-| Document                            | Purpose                                                               |
-| ----------------------------------- | --------------------------------------------------------------------- |
-| `README.md`                         | Project overview, feature list, quick links                           |
-| `PRD.md`                            | Product requirements (German, authoritative)                          |
-| `docs/REQUIREMENTS.md`              | Requirements overview & non-functional requirements                   |
-| `docs/ARCHITECTURE.md`              | System architecture overview & key design decisions                   |
-| `docs/features/mirror/FEATURE.md`   | Screen Mirror — functional requirements & technical implementation    |
-| `docs/features/touchpad/FEATURE.md` | Virtual Touchpad — functional requirements & technical implementation |
-| `docs/features/keyboard/FEATURE.md` | Virtual Keyboard — functional requirements & technical implementation |
-| `docs/features/FEATURE_TEMPLATE.md` | Template for new feature documentation                                |
-| `docs/features/theming/FEATURE.md`  | Design System — AppColors, Typography, AppDimens, ColorScheme bridge  |
+| Document                                   | Purpose                                                                                  |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `README.md`                                | Project overview, feature list, quick links                                              |
+| `PRD.md`                                   | Product requirements (German, authoritative)                                             |
+| `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
+| `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
+| `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |
+| `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
+| `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
+| `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
+| `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
+| `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
 
 > [!IMPORTANT]
 > **Documentation language: English only.**

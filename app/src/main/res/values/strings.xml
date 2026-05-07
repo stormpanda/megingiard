@@ -279,12 +279,85 @@ Open Settings to create a layout.</string>
     <string name="settings_log_level">Log Level</string>
     <string name="settings_gamepad_swap_face_buttons">Swap face button labels (A/B and X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Display Nintendo-style labels in the gamepad picker (A↔B and X↔Y). Injected keycodes remain unchanged.</string>
+
+    <!-- Privileged Mode -->
+    <string name="privd_title">Privileged Mode</string>
+    <string name="privd_description">Lets Megingiard write directly to system input devices that the regular app sandbox cannot reach. Required for some advanced features (see below). Connection runs over the device\'s own ADB shell — no root, no external server.</string>
+    <string name="privd_status_off">Off</string>
+    <string name="privd_status_connecting">Connecting…</string>
+    <string name="privd_status_bootstrapping">Bootstrapping…</string>
+    <string name="privd_status_running">Running</string>
+    <string name="privd_status_failed">Failed</string>
+    <string name="privd_action_connect">Connect</string>
+    <string name="privd_action_disconnect">Disconnect</string>
+    <string name="privd_action_test">Test connection</string>
+    <string name="privd_action_show_wizard">Set up…</string>
+    <string name="privd_ping_ok">Daemon responded — connection is healthy.</string>
+    <string name="privd_ping_fail">No response from daemon. The connection may be stale.</string>
+
+    <string name="privd_auto_connect">Auto-connect on app start</string>
+    <string name="privd_auto_connect_desc">When enabled, Megingiard silently re-opens the daemon socket on launch. Set automatically after a successful first-time setup.</string>
+
+    <string name="privd_feature_gamepad_merge">Gamepad merge</string>
+    <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the legacy virtual gamepad.</string>
+
+    <!-- Privileged Mode — setup wizard -->
+    <string name="privd_wizard_title">Set up Privileged Mode</string>
+    <string name="privd_wizard_next">Next</string>
+    <string name="privd_wizard_back">Back</string>
+    <string name="privd_wizard_close">Done</string>
+    <string name="privd_wizard_close_dialog">Close wizard</string>
+    <string name="privd_wizard_pairing">Pairing…</string>
+    <string name="privd_wizard_bootstrapping">Bootstrapping…</string>
+
+    <string name="privd_wizard_step1_intro">Follow these steps to enable Wireless Debugging:</string>
+    <string name="privd_wizard_step1_substep_1">1. Open Settings → About handheld console</string>
+    <string name="privd_wizard_step1_substep_2">2. Tap Build number 7 times until "You are now a developer!" appears</string>
+    <string name="privd_wizard_step1_substep_3">3. Go back → System → Developer options</string>
+    <string name="privd_wizard_step1_substep_4">4. Enable Wireless debugging and turn it ON</string>
+    <string name="privd_wizard_step1_substep_5">5. Tap "Pair device with pairing code" and keep that dialog open</string>
+    <string name="privd_wizard_step1_open">Open system settings</string>
+
+    <string name="privd_wizard_step2_intro">From the main "Wireless debugging" screen, note the IP address and the port shown next to it (Connect port). Then tap "Pair device with pairing code", enter that pairing port and 6-digit code here. Everything stays on-device — no internet required.</string>
+    <string name="privd_wizard_field_host">IP address</string>
+    <string name="privd_wizard_field_connect_port">Connect port (from "Wireless debugging" main screen)</string>
+    <string name="privd_wizard_field_pair_port">Pairing port (from "Pair device" dialog)</string>
+    <string name="privd_wizard_field_code">Pairing code (6 digits)</string>
+    <string name="privd_wizard_step2_pair">Pair</string>
+    <string name="privd_wizard_step2_error">Pairing failed. Double-check the address, port, and code, then try again.</string>
+
+    <string name="privd_wizard_step3_intro">Megingiard will now push the helper daemon binary to /data/local/tmp and start it. The daemon runs as the ADB shell user and survives until you reboot.</string>
+    <string name="privd_wizard_step3_start">Push and start daemon</string>
+
+    <string name="privd_wizard_step4_done">Privileged Mode is set up. Future app starts will reconnect automatically.</string>
+
+    <string name="privd_wizard_stage_idle">Idle</string>
+    <string name="privd_wizard_stage_pairing">Pairing with ADB…</string>
+    <string name="privd_wizard_stage_connecting">Connecting to ADB…</string>
+    <string name="privd_wizard_stage_pushing">Pushing daemon binary…</string>
+    <string name="privd_wizard_stage_spawning">Starting daemon…</string>
+    <string name="privd_wizard_stage_verifying">Verifying connection…</string>
+    <string name="privd_wizard_stage_done">Done</string>
+
+    <string name="privd_wizard_checklist_adb">ADB connection</string>
+    <string name="privd_wizard_checklist_push">Pushing daemon binary</string>
+    <string name="privd_wizard_checklist_spawn">Starting daemon</string>
+    <string name="privd_wizard_checklist_verify">Verifying connection</string>
+
+    <string name="privd_error_daemon_unreachable">Daemon is not reachable. Run the setup wizard.</string>
+    <string name="privd_error_pairing_failed">Pairing failed. Verify the address, port, and 6-digit code from the system pairing dialog.</string>
+    <string name="privd_error_adb_discovery_failed">Could not discover the ADB Wireless-Debugging endpoint via mDNS. Make sure Wireless Debugging is enabled.</string>
+    <string name="privd_error_adb_connect_failed">Could not connect to ADB. Try re-pairing if you previously revoked the pairing.</string>
+    <string name="privd_error_bootstrap_push_failed">Failed to push the daemon binary. Check available storage in /data/local/tmp.</string>
+    <string name="privd_error_bootstrap_spawn_failed">Failed to start the daemon process.</string>
     <string name="settings_jump_all">All</string>
     <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">General</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Configuration</string>
+    <string name="settings_jump_privileged_mode">Privileged Mode</string>
+    <string name="settings_section_privileged_mode">Privileged Mode</string>
     <string name="settings_section_expand">Expand section</string>
     <string name="settings_section_collapse">Collapse section</string>
     <string name="settings_name_error_empty">Name cannot be empty.</string>

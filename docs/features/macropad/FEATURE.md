@@ -50,6 +50,9 @@ Each button supports one of the following actions:
 - `GamepadButton` actions use `GamepadInjector` / `ShellGamepadInjector`. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
 - For both `KeyboardKey` and `GamepadButton`, the action picker shows the selectors **inline in a single row** (3 dropdowns for keyboard: base key + 2 optional modifiers; 4 dropdowns for gamepad: primary button + 3 optional extras). Optional slots default to "—" (None).
 - `GamepadButton` and all mouse actions use dedicated injectors (`GamepadInjector`, `MouseInjector`) backed by their own native binary processes.
+
+> **Optional: physical-pad merge** — When [Privileged Mode](../privileged-mode/FEATURE.md) is RUNNING and its `Gamepad merge` per-feature flag is enabled, `GamepadInjector` routes all gamepad events to `PrivdGamepadInjector` instead of the virtual uinput path. The privileged daemon writes them into the connected physical controller's evdev node, so games see only one device. Falls back transparently to the virtual gamepad when Privileged Mode is OFF.
+
 - Only the injectors for devices **enabled in the active profile** (see FR-P4) are started; the others stay stopped. The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
 
 ### FR-P4: Per-Profile Device Flags
