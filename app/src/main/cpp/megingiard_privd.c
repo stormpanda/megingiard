@@ -54,11 +54,16 @@
 #include <linux/input.h>
 #include <pthread.h>
 #include <poll.h>
+#include <time.h>
 
 #define ABSTRACT_SOCKET_NAME "megingiard.privd"
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
 #define MAX_LINE 64
+#define REPLAY_RING_SIZE 32
+#define REPLAY_SUPPRESSION_MS 20LL
+#define MS_PER_SEC 1000LL
+#define NS_PER_MS 1000000LL
 
 /* test_bit for evdev capability bitmaps */
 #define BITS_PER_LONG    (sizeof(long) * 8)
@@ -79,7 +84,24 @@ static pthread_t g_reader_thread;
 static volatile int g_client_fd_for_reader = -1;
 static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+struct replay_event_key {
+    __u16 type;
+    __u16 code;
+    __s32 value;
+    long long recorded_ms;
+};
+
+static struct replay_event_key g_replay_ring[REPLAY_RING_SIZE];
+static int g_replay_ring_count = 0;
+static int g_replay_ring_next = 0;
+
 static void write_event(int fd, __u16 type, __u16 code, __s32 value);
+
+static long long now_monotonic_ms(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0;
+    return ((long long)ts.tv_sec * MS_PER_SEC) + ((long long)ts.tv_nsec / NS_PER_MS);
+}
 
 /*
  * Returns 1 if the evdev event (type, code) should be streamed to the client.
@@ -105,8 +127,41 @@ static int should_emit_evdev(__u16 type, __u16 code) {
     return 0;
 }
 
-static int is_synthetic_evdev_event(const struct input_event *ev) {
-    return ev->time.tv_sec == 0 && ev->time.tv_usec == 0;
+static void remember_replayed_event(const struct input_event *ev) {
+    g_replay_ring[g_replay_ring_next].type = ev->type;
+    g_replay_ring[g_replay_ring_next].code = ev->code;
+    g_replay_ring[g_replay_ring_next].value = ev->value;
+    g_replay_ring[g_replay_ring_next].recorded_ms = now_monotonic_ms();
+    g_replay_ring_next = (g_replay_ring_next + 1) % REPLAY_RING_SIZE;
+    if (g_replay_ring_count < REPLAY_RING_SIZE) g_replay_ring_count++;
+}
+
+static int consume_replayed_event(const struct input_event *ev) {
+    long long now_ms = now_monotonic_ms();
+    for (int i = 0; i < g_replay_ring_count; i++) {
+        if (now_ms - g_replay_ring[i].recorded_ms > REPLAY_SUPPRESSION_MS) {
+            int last = g_replay_ring_count - 1;
+            g_replay_ring[i] = g_replay_ring[last];
+            g_replay_ring_count--;
+            if (g_replay_ring_next > g_replay_ring_count) {
+                g_replay_ring_next = g_replay_ring_count;
+            }
+            i--;
+            continue;
+        }
+        if (g_replay_ring[i].type == ev->type &&
+            g_replay_ring[i].code == ev->code &&
+            g_replay_ring[i].value == ev->value) {
+            int last = g_replay_ring_count - 1;
+            g_replay_ring[i] = g_replay_ring[last];
+            g_replay_ring_count--;
+            if (g_replay_ring_next > g_replay_ring_count) {
+                g_replay_ring_next = g_replay_ring_count;
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /*
@@ -137,11 +192,14 @@ static void *evdev_reader_thread(void *arg) {
          * During recording we grab the physical evdev node so Android's
          * EventHub no longer hides events from us. Immediately replay every
          * physical event back into the same input device so the foreground game
-         * continues seeing exactly what the user is doing. Replayed events are
-         * written with a zero timestamp by write_event(); if they are echoed
-         * back to this grabbed fd, ignore them to avoid an event feedback loop.
+         * continues seeing exactly what the user is doing. Replayed events can
+         * be echoed back to this grabbed fd, so suppress only events we have
+         * explicitly replayed. Do not rely on input_event timestamps: this
+         * controller is itself a virtual node and may emit physical events with
+         * zero timestamps.
          */
-        if (is_synthetic_evdev_event(&ev)) continue;
+        if (consume_replayed_event(&ev)) continue;
+        remember_replayed_event(&ev);
         write_event(g_gamepad_fd, ev.type, ev.code, ev.value);
 
         if (!should_emit_evdev(ev.type, ev.code)) continue;
@@ -172,6 +230,8 @@ static void stop_reader_thread(void) {
     g_reader_active = 0;
     pthread_join(g_reader_thread, NULL);
     g_client_fd_for_reader = -1;
+    g_replay_ring_count = 0;
+    g_replay_ring_next = 0;
     ioctl(g_gamepad_fd, EVIOCGRAB, 0);
 }
 
