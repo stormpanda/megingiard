@@ -1,21 +1,37 @@
 package com.stormpanda.megingiard.privd
 
+import android.app.ActivityOptions
 import android.content.Intent
 import android.provider.Settings
+import android.view.Display
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,38 +43,47 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 
-private val SW_CARD_PADDING = 16.dp
+private const val TAG = "PrivdSetupWizard"
+private const val SW_SCRIM_ALPHA = 0.5f
+private const val SW_DIALOG_WIDTH_FRACTION = 0.85f
+private val SW_DIALOG_CORNER = 16.dp
+private val SW_DIALOG_PADDING = 20.dp
 private val SW_GAP = 12.dp
-private val SW_CORNER = 12.dp
-private val SW_INSTR_BG_ALPHA = 0.06f
+private val SW_CHECKLIST_GAP = 6.dp
+private val SW_CHECKLIST_ICON_SIZE = 18.dp
 private const val SW_DEFAULT_PORT = "5555"
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
  *
+ * Renders as an in-tree modal dialog (full-screen scrim + centered card).
+ *
  * Steps:
- *  1. **Enable Wireless Debugging** — opens system settings.
+ *  1. **Enable Wireless Debugging** — step-by-step instructions + opens system settings.
  *  2. **Pair** — user enters host:port + 6-digit pairing code shown by Android.
- *  3. **Bootstrap** — auto-discovers the connect endpoint, pushes the daemon
- *     binary, spawns it, verifies with the abstract socket. Reports progress
- *     via [GlobalSettingsViewModel.privdBootstrapStage].
- *  4. **Done** — closes the wizard.
+ *  3. **Bootstrap** — pushes the daemon binary, spawns it, verifies with the abstract
+ *     socket. Shows a per-stage progress checklist.
+ *  4. **Done** — closes the dialog.
  *
  * On success, [GlobalSettingsViewModel.setPrivdAutoConnect] is called by the
  * ViewModel; subsequent app starts will silently call `PrivdManager.connect()`.
  */
 @Composable
-internal fun PrivdSetupWizard(
+internal fun PrivdSetupWizardDialog(
     viewModel: GlobalSettingsViewModel,
-    onClose: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
@@ -74,90 +99,112 @@ internal fun PrivdSetupWizard(
     var pairBusy by remember { mutableStateOf(false) }
     var bootstrapBusy by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                colors.onSurface.copy(alpha = SW_INSTR_BG_ALPHA),
-                RoundedCornerShape(SW_CORNER),
-            )
-            .padding(SW_CARD_PADDING),
-    ) {
-        Text(
-            text = stringResource(R.string.privd_wizard_title),
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Spacer(Modifier.height(SW_GAP))
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = colors.divider,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = colors.onSurfaceSecondary,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedTextColor = colors.onSurface,
+        unfocusedTextColor = colors.onSurface,
+    )
+    val focusManager = LocalFocusManager.current
 
-        when (step) {
-            0 -> StepEnableWireless(
-                onOpenSettings = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+    BackHandler(onBack = onDismiss)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = SW_SCRIM_ALPHA))
+            .clickable(enabled = false, onClick = {}),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(SW_DIALOG_WIDTH_FRACTION)
+                .background(colors.surface, RoundedCornerShape(SW_DIALOG_CORNER))
+                .verticalScroll(rememberScrollState())
+                .clickable(enabled = true, onClick = {})
+                .padding(SW_DIALOG_PADDING),
+            verticalArrangement = Arrangement.spacedBy(SW_GAP),
+        ) {
+            Text(
+                text = stringResource(R.string.privd_wizard_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            when (step) {
+                0 -> StepEnableWireless(
+                    onOpenSettings = {
+                        val intent = Intent(Settings.ACTION_SETTINGS).apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
-                    )
-                },
-                onNext = { step = 1 },
-            )
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        context.startActivity(intent, options.toBundle())
+                    },
+                    onNext = { step = 1 },
+                )
 
-            1 -> StepPair(
-                host = pairHost,
-                pairPort = pairPort,
-                connectPort = connectPort,
-                code = pairCode,
-                busy = pairBusy,
-                error = pairError,
-                onHostChange = { pairHost = it },
-                onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
-                onConnectPortChange = { connectPort = it.filter { ch -> ch.isDigit() }.take(5) },
-                onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
-                onSubmit = {
-                    val portInt = pairPort.toIntOrNull() ?: return@StepPair
-                    pairBusy = true
-                    pairError = false
-                    viewModel.privdPair(context, pairHost.trim(), portInt, pairCode) { ok ->
-                        pairBusy = false
-                        if (ok) {
-                            step = 2
-                        } else {
-                            pairError = true
+                1 -> StepPair(
+                    host = pairHost,
+                    pairPort = pairPort,
+                    connectPort = connectPort,
+                    code = pairCode,
+                    busy = pairBusy,
+                    error = pairError,
+                    fieldColors = fieldColors,
+                    focusManager = focusManager,
+                    onHostChange = { pairHost = it },
+                    onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
+                    onConnectPortChange = { connectPort = it.filter { ch -> ch.isDigit() }.take(5) },
+                    onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
+                    onSubmit = {
+                        val portInt = pairPort.toIntOrNull() ?: return@StepPair
+                        pairBusy = true
+                        pairError = false
+                        viewModel.privdPair(context, pairHost.trim(), portInt, pairCode) { ok ->
+                            pairBusy = false
+                            if (ok) {
+                                step = 2
+                            } else {
+                                pairError = true
+                            }
                         }
-                    }
-                },
-                onBack = { step = 0 },
-            )
+                    },
+                    onBack = { step = 0 },
+                )
 
-            2 -> StepBootstrap(
-                stage = stage,
-                busy = bootstrapBusy,
-                onStart = {
-                    val cPort = connectPort.toIntOrNull() ?: return@StepBootstrap
-                    bootstrapBusy = true
-                    viewModel.privdBootstrap(context, pairHost.trim(), cPort) { ok ->
-                        bootstrapBusy = false
-                        if (ok) step = 3
-                    }
-                },
-                onBack = { step = 1 },
-            )
+                2 -> StepBootstrap(
+                    stage = stage,
+                    busy = bootstrapBusy,
+                    onStart = {
+                        val cPort = connectPort.toIntOrNull() ?: return@StepBootstrap
+                        bootstrapBusy = true
+                        viewModel.privdBootstrap(context, pairHost.trim(), cPort) { ok ->
+                            bootstrapBusy = false
+                            if (ok) step = 3
+                        }
+                    },
+                    onBack = { step = 1 },
+                )
 
-            3 -> StepDone(onClose = {
-                viewModel.privdResetBootstrapStage()
-                onClose()
-            })
-        }
+                3 -> StepDone(onClose = {
+                    viewModel.privdResetBootstrapStage()
+                    onDismiss()
+                })
+            }
 
-        // Error footer (shows for any failed bootstrap stage)
-        val errorRes = errorStringResource(lastError)
-        if (errorRes != null && step == 2) {
-            Spacer(Modifier.height(SW_GAP))
-            Text(
-                text = stringResource(errorRes),
-                color = colors.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            // Error footer (shows for any failed bootstrap stage)
+            val errorRes = errorStringResource(lastError)
+            if (errorRes != null && step == 2) {
+                Text(
+                    text = stringResource(errorRes),
+                    color = colors.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
@@ -167,17 +214,47 @@ private fun StepEnableWireless(
     onOpenSettings: () -> Unit,
     onNext: () -> Unit,
 ) {
-    Text(
-        text = stringResource(R.string.privd_wizard_step1_intro),
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    Spacer(Modifier.height(SW_GAP))
-    Row(horizontalArrangement = Arrangement.spacedBy(SW_GAP)) {
-        OutlinedButton(onClick = onOpenSettings) {
-            Text(stringResource(R.string.privd_wizard_step1_open))
+    val colors = LocalAppColors.current
+    Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
+        Text(
+            text = stringResource(R.string.privd_wizard_step1_intro),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_substep_1),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_substep_2),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_substep_3),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_substep_4),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_substep_5),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
-        Button(onClick = onNext) {
-            Text(stringResource(R.string.privd_wizard_next))
+        Row(horizontalArrangement = Arrangement.spacedBy(SW_GAP)) {
+            OutlinedButton(onClick = onOpenSettings) {
+                Text(stringResource(R.string.privd_wizard_step1_open))
+            }
+            Button(onClick = onNext) {
+                Text(stringResource(R.string.privd_wizard_next))
+            }
         }
     }
 }
@@ -190,6 +267,8 @@ private fun StepPair(
     code: String,
     busy: Boolean,
     error: Boolean,
+    fieldColors: androidx.compose.material3.TextFieldColors,
+    focusManager: androidx.compose.ui.focus.FocusManager,
     onHostChange: (String) -> Unit,
     onPairPortChange: (String) -> Unit,
     onConnectPortChange: (String) -> Unit,
@@ -200,9 +279,9 @@ private fun StepPair(
     val colors = LocalAppColors.current
     Text(
         text = stringResource(R.string.privd_wizard_step2_intro),
+        color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
     )
-    Spacer(Modifier.height(SW_GAP))
     OutlinedTextField(
         value = host,
         onValueChange = onHostChange,
@@ -210,46 +289,62 @@ private fun StepPair(
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
+        colors = fieldColors,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Next,
+        ),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
     )
-    Spacer(Modifier.height(SW_GAP))
     OutlinedTextField(
         value = connectPort,
         onValueChange = onConnectPortChange,
         label = { Text(stringResource(R.string.privd_wizard_field_connect_port)) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
+        colors = fieldColors,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Next,
+        ),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
     )
-    Spacer(Modifier.height(SW_GAP))
     OutlinedTextField(
         value = pairPort,
         onValueChange = onPairPortChange,
         label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
+        colors = fieldColors,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Next,
+        ),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
     )
-    Spacer(Modifier.height(SW_GAP))
     OutlinedTextField(
         value = code,
         onValueChange = onCodeChange,
         label = { Text(stringResource(R.string.privd_wizard_field_code)) },
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
+        colors = fieldColors,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
     )
     if (error) {
-        Spacer(Modifier.height(SW_GAP))
         Text(
             text = stringResource(R.string.privd_wizard_step2_error),
             color = colors.error,
             style = MaterialTheme.typography.bodySmall,
         )
     }
-    Spacer(Modifier.height(SW_GAP))
     Row(horizontalArrangement = Arrangement.spacedBy(SW_GAP)) {
         TextButton(onClick = onBack, enabled = !busy) {
             Text(stringResource(R.string.privd_wizard_back))
@@ -270,6 +365,53 @@ private fun StepPair(
     }
 }
 
+/** Status of a single checklist row in [StepBootstrap]. */
+private enum class ChecklistStatus { PENDING, ACTIVE, DONE }
+
+@Composable
+private fun ChecklistRow(label: String, status: ChecklistStatus) {
+    val colors = LocalAppColors.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP),
+    ) {
+        when (status) {
+            ChecklistStatus.PENDING -> Icon(
+                imageVector = Icons.Rounded.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+            )
+            ChecklistStatus.ACTIVE -> CircularProgressIndicator(
+                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            ChecklistStatus.DONE -> Icon(
+                imageVector = Icons.Rounded.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+            )
+        }
+        Text(
+            text = label,
+            color = when (status) {
+                ChecklistStatus.DONE    -> colors.onSurface
+                ChecklistStatus.ACTIVE  -> colors.onSurface
+                ChecklistStatus.PENDING -> colors.onSurfaceSecondary
+            },
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+private fun checklistStatus(stageOrdinal: Int, rowOrdinal: Int): ChecklistStatus = when {
+    stageOrdinal < rowOrdinal  -> ChecklistStatus.PENDING
+    stageOrdinal == rowOrdinal -> ChecklistStatus.ACTIVE
+    else                       -> ChecklistStatus.DONE
+}
+
 @Composable
 private fun StepBootstrap(
     stage: BootstrapStage,
@@ -278,17 +420,32 @@ private fun StepBootstrap(
     onBack: () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val ord = stage.ordinal
+    // Checklist row ordinals map to BootstrapStage ordinals:
+    //  CONNECTING_ADB = 2, PUSHING_BINARY = 3, SPAWNING_DAEMON = 4, VERIFYING = 5
     Text(
         text = stringResource(R.string.privd_wizard_step3_intro),
+        color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
     )
-    Spacer(Modifier.height(SW_GAP))
-    Text(
-        text = stringResource(stageLabelRes(stage)),
-        color = colors.onSurfaceSecondary,
-        style = MaterialTheme.typography.bodySmall,
-    )
-    Spacer(Modifier.height(SW_GAP))
+    Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
+        ChecklistRow(
+            label = stringResource(R.string.privd_wizard_checklist_adb),
+            status = checklistStatus(ord, BootstrapStage.CONNECTING_ADB.ordinal),
+        )
+        ChecklistRow(
+            label = stringResource(R.string.privd_wizard_checklist_push),
+            status = checklistStatus(ord, BootstrapStage.PUSHING_BINARY.ordinal),
+        )
+        ChecklistRow(
+            label = stringResource(R.string.privd_wizard_checklist_spawn),
+            status = checklistStatus(ord, BootstrapStage.SPAWNING_DAEMON.ordinal),
+        )
+        ChecklistRow(
+            label = stringResource(R.string.privd_wizard_checklist_verify),
+            status = checklistStatus(ord, BootstrapStage.VERIFYING.ordinal),
+        )
+    }
     Row(
         horizontalArrangement = Arrangement.spacedBy(SW_GAP),
         verticalAlignment = Alignment.CenterVertically,
@@ -307,24 +464,15 @@ private fun StepBootstrap(
 
 @Composable
 private fun StepDone(onClose: () -> Unit) {
+    val colors = LocalAppColors.current
     Text(
         text = stringResource(R.string.privd_wizard_step4_done),
+        color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
     )
-    Spacer(Modifier.height(SW_GAP))
     Button(onClick = onClose) {
         Text(stringResource(R.string.privd_wizard_close))
     }
-}
-
-private fun stageLabelRes(stage: BootstrapStage): Int = when (stage) {
-    BootstrapStage.IDLE             -> R.string.privd_wizard_stage_idle
-    BootstrapStage.PAIRING          -> R.string.privd_wizard_stage_pairing
-    BootstrapStage.CONNECTING_ADB   -> R.string.privd_wizard_stage_connecting
-    BootstrapStage.PUSHING_BINARY   -> R.string.privd_wizard_stage_pushing
-    BootstrapStage.SPAWNING_DAEMON  -> R.string.privd_wizard_stage_spawning
-    BootstrapStage.VERIFYING        -> R.string.privd_wizard_stage_verifying
-    BootstrapStage.DONE             -> R.string.privd_wizard_stage_done
 }
 
 private fun errorStringResource(error: PrivdError?): Int? = when (error) {

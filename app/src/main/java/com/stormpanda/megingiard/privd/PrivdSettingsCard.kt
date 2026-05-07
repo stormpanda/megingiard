@@ -58,6 +58,7 @@ private val PR_BUTTON_GAP = 8.dp
 @Composable
 internal fun PrivdSettingsCard(
     viewModel: GlobalSettingsViewModel,
+    onShowWizard: () -> Unit,
 ) {
     val state by viewModel.privdState.collectAsState()
     val lastError by viewModel.privdLastError.collectAsState()
@@ -66,7 +67,6 @@ internal fun PrivdSettingsCard(
     val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
-    var showWizard by remember { mutableStateOf(false) }
     var pingResult by remember { mutableStateOf<Boolean?>(null) }
 
     Column(
@@ -152,13 +152,8 @@ internal fun PrivdSettingsCard(
                     Text(stringResource(R.string.privd_action_connect))
                 }
             }
-            TextButton(onClick = { showWizard = !showWizard }) {
-                Text(
-                    text = stringResource(
-                        if (showWizard) R.string.privd_action_hide_wizard
-                        else R.string.privd_action_show_wizard
-                    )
-                )
+            TextButton(onClick = onShowWizard) {
+                Text(stringResource(R.string.privd_action_show_wizard))
             }
         }
 
@@ -171,15 +166,6 @@ internal fun PrivdSettingsCard(
                 ),
                 color = if (ok) colors.actionColorSystem else colors.error,
                 style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        // ── Setup wizard (expandable) ──────────────────────────────────────
-        if (showWizard) {
-            Spacer(Modifier.height(PR_BUTTON_GAP))
-            PrivdSetupWizard(
-                viewModel = viewModel,
-                onClose = { showWizard = false },
             )
         }
 

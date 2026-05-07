@@ -59,6 +59,7 @@ import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.privd.PrivdSettingsCard
+import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -112,6 +113,7 @@ fun GlobalSettingsScreen(
     // whose token is null inside MirrorPresentation → BadTokenException crash.
     val context = LocalContext.current
     var showExportMetadataDialog by rememberSaveable { mutableStateOf(false) }
+    var showPrivdWizard by rememberSaveable { mutableStateOf(false) }
     // MegingiardExport is not Parcelable/Serializable — cannot survive process death; keep as remember
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -225,7 +227,10 @@ fun GlobalSettingsScreen(
                             onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
                         )
                         HorizontalDivider(color = colors.divider)
-                        PrivdSettingsCard(viewModel = viewModel)
+                        PrivdSettingsCard(
+                            viewModel = viewModel,
+                            onShowWizard = { showPrivdWizard = true },
+                        )
                     }
                 }
 
@@ -285,6 +290,12 @@ fun GlobalSettingsScreen(
             }
         }
         // ── In-tree overlays (work in Activity and MirrorPresentation contexts) ─────
+        if (showPrivdWizard) {
+            PrivdSetupWizardDialog(
+                viewModel = viewModel,
+                onDismiss = { showPrivdWizard = false },
+            )
+        }
         if (showColorPicker) {
             ColorWheelPicker(
                 initialColor = accentColor,

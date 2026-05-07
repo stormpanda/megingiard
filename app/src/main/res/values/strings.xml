@@ -310,8 +310,13 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_pairing">Pairing…</string>
     <string name="privd_wizard_bootstrapping">Bootstrapping…</string>
 
-    <string name="privd_wizard_step1_intro">1. Enable Developer Options if you have not already. 2. Open Developer Options → Wireless debugging and turn it ON. 3. Tap “Pair device with pairing code”. Keep the pairing dialog open and continue here.</string>
-    <string name="privd_wizard_step1_open">Open Developer Options</string>
+    <string name="privd_wizard_step1_intro">Follow these steps to enable Wireless Debugging:</string>
+    <string name="privd_wizard_step1_substep_1">1. Open Settings → About handheld console</string>
+    <string name="privd_wizard_step1_substep_2">2. Tap Build number 7 times until "You are now a developer!" appears</string>
+    <string name="privd_wizard_step1_substep_3">3. Go back → System → Developer options</string>
+    <string name="privd_wizard_step1_substep_4">4. Enable Wireless debugging and turn it ON</string>
+    <string name="privd_wizard_step1_substep_5">5. Tap "Pair device with pairing code" and keep that dialog open</string>
+    <string name="privd_wizard_step1_open">Open system settings</string>
 
     <string name="privd_wizard_step2_intro">From the main "Wireless debugging" screen, note the IP address and the port shown next to it (Connect port). Then tap "Pair device with pairing code", enter that pairing port and 6-digit code here. Everything stays on-device — no internet required.</string>
     <string name="privd_wizard_field_host">IP address</string>
@@ -333,6 +338,11 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_stage_spawning">Starting daemon…</string>
     <string name="privd_wizard_stage_verifying">Verifying connection…</string>
     <string name="privd_wizard_stage_done">Done</string>
+
+    <string name="privd_wizard_checklist_adb">ADB connection</string>
+    <string name="privd_wizard_checklist_push">Pushing daemon binary</string>
+    <string name="privd_wizard_checklist_spawn">Starting daemon</string>
+    <string name="privd_wizard_checklist_verify">Verifying connection</string>
 
     <string name="privd_error_daemon_unreachable">Daemon is not reachable. Run the setup wizard.</string>
     <string name="privd_error_pairing_failed">Pairing failed. Verify the address, port, and 6-digit code from the system pairing dialog.</string>
