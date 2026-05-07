@@ -83,7 +83,7 @@ private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 private enum class SettingsSectionFilter {
-    GENERAL, APPEARANCE, DATA, CONFIGURATION
+    GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -167,6 +167,7 @@ fun GlobalSettingsScreen(
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
+                    onSelectPrivilegedMode = { selectedSectionFilter = SettingsSectionFilter.PRIVILEGED_MODE },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
                     SettingsSection(
@@ -226,11 +227,6 @@ fun GlobalSettingsScreen(
                             accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
                         )
-                        HorizontalDivider(color = colors.divider)
-                        PrivdSettingsCard(
-                            viewModel = viewModel,
-                            onShowWizard = { showPrivdWizard = true },
-                        )
                     }
                 }
 
@@ -284,6 +280,19 @@ fun GlobalSettingsScreen(
                             accentColor = effectiveAccent,
                             onShowExportDialog = { showExportMetadataDialog = true },
                             onImportPreviewReady = { showImportPreviewDialog = it },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_privileged_mode),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        PrivdSettingsCard(
+                            viewModel = viewModel,
+                            onShowWizard = { showPrivdWizard = true },
                         )
                     }
                 }
@@ -412,6 +421,7 @@ private fun SectionJumpRow(
     onSelectAppearance: () -> Unit,
     onSelectData: () -> Unit,
     onSelectConfig: () -> Unit,
+    onSelectPrivilegedMode: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -461,6 +471,13 @@ private fun SectionJumpRow(
             accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
             onClick = onSelectConfig,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_privileged_mode),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE,
+            onClick = onSelectPrivilegedMode,
         )
     }
 }

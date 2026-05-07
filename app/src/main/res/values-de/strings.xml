@@ -414,6 +414,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_jump_appearance">Darstellung</string>
     <string name="settings_jump_data">Daten</string>
     <string name="settings_jump_config">Konfiguration</string>
+    <string name="settings_jump_privileged_mode">Priv. Modus</string>
+    <string name="settings_section_privileged_mode">Privilegierter Modus</string>
     <string name="settings_section_expand">Abschnitt aufklappen</string>
     <string name="settings_section_collapse">Abschnitt zuklappen</string>
     <string name="settings_name_error_empty">Name darf nicht leer sein.</string>

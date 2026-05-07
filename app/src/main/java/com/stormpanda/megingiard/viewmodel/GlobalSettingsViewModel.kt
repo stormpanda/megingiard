@@ -60,7 +60,16 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
 
     // Privileged Mode actions
-    fun privdConnect(): Boolean = PrivdManager.connect()
+    /**
+     * Initiates a connection to the daemon socket asynchronously on [Dispatchers.IO].
+     * The result is reflected in [privdState] — no return value.
+     */
+    fun privdConnect() {
+        AppLog.i(TAG, "privdConnect()")
+        viewModelScope.launch(Dispatchers.IO) {
+            PrivdManager.connect()
+        }
+    }
 
     /**
      * Disconnects from the daemon socket. The daemon binary stays on the device.

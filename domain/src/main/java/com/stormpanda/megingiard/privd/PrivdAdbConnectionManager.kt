@@ -29,7 +29,6 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
-import java.util.Random
 
 private const val TAG = "PrivdAdbCM"
 private const val KEY_FILE = "privd_adb_key.bin"
@@ -95,7 +94,7 @@ internal class PrivdAdbConnectionManager private constructor(
         private fun generateAndStore(keyFile: File, certFile: File): Pair<PrivateKey, Certificate> {
             AppLog.i(TAG, "Generating new ADB key pair + certificate")
             val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-            keyPairGenerator.initialize(RSA_KEY_SIZE, SecureRandom.getInstance("SHA1PRNG"))
+            keyPairGenerator.initialize(RSA_KEY_SIZE, SecureRandom())
             val keyPair = keyPairGenerator.generateKeyPair()
             val privateKey = keyPair.private
             val publicKey: PublicKey = keyPair.public
@@ -117,7 +116,7 @@ internal class PrivdAdbConnectionManager private constructor(
             )
             val info = X509CertInfo()
             info.set("version", CertificateVersion(2))
-            info.set("serialNumber", CertificateSerialNumber(Random().nextInt() and Int.MAX_VALUE))
+            info.set("serialNumber", CertificateSerialNumber(SecureRandom().nextInt() and Int.MAX_VALUE))
             info.set("algorithmID", CertificateAlgorithmId(AlgorithmId.get(algorithmName)))
             info.set("subject", CertificateSubjectName(x500))
             info.set("key", CertificateX509Key(publicKey))

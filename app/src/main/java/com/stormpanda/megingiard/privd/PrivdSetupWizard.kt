@@ -138,7 +138,10 @@ internal fun PrivdSetupWizardDialog(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onDismiss) {
+                IconButton(onClick = {
+                    viewModel.privdResetBootstrapStage()
+                    onDismiss()
+                }) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
                         contentDescription = stringResource(R.string.privd_wizard_close_dialog),

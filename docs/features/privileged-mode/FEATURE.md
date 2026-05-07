@@ -41,6 +41,9 @@ every device since Android 11 (API 30).
 
 - Each consumer feature (currently only Gamepad merge) MUST have its own
   toggle inside the Privileged Mode card.
+- The toggle MUST be interactable in **all** `PrivdState` values (not only
+  RUNNING). The flag is persisted independently of the connection state;
+  actual privileged behaviour is only activated when the daemon is RUNNING.
 - Toggling a feature OFF MUST keep that feature working in its non-privileged
   fallback path. Toggling ON MUST take effect on the next session-start of
   that feature (no live mid-session swap is required).
@@ -153,6 +156,10 @@ The RSA key (PKCS#8) and X.509 certificate are persisted as raw bytes in
 generated once via `android.sun.security.x509.*` (SHA512withRSA, ~30-year
 validity, CN=Megingiard) and reused on every subsequent pair / connect.
 
+Key pair generation uses `SecureRandom()` (not a named algorithm) for the
+RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`
+for the X.509 serial number, ensuring a cryptographically-strong positive value.
+
 The daemon binary in `/data/local/tmp` survives until reboot; thereafter
 the push step is replayed on the next launch (cold-boot recovery is the
 responsibility of the auto-connect retry path or a fresh wizard run).
@@ -232,8 +239,21 @@ UI.
 2. **Reader** — continuously reads `\n`-terminated daemon responses;
    completes the pending `pingDeferred` on `PONG`.
 
-Both threads exit silently when the socket fails, marking the client
-disconnected.
+Both threads exit when the socket fails, calling `markBroken()` which
+flips `running = false`, updates `_state` to `DISCONNECTED`, and schedules
+a full `disconnect()` on a daemon thread to close the socket fd and
+unblock the writer thread safely without risk of deadlock.
+
+`PrivdManager` launches a coroutine on its own `CoroutineScope` (backed by
+`SupervisorJob() + Dispatchers.Default`) that collects `PrivdClient.state`.
+When the state drops to `DISCONNECTED` while `PrivdManager.state == RUNNING`,
+the manager automatically transitions to `FAILED` with
+`PrivdError.DAEMON_UNREACHABLE`, keeping the UI in sync with the real transport
+state even after an unexpected drop.
+
+`GlobalSettingsViewModel.privdConnect()` dispatches to `Dispatchers.IO` via
+`viewModelScope` so the blocking `LocalSocket.connect()` never runs on the
+main thread.
 
 ### Strategy Routing in GamepadInjector
 

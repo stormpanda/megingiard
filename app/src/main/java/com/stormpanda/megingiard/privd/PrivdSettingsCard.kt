@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -41,6 +42,8 @@ private val PR_ROW_V_PADDING = 12.dp
 private val PR_STATUS_DOT_SIZE = 10.dp
 private val PR_STATUS_DOT_GAP = 8.dp
 private val PR_BUTTON_GAP = 8.dp
+private val PR_PING_SPINNER_SIZE = 18.dp
+private const val PR_PING_SPINNER_STROKE = 2
 
 /**
  * Privileged Mode settings card.
@@ -68,6 +71,7 @@ internal fun PrivdSettingsCard(
     val scope = rememberCoroutineScope()
 
     var pingResult by remember { mutableStateOf<Boolean?>(null) }
+    var isPinging by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -137,12 +141,22 @@ internal fun PrivdSettingsCard(
                 }
                 Button(onClick = {
                     pingResult = null
+                    isPinging = true
                     scope.launch {
                         val ok = withContext(Dispatchers.IO) { PrivdClient.ping() }
+                        isPinging = false
                         pingResult = ok
                     }
-                }) {
-                    Text(stringResource(R.string.privd_action_test))
+                }, enabled = !isPinging) {
+                    if (isPinging) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(PR_PING_SPINNER_SIZE),
+                            strokeWidth = PR_PING_SPINNER_STROKE.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                    } else {
+                        Text(stringResource(R.string.privd_action_test))
+                    }
                 }
             } else {
                 Button(
@@ -219,7 +233,6 @@ internal fun PrivdSettingsCard(
             Switch(
                 checked = mergeEnabled,
                 onCheckedChange = { viewModel.setPrivdGamepadMergeEnabled(it) },
-                enabled = state == PrivdState.RUNNING,
             )
         }
     }

@@ -170,8 +170,13 @@ object PrivdClient {
     private fun markBroken() {
         if (!running) return
         running = false
-        // Don't hold the lock here — the writer/reader thread may be calling.
         _state.value = PrivdConnectionState.DISCONNECTED
+        // Schedule full cleanup on a daemon thread so the socket fd is released
+        // and the writer thread is unblocked. We can't call disconnect() directly
+        // here because the caller (writer / reader thread) may be called while
+        // the main thread is inside another @Synchronized function, causing a
+        // deadlock. Scheduling on a new thread avoids that race.
+        Thread { disconnect() }.also { it.isDaemon = true }.start()
     }
 
     /** Must be invoked from a synchronized block. */

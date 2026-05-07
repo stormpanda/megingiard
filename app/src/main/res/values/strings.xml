@@ -357,6 +357,8 @@ Open Settings to create a layout.</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Configuration</string>
+    <string name="settings_jump_privileged_mode">Privileged Mode</string>
+    <string name="settings_section_privileged_mode">Privileged Mode</string>
     <string name="settings_section_expand">Expand section</string>
     <string name="settings_section_collapse">Collapse section</string>
     <string name="settings_name_error_empty">Name cannot be empty.</string>

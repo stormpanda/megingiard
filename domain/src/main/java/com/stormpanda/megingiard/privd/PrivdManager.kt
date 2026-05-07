@@ -1,9 +1,14 @@
 package com.stormpanda.megingiard.privd
 
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Features that become available when Privileged Mode is connected.
@@ -94,6 +99,9 @@ enum class PrivdError {
  */
 object PrivdManager {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var clientObserverJob: Job? = null
+
     private val _state = MutableStateFlow(PrivdState.OFF)
     val state: StateFlow<PrivdState> = _state.asStateFlow()
 
@@ -112,6 +120,7 @@ object PrivdManager {
         if (ok) {
             _state.value = PrivdState.RUNNING
             AppLog.i(TAG, "Privileged Mode is RUNNING")
+            startClientObserver()
         } else {
             _state.value = PrivdState.FAILED
             _lastError.value = PrivdError.DAEMON_UNREACHABLE
@@ -125,6 +134,8 @@ object PrivdManager {
      */
     fun disconnect() {
         AppLog.i(TAG, "disconnect()")
+        clientObserverJob?.cancel()
+        clientObserverJob = null
         PrivdClient.disconnect()
         _state.value = PrivdState.OFF
         _lastError.value = null
@@ -139,11 +150,6 @@ object PrivdManager {
     fun isAvailable(feature: PrivdFeature): Boolean =
         _state.value == PrivdState.RUNNING && PrivdClient.isConnected
 
-    /**
-     * Internal hooks used by [PrivdBootstrapper] to drive the BOOTSTRAPPING /
-     * FAILED state transitions while the wizard pushes the binary and spawns
-     * the daemon over ADB Wireless Debugging.
-     */
     internal fun reportBootstrapStart() {
         AppLog.i(TAG, "bootstrap started")
         _state.value = PrivdState.BOOTSTRAPPING
@@ -154,5 +160,25 @@ object PrivdManager {
         AppLog.w(TAG, "bootstrap failed: $error")
         _state.value = PrivdState.FAILED
         _lastError.value = error
+    }
+
+    /**
+     * Observes [PrivdClient.state] while the connection is RUNNING. If the
+     * transport drops unexpectedly (I/O error, daemon killed) this drives
+     * [PrivdManager.state] back to FAILED so the UI reflects the real state.
+     */
+    private fun startClientObserver() {
+        clientObserverJob?.cancel()
+        clientObserverJob = scope.launch {
+            PrivdClient.state.collect { clientState ->
+                if (clientState == PrivdConnectionState.DISCONNECTED &&
+                    _state.value == PrivdState.RUNNING
+                ) {
+                    AppLog.w(TAG, "PrivdClient dropped unexpectedly — setting state to FAILED")
+                    _state.value = PrivdState.FAILED
+                    _lastError.value = PrivdError.DAEMON_UNREACHABLE
+                }
+            }
+        }
     }
 }
