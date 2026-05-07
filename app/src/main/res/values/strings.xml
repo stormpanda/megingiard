@@ -307,6 +307,7 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_next">Next</string>
     <string name="privd_wizard_back">Back</string>
     <string name="privd_wizard_close">Done</string>
+    <string name="privd_wizard_close_dialog">Close wizard</string>
     <string name="privd_wizard_pairing">Pairing…</string>
     <string name="privd_wizard_bootstrapping">Bootstrapping…</string>
 

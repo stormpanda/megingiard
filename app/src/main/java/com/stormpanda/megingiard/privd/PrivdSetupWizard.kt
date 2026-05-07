@@ -24,10 +24,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -49,7 +51,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -128,11 +129,24 @@ internal fun PrivdSetupWizardDialog(
                 .padding(SW_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(SW_GAP),
         ) {
-            Text(
-                text = stringResource(R.string.privd_wizard_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.privd_wizard_title),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.privd_wizard_close_dialog),
+                        tint = colors.onSurfaceSecondary,
+                    )
+                }
+            }
 
             when (step) {
                 0 -> StepEnableWireless(
@@ -291,7 +305,6 @@ private fun StepPair(
         enabled = !busy,
         colors = fieldColors,
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Next,
         ),
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
@@ -305,7 +318,6 @@ private fun StepPair(
         enabled = !busy,
         colors = fieldColors,
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Next,
         ),
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
@@ -319,7 +331,6 @@ private fun StepPair(
         enabled = !busy,
         colors = fieldColors,
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Next,
         ),
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
@@ -333,7 +344,6 @@ private fun StepPair(
         enabled = !busy,
         colors = fieldColors,
         keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done,
         ),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),

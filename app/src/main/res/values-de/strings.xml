@@ -269,6 +269,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_next">Weiter</string>
     <string name="privd_wizard_back">Zurück</string>
     <string name="privd_wizard_close">Fertig</string>
+    <string name="privd_wizard_close_dialog">Assistent schließen</string>
     <string name="privd_wizard_pairing">Koppeln…</string>
     <string name="privd_wizard_bootstrapping">Einrichten…</string>
 
