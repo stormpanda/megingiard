@@ -266,6 +266,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_feature_gamepad_recording">Physisches Gamepad aufzeichnen</string>
     <string name="privd_feature_gamepad_recording_desc">Nimmt Makro-Schritte direkt vom physischen Gamepad auf (Analogsticks, Tasten). Wenn aktiviert, nutzt die Aufnahme-Schaltfläche im Timeline-Editor den physischen Controller statt des virtuellen On-Screen-Gamepads.</string>
 
+    <!-- Dead-zone-Einstellungen Zeile + Dialog -->
+    <string name="privd_deadzone_title">Deadzones einstellen</string>
+    <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>
+    <string name="privd_deadzone_dialog_title">Gamepad-Deadzones</string>
+    <string name="privd_deadzone_dialog_hint">Öffne Einstellungen → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius, um die Werte für jeden Stick nachzuschlagen, und trage sie unten ein.</string>
+    <string name="privd_deadzone_left">Linker Stick</string>
+    <string name="privd_deadzone_right">Rechter Stick</string>
+    <string name="privd_deadzone_ok">OK</string>
+    <string name="privd_deadzone_cancel">Abbrechen</string>
+
     <string name="privd_recording_physical_title">Physischen Controller aufzeichnen…</string>
     <string name="privd_recording_physical_hint">Drücke Tasten und bewege die Sticks am physischen Gamepad. Tippe auf Stop, wenn du fertig bist.</string>
     <string name="privd_recording_physical_pressed">Gedrückt: %1$s</string>

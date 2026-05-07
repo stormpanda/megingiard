@@ -74,6 +74,10 @@ internal val KEY_PRIVD_GAMEPAD_RECORDING_ENABLED = booleanPreferencesKey("privd_
 // Privileged Mode — auto-connect on app start once the user has bootstrapped at least once.
 internal val KEY_PRIVD_AUTO_CONNECT = booleanPreferencesKey("privd_auto_connect")
 
+// Privileged Mode — per-stick evdev dead zone for physical gamepad recording (0.0–1.0, default 0.15).
+internal val KEY_PRIVD_DEADZONE_LEFT  = floatPreferencesKey("privd_deadzone_left")
+internal val KEY_PRIVD_DEADZONE_RIGHT = floatPreferencesKey("privd_deadzone_right")
+
 // MacroPad ambient display settings
 internal val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
 internal val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
@@ -116,6 +120,8 @@ private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_GAMEPAD_SWAP_FACE_BUTTONS,
     KEY_PRIVD_GAMEPAD_MERGE_ENABLED,
     KEY_PRIVD_AUTO_CONNECT,
+    KEY_PRIVD_DEADZONE_LEFT,
+    KEY_PRIVD_DEADZONE_RIGHT,
 )
 
 internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(

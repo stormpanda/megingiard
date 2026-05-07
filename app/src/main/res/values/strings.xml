@@ -304,6 +304,16 @@ Open Settings to create a layout.</string>
     <string name="privd_feature_gamepad_recording">Physical gamepad recording</string>
     <string name="privd_feature_gamepad_recording_desc">Capture macro steps directly from the physical gamepad (analog sticks, buttons). When enabled, the Record button in the timeline editor uses the physical controller instead of the on-screen virtual gamepad.</string>
 
+    <!-- Dead-zone settings row + dialog -->
+    <string name="privd_deadzone_title">Configure dead zones</string>
+    <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>
+    <string name="privd_deadzone_dialog_title">Gamepad dead zones</string>
+    <string name="privd_deadzone_dialog_hint">Open the Thor\'s built-in Settings app → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius to look up the values for each stick, then enter them below.</string>
+    <string name="privd_deadzone_left">Left stick</string>
+    <string name="privd_deadzone_right">Right stick</string>
+    <string name="privd_deadzone_ok">OK</string>
+    <string name="privd_deadzone_cancel">Cancel</string>
+
     <string name="privd_recording_physical_title">Recording Physical Controller…</string>
     <string name="privd_recording_physical_hint">Press buttons and move the sticks on your physical gamepad. Tap Stop when done.</string>
     <string name="privd_recording_physical_pressed">Pressed: %1$s</string>

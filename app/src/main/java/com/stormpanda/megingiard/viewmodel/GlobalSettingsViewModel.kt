@@ -48,6 +48,8 @@ class GlobalSettingsViewModel : ViewModel() {
     val privdGamepadMergeEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadMergeEnabled
     val privdGamepadRecordingEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadRecordingEnabled
     val privdAutoConnect: StateFlow<Boolean> = MacroPadSettings.privdAutoConnect
+    val privdDeadzoneLeft: StateFlow<Float>  = MacroPadSettings.deadzoneLeft
+    val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
     val privdBootstrapStage: StateFlow<BootstrapStage> = PrivdBootstrapper.stage
 
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
@@ -80,6 +82,8 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setPrivdGamepadMergeEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadMergeEnabled(value)
     fun setPrivdGamepadRecordingEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadRecordingEnabled(value)
     fun setPrivdAutoConnect(value: Boolean) = MacroPadSettings.setPrivdAutoConnect(value)
+    fun setPrivdDeadzoneLeft(value: Float)  = MacroPadSettings.setDeadzoneLeft(value)
+    fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)
     fun privdResetBootstrapStage() = PrivdBootstrapper.resetStage()
 
     /**

@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.EvdevEvent
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdGamepadInjector
 import kotlinx.coroutines.CoroutineScope
@@ -25,7 +26,10 @@ private const val ABS_HAT0X = 16
 private const val ABS_HAT0Y = 17
 
 /** Normalised dead zone radius. Stick movements below this magnitude do not start a gesture. */
-private const val JOYSTICK_DEAD_ZONE = 0f  // TEST: dead zone disabled
+// Dead zones are now per-stick, read from MacroPadSettings.deadzoneLeft / deadzoneRight.
+// The constant is kept as a documentation anchor but is no longer used directly.
+@Suppress("unused")
+private const val JOYSTICK_DEAD_ZONE_DEFAULT = 0.15f
 
 /** RDP simplification tolerance in normalised axis units (0–1 scale). */
 private const val RDP_EPSILON = 0f  // TEST: decimation disabled — all samples preserved
@@ -294,12 +298,16 @@ object PhysicalGamepadRecordingManager {
 
     private fun updateStick(stick: JoystickStick, x: Float, y: Float, nowMs: Long) {
         val mag = kotlin.math.sqrt(x * x + y * y)
+        val deadZone = if (stick == JoystickStick.LEFT)
+            MacroPadSettings.deadzoneLeft.value
+        else
+            MacroPadSettings.deadzoneRight.value
         val samples = if (stick == JoystickStick.LEFT) leftSamples else rightSamples
         val inGesture = if (stick == JoystickStick.LEFT) leftInGesture else rightInGesture
         val gestureStartMs = if (stick == JoystickStick.LEFT) leftGestureStartMs else rightGestureStartMs
 
         if (!inGesture) {
-            if (mag > JOYSTICK_DEAD_ZONE) {
+            if (mag > deadZone) {
                 /* Stick left dead zone — begin new gesture. */
                 val start = nowMs
                 samples.clear()
@@ -318,7 +326,7 @@ object PhysicalGamepadRecordingManager {
             val offsetMs = nowMs - gestureStartMs
             samples.add(PathSample(offsetMs = offsetMs, x = x, y = y))
 
-            if (mag <= JOYSTICK_DEAD_ZONE) {
+            if (mag <= deadZone) {
                 /* Stick returned to neutral — close gesture. */
                 val decimated = rdpDecimate(samples.toList(), RDP_EPSILON)
                 val durationMs = offsetMs.coerceAtLeast(1L)

@@ -58,6 +58,7 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.privd.DeadzoneDialog
 import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
@@ -114,6 +115,7 @@ fun GlobalSettingsScreen(
     val context = LocalContext.current
     var showExportMetadataDialog by rememberSaveable { mutableStateOf(false) }
     var showPrivdWizard by rememberSaveable { mutableStateOf(false) }
+    var showDeadzoneDialog by rememberSaveable { mutableStateOf(false) }
     // MegingiardExport is not Parcelable/Serializable — cannot survive process death; keep as remember
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -293,6 +295,7 @@ fun GlobalSettingsScreen(
                         PrivdSettingsCard(
                             viewModel = viewModel,
                             onShowWizard = { showPrivdWizard = true },
+                            onShowDeadzoneDialog = { showDeadzoneDialog = true },
                         )
                     }
                 }
@@ -303,6 +306,20 @@ fun GlobalSettingsScreen(
             PrivdSetupWizardDialog(
                 viewModel = viewModel,
                 onDismiss = { showPrivdWizard = false },
+            )
+        }
+        if (showDeadzoneDialog) {
+            val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
+            val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
+            DeadzoneDialog(
+                initialDeadzoneLeft = deadzoneLeft,
+                initialDeadzoneRight = deadzoneRight,
+                onConfirm = { left, right ->
+                    viewModel.setPrivdDeadzoneLeft(left)
+                    viewModel.setPrivdDeadzoneRight(right)
+                    showDeadzoneDialog = false
+                },
+                onDismiss = { showDeadzoneDialog = false },
             )
         }
         if (showColorPicker) {

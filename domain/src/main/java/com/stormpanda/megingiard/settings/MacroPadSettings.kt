@@ -20,6 +20,7 @@ import kotlinx.serialization.json.Json
 
 private const val TAG = "MacroPadSettings"
 private const val MACROPAD_SAVE_DEBOUNCE_MS = 500L
+private const val PRIVD_DEFAULT_DEADZONE = 0.15f
 
 /**
  * MacroPad-feature persisted settings:
@@ -71,6 +72,14 @@ object MacroPadSettings {
      */
     val privdAutoConnect: StateFlow<Boolean> = _privdAutoConnect.asStateFlow()
 
+    private val _deadzoneLeft  = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
+    /** Dead zone radius for the left analog stick during physical gamepad recording (0.0–1.0). */
+    val deadzoneLeft: StateFlow<Float> = _deadzoneLeft.asStateFlow()
+
+    private val _deadzoneRight = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
+    /** Dead zone radius for the right analog stick during physical gamepad recording (0.0–1.0). */
+    val deadzoneRight: StateFlow<Float> = _deadzoneRight.asStateFlow()
+
     internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
         this.dataStore = dataStore
         this.scope = scope
@@ -91,6 +100,8 @@ object MacroPadSettings {
         _privdGamepadMergeEnabled.value = prefs[KEY_PRIVD_GAMEPAD_MERGE_ENABLED] ?: false
         _privdGamepadRecordingEnabled.value = prefs[KEY_PRIVD_GAMEPAD_RECORDING_ENABLED] ?: false
         _privdAutoConnect.value = prefs[KEY_PRIVD_AUTO_CONNECT] ?: false
+        _deadzoneLeft.value  = prefs[KEY_PRIVD_DEADZONE_LEFT]  ?: PRIVD_DEFAULT_DEADZONE
+        _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -137,6 +148,18 @@ object MacroPadSettings {
         AppLog.d(TAG, "setPrivdAutoConnect($value)")
         _privdAutoConnect.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_AUTO_CONNECT] = value } }
+    }
+
+    fun setDeadzoneLeft(value: Float) {
+        AppLog.d(TAG, "setDeadzoneLeft($value)")
+        _deadzoneLeft.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_DEADZONE_LEFT] = value } }
+    }
+
+    fun setDeadzoneRight(value: Float) {
+        AppLog.d(TAG, "setDeadzoneRight($value)")
+        _deadzoneRight.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_DEADZONE_RIGHT] = value } }
     }
 
     /**
