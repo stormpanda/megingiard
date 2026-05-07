@@ -205,7 +205,7 @@ the existing protocol.
 | App → D   | `UNSUB GAMEPAD\n`             | Stop streaming physical gamepad evdev events             |
 | D → App   | `EVT <type> <code> <value>\n` | Physical evdev event while subscribed                    |
 
-`SUB GAMEPAD` is a read-only subscription. The daemon does **not** call `EVIOCGRAB`, so Android and the foreground game continue receiving physical controller input during recording. The app uses the stream only to assemble macro steps.
+`SUB GAMEPAD` temporarily grabs the physical evdev node so Android's EventHub cannot hide the raw stream from the daemon. The reader thread immediately replays every physical event back into the same input device before forwarding selected `EVT` lines to the app, so the foreground game continues receiving the user's controller input while Megingiard assembles macro steps.
 
 On startup the daemon prints exactly one line on **stdout** so the
 spawn command can detect success:
@@ -296,7 +296,7 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 | File                                                     | Responsibility                                                                                                                             |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (abstract-socket server, evdev writer, read-only physical gamepad subscription stream)                                |
+| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (abstract-socket server, evdev writer, physical gamepad grab-and-tee recording stream)                                |
 | `app/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
 | `build_megingiard_privd.sh`                              | NDK build script                                                                                                                           |
 | `domain/.../privd/PrivdClient.kt`                        | LocalSocket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                       |

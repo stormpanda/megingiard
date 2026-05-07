@@ -79,6 +79,8 @@ static pthread_t g_reader_thread;
 static volatile int g_client_fd_for_reader = -1;
 static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static void write_event(int fd, __u16 type, __u16 code, __s32 value);
+
 /*
  * Returns 1 if the evdev event (type, code) should be streamed to the client.
  * We forward:
@@ -101,6 +103,10 @@ static int should_emit_evdev(__u16 type, __u16 code) {
         }
     }
     return 0;
+}
+
+static int is_synthetic_evdev_event(const struct input_event *ev) {
+    return ev->time.tv_sec == 0 && ev->time.tv_usec == 0;
 }
 
 /*
@@ -126,6 +132,17 @@ static void *evdev_reader_thread(void *arg) {
         struct input_event ev;
         ssize_t r = read(g_gamepad_fd, &ev, sizeof(ev));
         if (r != (ssize_t)sizeof(ev)) break;
+
+        /*
+         * During recording we grab the physical evdev node so Android's
+         * EventHub no longer hides events from us. Immediately replay every
+         * physical event back into the same input device so the foreground game
+         * continues seeing exactly what the user is doing. Replayed events are
+         * written with a zero timestamp by write_event(); if they are echoed
+         * back to this grabbed fd, ignore them to avoid an event feedback loop.
+         */
+        if (is_synthetic_evdev_event(&ev)) continue;
+        write_event(g_gamepad_fd, ev.type, ev.code, ev.value);
 
         if (!should_emit_evdev(ev.type, ev.code)) continue;
 
@@ -155,6 +172,7 @@ static void stop_reader_thread(void) {
     g_reader_active = 0;
     pthread_join(g_reader_thread, NULL);
     g_client_fd_for_reader = -1;
+    ioctl(g_gamepad_fd, EVIOCGRAB, 0);
 }
 
 static void signal_handler(int sig) {
@@ -313,6 +331,7 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
             if (!g_reader_active) {
+                ioctl(g_gamepad_fd, EVIOCGRAB, 1);
                 g_reader_active = 1;
                 pthread_create(&g_reader_thread, NULL, evdev_reader_thread, NULL);
             }
