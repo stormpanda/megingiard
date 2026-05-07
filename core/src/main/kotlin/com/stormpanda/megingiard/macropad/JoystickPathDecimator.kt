@@ -9,8 +9,8 @@ import kotlin.math.sqrt
  * [PhysicalGamepadRecordingManager] while preserving the visual shape of the
  * path within [epsilon] units of normalised axis space (0.0–1.0 range).
  *
- * Recommended epsilon: 0.04f (keeps most direction changes, discards linear
- * interpolation points).
+ * Recommended epsilon: 0.02f (keeps most direction changes, discards linear
+ * interpolation points; ≈655 raw axis units at int16 range).
  *
  * This is a pure function with no Android dependencies — it can be unit-tested
  * directly in the `:core` JVM test source set.

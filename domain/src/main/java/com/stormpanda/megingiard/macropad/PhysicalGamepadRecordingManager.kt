@@ -28,7 +28,7 @@ private const val ABS_HAT0Y = 17
 private const val JOYSTICK_DEAD_ZONE = 0.08f
 
 /** RDP simplification tolerance in normalised axis units (0–1 scale). */
-private const val RDP_EPSILON = 0.04f
+private const val RDP_EPSILON = 0.02f
 
 /**
  * Records buttons, D-Pad taps, and analog stick gestures from the physical gamepad

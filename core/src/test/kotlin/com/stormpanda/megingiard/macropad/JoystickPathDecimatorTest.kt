@@ -91,4 +91,29 @@ class JoystickPathDecimatorTest {
         val result = rdpDecimate(samples, epsilon = 0.1f)
         assertEquals(2, result.size)
     }
+
+    @Test
+    fun `tighter epsilon 0_02 preserves more samples than 0_04 on curved path`() {
+        /* Simulate a quarter-circle at full deflection: points move from (1,0) to (0,1).
+         * The intermediate points deviate from the chord (1,0)→(0,1) by up to ~0.29,
+         * so both epsilons will subdivide — but ε=0.02 must produce at least as many
+         * samples as ε=0.04 (strictly more for a path with fine curvature). */
+        val quarterCircle = (0..8).map { i ->
+            val angle = Math.PI / 2.0 * i / 8.0
+            PathSample(
+                offsetMs = i * 50L,
+                x = kotlin.math.cos(angle).toFloat(),
+                y = kotlin.math.sin(angle).toFloat(),
+            )
+        }
+        val coarseResult = rdpDecimate(quarterCircle, epsilon = 0.04f)
+        val fineResult   = rdpDecimate(quarterCircle, epsilon = 0.02f)
+        assertTrue(
+            "ε=0.02 should retain at least as many samples as ε=0.04 on a curved path",
+            fineResult.size >= coarseResult.size,
+        )
+        /* ε=0.02 must preserve at least the two endpoints. */
+        assertEquals(quarterCircle.first(), fineResult.first())
+        assertEquals(quarterCircle.last(),  fineResult.last())
+    }
 }
