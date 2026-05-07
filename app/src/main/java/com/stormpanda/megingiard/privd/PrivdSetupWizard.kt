@@ -64,7 +64,6 @@ private val SW_DIALOG_PADDING = 20.dp
 private val SW_GAP = 12.dp
 private val SW_CHECKLIST_GAP = 6.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
-private const val SW_DEFAULT_PORT = "5555"
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
@@ -93,7 +92,7 @@ internal fun PrivdSetupWizardDialog(
 
     var step by rememberSaveable { mutableStateOf(0) }
     var pairHost by rememberSaveable { mutableStateOf("") }
-    var pairPort by rememberSaveable { mutableStateOf(SW_DEFAULT_PORT) }
+    var pairPort by rememberSaveable { mutableStateOf("") }
     var connectPort by rememberSaveable { mutableStateOf("") }
     var pairCode by rememberSaveable { mutableStateOf("") }
     var pairError by remember { mutableStateOf(false) }
