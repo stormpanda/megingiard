@@ -146,6 +146,50 @@ class MacroEventCompilerTest {
         assertEquals(MacroEventType.BUTTON_DOWN, at100[1].type)
     }
 
+    // ── JoystickPath ──────────────────────────────────────────────────────────
+
+    @Test
+    fun `joystick path emits JOYSTICK_SET for each sample then reset at end`() {
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 100L,
+            durationMs  = 200L,
+            stick       = JoystickStick.LEFT,
+            samples     = listOf(
+                PathSample(offsetMs = 0L,   x = 0.5f,  y = 0f),
+                PathSample(offsetMs = 100L, x = 1.0f,  y = 0.5f),
+            ),
+        )
+        val events = buildMacroEventList(macro(step))
+        // Each sample emits 2 JOYSTICK_SET events (X + Y axis), plus 2 reset events at end.
+        assertEquals(6, events.size)
+
+        val sample0Events = events.filter { it.timeMs == 100L }
+        assertEquals(2, sample0Events.size)
+        assertTrue(sample0Events.all { it.type == MacroEventType.JOYSTICK_SET })
+        assertTrue(sample0Events.any { it.code == GamepadKeycodes.ABS_X && it.value > 0 })
+
+        val sample1Events = events.filter { it.timeMs == 200L }
+        assertEquals(2, sample1Events.size)
+
+        val resetEvents = events.filter { it.timeMs == 300L }
+        assertEquals(2, resetEvents.size)
+        assertTrue(resetEvents.all { it.value == 0 })
+    }
+
+    @Test
+    fun `joystick path right stick uses ABS_Z and ABS_RZ`() {
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 100L,
+            stick       = JoystickStick.RIGHT,
+            samples     = listOf(PathSample(0L, 0.5f, 0.5f)),
+        )
+        val events = buildMacroEventList(macro(step))
+        val axisCodes = events.filter { it.timeMs == 0L }.map { it.code }.toSet()
+        assertTrue(axisCodes.contains(GamepadKeycodes.ABS_Z))
+        assertTrue(axisCodes.contains(GamepadKeycodes.ABS_RZ))
+    }
+
     @Test
     fun `joystick reset value zero sorts before non-zero at same timestamp`() {
         // Two joystick steps back-to-back on the same axis: reset of step1 and set of step2

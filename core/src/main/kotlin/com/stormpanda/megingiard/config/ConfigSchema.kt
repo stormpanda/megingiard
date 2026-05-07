@@ -12,7 +12,7 @@ import kotlinx.serialization.json.JsonElement
  * Schema version — integer, incremented on breaking changes.
  * v3: macros embedded inside PadProfile.macros; flat DataStore key/value map grouped by section.
  */
-const val SCHEMA_VERSION = 3
+const val SCHEMA_VERSION = 4
 
 /** MIME type registered in AndroidManifest for `.mgrd` config files. */
 const val MGRD_MIME_TYPE = "application/vnd.megingiard.config+json"

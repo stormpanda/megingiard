@@ -34,16 +34,27 @@ internal object PrivdGamepadInjector {
 
     val isConnected: Boolean get() = PrivdClient.isConnected
 
+    /**
+     * Set to `true` by [com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager]
+     * while a physical recording session is active. All inject methods return early when this
+     * flag is set, preventing self-echo: injected events would otherwise be read back by the
+     * daemon’s evdev reader thread and falsely recorded as physical input.
+     */
+    @Volatile internal var isRecordingActive: Boolean = false
+
     fun buttonDown(btnCode: Int) {
+        if (isRecordingActive) return
         PrivdClient.send("GD $btnCode\n")
     }
 
     fun buttonUp(btnCode: Int) {
+        if (isRecordingActive) return
         PrivdClient.send("GU $btnCode\n")
     }
 
     /** Sends a D-Pad hat event. axis: 0 = X, 1 = Y; value: −1 / 0 / +1 */
     fun hat(axis: Int, value: Int) {
+        if (isRecordingActive) return
         require(axis in 0..1) { "axis must be 0 (X) or 1 (Y)" }
         require(value in -1..1) { "value must be -1, 0, or +1" }
         PrivdClient.send("HD $axis $value\n")
@@ -56,6 +67,7 @@ internal object PrivdGamepadInjector {
      * [value]: raw int16, range −32768…+32767.
      */
     fun joystick(axisCode: Int, value: Int) {
+        if (isRecordingActive) return
         require(axisCode in VALID_JOYSTICK_AXES) { "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)" }
         require(value in -32768..32767) { "value must be in int16 range -32768..32767" }
         PrivdClient.send("JS $axisCode $value\n")

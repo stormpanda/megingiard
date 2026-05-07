@@ -263,6 +263,17 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_feature_gamepad_merge">Gamepad-Merge</string>
     <string name="privd_feature_gamepad_merge_desc">Sendet MacroPad-Gamepad-Aktionen direkt an den verbundenen physischen Controller, sodass Spiele nur ein Gerät sehen. Deaktivieren, um das klassische virtuelle Gamepad zu verwenden.</string>
 
+    <string name="privd_feature_gamepad_recording">Physisches Gamepad aufzeichnen</string>
+    <string name="privd_feature_gamepad_recording_desc">Nimmt Makro-Schritte direkt vom physischen Gamepad auf (Analogsticks, Tasten). Wenn aktiviert, nutzt die Aufnahme-Schaltfläche im Timeline-Editor den physischen Controller statt des virtuellen On-Screen-Gamepads.</string>
+
+    <string name="privd_recording_physical_title">Physischen Controller aufzeichnen…</string>
+    <string name="privd_recording_physical_hint">Drücke Tasten und bewege die Sticks am physischen Gamepad. Tippe auf Stop, wenn du fertig bist.</string>
+    <string name="privd_recording_physical_pressed">Gedrückt: %1$s</string>
+    <string name="privd_recording_physical_stick_left">Linker Stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stick_right">Rechter Stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stop">Stopp &amp; Speichern</string>
+    <string name="privd_recording_physical_cancel">Abbrechen</string>
+
     <!-- Privilegierter Modus — Einrichtungs-Assistent -->
     <string name="privd_wizard_title">Privilegierten Modus einrichten</string>
     <string name="privd_wizard_next">Weiter</string>
@@ -374,6 +385,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_step_edit">Schritt bearbeiten</string>
     <string name="macropad_macro_step_type_gamepad">Gamepad-Taste</string>
     <string name="macropad_macro_step_type_joystick">Joystick</string>
+    <string name="macropad_macro_step_type_joystick_path">Joystick-Pfad</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch-Tippen</string>
     <string name="macropad_macro_step_touch_position">Aufgezeichnete Position (schreibgeschützt)</string>

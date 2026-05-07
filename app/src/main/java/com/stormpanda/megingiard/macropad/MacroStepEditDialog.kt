@@ -132,6 +132,7 @@ internal fun MacroStepEditDialog(
         is MacroStep.JoystickMove     -> StepType.JOYSTICK
         is MacroStep.DPadTap          -> StepType.DPAD
         is MacroStep.TouchTap         -> StepType.TOUCH
+        is MacroStep.JoystickPath     -> StepType.JOYSTICK
         null                          -> StepType.GAMEPAD
     }
 

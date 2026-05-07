@@ -301,6 +301,17 @@ Open Settings to create a layout.</string>
     <string name="privd_feature_gamepad_merge">Gamepad merge</string>
     <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the legacy virtual gamepad.</string>
 
+    <string name="privd_feature_gamepad_recording">Physical gamepad recording</string>
+    <string name="privd_feature_gamepad_recording_desc">Capture macro steps directly from the physical gamepad (analog sticks, buttons). When enabled, the Record button in the timeline editor uses the physical controller instead of the on-screen virtual gamepad.</string>
+
+    <string name="privd_recording_physical_title">Recording Physical Controller…</string>
+    <string name="privd_recording_physical_hint">Press buttons and move the sticks on your physical gamepad. Tap Stop when done.</string>
+    <string name="privd_recording_physical_pressed">Pressed: %1$s</string>
+    <string name="privd_recording_physical_stick_left">Left stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stick_right">Right stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stop">Stop &amp; Save</string>
+    <string name="privd_recording_physical_cancel">Cancel</string>
+
     <!-- Privileged Mode — setup wizard -->
     <string name="privd_wizard_title">Set up Privileged Mode</string>
     <string name="privd_wizard_next">Next</string>
@@ -468,6 +479,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_edit">Edit Step</string>
     <string name="macropad_macro_step_type_gamepad">Gamepad Button</string>
     <string name="macropad_macro_step_type_joystick">Joystick</string>
+    <string name="macropad_macro_step_type_joystick_path">Joystick Path</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch Tap</string>
     <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>

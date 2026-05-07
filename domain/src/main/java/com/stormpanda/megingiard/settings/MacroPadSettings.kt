@@ -59,6 +59,10 @@ object MacroPadSettings {
     /** Per-feature flag for [com.stormpanda.megingiard.privd.PrivdFeature.GAMEPAD_MERGE]. */
     val privdGamepadMergeEnabled: StateFlow<Boolean> = _privdGamepadMergeEnabled.asStateFlow()
 
+    private val _privdGamepadRecordingEnabled = MutableStateFlow(false)
+    /** Per-feature flag for [com.stormpanda.megingiard.privd.PrivdFeature.GAMEPAD_RECORDING]. */
+    val privdGamepadRecordingEnabled: StateFlow<Boolean> = _privdGamepadRecordingEnabled.asStateFlow()
+
     private val _privdAutoConnect = MutableStateFlow(false)
     /**
      * When true, the app silently calls `PrivdManager.connect()` on startup
@@ -85,6 +89,7 @@ object MacroPadSettings {
         _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
         _privdGamepadMergeEnabled.value = prefs[KEY_PRIVD_GAMEPAD_MERGE_ENABLED] ?: false
+        _privdGamepadRecordingEnabled.value = prefs[KEY_PRIVD_GAMEPAD_RECORDING_ENABLED] ?: false
         _privdAutoConnect.value = prefs[KEY_PRIVD_AUTO_CONNECT] ?: false
 
         // MacroPad profiles
@@ -120,6 +125,12 @@ object MacroPadSettings {
         AppLog.d(TAG, "setPrivdGamepadMergeEnabled($value)")
         _privdGamepadMergeEnabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_GAMEPAD_MERGE_ENABLED] = value } }
+    }
+
+    fun setPrivdGamepadRecordingEnabled(value: Boolean) {
+        AppLog.d(TAG, "setPrivdGamepadRecordingEnabled($value)")
+        _privdGamepadRecordingEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_GAMEPAD_RECORDING_ENABLED] = value } }
     }
 
     fun setPrivdAutoConnect(value: Boolean) {

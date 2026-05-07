@@ -66,6 +66,7 @@ internal fun PrivdSettingsCard(
     val state by viewModel.privdState.collectAsState()
     val lastError by viewModel.privdLastError.collectAsState()
     val mergeEnabled by viewModel.privdGamepadMergeEnabled.collectAsState()
+    val recordingEnabled by viewModel.privdGamepadRecordingEnabled.collectAsState()
     val autoConnect by viewModel.privdAutoConnect.collectAsState()
     val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
@@ -233,6 +234,32 @@ internal fun PrivdSettingsCard(
             Switch(
                 checked = mergeEnabled,
                 onCheckedChange = { viewModel.setPrivdGamepadMergeEnabled(it) },
+            )
+        }
+
+        // ── Per-feature toggle: Gamepad recording ────────────────────────────────
+        HorizontalDivider(color = colors.divider)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = PR_ROW_V_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.privd_feature_gamepad_recording),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.privd_feature_gamepad_recording_desc),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = recordingEnabled,
+                onCheckedChange = { viewModel.setPrivdGamepadRecordingEnabled(it) },
             )
         }
     }

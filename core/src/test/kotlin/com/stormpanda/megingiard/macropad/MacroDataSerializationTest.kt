@@ -125,6 +125,35 @@ class MacroDataSerializationTest {
     }
 
     @Test
+    fun `joystick path survives JSON round-trip`() {
+        val step: MacroStep = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 300L,
+            stick       = JoystickStick.LEFT,
+            samples     = listOf(
+                PathSample(offsetMs = 0L,   x = 0f,    y = 0f),
+                PathSample(offsetMs = 100L, x = 0.5f,  y = 0.25f),
+                PathSample(offsetMs = 200L, x = 1.0f,  y = -0.5f),
+            ),
+        )
+        val decoded = json.decodeFromString<MacroStep>(json.encodeToString(step))
+        assertEquals(step, decoded)
+    }
+
+    @Test
+    fun `joystick path serial name discriminator is stable`() {
+        val json2 = json
+        val step: MacroStep = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 100L,
+            stick       = JoystickStick.RIGHT,
+            samples     = listOf(PathSample(0L, 0.5f, 0.5f)),
+        )
+        val encoded = json2.encodeToString(step)
+        assertTrue("joystick_path discriminator", encoded.contains("\"joystick_path\""))
+    }
+
+    @Test
     fun `empty step list has zero total duration`() {
         assertEquals(0L, emptyList<MacroStep>().totalDurationMs())
     }

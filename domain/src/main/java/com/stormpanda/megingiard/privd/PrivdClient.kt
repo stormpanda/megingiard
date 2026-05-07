@@ -4,8 +4,12 @@ import android.net.LocalSocket
 import android.net.LocalSocketAddress
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
@@ -44,6 +48,19 @@ object PrivdClient {
 
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
+
+    /**
+     * Raw evdev events streamed from the daemon while a `SUB GAMEPAD` subscription is active.
+     * Consumed by [com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager].
+     *
+     * Buffer: 64 events (DROP_OLDEST on overflow — the recording manager processes events
+     * fast enough that this should never be reached under normal conditions).
+     */
+    private val _evdevEvents = MutableSharedFlow<EvdevEvent>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val evdevEvents: SharedFlow<EvdevEvent> = _evdevEvents.asSharedFlow()
 
     @Volatile private var socket: LocalSocket? = null
     @Volatile private var writer: BufferedWriter? = null
@@ -162,6 +179,18 @@ object PrivdClient {
             }
             if (line == "PONG") {
                 pingDeferred?.complete(true)
+                continue
+            }
+            if (line.startsWith("EVT ")) {
+                val parts = line.split(' ')
+                if (parts.size == 4) {
+                    val type = parts[1].toIntOrNull()
+                    val code = parts[2].toIntOrNull()
+                    val value = parts[3].toIntOrNull()
+                    if (type != null && code != null && value != null) {
+                        _evdevEvents.tryEmit(EvdevEvent(type, code, value))
+                    }
+                }
             }
         }
         markBroken()

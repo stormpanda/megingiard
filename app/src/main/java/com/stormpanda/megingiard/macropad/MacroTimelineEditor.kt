@@ -78,6 +78,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -183,6 +185,10 @@ private fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean): String = 
     }
     is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
     is MacroStep.TouchTap -> "Tap"
+    is MacroStep.JoystickPath -> {
+        val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
+        "$stick↻"
+    }
 }
 
 @Composable
@@ -212,12 +218,19 @@ internal fun MacroTimelineEditor(
     var loopPauseMaxMs by remember { mutableIntStateOf(mtExpandLoopScale(MT_LOOP_PAUSE_INIT_MAX_MS, macro.loopPauseMs).coerceAtLeast(MT_LOOP_PAUSE_INIT_MAX_MS)) }
     // Tracks whether the recording session started GamepadInjector; guards the matching stop() call.
     var recordingStartedGamepad by remember { mutableStateOf(false) }
+    // True when the physical recorder path was taken for the current session.
+    var usingPhysicalRecorder by remember { mutableStateOf(false) }
+    var showPhysicalRecordingSheet by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
     val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
+    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+    val privdGamepadRecordingEnabled by MacroPadSettings.privdGamepadRecordingEnabled.collectAsState()
+    val privdState by PrivdManager.state.collectAsState()
+    val physicalRecordingAvailable = privdGamepadRecordingEnabled && privdState == PrivdState.RUNNING
 
     fun pushUndo(previous: List<MacroStep>) {
         val bounded = (undoStack + listOf(previous)).takeLast(MT_UNDO_STACK_MAX)
@@ -226,6 +239,14 @@ internal fun MacroTimelineEditor(
     }
 
     fun startGamepadRecording() {
+        if (physicalRecordingAvailable) {
+            AppLog.i(TAG, "startGamepadRecording() → physical path")
+            usingPhysicalRecorder = true
+            showPhysicalRecordingSheet = true
+            showRecordGamepadDialog = false
+            PhysicalGamepadRecordingManager.startRecording()
+            return
+        }
         val wasAlreadyRunning = GamepadInjector.isRunning
         GamepadInjector.start(context)
         if (!GamepadInjector.isRunning) {
@@ -288,6 +309,18 @@ internal fun MacroTimelineEditor(
         recordingStartedGamepad = false
         GamepadRecordingManager.resetState()
         showGamepadRecordingOverlay = false
+    }
+
+    LaunchedEffect(physicalRecordingState) {
+        val recorded = physicalRecordingState as? GamepadRecordingState.Done ?: return@LaunchedEffect
+        val nextStart = steps.totalDurationMs()
+        val shiftedSteps = recorded.steps.offsetBy(nextStart)
+        pushUndo(steps)
+        steps = steps + shiftedSteps
+        AppLog.d(TAG, "recordedPhysicalGamepadAdded count=${shiftedSteps.size} startMs=$nextStart")
+        PhysicalGamepadRecordingManager.resetState()
+        usingPhysicalRecorder = false
+        showPhysicalRecordingSheet = false
     }
 
     if (showRecordTouchDialog) {
@@ -653,6 +686,22 @@ internal fun MacroTimelineEditor(
                     if (recordingStartedGamepad) GamepadInjector.stop()
                     recordingStartedGamepad = false
                     showGamepadRecordingOverlay = false
+                },
+            )
+        }
+
+        val physicalRecordingStateSnapshot = physicalRecordingState
+        if (showPhysicalRecordingSheet && usingPhysicalRecorder) {
+            PhysicalGamepadRecordingSheet(
+                state = physicalRecordingStateSnapshot,
+                swapFaceButtons = swapFaceButtons,
+                onStop = {
+                    PhysicalGamepadRecordingManager.finishRecording()
+                },
+                onCancel = {
+                    PhysicalGamepadRecordingManager.cancelRecording()
+                    usingPhysicalRecorder = false
+                    showPhysicalRecordingSheet = false
                 },
             )
         }
@@ -1090,6 +1139,7 @@ private fun stepColor(
     is MacroStep.JoystickMove -> joystickColor
     is MacroStep.DPadTap -> dpadColor
     is MacroStep.TouchTap -> touchColor
+    is MacroStep.JoystickPath -> joystickColor
 }
 
 @Composable
@@ -1111,6 +1161,7 @@ private fun StepListItem(
             is MacroStep.JoystickMove -> R.string.macropad_macro_step_type_joystick
             is MacroStep.DPadTap -> R.string.macropad_macro_step_type_dpad
             is MacroStep.TouchTap -> R.string.macropad_macro_step_type_touch
+            is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
         },
     )
     val description = when (step) {
@@ -1121,6 +1172,10 @@ private fun StepListItem(
         }
         is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
         is MacroStep.TouchTap -> "${"%.2f".format(step.normX)}, ${"%.2f".format(step.normY)}"
+        is MacroStep.JoystickPath -> {
+            val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
+            "$stickLabel (${step.samples.size} pts)"
+        }
     }
     val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor, touchColor)
 

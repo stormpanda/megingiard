@@ -28,7 +28,13 @@ enum class PrivdFeature {
      * to the legacy virtual uinput gamepad.
      */
     GAMEPAD_MERGE,
-}
+    /**
+     * Physical gamepad input is recorded directly from the evdev node during
+     * macro recording sessions, capturing analog stick paths with full fidelity.
+     * When disabled, the existing virtual touch-controller overlay recording
+     * path is used instead.
+     */
+    GAMEPAD_RECORDING,}
 
 /**
  * Lifecycle state of the privileged-mode subsystem.
