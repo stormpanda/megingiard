@@ -277,7 +277,7 @@ internal fun MacroTimelineEditor(
     }
 
     fun requestGamepadRecording() {
-        if (MacroPadSettings.skipGamepadRecordDialog.value) {
+        if (physicalRecordingAvailable || MacroPadSettings.skipGamepadRecordDialog.value) {
             startGamepadRecording()
         } else {
             showRecordGamepadDialog = true

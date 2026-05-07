@@ -31,9 +31,6 @@ private const val ABS_HAT0Y = 17
 @Suppress("unused")
 private const val JOYSTICK_DEAD_ZONE_DEFAULT = 0.15f
 
-/** RDP simplification tolerance in normalised axis units (0–1 scale). */
-private const val RDP_EPSILON = 0f  // TEST: decimation disabled — all samples preserved
-
 /**
  * Records buttons, D-Pad taps, and analog stick gestures from the physical gamepad
  * via the `megingiard_privd`
@@ -45,7 +42,7 @@ private const val RDP_EPSILON = 0f  // TEST: decimation disabled — all samples
  *    [PrivdClient.evdevEvents].
  * 2. Evdev events are translated to [GamepadRecordingState.Recording] state updates;
  *    button, D-Pad, and per-stick [PathSample] data are accumulated as macro steps.
- * 3. [finishRecording] — closes open button / D-Pad / stick gestures, applies RDP decimation, sends
+ * 3. [finishRecording] — closes open button / D-Pad / stick gestures, sends
  *    `UNSUB GAMEPAD\n`, restores injection, and emits [GamepadRecordingState.Done].
  * 4. [cancelRecording] — tears down without emitting steps.
  *
@@ -116,7 +113,7 @@ object PhysicalGamepadRecordingManager {
     }
 
     /**
-     * Stops recording, decimates accumulated samples, and emits [GamepadRecordingState.Done].
+     * Stops recording, closes any open gestures, and emits [GamepadRecordingState.Done].
      */
     fun finishRecording() {
         val currentState = _state.value
@@ -328,13 +325,12 @@ object PhysicalGamepadRecordingManager {
 
             if (mag <= deadZone) {
                 /* Stick returned to neutral — close gesture. */
-                val decimated = rdpDecimate(samples.toList(), RDP_EPSILON)
                 val durationMs = offsetMs.coerceAtLeast(1L)
                 val step = MacroStep.JoystickPath(
                     startTimeMs = gestureStartMs - recordingStartEpochMs,
                     durationMs = durationMs,
                     stick = stick,
-                    samples = decimated,
+                    samples = samples.toList(),
                 )
                 recordedSteps.add(step)
                 samples.clear()
@@ -343,7 +339,7 @@ object PhysicalGamepadRecordingManager {
                 } else {
                     rightInGesture = false
                 }
-                AppLog.d(TAG, "gesture closed stick=$stick samples=${decimated.size} (raw=${samples.size})")
+                AppLog.d(TAG, "gesture closed stick=$stick samples=${step.samples.size}")
             }
         }
     }
@@ -356,31 +352,29 @@ object PhysicalGamepadRecordingManager {
     private fun closeOpenGestures(stopMs: Long) {
         if (leftInGesture && leftSamples.isNotEmpty()) {
             val durationMs = (stopMs - leftGestureStartMs).coerceAtLeast(1L)
-            val decimated = rdpDecimate(leftSamples.toList(), RDP_EPSILON)
             recordedSteps.add(
                 MacroStep.JoystickPath(
                     startTimeMs = leftGestureStartMs - recordingStartEpochMs,
                     durationMs = durationMs,
                     stick = JoystickStick.LEFT,
-                    samples = decimated,
+                    samples = leftSamples.toList(),
                 ),
             )
             leftInGesture = false
-            AppLog.d(TAG, "closeOpenGesture: left stick forced-closed samples=${decimated.size}")
+            AppLog.d(TAG, "closeOpenGesture: left stick forced-closed samples=${leftSamples.size}")
         }
         if (rightInGesture && rightSamples.isNotEmpty()) {
             val durationMs = (stopMs - rightGestureStartMs).coerceAtLeast(1L)
-            val decimated = rdpDecimate(rightSamples.toList(), RDP_EPSILON)
             recordedSteps.add(
                 MacroStep.JoystickPath(
                     startTimeMs = rightGestureStartMs - recordingStartEpochMs,
                     durationMs = durationMs,
                     stick = JoystickStick.RIGHT,
-                    samples = decimated,
+                    samples = rightSamples.toList(),
                 ),
             )
             rightInGesture = false
-            AppLog.d(TAG, "closeOpenGesture: right stick forced-closed samples=${decimated.size}")
+            AppLog.d(TAG, "closeOpenGesture: right stick forced-closed samples=${rightSamples.size}")
         }
     }
 

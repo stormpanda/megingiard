@@ -57,12 +57,12 @@ object GamepadInjector {
         get() = if (useMerge) PrivdClient.isConnected else ShellGamepadInjector.isRunning
 
     fun buttonDown(btnCode: Int) {
-        if (useMerge) PrivdGamepadInjector.buttonDown(btnCode)
+        if (useMerge) PrivdGamepadInjector.buttonDown(remapForPhysical(btnCode))
         else ShellGamepadInjector.buttonDown(btnCode)
     }
 
     fun buttonUp(btnCode: Int) {
-        if (useMerge) PrivdGamepadInjector.buttonUp(btnCode)
+        if (useMerge) PrivdGamepadInjector.buttonUp(remapForPhysical(btnCode))
         else ShellGamepadInjector.buttonUp(btnCode)
     }
 
@@ -81,6 +81,26 @@ object GamepadInjector {
     fun joystick(axisCode: Int, value: Int) {
         if (useMerge) PrivdGamepadInjector.joystick(axisCode, value)
         else ShellGamepadInjector.joystick(axisCode, value)
+    }
+
+    /**
+     * Remaps face-button codes from Android's Generic.kl layout (used by the virtual
+     * uinput device created by gamepadinjector_arm64) to the physical Xbox controller
+     * layout on AYN Thor.
+     *
+     * Android Generic.kl: 304→BUTTON_A, 305→BUTTON_B, 307→BUTTON_X, 308→BUTTON_Y
+     * AYN Thor Xbox evdev: 305→A, 304→B, 308→X, 307→Y
+     *
+     * Without this remap, manually created macros (which store Generic.kl codes) would
+     * inject the wrong buttons on the physical controller when Gamepad Merge is active.
+     * Recorded macros are unaffected — they capture the actual physical codes directly.
+     */
+    private fun remapForPhysical(code: Int): Int = when (code) {
+        GamepadKeycodes.BTN_SOUTH -> GamepadKeycodes.BTN_EAST   // 304→305: generic A → physical A
+        GamepadKeycodes.BTN_EAST  -> GamepadKeycodes.BTN_SOUTH  // 305→304: generic B → physical B
+        GamepadKeycodes.BTN_WEST  -> GamepadKeycodes.BTN_NORTH  // 307→308: generic X → physical X
+        GamepadKeycodes.BTN_NORTH -> GamepadKeycodes.BTN_WEST   // 308→307: generic Y → physical Y
+        else                      -> code
     }
 
     private fun shouldUseMerge(): Boolean =

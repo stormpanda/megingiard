@@ -93,7 +93,7 @@ sealed class MacroStep {
 
     /**
      * Replays a recorded analog stick path on [stick], beginning [startTimeMs] milliseconds
-     * after macro start. [samples] is a list of RDP-decimated normalised axis positions
+     * after macro start. [samples] is a list of raw normalised axis positions
      * (each in [−1.0, 1.0]) with timing offsets relative to [startTimeMs]. On step end
      * the axis is reset to 0. Created exclusively by [PhysicalGamepadRecordingManager].
      */
