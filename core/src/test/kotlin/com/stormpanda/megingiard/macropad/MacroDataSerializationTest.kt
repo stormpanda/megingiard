@@ -176,4 +176,42 @@ class MacroDataSerializationTest {
         assertEquals("abc", decoded.id)
         assertEquals("X", decoded.name)
     }
+
+    @Test
+    fun `mixed macro including JoystickPath survives JSON round-trip`() {
+        val macro = Macro(
+            id = "test-uuid-path",
+            name = "Full combo with path",
+            steps = listOf(
+                MacroStep.GamepadButtonTap(0L, 50L, 0x130, "A"),
+                MacroStep.JoystickPath(
+                    startTimeMs = 60L,
+                    durationMs  = 201L, // > max sample offset (200)
+                    stick       = JoystickStick.LEFT,
+                    samples     = listOf(
+                        PathSample(offsetMs = 0L,   x = 0.5f, y = 0f),
+                        PathSample(offsetMs = 100L, x = 1.0f, y = 0.5f),
+                        PathSample(offsetMs = 200L, x = 0.0f, y = 0.0f),
+                    ),
+                ),
+                MacroStep.DPadTap(300L, 100L, 1, 0),
+            ),
+        )
+        val decoded = json.decodeFromString<Macro>(json.encodeToString(macro))
+        assertEquals(macro, decoded)
+        val path = decoded.steps[1] as MacroStep.JoystickPath
+        assertEquals(3, path.samples.size)
+        assertEquals(100L, path.samples[1].offsetMs)
+    }
+
+    @Test
+    fun `JoystickPath endTimeMs equals startTimeMs plus durationMs`() {
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 200L,
+            durationMs  = 350L,
+            stick       = JoystickStick.RIGHT,
+            samples     = listOf(PathSample(0L, 0f, 0f)),
+        )
+        assertEquals(550L, step.endTimeMs())
+    }
 }

@@ -154,4 +154,121 @@ class PrivdSubsystemTest {
         assertNotNull(BootstrapStage.valueOf("VERIFYING"))
         assertNotNull(BootstrapStage.valueOf("DONE"))
     }
+
+    // ── PhysicalGamepadRecordingManager — additional recording logic ──────────
+
+    @Test
+    fun `empty recording produces no steps`() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 500L)
+        assertTrue(steps.isEmpty())
+        PhysicalGamepadRecordingManager.resetState()
+    }
+
+    @Test
+    fun `leading idle is trimmed so first step startTimeMs is 0`() {
+        // Recording starts at 5000ms; the button press arrives 200ms later.
+        // After trimLeadingIdle() the step must start at 0.
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 5_000L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 1),
+            nowElapsedMs = 5_200L,
+        )
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 0),
+            nowElapsedMs = 5_300L,
+        )
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 5_400L)
+        assertEquals(1, steps.size)
+        assertEquals(0L, steps.first().startTimeMs)
+        PhysicalGamepadRecordingManager.resetState()
+    }
+
+    @Test
+    fun `closed joystick path durationMs is strictly greater than last sample offsetMs`() {
+        // R3 regression guard: recorder sets durationMs = lastSampleOffsetMs + 1
+        // so that no sample can land at the same timestamp as the end-of-step neutral reset.
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
+        // Push left stick above deadzone (16384 / 32767 ≈ 0.5 > 0.15 default deadzone)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
+            nowElapsedMs = 10L,
+        )
+        // Return to neutral — closes the gesture normally
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 0),
+            nowElapsedMs = 100L,
+        )
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 200L)
+        val path = steps.filterIsInstance<MacroStep.JoystickPath>().first()
+        val lastOffset = path.samples.maxOf { it.offsetMs }
+        assertTrue(
+            "durationMs (${path.durationMs}) must be strictly greater than last sample offset ($lastOffset)",
+            path.durationMs > lastOffset,
+        )
+        PhysicalGamepadRecordingManager.resetState()
+    }
+
+    @Test
+    fun `right stick ABS_Z events produce a JoystickPath with RIGHT stick`() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Z, 16_384),
+            nowElapsedMs = 10L,
+        )
+        // Return to neutral — closes gesture
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_Z, 0),
+            nowElapsedMs = 80L,
+        )
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 100L)
+        val path = steps.filterIsInstance<MacroStep.JoystickPath>().first()
+        assertEquals(JoystickStick.RIGHT, path.stick)
+        PhysicalGamepadRecordingManager.resetState()
+    }
+
+    @Test
+    fun `stick still deflected at stop time is force-closed and emitted as JoystickPath`() {
+        // The stick goes above deadzone but never returns to neutral before finishRecording.
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
+            nowElapsedMs = 10L,
+        )
+        // No neutral event — finishRecording force-closes the open gesture.
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 200L)
+        val path = steps.filterIsInstance<MacroStep.JoystickPath>().singleOrNull()
+        assertNotNull("Expected a force-closed JoystickPath to be emitted", path)
+        PhysicalGamepadRecordingManager.resetState()
+    }
+
+    @Test
+    fun `concurrent button press and stick gesture produce two distinct steps`() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 0L)
+        // Button DOWN
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 1),
+            nowElapsedMs = 10L,
+        )
+        // Stick deflects while button is still held
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 16_384),
+            nowElapsedMs = 20L,
+        )
+        // Stick returns to neutral
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_ABS, GamepadKeycodes.ABS_X, 0),
+            nowElapsedMs = 80L,
+        )
+        // Button UP
+        PhysicalGamepadRecordingManager.recordEvdevEvent(
+            event = EvdevEvent(EV_KEY, GamepadKeycodes.BTN_SOUTH, 0),
+            nowElapsedMs = 100L,
+        )
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 110L)
+        assertEquals(2, steps.size)
+        assertTrue(steps.any { it is MacroStep.GamepadButtonTap })
+        assertTrue(steps.any { it is MacroStep.JoystickPath })
+        PhysicalGamepadRecordingManager.resetState()
+    }
 }

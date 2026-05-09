@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -357,6 +358,49 @@ class MacroStepShiftTest {
             newStep     = actual.copy(startTimeMs = 200L),
             mode        = ShiftMode.END_DELTA,
         )
+    }
+
+    // ── JoystickPath — withStartTime + applyShiftSubsequent ──────────────────
+
+    private fun joystickPath(startMs: Long, durationMs: Long = 201L) = MacroStep.JoystickPath(
+        startTimeMs = startMs,
+        durationMs  = durationMs,
+        stick       = JoystickStick.LEFT,
+        samples     = listOf(
+            PathSample(offsetMs = 0L,   x = 0.5f, y = 0f),
+            PathSample(offsetMs = 100L, x = 1.0f, y = 0.5f),
+            PathSample(offsetMs = 200L, x = 0.0f, y = 0.0f),
+        ),
+    )
+
+    @Test
+    fun `JoystickPath withStartTime changes startTimeMs but preserves samples verbatim`() {
+        val original = joystickPath(startMs = 100L)
+        val shifted  = original.withStartTime(500L) as MacroStep.JoystickPath
+        assertEquals(500L, shifted.startTimeMs)
+        assertEquals(original.durationMs, shifted.durationMs)
+        assertEquals(original.samples, shifted.samples)
+        assertEquals(original.stick, shifted.stick)
+    }
+
+    @Test
+    fun `START_DELTA — JoystickPath as subsequent step is shifted correctly`() {
+        val edited      = gamepad(startMs = 0L, durationMs = 100L)   // oldEnd = 100
+        val pathAfter   = joystickPath(startMs = 100L)               // at oldEnd → shifts
+        val newEdited   = edited.copy(startTimeMs = 50L)             // startDelta = +50
+
+        val result = applyShiftSubsequent(
+            steps       = listOf(pathAfter, edited),
+            editedIndex = 1,
+            oldStep     = edited,
+            newStep     = newEdited,
+            mode        = ShiftMode.START_DELTA,
+        )
+
+        val shiftedPath = result[0] as MacroStep.JoystickPath
+        assertEquals(150L, shiftedPath.startTimeMs)           // 100 + 50
+        assertEquals(pathAfter.samples, shiftedPath.samples)  // samples unchanged
+        assertEquals(pathAfter.durationMs, shiftedPath.durationMs)
     }
 }
 

@@ -214,6 +214,40 @@ class MacroEventCompilerTest {
     }
 
     @Test
+    fun `joystick path with no samples emits only the two neutral reset events`() {
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 50L,
+            durationMs  = 200L,
+            stick       = JoystickStick.LEFT,
+            samples     = emptyList(),
+        )
+        val events = buildMacroEventList(macro(step))
+        assertEquals(2, events.size)
+        assertEquals(250L, events[0].timeMs)
+        assertEquals(250L, events[1].timeMs)
+        assertTrue(events.all { it.value == 0 })
+    }
+
+    @Test
+    fun `joystick path sample beyond duration is also filtered`() {
+        // Guard also catches offsetMs > durationMs (not only the == boundary).
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 100L,
+            stick       = JoystickStick.LEFT,
+            samples     = listOf(
+                PathSample(offsetMs = 50L,  x = 0.5f, y = 0f), // inside → kept
+                PathSample(offsetMs = 150L, x = 1.0f, y = 0f), // beyond → filtered
+            ),
+        )
+        val events = buildMacroEventList(macro(step))
+        // 2 events from the valid sample + 2 reset events = 4 total
+        assertEquals(4, events.size)
+        val at150 = events.filter { it.timeMs == 150L }
+        assertTrue("No event should land at t=150 (beyond step end)", at150.isEmpty())
+    }
+
+    @Test
     fun `joystick reset value zero sorts before non-zero at same timestamp`() {
         // Two joystick steps back-to-back on the same axis: reset of step1 and set of step2
         // both land at 100ms.  The reset (value=0) must come first.
