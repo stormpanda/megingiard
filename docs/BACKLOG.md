@@ -275,6 +275,7 @@ The Privileged Mode setup wizard requires the user to manually read the pairing 
 When the **screen mirror is already active**, the app already has a live feed of the primary display via `VirtualDisplay`. Use this to take a silent one-shot frame capture, run **on-device OCR** (ML Kit Text Recognition, Latin model, ~4 MB, no internet required), and automatically fill the pairing port and code fields.
 
 User flow:
+
 1. User opens the system "Pair device with pairing code" dialog — visible on the main screen, which is being mirrored.
 2. User opens or is already on Step 2 of the wizard.
 3. A button **"Detect automatically"** is shown (only when mirror is active).
@@ -287,29 +288,35 @@ This reduces the pairing step to: open the system dialog → tap "Detect automat
 #### Implementation Plan
 
 **1. Snapshot mechanism (domain layer)**
+
 - Extend `ScreenCaptureManager` with a dedicated snapshot flow: `requestSnapshot()` + read-only `snapshotBitmap: StateFlow<Bitmap?>` + `clearSnapshotBitmap()`.
 - The snapshot is completely independent of the freeze/unfreeze UI state — it does not affect `isFrozen` or `frozenBitmap`, and does not show or hide the mirror image on screen.
 
 **2. Frame capture (app layer / Presentation)**
+
 - The mirror presentation watches `snapshotRequested` and, when it fires, performs a `PixelCopy` of the current `SurfaceView` frame — identical to the existing freeze flow, but writes the result to `snapshotBitmap` instead.
 - The `SurfaceView` visibility is not changed; the user sees no visual effect.
 
 **3. OCR library**
+
 - Add `com.google.mlkit:text-recognition` (Latin model) to the version catalog and app dependencies.
 - This is a fully on-device library — no network calls, no Google Play Services dependency.
 
 **4. OCR helper (app layer)**
+
 - A small internal helper function that takes a `Bitmap`, runs ML Kit text recognition as a suspend function, and returns a result data class with `pairPort: String` and `code: String` (both empty string if not found).
 - Detection logic: scan all recognised text blocks for a 6-digit digit sequence (the code) and a 4–5 digit sequence in valid port range 1024–65535 (the pairing port). The connect port is already auto-detected via system property, so it is not searched for.
 - Returns `null` if no valid combination is found.
 
 **5. Wizard integration (app layer)**
+
 - The pairing step receives an `isCapturing: Boolean` and `scanning: Boolean` flag.
 - When `isCapturing` is true, the "Detect automatically" button is shown above the input fields. Tapping it calls `viewModel.requestMirrorSnapshot()`.
 - A `LaunchedEffect` watches `snapshotBitmap`: when a new bitmap arrives, it launches OCR on the IO dispatcher, fills the fields on success, and clears the bitmap after.
 - When `isCapturing` is false, a short hint text replaces the button, explaining that mirroring must be active.
 
 **6. ViewModel additions**
+
 - Expose `isCapturing` and `snapshotBitmap` as read-only flows.
 - Add `requestMirrorSnapshot()` and `clearMirrorSnapshot()` as thin wrappers over `ScreenCaptureManager`.
 
