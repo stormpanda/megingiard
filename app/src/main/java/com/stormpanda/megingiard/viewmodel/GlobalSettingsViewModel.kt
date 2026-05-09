@@ -108,21 +108,21 @@ class GlobalSettingsViewModel : ViewModel() {
     }
 
     /**
-     * After pairing succeeded: connect directly to [host]:[connectPort], push the
+     * After pairing succeeded: connect directly to [host], push the
      * daemon binary, spawn the daemon, then verify with [PrivdManager.connect].
+     * The ADB connect port is detected automatically from the system property.
      * On success, persists the auto-connect flag so future app starts skip the wizard.
      */
     fun privdBootstrap(
         context: Context,
         host: String,
-        connectPort: Int,
         onResult: (Boolean) -> Unit,
     ) {
         AppLog.i(TAG, "privdBootstrap()")
         val appContext = context.applicationContext
         viewModelScope.launch {
             val ok = withContext(Dispatchers.IO) {
-                PrivdBootstrapper.bootstrapAndConnect(appContext, host, connectPort)
+                PrivdBootstrapper.bootstrapAndConnect(appContext, host)
             }
             if (ok) MacroPadSettings.setPrivdAutoConnect(true)
             onResult(ok)

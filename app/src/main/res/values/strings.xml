@@ -339,13 +339,11 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_substep_5">5. Tap "Pair device with pairing code" and keep that dialog open</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
 
-    <string name="privd_wizard_step2_intro">From the main "Wireless debugging" screen, note the IP address and the port shown next to it (Connect port). Then tap "Pair device with pairing code", enter that pairing port and 6-digit code here. Everything stays on-device — no internet required.</string>
-    <string name="privd_wizard_field_host">IP address</string>
-    <string name="privd_wizard_field_connect_port">Connect port (from "Wireless debugging" main screen)</string>
+    <string name="privd_wizard_step2_intro">Tap "Pair device with pairing code" in the Wireless Debugging settings. Enter the pairing port and 6-digit code shown in that dialog. The connect port is detected automatically.</string>
     <string name="privd_wizard_field_pair_port">Pairing port (from "Pair device" dialog)</string>
     <string name="privd_wizard_field_code">Pairing code (6 digits)</string>
     <string name="privd_wizard_step2_pair">Pair</string>
-    <string name="privd_wizard_step2_error">Pairing failed. Double-check the address, port, and code, then try again.</string>
+    <string name="privd_wizard_step2_error">Pairing failed. Double-check the pairing port and code, then try again.</string>
 
     <string name="privd_wizard_step3_intro">Megingiard will now push the helper daemon binary to /data/local/tmp and start it. The daemon runs as the ADB shell user and survives until you reboot.</string>
     <string name="privd_wizard_step3_start">Push and start daemon</string>

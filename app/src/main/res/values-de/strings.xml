@@ -301,13 +301,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_step1_substep_5">5. Auf "Gerät über Kopplungscode koppeln" tippen und diesen Dialog offen lassen</string>
     <string name="privd_wizard_step1_open">Systemeinstellungen öffnen</string>
 
-    <string name="privd_wizard_step2_intro">Notiere auf dem Hauptbildschirm "Drahtloses Debugging" die IP-Adresse und den danebenstehenden Port (Verbindungsport). Tippe dann auf "Gerät über Kopplungscode koppeln" und trage den Kopplungsport sowie den 6-stelligen Code hier ein. Alles läuft auf dem Gerät — keine Internetverbindung nötig.</string>
-    <string name="privd_wizard_field_host">IP-Adresse</string>
+    <string name="privd_wizard_step2_intro">Tippe auf "Gerät über Kopplungscode koppeln" in den Drahtloses-Debugging-Einstellungen. Trage den Kopplungsport und den 6-stelligen Code aus dem Dialog ein. Der Verbindungsport wird automatisch erkannt.</string>
     <string name="privd_wizard_field_connect_port">Verbindungsport (aus dem Hauptbildschirm "Drahtloses Debugging")</string>
     <string name="privd_wizard_field_pair_port">Kopplungsport (aus dem Dialog "Gerät koppeln")</string>
     <string name="privd_wizard_field_code">Kopplungscode (6 Ziffern)</string>
     <string name="privd_wizard_step2_pair">Koppeln</string>
-    <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Adresse, Port und Code und versuche es erneut.</string>
+    <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Kopplungsport und Code und versuche es erneut.</string>
 
     <string name="privd_wizard_step3_intro">Megingiard kopiert jetzt die Helfer-Daemon-Binary nach /data/local/tmp und startet sie. Der Daemon läuft als ADB-Shell-Benutzer und bleibt bis zum Neustart aktiv.</string>
     <string name="privd_wizard_step3_start">Daemon übertragen und starten</string>
