@@ -15,6 +15,7 @@
 5. [Global Face-Button Label Swap](#5-global-face-button-label-swap)
 6. [More Default Profiles](#6-more-default-profiles)
 7. [More Themes](#7-more-themes)
+8. [OCR Auto-Fill for ADB Pairing Wizard](#8-ocr-auto-fill-for-adb-pairing-wizard)
 
 ---
 
@@ -22,16 +23,17 @@
 
 | #   | Feature                                   | Value | Effort | Priority                                   |
 | --- | ----------------------------------------- | ----- | ------ | ------------------------------------------ |
-| 2   | Default Icons & Names for Special Actions | ●●●○○ | ●○○○○  | **High — Low Hanging Fruit**               |
+| 2   | Default Icons & Names for Special Actions | ●●●○○ | ●○○○○  | **✅ Implemented**                         |
 | 6   | More Default Profiles                     | ●●●○○ | ●○○○○  | **High — Low Hanging Fruit**               |
 | 5   | Global Face-Button Label Swap             | ●●●●○ | ●○○○○  | **✅ Implemented**                         |
 | 7   | More Themes                               | ●●○○○ | ●○○○○  | **Medium — Low Hanging Fruit**             |
 | 1   | Grouped Action Dropdown                   | ●●●○○ | ●●●○○  | **✅ Implemented**                         |
-| 4   | Recording Gamepad Inputs in Macros        | ●●●○○ | ●●●○○  | **Medium**                                 |
+| 4   | Recording Gamepad Inputs in Macros        | ●●●○○ | ●●●○○  | **✅ Implemented**                         |
+| 8   | OCR Auto-Fill for ADB Pairing Wizard      | ●●●○○ | ●●○○○  | **Medium**                                 |
 | 3   | Macro Recording (full chains)             | ●●●●● | ●●●●○  | **Long-term — transformative but complex** |
 
-**Recommendation for the next sprint:** Features 6 → 7 (in that order).
-Both are independent, low-effort candidates with clear user-facing impact.
+**Recommendation for the next sprint:** Feature 8 (OCR Auto-Fill) → Feature 6 (Default Profiles).
+Feature 8 builds on the existing mirror pipeline and eliminates the last manual step in the Privileged Mode setup. Feature 6 is independent, very low effort, and improves onboarding.
 
 ---
 
@@ -153,7 +155,7 @@ A **live recording feature** that materialises inputs with correct timing as a `
 
 ### 4 Recording Gamepad Inputs in Macros
 
-**Status:** Idea · **Effort:** Medium · **Value:** Medium–High
+**Status:** ✅ Implemented · **Effort:** Medium · **Value:** Medium–High
 
 #### Problem
 
@@ -257,6 +259,78 @@ Add more colour palettes to `AppTheme.kt`:
 - Each theme = a new `fun buildXxxPalette(): AppColorPalette` function in `AppTheme.kt`.
 - Extend the `ThemeMode` enum in `core/…/settings/ThemeMode.kt` with the new values.
 - `SettingsManager` and the theme picker UI adapt automatically once the enum is extended.
+
+---
+
+### 8 OCR Auto-Fill for ADB Pairing Wizard
+
+**Status:** Idea · **Effort:** Medium · **Value:** Medium–High
+
+#### Problem
+
+The Privileged Mode setup wizard requires the user to manually read the pairing port and 6-digit code from the Android system dialog and type them into two fields. This is friction-heavy, especially on a small touchscreen — the user has to switch between the wizard and the system settings, read small numbers, and type them without making mistakes.
+
+#### Idea
+
+When the **screen mirror is already active**, the app already has a live feed of the primary display via `VirtualDisplay`. Use this to take a silent one-shot frame capture, run **on-device OCR** (ML Kit Text Recognition, Latin model, ~4 MB, no internet required), and automatically fill the pairing port and code fields.
+
+User flow:
+
+1. User opens the system "Pair device with pairing code" dialog — visible on the main screen, which is being mirrored.
+2. User opens or is already on Step 2 of the wizard.
+3. A button **"Detect automatically"** is shown (only when mirror is active).
+4. Tapping it takes a silent snapshot of the mirrored frame, runs OCR, and fills both fields if recognised.
+5. If OCR fails or the dialog is not visible, a brief failure hint is shown and the fields remain manually editable.
+6. If mirror is not active, the button is hidden and a hint encourages the user to start mirroring first.
+
+This reduces the pairing step to: open the system dialog → tap "Detect automatically" → tap "Pair".
+
+#### Implementation Plan
+
+**1. Snapshot mechanism (domain layer)**
+
+- Extend `ScreenCaptureManager` with a dedicated snapshot flow: `requestSnapshot()` + read-only `snapshotBitmap: StateFlow<Bitmap?>` + `clearSnapshotBitmap()`.
+- The snapshot is completely independent of the freeze/unfreeze UI state — it does not affect `isFrozen` or `frozenBitmap`, and does not show or hide the mirror image on screen.
+
+**2. Frame capture (app layer / Presentation)**
+
+- The mirror presentation watches `snapshotRequested` and, when it fires, performs a `PixelCopy` of the current `SurfaceView` frame — identical to the existing freeze flow, but writes the result to `snapshotBitmap` instead.
+- The `SurfaceView` visibility is not changed; the user sees no visual effect.
+
+**3. OCR library**
+
+- Add `com.google.mlkit:text-recognition` (Latin model) to the version catalog and app dependencies.
+- This is a fully on-device library — no network calls, no Google Play Services dependency.
+
+**4. OCR helper (app layer)**
+
+- A small internal helper function that takes a `Bitmap`, runs ML Kit text recognition as a suspend function, and returns a result data class with `pairPort: String` and `code: String` (both empty string if not found).
+- Detection logic: scan all recognised text blocks for a 6-digit digit sequence (the code) and a 4–5 digit sequence in valid port range 1024–65535 (the pairing port). The connect port is already auto-detected via system property, so it is not searched for.
+- Returns `null` if no valid combination is found.
+
+**5. Wizard integration (app layer)**
+
+- The pairing step receives an `isCapturing: Boolean` and `scanning: Boolean` flag.
+- When `isCapturing` is true, the "Detect automatically" button is shown above the input fields. Tapping it calls `viewModel.requestMirrorSnapshot()`.
+- A `LaunchedEffect` watches `snapshotBitmap`: when a new bitmap arrives, it launches OCR on the IO dispatcher, fills the fields on success, and clears the bitmap after.
+- When `isCapturing` is false, a short hint text replaces the button, explaining that mirroring must be active.
+
+**6. ViewModel additions**
+
+- Expose `isCapturing` and `snapshotBitmap` as read-only flows.
+- Add `requestMirrorSnapshot()` and `clearMirrorSnapshot()` as thin wrappers over `ScreenCaptureManager`.
+
+#### Constraints / Non-Goals
+
+- Only the **pairing port and code** are auto-filled; the connect port is handled separately by `getprop` (already done).
+- OCR is **never triggered automatically** — always on explicit user tap.
+- If OCR finds ambiguous results (multiple 6-digit numbers), the helper returns `null` rather than guessing.
+- The snapshot does **not** require a separate `MediaProjection` consent — it reuses the already-running capture session.
+
+#### Open Questions
+
+- ML Kit text recognition accuracy on small system UI font at typical mirror resolution (~1080p) — likely fine, but worth testing.
+- Should the wizard auto-trigger the scan when Step 2 is first entered (if mirror is active)? Probably opt-in to avoid surprising the user.
 
 ---
 

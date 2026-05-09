@@ -72,6 +72,28 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> {
                 events += MacroEvent(step.startTimeMs, MacroEventType.TOUCH_DOWN, 0, 0, step.normX, step.normY)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.TOUCH_UP, 0, 0, step.normX, step.normY)
             }
+            is MacroStep.JoystickPath -> {
+                val axisX = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
+                val axisY = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
+                for (sample in step.samples) {
+                    /* Defensive: skip samples whose offset reaches or exceeds the step's duration
+                       — they would otherwise land at the same global timestamp as the
+                       end-of-step neutral reset and the sort order (resets first at equal
+                       timestamps) would leave the stick non-neutral at step end. The
+                       recorder is also responsible for ensuring durationMs > maxOffsetMs;
+                       this guard keeps the compiler robust against data on disk that may
+                       not honour that invariant. */
+                    if (sample.offsetMs >= step.durationMs) continue
+                    val rawX = (sample.x.coerceIn(-1f, 1f) * ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
+                    val rawY = (sample.y.coerceIn(-1f, 1f) * ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
+                    val t = step.startTimeMs + sample.offsetMs
+                    events += MacroEvent(t, MacroEventType.JOYSTICK_SET, axisX, rawX)
+                    events += MacroEvent(t, MacroEventType.JOYSTICK_SET, axisY, rawY)
+                }
+                /* Return axes to neutral at step end. */
+                events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisX, 0)
+                events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisY, 0)
+            }
         }
     }
     events.sortWith(compareBy({ it.timeMs }, { if (it.isReset) 0 else 1 }))

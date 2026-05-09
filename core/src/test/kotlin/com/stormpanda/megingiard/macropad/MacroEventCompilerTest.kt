@@ -146,6 +146,107 @@ class MacroEventCompilerTest {
         assertEquals(MacroEventType.BUTTON_DOWN, at100[1].type)
     }
 
+    // ── JoystickPath ──────────────────────────────────────────────────────────
+
+    @Test
+    fun `joystick path emits JOYSTICK_SET for each sample then reset at end`() {
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 100L,
+            durationMs  = 200L,
+            stick       = JoystickStick.LEFT,
+            samples     = listOf(
+                PathSample(offsetMs = 0L,   x = 0.5f,  y = 0f),
+                PathSample(offsetMs = 100L, x = 1.0f,  y = 0.5f),
+            ),
+        )
+        val events = buildMacroEventList(macro(step))
+        // Each sample emits 2 JOYSTICK_SET events (X + Y axis), plus 2 reset events at end.
+        assertEquals(6, events.size)
+
+        val sample0Events = events.filter { it.timeMs == 100L }
+        assertEquals(2, sample0Events.size)
+        assertTrue(sample0Events.all { it.type == MacroEventType.JOYSTICK_SET })
+        assertTrue(sample0Events.any { it.code == GamepadKeycodes.ABS_X && it.value > 0 })
+
+        val sample1Events = events.filter { it.timeMs == 200L }
+        assertEquals(2, sample1Events.size)
+
+        val resetEvents = events.filter { it.timeMs == 300L }
+        assertEquals(2, resetEvents.size)
+        assertTrue(resetEvents.all { it.value == 0 })
+    }
+
+    @Test
+    fun `joystick path right stick uses ABS_Z and ABS_RZ`() {
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 100L,
+            stick       = JoystickStick.RIGHT,
+            samples     = listOf(PathSample(0L, 0.5f, 0.5f)),
+        )
+        val events = buildMacroEventList(macro(step))
+        val axisCodes = events.filter { it.timeMs == 0L }.map { it.code }.toSet()
+        assertTrue(axisCodes.contains(GamepadKeycodes.ABS_Z))
+        assertTrue(axisCodes.contains(GamepadKeycodes.ABS_RZ))
+    }
+
+    @Test
+    fun `joystick path sample at duration is filtered so reset wins at end`() {
+        // Regression: a sample whose offsetMs equals the step's durationMs would land at the
+        // same global timestamp as the end-of-step neutral reset. The reset must sort first
+        // (resets before non-resets at equal timestamps) but the sample must NOT be applied
+        // afterwards, otherwise the stick latches non-neutral. The compiler defends against
+        // this by skipping samples whose offsetMs >= durationMs.
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 100L,
+            stick       = JoystickStick.LEFT,
+            samples     = listOf(
+                PathSample(offsetMs = 0L,   x = 0.5f, y = 0f),
+                PathSample(offsetMs = 100L, x = 1.0f, y = 0f), // boundary: offset == duration
+            ),
+        )
+        val events = buildMacroEventList(macro(step))
+        val at100 = events.filter { it.timeMs == 100L && it.code == GamepadKeycodes.ABS_X }
+        // Only the reset event should land at t=100, not a JOYSTICK_SET with value != 0.
+        assertEquals(1, at100.size)
+        assertEquals(0, at100[0].value)
+    }
+
+    @Test
+    fun `joystick path with no samples emits only the two neutral reset events`() {
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 50L,
+            durationMs  = 200L,
+            stick       = JoystickStick.LEFT,
+            samples     = emptyList(),
+        )
+        val events = buildMacroEventList(macro(step))
+        assertEquals(2, events.size)
+        assertEquals(250L, events[0].timeMs)
+        assertEquals(250L, events[1].timeMs)
+        assertTrue(events.all { it.value == 0 })
+    }
+
+    @Test
+    fun `joystick path sample beyond duration is also filtered`() {
+        // Guard also catches offsetMs > durationMs (not only the == boundary).
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 100L,
+            stick       = JoystickStick.LEFT,
+            samples     = listOf(
+                PathSample(offsetMs = 50L,  x = 0.5f, y = 0f), // inside → kept
+                PathSample(offsetMs = 150L, x = 1.0f, y = 0f), // beyond → filtered
+            ),
+        )
+        val events = buildMacroEventList(macro(step))
+        // 2 events from the valid sample + 2 reset events = 4 total
+        assertEquals(4, events.size)
+        val at150 = events.filter { it.timeMs == 150L }
+        assertTrue("No event should land at t=150 (beyond step end)", at150.isEmpty())
+    }
+
     @Test
     fun `joystick reset value zero sorts before non-zero at same timestamp`() {
         // Two joystick steps back-to-back on the same axis: reset of step1 and set of step2

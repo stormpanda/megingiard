@@ -359,6 +359,7 @@ object GamepadRecordingManager {
                 is MacroStep.JoystickMove -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
                 is MacroStep.DPadTap -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
                 is MacroStep.TouchTap -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
+                is MacroStep.JoystickPath -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
             }
         }
     }

@@ -301,6 +301,27 @@ Open Settings to create a layout.</string>
     <string name="privd_feature_gamepad_merge">Gamepad merge</string>
     <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the legacy virtual gamepad.</string>
 
+    <string name="privd_feature_gamepad_recording">Physical gamepad recording</string>
+    <string name="privd_feature_gamepad_recording_desc">Capture macro steps directly from the physical gamepad (analog sticks, buttons). When enabled, the Record button in the timeline editor uses the physical controller instead of the on-screen virtual gamepad.</string>
+
+    <!-- Dead-zone settings row + dialog -->
+    <string name="privd_deadzone_title">Configure dead zones</string>
+    <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>
+    <string name="privd_deadzone_dialog_title">Gamepad dead zones</string>
+    <string name="privd_deadzone_dialog_hint">Open the Thor\'s built-in Settings app → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius to look up the values for each stick, then enter them below.</string>
+    <string name="privd_deadzone_left">Left stick</string>
+    <string name="privd_deadzone_right">Right stick</string>
+    <string name="privd_deadzone_ok">OK</string>
+    <string name="privd_deadzone_cancel">Cancel</string>
+
+    <string name="privd_recording_physical_title">Recording Physical Controller…</string>
+    <string name="privd_recording_physical_hint">Press buttons and move the sticks on your physical gamepad. Tap Stop when done.</string>
+    <string name="privd_recording_physical_pressed">Pressed: %1$s</string>
+    <string name="privd_recording_physical_stick_left">Left stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stick_right">Right stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stop">Stop &amp; Save</string>
+    <string name="privd_recording_physical_cancel">Cancel</string>
+
     <!-- Privileged Mode — setup wizard -->
     <string name="privd_wizard_title">Set up Privileged Mode</string>
     <string name="privd_wizard_next">Next</string>
@@ -318,13 +339,11 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_substep_5">5. Tap "Pair device with pairing code" and keep that dialog open</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
 
-    <string name="privd_wizard_step2_intro">From the main "Wireless debugging" screen, note the IP address and the port shown next to it (Connect port). Then tap "Pair device with pairing code", enter that pairing port and 6-digit code here. Everything stays on-device — no internet required.</string>
-    <string name="privd_wizard_field_host">IP address</string>
-    <string name="privd_wizard_field_connect_port">Connect port (from "Wireless debugging" main screen)</string>
+    <string name="privd_wizard_step2_intro">Tap "Pair device with pairing code" in the Wireless Debugging settings. Enter the pairing port and 6-digit code shown in that dialog. The connect port is detected automatically.</string>
     <string name="privd_wizard_field_pair_port">Pairing port (from "Pair device" dialog)</string>
     <string name="privd_wizard_field_code">Pairing code (6 digits)</string>
     <string name="privd_wizard_step2_pair">Pair</string>
-    <string name="privd_wizard_step2_error">Pairing failed. Double-check the address, port, and code, then try again.</string>
+    <string name="privd_wizard_step2_error">Pairing failed. Double-check the pairing port and code, then try again.</string>
 
     <string name="privd_wizard_step3_intro">Megingiard will now push the helper daemon binary to /data/local/tmp and start it. The daemon runs as the ADB shell user and survives until you reboot.</string>
     <string name="privd_wizard_step3_start">Push and start daemon</string>
@@ -468,9 +487,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_edit">Edit Step</string>
     <string name="macropad_macro_step_type_gamepad">Gamepad Button</string>
     <string name="macropad_macro_step_type_joystick">Joystick</string>
+    <string name="macropad_macro_step_type_joystick_path">Joystick Path</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch Tap</string>
     <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>
+    <string name="macropad_macro_step_path_readonly">Recorded analog stick path (read-only). Only timing can be edited.</string>
+    <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
+    <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>
     <string name="macropad_macro_step_start_ms">Start time (ms)</string>
     <string name="macropad_macro_step_duration_ms">Duration (ms)</string>
     <string name="macropad_macro_step_timing_delta">%+d</string>

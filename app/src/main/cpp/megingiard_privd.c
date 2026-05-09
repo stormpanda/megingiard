@@ -52,6 +52,8 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <linux/input.h>
+#include <pthread.h>
+#include <poll.h>
 
 #define ABSTRACT_SOCKET_NAME "megingiard.privd"
 #define SCAN_MAX 32
@@ -64,6 +66,102 @@
 #define test_bit(bit, array) (((array)[(bit) / BITS_PER_LONG] >> ((bit) % BITS_PER_LONG)) & 1)
 
 static volatile sig_atomic_t g_should_exit = 0;
+
+/*
+ * Gamepad evdev fd — promoted to file scope so both serve_client() and the
+ * reader thread can access it without passing it as a parameter.
+ */
+static int g_gamepad_fd = -1;
+
+/* Evdev-streaming state (SUB GAMEPAD / UNSUB GAMEPAD). */
+static volatile int g_reader_active = 0;
+static pthread_t g_reader_thread;
+static volatile int g_client_fd_for_reader = -1;
+static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/*
+ * Returns 1 if the evdev event (type, code) should be streamed to the client.
+ * We forward:
+ *   EV_KEY  codes >= BTN_MISC (0x100) — physical gamepad buttons
+ *   EV_ABS  joystick axes (ABS_X/Y/Z/RZ) and D-Pad hat axes (ABS_HAT0X/Y)
+ */
+static int should_emit_evdev(__u16 type, __u16 code) {
+    if (type == EV_KEY) return code >= BTN_MISC;
+    if (type == EV_ABS) {
+        switch (code) {
+            case ABS_X:      /* 0  — left stick X */
+            case ABS_Y:      /* 1  — left stick Y */
+            case ABS_Z:      /* 2  — right stick X */
+            case ABS_RZ:     /* 5  — right stick Y */
+            case ABS_HAT0X:  /* 16 — D-Pad X */
+            case ABS_HAT0Y:  /* 17 — D-Pad Y */
+                return 1;
+            default:
+                return 0;
+        }
+    }
+    return 0;
+}
+
+/*
+ * Background thread: polls g_gamepad_fd for physical evdev events and
+ * forwards filtered events to the connected client as:
+ *   EVT <type> <code> <value>\n
+ *
+ * Read-only observation — the fd is NOT grabbed via EVIOCGRAB. Multiple
+ * readers can share an evdev node; Android's EventHub continues to dispatch
+ * the same events to the foreground app/game in parallel. We therefore
+ * neither swallow nor replay anything; the kernel multicasts each event to
+ * every open fd.
+ *
+ * The thread runs while g_reader_active == 1. All writes to the client
+ * socket are protected by g_send_mutex to prevent interleaving with the
+ * PONG response written from serve_client().
+ */
+static void *evdev_reader_thread(void *arg) {
+    (void)arg;
+    struct pollfd pfd;
+    pfd.fd = g_gamepad_fd;
+    pfd.events = POLLIN;
+
+    while (g_reader_active) {
+        int ret = poll(&pfd, 1, 10); /* 10 ms timeout so the exit flag is checked */
+        if (ret <= 0) continue;
+        if (!(pfd.revents & POLLIN)) continue;
+
+        struct input_event ev;
+        ssize_t r = read(g_gamepad_fd, &ev, sizeof(ev));
+        if (r != (ssize_t)sizeof(ev)) break;
+
+        if (!should_emit_evdev(ev.type, ev.code)) continue;
+
+        int cfd = g_client_fd_for_reader;
+        if (cfd < 0) continue;
+
+        char buf[64];
+        int len = snprintf(buf, sizeof(buf), "EVT %d %d %d\n",
+                           (int)ev.type, (int)ev.code, (int)ev.value);
+        if (len <= 0 || len >= (int)sizeof(buf)) continue;
+
+        pthread_mutex_lock(&g_send_mutex);
+        if (g_reader_active) {
+            (void)write(cfd, buf, (size_t)len);
+        }
+        pthread_mutex_unlock(&g_send_mutex);
+    }
+    return NULL;
+}
+
+/*
+ * Signals the reader thread to stop and blocks until it has exited.
+ * Safe to call even if no thread is running (g_reader_active == 0).
+ */
+static void stop_reader_thread(void) {
+    if (!g_reader_active) return;
+    g_reader_active = 0;
+    pthread_join(g_reader_thread, NULL);
+    g_client_fd_for_reader = -1;
+}
 
 static void signal_handler(int sig) {
     (void)sig;
@@ -191,23 +289,59 @@ static int read_line(int fd, char *out) {
 /*
  * Handles a single client connection.
  * Returns 0 on normal disconnect, 1 if the client requested QUIT.
+ *
+ * Extended protocol commands:
+ *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
+ *   UNSUB GAMEPAD\n — stop streaming
  */
-static int serve_client(int client_fd, int gamepad_fd) {
+static int serve_client(int client_fd) {
     char line[MAX_LINE];
     char action[5];
     int a, b;
 
+    /* Publish this fd so evdev_reader_thread can send EVT lines to it. */
+    g_client_fd_for_reader = client_fd;
+
     while (!g_should_exit) {
         int n = read_line(client_fd, line);
-        if (n <= 0) return 0;  /* EOF or error */
+        if (n <= 0) break;  /* EOF or error */
 
         if (line[0] == 'P' && strcmp(line, "PING") == 0) {
             const char *resp = "PONG\n";
+            pthread_mutex_lock(&g_send_mutex);
             (void)write(client_fd, resp, 5);
+            pthread_mutex_unlock(&g_send_mutex);
             continue;
         }
         if (line[0] == 'Q' && strcmp(line, "QUIT") == 0) {
+            stop_reader_thread();
             return 1;
+        }
+        if (strcmp(line, "SUB GAMEPAD") == 0) {
+            if (!g_reader_active) {
+                /* Drain any events that accumulated in the kernel buffer while the
+                 * reader was inactive. These include stale physical presses and
+                 * synthetic events written by previous GD/GU/JS injection sessions;
+                 * delivering them to the app would create spurious steps at the very
+                 * beginning of the recording. */
+                int fl = fcntl(g_gamepad_fd, F_GETFL);
+                fcntl(g_gamepad_fd, F_SETFL, fl | O_NONBLOCK);
+                struct input_event drain_ev;
+                while (read(g_gamepad_fd, &drain_ev, sizeof(drain_ev)) > 0) {}
+                fcntl(g_gamepad_fd, F_SETFL, fl);
+
+                /* Re-publish the client fd. stop_reader_thread() resets it to -1,
+                 * so a second SUB GAMEPAD on the same connection would silently
+                 * discard every event without this assignment. */
+                g_client_fd_for_reader = client_fd;
+                g_reader_active = 1;
+                pthread_create(&g_reader_thread, NULL, evdev_reader_thread, NULL);
+            }
+            continue;
+        }
+        if (strcmp(line, "UNSUB GAMEPAD") == 0) {
+            stop_reader_thread();
+            continue;
         }
 
         if (line[0] == 'G') {
@@ -215,11 +349,11 @@ static int serve_client(int client_fd, int gamepad_fd) {
             if (sscanf(line, "%4s %d", action, &a) != 2) continue;
             if (a < BTN_MISC || a > KEY_MAX) continue;
             if (strcmp(action, "GD") == 0) {
-                write_event(gamepad_fd, EV_KEY, (__u16)a, 1);
-                write_event(gamepad_fd, EV_SYN, SYN_REPORT, 0);
+                write_event(g_gamepad_fd, EV_KEY, (__u16)a, 1);
+                write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
             } else if (strcmp(action, "GU") == 0) {
-                write_event(gamepad_fd, EV_KEY, (__u16)a, 0);
-                write_event(gamepad_fd, EV_SYN, SYN_REPORT, 0);
+                write_event(g_gamepad_fd, EV_KEY, (__u16)a, 0);
+                write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
             }
         } else if (line[0] == 'H') {
             /* HD <axis> <val>  D-Pad */
@@ -227,19 +361,20 @@ static int serve_client(int client_fd, int gamepad_fd) {
             if (a < 0 || a > 1) continue;
             if (b < -1 || b > 1) continue;
             __u16 code = (a == 0) ? ABS_HAT0X : ABS_HAT0Y;
-            write_event(gamepad_fd, EV_ABS, code, b);
-            write_event(gamepad_fd, EV_SYN, SYN_REPORT, 0);
+            write_event(g_gamepad_fd, EV_ABS, code, b);
+            write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
         } else if (line[0] == 'J') {
             /* JS <axis_code> <val>  analog stick */
             if (sscanf(line, "%4s %d %d", action, &a, &b) != 3) continue;
             if (a != ABS_X && a != ABS_Y && a != ABS_Z && a != ABS_RZ) continue;
             if (b < -32768 || b > 32767) continue;
-            write_event(gamepad_fd, EV_ABS, (__u16)a, b);
-            write_event(gamepad_fd, EV_SYN, SYN_REPORT, 0);
+            write_event(g_gamepad_fd, EV_ABS, (__u16)a, b);
+            write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
         }
         /* Unknown commands are silently ignored — forward-compat for future
          * feature prefixes. */
     }
+    stop_reader_thread();
     return 0;
 }
 
@@ -264,8 +399,8 @@ int main(void) {
     signal(SIGINT,  signal_handler);
     signal(SIGPIPE, SIG_IGN);
 
-    int gamepad_fd = discover_gamepad_fd();
-    if (gamepad_fd < 0) {
+    g_gamepad_fd = discover_gamepad_fd();
+    if (g_gamepad_fd < 0) {
         (void)write(STDOUT_FILENO, "N\n", 2);
         return 1;
     }
@@ -274,7 +409,7 @@ int main(void) {
     if (srv_fd < 0) {
         fprintf(stderr, "privd: bind_listening_socket failed errno=%d\n", errno);
         (void)write(STDOUT_FILENO, "E\n", 2);
-        close(gamepad_fd);
+        close(g_gamepad_fd);
         return 1;
     }
 
@@ -289,12 +424,12 @@ int main(void) {
             if (errno == EINTR) continue;
             break;
         }
-        int quit = serve_client(client, gamepad_fd);
+        int quit = serve_client(client);
         close(client);
         if (quit) break;
     }
 
     close(srv_fd);
-    close(gamepad_fd);
+    close(g_gamepad_fd);
     return 0;
 }

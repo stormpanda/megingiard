@@ -12,6 +12,7 @@ import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
@@ -23,6 +24,7 @@ private const val VERIFY_RETRY_COUNT = 20
 private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
+private const val GETPROP_TIMEOUT_MS = 2_000L
 private const val SYNC_DATA = "DATA"
 private const val SYNC_DONE = "DONE"
 private const val SYNC_OKAY = "OKAY"
@@ -104,14 +106,21 @@ object PrivdBootstrapper {
      * Push the daemon binary, spawn it, then call [PrivdManager.connect] to verify.
      * Caller must have completed [pair] (or have a previously-paired device).
      *
-     * @param host        The device's IP address (same value entered during pairing).
-     * @param connectPort The ADB Wireless-Debugging connect port shown on the
-     *                    main "Wireless debugging" screen (not the pairing port).
+     * The ADB Wireless-Debugging connect port is read automatically from the
+     * `service.adb.tls.port` system property — no user input required.
+     *
+     * @param host The device's IP address (always `127.0.0.1` for on-device use).
      *
      * Blocking — call on `Dispatchers.IO`. Returns `true` on success.
      * Failure modes are reported through [PrivdManager.reportBootstrapFailure].
      */
-    fun bootstrapAndConnect(context: Context, host: String, connectPort: Int): Boolean {
+    fun bootstrapAndConnect(context: Context, host: String): Boolean {
+        val connectPort = readAdbTlsConnectPort()
+        if (connectPort <= 0) {
+            AppLog.w(TAG, "bootstrapAndConnect: wireless debugging port not available (port=$connectPort) — is Wireless Debugging enabled?")
+            PrivdManager.reportBootstrapFailure(PrivdError.ADB_CONNECT_FAILED)
+            return false
+        }
         AppLog.i(TAG, "bootstrapAndConnect(host=$host connectPort=$connectPort)")
         PrivdManager.reportBootstrapStart()
         val mgr = PrivdAdbConnectionManager.getInstance(context)
@@ -185,6 +194,35 @@ object PrivdBootstrapper {
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
+
+    /**
+     * Reads the ADB Wireless-Debugging TLS connect port from the system property
+     * `service.adb.tls.port`. Returns 0 if the property is absent (Wireless Debugging
+     * not enabled), if the `getprop` invocation hangs beyond [GETPROP_TIMEOUT_MS],
+     * or if the output cannot be parsed.
+     */
+    private fun readAdbTlsConnectPort(): Int {
+        var proc: Process? = null
+        return try {
+            proc = ProcessBuilder("getprop", "service.adb.tls.port")
+                .redirectErrorStream(true)
+                .start()
+            val output = proc.inputStream.bufferedReader().use { reader ->
+                reader.readLine()?.trim().orEmpty()
+            }
+            val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            if (!exited) {
+                AppLog.w(TAG, "readAdbTlsConnectPort() getprop timed out after $GETPROP_TIMEOUT_MS ms")
+                proc.destroyForcibly()
+                return 0
+            }
+            output.toIntOrNull() ?: 0
+        } catch (e: Exception) {
+            AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
+            proc?.destroyForcibly()
+            0
+        }
+    }
 
     private fun pushDaemon(context: Context, mgr: PrivdAdbConnectionManager): Boolean {
         val binaryBytes = context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }

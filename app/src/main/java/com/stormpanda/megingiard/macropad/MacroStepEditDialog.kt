@@ -82,7 +82,7 @@ private const val MSD_TIMING_DELTA_BUTTON_V_PADDING = 2
 // Step type (editor-internal)
 // ─────────────────────────────────────────────────────────────────────────────
 
-private enum class StepType { GAMEPAD, JOYSTICK, DPAD, TOUCH }
+private enum class StepType { GAMEPAD, JOYSTICK, JOYSTICK_PATH, DPAD, TOUCH }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Direction arrow labels keyed by (col, row) in the 3×3 grid.
@@ -132,6 +132,7 @@ internal fun MacroStepEditDialog(
         is MacroStep.JoystickMove     -> StepType.JOYSTICK
         is MacroStep.DPadTap          -> StepType.DPAD
         is MacroStep.TouchTap         -> StepType.TOUCH
+        is MacroStep.JoystickPath     -> StepType.JOYSTICK_PATH
         null                          -> StepType.GAMEPAD
     }
 
@@ -190,10 +191,11 @@ internal fun MacroStepEditDialog(
 
     // ── Confirm guard ─────────────────────────────────────────────────────────
     val isConfirmEnabled = durMs > 0 && when (stepType) {
-        StepType.GAMEPAD  -> true
-        StepType.JOYSTICK -> !(joyDirX == 0 && joyDirY == 0)
-        StepType.DPAD     -> !(dpadDirX == 0 && dpadDirY == 0)
-        StepType.TOUCH    -> true
+        StepType.GAMEPAD       -> true
+        StepType.JOYSTICK      -> !(joyDirX == 0 && joyDirY == 0)
+        StepType.JOYSTICK_PATH -> step is MacroStep.JoystickPath
+        StepType.DPAD          -> !(dpadDirX == 0 && dpadDirY == 0)
+        StepType.TOUCH         -> true
     }
 
     // ── Full-screen layout ────────────────────────────────────────────────────────────────
@@ -237,6 +239,10 @@ internal fun MacroStepEditDialog(
                             startTimeMs = startMs.toLong(),
                             durationMs  = durMs.toLong().coerceAtLeast(1L),
                         )
+                        StepType.JOYSTICK_PATH -> (step as MacroStep.JoystickPath).copy(
+                            startTimeMs = startMs.toLong(),
+                            durationMs  = durMs.toLong().coerceAtLeast(1L),
+                        )
                     }
                     onConfirm(builtStep, shiftMode)
                 },
@@ -260,28 +266,32 @@ internal fun MacroStepEditDialog(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StepType.entries.forEach { type ->
-                    // Show the TOUCH chip only when editing a TouchTap;
-                    // hide non-TOUCH chips when editing a TouchTap.
-                    if (initialType == StepType.TOUCH && type != StepType.TOUCH) return@forEach
-                    if (initialType != StepType.TOUCH && type == StepType.TOUCH) return@forEach
+                    /* TOUCH and JOYSTICK_PATH are recorded — only show their chip when editing
+                       a step of that type, and hide them when editing any other step. */
+                    val initialIsRecorded = initialType == StepType.TOUCH || initialType == StepType.JOYSTICK_PATH
+                    val typeIsRecorded = type == StepType.TOUCH || type == StepType.JOYSTICK_PATH
+                    if (initialIsRecorded && type != initialType) return@forEach
+                    if (!initialIsRecorded && typeIsRecorded) return@forEach
                     val selected = type == stepType
                     val labelRes = when (type) {
-                        StepType.GAMEPAD  -> R.string.macropad_macro_step_type_gamepad
-                        StepType.JOYSTICK -> R.string.macropad_macro_step_type_joystick
-                        StepType.DPAD     -> R.string.macropad_macro_step_type_dpad
-                        StepType.TOUCH    -> R.string.macropad_macro_step_type_touch
+                        StepType.GAMEPAD       -> R.string.macropad_macro_step_type_gamepad
+                        StepType.JOYSTICK      -> R.string.macropad_macro_step_type_joystick
+                        StepType.JOYSTICK_PATH -> R.string.macropad_macro_step_type_joystick_path
+                        StepType.DPAD          -> R.string.macropad_macro_step_type_dpad
+                        StepType.TOUCH         -> R.string.macropad_macro_step_type_touch
                     }
                     val symbolName = when (type) {
-                        StepType.GAMEPAD -> "sports_esports"
-                        StepType.JOYSTICK -> "joystick"
-                        StepType.DPAD -> "gamepad"
-                        StepType.TOUCH -> "touch_app"
+                        StepType.GAMEPAD       -> "sports_esports"
+                        StepType.JOYSTICK      -> "joystick"
+                        StepType.JOYSTICK_PATH -> "joystick"
+                        StepType.DPAD          -> "gamepad"
+                        StepType.TOUCH         -> "touch_app"
                     }
                     StepTypeChip(
                         text = stringResource(labelRes),
                         symbolName = symbolName,
                         selected = selected,
-                        enabled = type != StepType.TOUCH,
+                        enabled = !typeIsRecorded,
                         onClick = { stepType = type },
                     )
                 }
@@ -425,6 +435,34 @@ internal fun MacroStepEditDialog(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+                }
+
+                StepType.JOYSTICK_PATH -> {
+                    val pathStep = step as? MacroStep.JoystickPath
+                    Text(
+                        stringResource(R.string.macropad_macro_step_path_readonly),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    val stickLabel = stringResource(
+                        if (pathStep?.stick == JoystickStick.RIGHT)
+                            R.string.macropad_macro_step_stick_right
+                        else
+                            R.string.macropad_macro_step_stick_left
+                    )
+                    Text(
+                        stringResource(R.string.macropad_macro_step_path_summary_stick, stickLabel),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.macropad_macro_step_path_summary_samples,
+                            pathStep?.samples?.size ?: 0,
+                        ),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
             }
 

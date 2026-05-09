@@ -655,7 +655,7 @@ After completing every set of changes, you MUST propose a ready-to-use commit me
 **Scope of the commit message:**
 The message MUST cover **every change made since the last commit** — across the entire conversation, not only the most recent editing step. This means: if the session involved multiple rounds of edits (e.g. first a refactor, then a bug fix, then a follow-up tweak), all of them must appear as bullets in the final proposal. Never limit the message to just the last reply or last file touched.
 
-When in doubt, mentally run through all files that were modified during the session and verify each one is represented.
+**Determining which files changed:** Before writing the commit message, run `git status` to get the definitive list of modified files. Include **all** files shown — both staged and unstaged — without distinguishing between the two states. Do not rely solely on memory of what was edited during the conversation; the `git status` output is the authoritative source.
 
 The proposal must be copy-paste ready — no placeholders. You must present it as a separate code block so the user can copy it directly.
 

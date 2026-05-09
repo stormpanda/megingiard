@@ -1,33 +1,42 @@
 package com.stormpanda.megingiard.privd
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
@@ -36,6 +45,7 @@ import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 private val PR_CARD_PADDING = 16.dp
 private val PR_ROW_V_PADDING = 12.dp
@@ -44,6 +54,12 @@ private val PR_STATUS_DOT_GAP = 8.dp
 private val PR_BUTTON_GAP = 8.dp
 private val PR_PING_SPINNER_SIZE = 18.dp
 private const val PR_PING_SPINNER_STROKE = 2
+private const val PR_DIALOG_SCRIM_ALPHA = 0.5f
+private const val PR_DIALOG_WIDTH_FRACTION = 0.85f
+private val PR_DIALOG_CORNER = 16.dp
+private val PR_DIALOG_PADDING = 20.dp
+private val PR_DIALOG_SLIDER_GAP = 8.dp
+private val PR_DIALOG_PCT_WIDTH = 52.dp
 
 /**
  * Privileged Mode settings card.
@@ -62,11 +78,15 @@ private const val PR_PING_SPINNER_STROKE = 2
 internal fun PrivdSettingsCard(
     viewModel: GlobalSettingsViewModel,
     onShowWizard: () -> Unit,
+    onShowDeadzoneDialog: () -> Unit,
 ) {
     val state by viewModel.privdState.collectAsState()
     val lastError by viewModel.privdLastError.collectAsState()
     val mergeEnabled by viewModel.privdGamepadMergeEnabled.collectAsState()
+    val recordingEnabled by viewModel.privdGamepadRecordingEnabled.collectAsState()
     val autoConnect by viewModel.privdAutoConnect.collectAsState()
+    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
+    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
@@ -234,6 +254,178 @@ internal fun PrivdSettingsCard(
                 checked = mergeEnabled,
                 onCheckedChange = { viewModel.setPrivdGamepadMergeEnabled(it) },
             )
+        }
+
+        // ── Per-feature toggle: Gamepad recording ────────────────────────────────
+        HorizontalDivider(color = colors.divider)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = PR_ROW_V_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.privd_feature_gamepad_recording),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.privd_feature_gamepad_recording_desc),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = recordingEnabled,
+                onCheckedChange = { viewModel.setPrivdGamepadRecordingEnabled(it) },
+            )
+        }
+
+        // ── Dead-zone configuration row ──────────────────────────────────────
+        HorizontalDivider(color = colors.divider)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onShowDeadzoneDialog() }
+                .padding(vertical = PR_ROW_V_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.privd_deadzone_title),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.privd_deadzone_desc,
+                        (deadzoneLeft * 100).toInt(),
+                        (deadzoneRight * 100).toInt(),
+                    ),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * In-tree dialog for configuring the per-stick dead zone used during physical
+ * gamepad recording. Rendered at the GlobalSettingsScreen overlay level so it
+ * covers the full Scaffold content.
+ *
+ * @param initialDeadzoneLeft  Current left-stick dead zone (0.0–1.0).
+ * @param initialDeadzoneRight Current right-stick dead zone (0.0–1.0).
+ * @param onConfirm            Called with the new (left, right) values when the user confirms.
+ * @param onDismiss            Called when the dialog is dismissed without saving.
+ */
+@Composable
+internal fun DeadzoneDialog(
+    initialDeadzoneLeft: Float,
+    initialDeadzoneRight: Float,
+    onConfirm: (left: Float, right: Float) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var leftPct  by rememberSaveable { mutableIntStateOf((initialDeadzoneLeft  * 100).roundToInt()) }
+    var rightPct by rememberSaveable { mutableIntStateOf((initialDeadzoneRight * 100).roundToInt()) }
+    val colors = LocalAppColors.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = PR_DIALOG_SCRIM_ALPHA))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(PR_DIALOG_WIDTH_FRACTION)
+                .clip(RoundedCornerShape(PR_DIALOG_CORNER))
+                .background(colors.surface)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {}
+                .padding(PR_DIALOG_PADDING),
+        ) {
+            Text(
+                text = stringResource(R.string.privd_deadzone_dialog_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Spacer(Modifier.height(PR_DIALOG_PADDING))
+            Text(
+                text = stringResource(R.string.privd_deadzone_dialog_hint),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(PR_DIALOG_PADDING))
+            // ── Left stick ──────────────────────────────────────────────────
+            Text(
+                text = stringResource(R.string.privd_deadzone_left),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Slider(
+                    value = leftPct / 100f,
+                    onValueChange = { leftPct = (it * 100).roundToInt() },
+                    valueRange = 0f..1f,
+                    steps = 99,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "$leftPct %",
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .width(PR_DIALOG_PCT_WIDTH)
+                        .padding(start = PR_DIALOG_SLIDER_GAP),
+                )
+            }
+            Spacer(Modifier.height(PR_DIALOG_SLIDER_GAP))
+            // ── Right stick ─────────────────────────────────────────────────
+            Text(
+                text = stringResource(R.string.privd_deadzone_right),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Slider(
+                    value = rightPct / 100f,
+                    onValueChange = { rightPct = (it * 100).roundToInt() },
+                    valueRange = 0f..1f,
+                    steps = 99,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "$rightPct %",
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .width(PR_DIALOG_PCT_WIDTH)
+                        .padding(start = PR_DIALOG_SLIDER_GAP),
+                )
+            }
+            Spacer(Modifier.height(PR_DIALOG_PADDING))
+            // ── Action buttons ───────────────────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.privd_deadzone_cancel))
+                }
+                Spacer(Modifier.width(PR_DIALOG_SLIDER_GAP))
+                Button(onClick = { onConfirm(leftPct / 100f, rightPct / 100f) }) {
+                    Text(stringResource(R.string.privd_deadzone_ok))
+                }
+            }
         }
     }
 }

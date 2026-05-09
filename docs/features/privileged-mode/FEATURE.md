@@ -39,7 +39,7 @@ every device since Android 11 (API 30).
 
 ### FR-PV3: Per-Feature Opt-In
 
-- Each consumer feature (currently only Gamepad merge) MUST have its own
+- Each consumer feature (currently Gamepad merge and physical Gamepad recording) MUST have its own
   toggle inside the Privileged Mode card.
 - The toggle MUST be interactable in **all** `PrivdState` values (not only
   RUNNING). The flag is persisted independently of the connection state;
@@ -75,9 +75,10 @@ every device since Android 11 (API 30).
 
 ## Features That Require Privileged Mode
 
-| Feature                                     | What it gains                                               | Without Privileged Mode                                                                                                                                        |
-| ------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Gamepad merge** (MacroPad → physical pad) | Single-controller emulation: games see only one controller. | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
+| Feature                                      | What it gains                                                                                 | Without Privileged Mode                                                                                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                   | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
+| **Gamepad recording** (physical pad → macro) | Macro recording from the real controller while the target game still receives the same input. | Falls back to the on-screen virtual controller recording overlay.                                                                                              |
 
 > _New entries get added here whenever a feature opts in. Examples that
 > may join the list later: writing to `/dev/input/event*` for special
@@ -191,15 +192,20 @@ ASCII, newline-terminated, both directions. Each feature uses a two-letter
 command prefix; new feature modules can claim new prefixes without breaking
 the existing protocol.
 
-| Direction | Command             | Meaning                                     |
-| --------- | ------------------- | ------------------------------------------- |
-| App → D   | `PING\n`            | Health-check                                |
-| D → App   | `PONG\n`            | Reply to PING                               |
-| App → D   | `QUIT\n`            | Daemon exits cleanly                        |
-| App → D   | `GD <btn>\n`        | Gamepad button DOWN (Linux `BTN_*`)         |
-| App → D   | `GU <btn>\n`        | Gamepad button UP                           |
-| App → D   | `HD <axis> <val>\n` | D-Pad hat (axis 0=X 1=Y, val −1/0/+1)       |
-| App → D   | `JS <axis> <val>\n` | Analog stick (axis ABS_X=0…ABS_RZ=5, int16) |
+| Direction | Command                       | Meaning                                                  |
+| --------- | ----------------------------- | -------------------------------------------------------- |
+| App → D   | `PING\n`                      | Health-check                                             |
+| D → App   | `PONG\n`                      | Reply to PING                                            |
+| App → D   | `QUIT\n`                      | Daemon exits cleanly                                     |
+| App → D   | `GD <btn>\n`                  | Gamepad button DOWN (Linux `BTN_*`)                      |
+| App → D   | `GU <btn>\n`                  | Gamepad button UP                                        |
+| App → D   | `HD <axis> <val>\n`           | D-Pad hat (axis 0=X 1=Y, val −1/0/+1)                    |
+| App → D   | `JS <axis> <val>\n`           | Analog stick (axis ABS_X=0…ABS_RZ=5, int16)              |
+| App → D   | `SUB GAMEPAD\n`               | Start streaming physical gamepad evdev events to the app |
+| App → D   | `UNSUB GAMEPAD\n`             | Stop streaming physical gamepad evdev events             |
+| D → App   | `EVT <type> <code> <value>\n` | Physical evdev event while subscribed                    |
+
+`SUB GAMEPAD` opens the physical evdev node read-only and starts a reader thread that forwards filtered `EVT` lines to the app. The fd is **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
 
 On startup the daemon prints exactly one line on **stdout** so the
 spawn command can detect success:
@@ -288,20 +294,21 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 ### Source Files
 
-| File                                            | Responsibility                                                                                                                             |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/src/main/cpp/megingiard_privd.c`           | Native daemon source (abstract-socket server + evdev writer)                                                                               |
-| `app/src/main/assets/megingiard_privd_arm64`    | Pre-built static daemon binary                                                                                                             |
-| `build_megingiard_privd.sh`                     | NDK build script                                                                                                                           |
-| `domain/.../privd/PrivdClient.kt`               | LocalSocket transport singleton (writer + reader threads, ping support)                                                                    |
-| `domain/.../privd/PrivdConnectionState.kt`      | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
-| `domain/.../privd/PrivdGamepadInjector.kt`      | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                                            |
-| `domain/.../privd/PrivdManager.kt`              | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum                                 |
-| `domain/.../privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                                        |
-| `domain/.../privd/PrivdBootstrapper.kt`         | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration                     |
-| `app/.../privd/PrivdSettingsCard.kt`            | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch, feature toggles                                     |
-| `app/.../privd/PrivdSetupWizard.kt`             | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; state hoisted to `GlobalSettingsScreen` |
-| `app/.../MainActivity.kt`                       | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                                            |
-| `domain/.../macropad/GamepadInjector.kt`        | Strategy router between virtual uinput and Privd merge backends                                                                            |
-| `domain/.../settings/MacroPadSettings.kt`       | `privdGamepadMergeEnabled` + `privdAutoConnect` per-feature flags                                                                          |
-| `domain/.../settings/SettingsKeys.kt`           | `KEY_PRIVD_GAMEPAD_MERGE_ENABLED`, `KEY_PRIVD_AUTO_CONNECT` DataStore keys                                                                 |
+| File                                                     | Responsibility                                                                                                                             |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (abstract-socket server, evdev writer, passive read-only physical gamepad event stream)                               |
+| `app/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
+| `build_megingiard_privd.sh`                              | NDK build script                                                                                                                           |
+| `domain/.../privd/PrivdClient.kt`                        | LocalSocket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                       |
+| `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
+| `domain/.../privd/PrivdGamepadInjector.kt`               | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                                            |
+| `domain/.../privd/PrivdManager.kt`                       | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum                                 |
+| `domain/.../privd/PrivdAdbConnectionManager.kt`          | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                                        |
+| `domain/.../privd/PrivdBootstrapper.kt`                  | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration                     |
+| `app/.../privd/PrivdSettingsCard.kt`                     | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch, feature toggles                                     |
+| `app/.../privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; state hoisted to `GlobalSettingsScreen` |
+| `app/.../MainActivity.kt`                                | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                                            |
+| `domain/.../macropad/GamepadInjector.kt`                 | Strategy router between virtual uinput and Privd merge backends                                                                            |
+| `domain/.../macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`)                            |
+| `domain/.../settings/MacroPadSettings.kt`                | `privdGamepadMergeEnabled`, `privdGamepadRecordingEnabled`, and `privdAutoConnect` per-feature flags                                       |
+| `domain/.../settings/SettingsKeys.kt`                    | `KEY_PRIVD_GAMEPAD_MERGE_ENABLED`, `KEY_PRIVD_GAMEPAD_RECORDING_ENABLED`, `KEY_PRIVD_AUTO_CONNECT` DataStore keys                          |

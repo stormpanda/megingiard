@@ -46,7 +46,10 @@ class GlobalSettingsViewModel : ViewModel() {
     val privdState: StateFlow<PrivdState> = PrivdManager.state
     val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
     val privdGamepadMergeEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadMergeEnabled
+    val privdGamepadRecordingEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadRecordingEnabled
     val privdAutoConnect: StateFlow<Boolean> = MacroPadSettings.privdAutoConnect
+    val privdDeadzoneLeft: StateFlow<Float>  = MacroPadSettings.deadzoneLeft
+    val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
     val privdBootstrapStage: StateFlow<BootstrapStage> = PrivdBootstrapper.stage
 
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
@@ -77,7 +80,10 @@ class GlobalSettingsViewModel : ViewModel() {
     fun privdDisconnect() = PrivdManager.disconnect()
 
     fun setPrivdGamepadMergeEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadMergeEnabled(value)
+    fun setPrivdGamepadRecordingEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadRecordingEnabled(value)
     fun setPrivdAutoConnect(value: Boolean) = MacroPadSettings.setPrivdAutoConnect(value)
+    fun setPrivdDeadzoneLeft(value: Float)  = MacroPadSettings.setDeadzoneLeft(value)
+    fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)
     fun privdResetBootstrapStage() = PrivdBootstrapper.resetStage()
 
     /**
@@ -102,21 +108,21 @@ class GlobalSettingsViewModel : ViewModel() {
     }
 
     /**
-     * After pairing succeeded: connect directly to [host]:[connectPort], push the
+     * After pairing succeeded: connect directly to [host], push the
      * daemon binary, spawn the daemon, then verify with [PrivdManager.connect].
+     * The ADB connect port is detected automatically from the system property.
      * On success, persists the auto-connect flag so future app starts skip the wizard.
      */
     fun privdBootstrap(
         context: Context,
         host: String,
-        connectPort: Int,
         onResult: (Boolean) -> Unit,
     ) {
         AppLog.i(TAG, "privdBootstrap()")
         val appContext = context.applicationContext
         viewModelScope.launch {
             val ok = withContext(Dispatchers.IO) {
-                PrivdBootstrapper.bootstrapAndConnect(appContext, host, connectPort)
+                PrivdBootstrapper.bootstrapAndConnect(appContext, host)
             }
             if (ok) MacroPadSettings.setPrivdAutoConnect(true)
             onResult(ok)

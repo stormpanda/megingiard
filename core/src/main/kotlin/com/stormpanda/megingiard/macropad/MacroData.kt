@@ -90,7 +90,31 @@ sealed class MacroStep {
         val normX: Float,
         val normY: Float,
     ) : MacroStep()
+
+    /**
+     * Replays a recorded analog stick path on [stick], beginning [startTimeMs] milliseconds
+     * after macro start. [samples] is a list of raw normalised axis positions
+     * (each in [−1.0, 1.0]) with timing offsets relative to [startTimeMs]. On step end
+     * the axis is reset to 0. Created exclusively by [PhysicalGamepadRecordingManager].
+     */
+    @Serializable
+    @SerialName("joystick_path")
+    data class JoystickPath(
+        override val startTimeMs: Long,
+        override val durationMs: Long,
+        val stick: JoystickStick,
+        val samples: List<PathSample>,
+    ) : MacroStep()
 }
+
+/**
+ * A single analog stick position sample within a [MacroStep.JoystickPath].
+ *
+ * [offsetMs] is relative to the parent [MacroStep.JoystickPath.startTimeMs].
+ * [x] and [y] are normalised axis values in [−1.0, 1.0].
+ */
+@Serializable
+data class PathSample(val offsetMs: Long, val x: Float, val y: Float)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Extension helpers
@@ -105,6 +129,7 @@ fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
     is MacroStep.JoystickMove     -> copy(startTimeMs = newStartTimeMs)
     is MacroStep.DPadTap          -> copy(startTimeMs = newStartTimeMs)
     is MacroStep.TouchTap         -> copy(startTimeMs = newStartTimeMs)
+    is MacroStep.JoystickPath     -> copy(startTimeMs = newStartTimeMs)
 }
 
 /** Returns a new list where every step's start time is shifted by [offsetMs]. */

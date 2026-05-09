@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import android.content.Context
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.macropad.displayShortLabel
@@ -296,6 +297,41 @@ internal fun gamepadCodeDisplayShortLabel(code: Int, swapFaceButtons: Boolean): 
         swapFaceButtons && code == GamepadKeycodes.BTN_NORTH -> "X"
         swapFaceButtons && code == GamepadKeycodes.BTN_WEST  -> "Y"
         else -> GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.shortLabel ?: code.toString()
+    }
+}
+
+/**
+ * Non-Composable variant of [gamepadCodeDisplayLabel] for use in non-Composable contexts
+ * (e.g. inside `map` / `mapNotNull` lambdas). Uses [Context.getString] instead of `stringResource`.
+ */
+internal fun gamepadCodeDisplayLabel(code: Int, swapFaceButtons: Boolean, context: Context): String {
+    val primary = gamepadCodeDisplayShortLabel(code, swapFaceButtons)
+    return when (code) {
+        GamepadKeycodes.BTN_SOUTH -> context.getString(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            context.getString(R.string.macropad_gamepad_symbol_cross),
+            context.getString(R.string.macropad_gamepad_position_south),
+        )
+        GamepadKeycodes.BTN_EAST -> context.getString(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            context.getString(R.string.macropad_gamepad_symbol_circle),
+            context.getString(R.string.macropad_gamepad_position_east),
+        )
+        GamepadKeycodes.BTN_NORTH -> context.getString(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            context.getString(R.string.macropad_gamepad_symbol_triangle),
+            context.getString(R.string.macropad_gamepad_position_north),
+        )
+        GamepadKeycodes.BTN_WEST -> context.getString(
+            R.string.macropad_gamepad_face_label_template,
+            primary,
+            context.getString(R.string.macropad_gamepad_symbol_square),
+            context.getString(R.string.macropad_gamepad_position_west),
+        )
+        else -> GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: code.toString()
     }
 }
 

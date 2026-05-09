@@ -91,9 +91,7 @@ internal fun PrivdSetupWizardDialog(
     val lastError by viewModel.privdLastError.collectAsState()
 
     var step by rememberSaveable { mutableStateOf(0) }
-    var pairHost by rememberSaveable { mutableStateOf("") }
     var pairPort by rememberSaveable { mutableStateOf("") }
-    var connectPort by rememberSaveable { mutableStateOf("") }
     var pairCode by rememberSaveable { mutableStateOf("") }
     var pairError by remember { mutableStateOf(false) }
     var pairBusy by remember { mutableStateOf(false) }
@@ -167,23 +165,19 @@ internal fun PrivdSetupWizardDialog(
                 )
 
                 1 -> StepPair(
-                    host = pairHost,
                     pairPort = pairPort,
-                    connectPort = connectPort,
                     code = pairCode,
                     busy = pairBusy,
                     error = pairError,
                     fieldColors = fieldColors,
                     focusManager = focusManager,
-                    onHostChange = { pairHost = it },
                     onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
-                    onConnectPortChange = { connectPort = it.filter { ch -> ch.isDigit() }.take(5) },
                     onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
                     onSubmit = {
                         val portInt = pairPort.toIntOrNull() ?: return@StepPair
                         pairBusy = true
                         pairError = false
-                        viewModel.privdPair(context, pairHost.trim(), portInt, pairCode) { ok ->
+                        viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
                             pairBusy = false
                             if (ok) {
                                 step = 2
@@ -199,9 +193,8 @@ internal fun PrivdSetupWizardDialog(
                     stage = stage,
                     busy = bootstrapBusy,
                     onStart = {
-                        val cPort = connectPort.toIntOrNull() ?: return@StepBootstrap
                         bootstrapBusy = true
-                        viewModel.privdBootstrap(context, pairHost.trim(), cPort) { ok ->
+                        viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
                             bootstrapBusy = false
                             if (ok) step = 3
                         }
@@ -280,17 +273,13 @@ private fun StepEnableWireless(
 
 @Composable
 private fun StepPair(
-    host: String,
     pairPort: String,
-    connectPort: String,
     code: String,
     busy: Boolean,
     error: Boolean,
     fieldColors: androidx.compose.material3.TextFieldColors,
     focusManager: androidx.compose.ui.focus.FocusManager,
-    onHostChange: (String) -> Unit,
     onPairPortChange: (String) -> Unit,
-    onConnectPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onBack: () -> Unit,
@@ -300,32 +289,6 @@ private fun StepPair(
         text = stringResource(R.string.privd_wizard_step2_intro),
         color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
-    )
-    OutlinedTextField(
-        value = host,
-        onValueChange = onHostChange,
-        label = { Text(stringResource(R.string.privd_wizard_field_host)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = !busy,
-        colors = fieldColors,
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Next,
-        ),
-        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-    )
-    OutlinedTextField(
-        value = connectPort,
-        onValueChange = onConnectPortChange,
-        label = { Text(stringResource(R.string.privd_wizard_field_connect_port)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-        enabled = !busy,
-        colors = fieldColors,
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Next,
-        ),
-        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
     )
     OutlinedTextField(
         value = pairPort,
@@ -367,8 +330,6 @@ private fun StepPair(
         Button(
             onClick = onSubmit,
             enabled = !busy &&
-                host.isNotBlank() &&
-                connectPort.toIntOrNull()?.let { it in 1..65535 } == true &&
                 pairPort.toIntOrNull()?.let { it in 1..65535 } == true &&
                 code.length == 6,
         ) {
