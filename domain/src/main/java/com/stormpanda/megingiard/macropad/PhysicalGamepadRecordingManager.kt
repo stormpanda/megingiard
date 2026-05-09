@@ -324,8 +324,11 @@ object PhysicalGamepadRecordingManager {
             samples.add(PathSample(offsetMs = offsetMs, x = x, y = y))
 
             if (mag <= deadZone) {
-                /* Stick returned to neutral — close gesture. */
-                val durationMs = offsetMs.coerceAtLeast(1L)
+                /* Stick returned to neutral — close gesture. Duration MUST be strictly
+                   greater than the final sample's offset so that the compiler's
+                   end-of-step neutral reset event sorts strictly after the last sample
+                   at the same global timestamp. */
+                val durationMs = (offsetMs + 1L).coerceAtLeast(1L)
                 val step = MacroStep.JoystickPath(
                     startTimeMs = gestureStartMs - recordingStartEpochMs,
                     durationMs = durationMs,

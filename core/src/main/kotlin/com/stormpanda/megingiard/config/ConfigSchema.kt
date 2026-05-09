@@ -11,6 +11,8 @@ import kotlinx.serialization.json.JsonElement
 /**
  * Schema version — integer, incremented on breaking changes.
  * v3: macros embedded inside PadProfile.macros; flat DataStore key/value map grouped by section.
+ * v4: adds [com.stormpanda.megingiard.macropad.MacroStep.JoystickPath] (and its [PathSample]
+ *     timeline) for high-fidelity replay of recorded analog stick paths.
  */
 const val SCHEMA_VERSION = 4
 

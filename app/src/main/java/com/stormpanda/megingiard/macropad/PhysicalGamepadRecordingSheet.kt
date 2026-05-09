@@ -171,7 +171,7 @@ internal fun PhysicalGamepadRecordingSheet(
                         color = colors.onSurfaceSecondary,
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+
                 Button(
                     onClick = onStop,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.error),

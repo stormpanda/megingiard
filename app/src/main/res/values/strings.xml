@@ -491,6 +491,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch Tap</string>
     <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>
+    <string name="macropad_macro_step_path_readonly">Recorded analog stick path (read-only). Only timing can be edited.</string>
+    <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
+    <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>
     <string name="macropad_macro_step_start_ms">Start time (ms)</string>
     <string name="macropad_macro_step_duration_ms">Duration (ms)</string>
     <string name="macropad_macro_step_timing_delta">%+d</string>

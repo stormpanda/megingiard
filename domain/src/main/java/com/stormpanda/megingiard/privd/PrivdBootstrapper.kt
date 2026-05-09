@@ -12,6 +12,7 @@ import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
@@ -23,6 +24,7 @@ private const val VERIFY_RETRY_COUNT = 20
 private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
+private const val GETPROP_TIMEOUT_MS = 2_000L
 private const val SYNC_DATA = "DATA"
 private const val SYNC_DONE = "DONE"
 private const val SYNC_OKAY = "OKAY"
@@ -196,18 +198,28 @@ object PrivdBootstrapper {
     /**
      * Reads the ADB Wireless-Debugging TLS connect port from the system property
      * `service.adb.tls.port`. Returns 0 if the property is absent (Wireless Debugging
-     * not enabled) or cannot be parsed.
+     * not enabled), if the `getprop` invocation hangs beyond [GETPROP_TIMEOUT_MS],
+     * or if the output cannot be parsed.
      */
     private fun readAdbTlsConnectPort(): Int {
+        var proc: Process? = null
         return try {
-            val proc = ProcessBuilder("getprop", "service.adb.tls.port")
+            proc = ProcessBuilder("getprop", "service.adb.tls.port")
                 .redirectErrorStream(true)
                 .start()
-            val output = proc.inputStream.bufferedReader().readLine()?.trim() ?: ""
-            proc.waitFor()
+            val output = proc.inputStream.bufferedReader().use { reader ->
+                reader.readLine()?.trim().orEmpty()
+            }
+            val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            if (!exited) {
+                AppLog.w(TAG, "readAdbTlsConnectPort() getprop timed out after $GETPROP_TIMEOUT_MS ms")
+                proc.destroyForcibly()
+                return 0
+            }
             output.toIntOrNull() ?: 0
         } catch (e: Exception) {
             AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
+            proc?.destroyForcibly()
             0
         }
     }

@@ -302,7 +302,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_step1_open">Systemeinstellungen öffnen</string>
 
     <string name="privd_wizard_step2_intro">Tippe auf "Gerät über Kopplungscode koppeln" in den Drahtloses-Debugging-Einstellungen. Trage den Kopplungsport und den 6-stelligen Code aus dem Dialog ein. Der Verbindungsport wird automatisch erkannt.</string>
-    <string name="privd_wizard_field_connect_port">Verbindungsport (aus dem Hauptbildschirm "Drahtloses Debugging")</string>
     <string name="privd_wizard_field_pair_port">Kopplungsport (aus dem Dialog "Gerät koppeln")</string>
     <string name="privd_wizard_field_code">Kopplungscode (6 Ziffern)</string>
     <string name="privd_wizard_step2_pair">Koppeln</string>
@@ -398,6 +397,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch-Tippen</string>
     <string name="macropad_macro_step_touch_position">Aufgezeichnete Position (schreibgeschützt)</string>
+    <string name="macropad_macro_step_path_readonly">Aufgezeichneter analoger Stick-Pfad (schreibgeschützt). Nur das Timing kann bearbeitet werden.</string>
+    <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
+    <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>
     <string name="macropad_macro_step_start_ms">Startzeit (ms)</string>
     <string name="macropad_macro_step_duration_ms">Dauer (ms)</string>
     <string name="macropad_macro_step_timing_delta">%+d</string>

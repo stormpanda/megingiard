@@ -191,6 +191,29 @@ class MacroEventCompilerTest {
     }
 
     @Test
+    fun `joystick path sample at duration is filtered so reset wins at end`() {
+        // Regression: a sample whose offsetMs equals the step's durationMs would land at the
+        // same global timestamp as the end-of-step neutral reset. The reset must sort first
+        // (resets before non-resets at equal timestamps) but the sample must NOT be applied
+        // afterwards, otherwise the stick latches non-neutral. The compiler defends against
+        // this by skipping samples whose offsetMs >= durationMs.
+        val step = MacroStep.JoystickPath(
+            startTimeMs = 0L,
+            durationMs  = 100L,
+            stick       = JoystickStick.LEFT,
+            samples     = listOf(
+                PathSample(offsetMs = 0L,   x = 0.5f, y = 0f),
+                PathSample(offsetMs = 100L, x = 1.0f, y = 0f), // boundary: offset == duration
+            ),
+        )
+        val events = buildMacroEventList(macro(step))
+        val at100 = events.filter { it.timeMs == 100L && it.code == GamepadKeycodes.ABS_X }
+        // Only the reset event should land at t=100, not a JOYSTICK_SET with value != 0.
+        assertEquals(1, at100.size)
+        assertEquals(0, at100[0].value)
+    }
+
+    @Test
     fun `joystick reset value zero sorts before non-zero at same timestamp`() {
         // Two joystick steps back-to-back on the same axis: reset of step1 and set of step2
         // both land at 100ms.  The reset (value=0) must come first.
