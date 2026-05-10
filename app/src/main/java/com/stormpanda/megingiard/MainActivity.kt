@@ -226,8 +226,9 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
-            val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-            val promptInFlight by AppStateManager.promptInFlight.collectAsState()
+            val isCapturingState = ScreenCaptureManager.isCapturing.collectAsState()
+            val promptInFlightState = AppStateManager.promptInFlight.collectAsState()
+            val isCapturing = isCapturingState.value
 
             val lifecycleOwner = LocalLifecycleOwner.current
             LaunchedEffect(lifecycleOwner) {
@@ -257,9 +258,9 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.setOnValidScreen(isOnValidScreenLocal)
             }
 
-            val globalMirrorAutoStart by SettingsManager.autoStartCapture.collectAsState()
-            val activeLayout by MacroPadState.activeLayout.collectAsState()
-            val layoutMirrorAutoStart = activeLayout?.mirrorAutoStart == true
+            val globalMirrorAutoStartState = SettingsManager.autoStartCapture.collectAsState()
+            val activeLayoutState = MacroPadState.activeLayout.collectAsState()
+            val activeLayout = activeLayoutState.value
 
             // Reconcile the running mirror session with the active layout's persisted
             // desired state. PadLayout.mirrorAutoStart is the single source of truth:
@@ -268,13 +269,14 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 var lastPolicyLayoutId: String? = null
                 snapshotFlow {
+                    val currentLayout = activeLayoutState.value
                     MirrorLayoutPolicy(
-                        promptInFlight = promptInFlight,
+                        promptInFlight = promptInFlightState.value,
                         isOnValidScreen = isOnValidScreenLocal,
-                        isCapturing = isCapturing,
-                        globalAutoStart = globalMirrorAutoStart,
-                        layoutId = activeLayout?.id,
-                        layoutWantsMirror = layoutMirrorAutoStart,
+                        isCapturing = isCapturingState.value,
+                        globalAutoStart = globalMirrorAutoStartState.value,
+                        layoutId = currentLayout?.id,
+                        layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                     )
                 }
                     .distinctUntilChanged()
