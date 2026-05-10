@@ -299,10 +299,24 @@ class MainActivity : ComponentActivity() {
             // Stop mirroring when the user switches to a layout whose remembered
             // state is "off" (mirrorAutoStart == false). This honors the per-layout
             // remembered state on layout switch as well as on app launch.
+            //
+            // IMPORTANT: The gate only fires once the session is *confirmed* (i.e. we
+            // have previously observed isCapturing=true AND layoutFlag=true in the same
+            // snapshot). This prevents a false-positive STOP during service start-up:
+            // activeLayout is a two-level derived StateFlow (_profiles → activeProfile →
+            // activeLayout), so its mirrorAutoStart field propagates two async coroutine
+            // hops after setLayoutMirrorAutoStart() is called. isCapturing only needs
+            // one hop. Compose may therefore see (isCapturing=true, layoutFlag=false) at
+            // the next vsync before the stateIn chain has settled — this was firing the
+            // STOP gate spuriously every time the privd mirror session started.
             LaunchedEffect(Unit) {
+                var confirmedCapturingWithFlagOn = false
                 snapshotFlow { isCapturing to layoutMirrorAutoStart }
                     .collect { (capturing, layoutFlag) ->
-                        if (capturing && !layoutFlag) {
+                        if (!capturing) confirmedCapturingWithFlagOn = false
+                        if (capturing && layoutFlag) confirmedCapturingWithFlagOn = true
+                        if (confirmedCapturingWithFlagOn && capturing && !layoutFlag) {
+                            confirmedCapturingWithFlagOn = false
                             AppLog.i(TAG, "layout switched to off-state while capturing → STOP")
                             val stopIntent = Intent(this@MainActivity, ScreenCaptureService::class.java).apply {
                                 action = "STOP"
