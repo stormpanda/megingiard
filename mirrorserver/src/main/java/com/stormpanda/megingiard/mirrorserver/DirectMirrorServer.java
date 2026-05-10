@@ -22,20 +22,31 @@ public final class DirectMirrorServer {
         String socketName = args[0];
         int width = Integer.parseInt(args[1]);
         int height = Integer.parseInt(args[2]);
+        System.err.println("DirectMirrorServer: starting socket=" + socketName + " size=" + width + "x" + height);
+        
         Surface surface = null;
         IBinder displayToken = null;
         LocalServerSocket readinessSocket = null;
         try {
+            System.err.println("DirectMirrorServer: acquiring surface from app...");
             surface = DirectSurfaceClient.acquireSurface(SURFACE_BIND_TIMEOUT_MS);
-            if (surface == null || !surface.isValid()) {
-                System.err.println("direct surface unavailable");
+            if (surface == null) {
+                System.err.println("DirectMirrorServer: DirectSurfaceClient.acquireSurface() returned null");
                 System.exit(1);
                 return;
             }
+            if (!surface.isValid()) {
+                System.err.println("DirectMirrorServer: acquired surface is not valid");
+                System.exit(1);
+                return;
+            }
+            System.err.println("DirectMirrorServer: surface acquired and valid");
 
+            System.err.println("DirectMirrorServer: creating display...");
             displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-mirror", false);
             Rect rect = new Rect(0, 0, width, height);
             SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
+            System.err.println("DirectMirrorServer: display configured, entering wait loop");
 
             readinessSocket = new LocalServerSocket(socketName);
             synchronized (DirectMirrorServer.class) {
@@ -43,6 +54,7 @@ public final class DirectMirrorServer {
             }
         } catch (Throwable t) {
             System.err.println("direct mirror ended: " + t);
+            t.printStackTrace();
             System.exit(1);
         } finally {
             if (displayToken != null) {
