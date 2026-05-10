@@ -418,6 +418,7 @@ static void stop_mirror_child(void) {
  *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
  *   UNSUB GAMEPAD\n — stop streaming
  *   MIRROR START <w> <h> <bitrate> <maxfps>\n  — spawn mirror server child
+ *   MIRROR START_DIRECT <w> <h>\n              — reserve direct-Surface mirror protocol
  *   MIRROR STOP\n                              — terminate mirror server
  */
 static int serve_client(int client_fd) {
@@ -468,6 +469,20 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "UNSUB GAMEPAD") == 0) {
             stop_reader_thread();
+            continue;
+        }
+
+        if (strncmp(line, "MIRROR START_DIRECT", 19) == 0) {
+            int w, h;
+            const char *resp;
+            if (sscanf(line, "MIRROR START_DIRECT %d %d", &w, &h) == 2 && w > 0 && h > 0) {
+                resp = "MIRROR_DIRECT_ERR UNSUPPORTED\n";
+            } else {
+                resp = "MIRROR_DIRECT_ERR INVALID\n";
+            }
+            pthread_mutex_lock(&g_send_mutex);
+            (void)write(client_fd, resp, strlen(resp));
+            pthread_mutex_unlock(&g_send_mutex);
             continue;
         }
 

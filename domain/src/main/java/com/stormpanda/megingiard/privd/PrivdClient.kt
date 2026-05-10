@@ -74,6 +74,7 @@ object PrivdClient {
     private val queue = LinkedBlockingQueue<String>()
     @Volatile private var pingDeferred: CompletableDeferred<Boolean>? = null
     @Volatile private var mirrorStartDeferred: CompletableDeferred<String?>? = null
+    @Volatile private var mirrorDirectStartDeferred: CompletableDeferred<Boolean>? = null
     @Volatile private var mirrorStopDeferred: CompletableDeferred<Boolean>? = null
 
     val isConnected: Boolean
@@ -168,6 +169,21 @@ object PrivdClient {
     }
 
     /**
+     * Requests the daemon to start the direct-Surface privileged mirror path.
+     * Returns `false` when the daemon build does not support the direct handoff yet.
+     */
+    suspend fun startDirectMirror(width: Int, height: Int): Boolean {
+        if (!isConnected) return false
+        val deferred = CompletableDeferred<Boolean>()
+        mirrorDirectStartDeferred = deferred
+        send("MIRROR START_DIRECT $width $height\n")
+        val ok = withTimeoutOrNull(MIRROR_START_TIMEOUT_MS) { deferred.await() } ?: false
+        mirrorDirectStartDeferred = null
+        AppLog.i(TAG, "startDirectMirror($width x $height) → $ok")
+        return ok
+    }
+
+    /**
      * Stops the privileged-mirror server child. Returns `true` if the daemon
      * acknowledged with `MIRROR_STOPPED`, `false` on timeout / disconnect.
      */
@@ -225,6 +241,14 @@ object PrivdClient {
                 mirrorStartDeferred?.complete(null)
                 continue
             }
+            if (line.startsWith("MIRROR_DIRECT_READY")) {
+                mirrorDirectStartDeferred?.complete(true)
+                continue
+            }
+            if (line.startsWith("MIRROR_DIRECT_ERR")) {
+                mirrorDirectStartDeferred?.complete(false)
+                continue
+            }
             if (line == "MIRROR_STOPPED") {
                 mirrorStopDeferred?.complete(true)
                 continue
@@ -262,6 +286,8 @@ object PrivdClient {
         queue.clear()
         pingDeferred?.complete(false)
         pingDeferred = null
+        mirrorDirectStartDeferred?.complete(false)
+        mirrorDirectStartDeferred = null
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null

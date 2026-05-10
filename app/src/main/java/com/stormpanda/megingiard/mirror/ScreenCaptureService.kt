@@ -37,6 +37,7 @@ class ScreenCaptureService : Service() {
     private var virtualDisplay: VirtualDisplay? = null
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
+    private var directPrivdSession: DirectPrivdMirrorSession? = null
     private var privdSession: PrivdMirrorSession? = null
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
@@ -247,17 +248,30 @@ class ScreenCaptureService : Service() {
         mirrorPresentation = presentation
 
         presentation.onSurfaceDestroyed = {
+            directPrivdSession?.stop()
             privdSession?.stop()
         }
         presentation.onSurfaceReady = { surface ->
             // Tear down any existing session and start a fresh one bound to the new surface.
+            directPrivdSession?.release()
+            directPrivdSession = null
             privdSession?.release()
-            val session = PrivdMirrorSession(surface, srcWidth, srcHeight)
-            privdSession = session
+            privdSession = null
             scope.launch {
-                val ok = session.start()
-                if (!ok) {
-                    AppLog.e(TAG, "PrivdMirrorSession failed to start")
+                val directSession = DirectPrivdMirrorSession(surface, srcWidth, srcHeight)
+                directPrivdSession = directSession
+                if (directSession.start()) {
+                    AppLog.i(TAG, "direct privileged mirror session started")
+                    return@launch
+                }
+                directSession.release()
+                directPrivdSession = null
+
+                AppLog.w(TAG, "direct privileged mirror unavailable — falling back to H.264 stream")
+                val session = PrivdMirrorSession(surface, srcWidth, srcHeight)
+                privdSession = session
+                if (!session.start()) {
+                    AppLog.e(TAG, "H.264 PrivdMirrorSession failed to start")
                     stopSelf()
                 }
             }
@@ -288,6 +302,8 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
+        directPrivdSession?.release()
+        directPrivdSession = null
         privdSession?.release()
         privdSession = null
     }

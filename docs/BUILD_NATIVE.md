@@ -341,6 +341,11 @@ child with `CLASSPATH=/data/local/tmp/megingiard_mirror.dex` and
 `/system/bin/app_process /data/local/tmp com.stormpanda.megingiard.mirrorserver.MirrorServer
 <socket> <w> <h> <bitrate> <fps>`.
 
+The daemon also reserves `MIRROR START_DIRECT <w> <h>` for the direct-Surface
+privileged mirror transport. Until the Surface/layer handoff is implemented,
+the daemon responds with `MIRROR_DIRECT_ERR UNSUPPORTED` and the app falls back
+to the H.264 transport below.
+
 ### Wire format
 
 The server writes raw H.264 NAL units, each prefixed by a 4-byte big-endian length:

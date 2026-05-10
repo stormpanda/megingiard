@@ -79,7 +79,7 @@ every device since Android 11 (API 30).
 | -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                   | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
 | **Gamepad recording** (physical pad → macro) | Macro recording from the real controller while the target game still receives the same input. | Falls back to the on-screen virtual controller recording overlay.                                                                                              |
-| **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog, lower CPU (scrcpy-style H.264 over LocalSocket).           | Falls back to `MediaProjection` + `VirtualDisplay`. DRM content keeps working; user sees the system consent dialog every cold start.                           |
+| **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog. Direct SurfaceControl output is preferred when supported; the current production fallback is H.264 over LocalSocket. | Falls back to `MediaProjection` + `VirtualDisplay`. DRM content keeps working; user sees the system consent dialog every cold start.                           |
 
 > _New entries get added here whenever a feature opts in. Examples that
 > may join the list later: writing to `/dev/input/event*` for special

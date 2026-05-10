@@ -15,6 +15,14 @@ enum class MirrorStrategy {
     PRIVILEGED,
 }
 
+enum class PrivdMirrorTransport {
+    /** Privileged SurfaceControl output directly to the secondary display target. */
+    DIRECT_SURFACE,
+
+    /** Current scrcpy-style fallback: H.264 over LocalSocket, decoded in the app. */
+    H264_STREAM,
+}
+
 /**
  * Returns [MirrorStrategy.PRIVILEGED] iff both:
  *  - the privileged-mirror per-feature flag is enabled, **and**
@@ -32,3 +40,9 @@ fun selectMirrorStrategy(
 ): MirrorStrategy =
     if (privdMirrorEnabled && privdRunning) MirrorStrategy.PRIVILEGED
     else MirrorStrategy.MEDIA_PROJECTION
+
+fun selectPrivdMirrorTransport(
+    directSurfaceAvailable: Boolean,
+): PrivdMirrorTransport =
+    if (directSurfaceAvailable) PrivdMirrorTransport.DIRECT_SURFACE
+    else PrivdMirrorTransport.H264_STREAM
