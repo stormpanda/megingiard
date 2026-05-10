@@ -554,6 +554,12 @@ static void detach_from_shell(void) {
 }
 
 int main(void) {
+    /* Ignore SIGHUP immediately so the daemon survives the ADB shell stream
+     * closing before setsid() is called.  The bootstrapper spawns with '&'
+     * and closes the stream as soon as it reads MGRD_SPAWN_OK; the default
+     * SIGHUP disposition would kill the process if the shell exits before
+     * setsid() completes.  detach_from_shell() still calls setsid() later. */
+    signal(SIGHUP,  SIG_IGN);
     /* Graceful shutdown on SIGTERM/SIGINT. */
     signal(SIGTERM, signal_handler);
     signal(SIGINT,  signal_handler);
