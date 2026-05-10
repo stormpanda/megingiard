@@ -21,6 +21,8 @@ import java.util.concurrent.LinkedBlockingQueue
 private const val TAG = "PrivdClient"
 private const val ABSTRACT_NAME = "megingiard.privd"
 private const val PING_TIMEOUT_MS = 1_500L
+private const val MIRROR_START_TIMEOUT_MS = 8_000L
+private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
 
@@ -71,6 +73,8 @@ object PrivdClient {
 
     private val queue = LinkedBlockingQueue<String>()
     @Volatile private var pingDeferred: CompletableDeferred<Boolean>? = null
+    @Volatile private var mirrorStartDeferred: CompletableDeferred<String?>? = null
+    @Volatile private var mirrorStopDeferred: CompletableDeferred<Boolean>? = null
 
     val isConnected: Boolean
         get() = running && (socket?.isConnected == true)
@@ -147,6 +151,37 @@ object PrivdClient {
         return ok
     }
 
+    /**
+     * Requests the daemon to spawn the privileged-mirror server child.
+     * Returns the abstract socket name to connect to for NAL streaming, or
+     * `null` on failure / timeout.
+     */
+    suspend fun startMirror(width: Int, height: Int, bitrate: Int, maxFps: Int): String? {
+        if (!isConnected) return null
+        val deferred = CompletableDeferred<String?>()
+        mirrorStartDeferred = deferred
+        send("MIRROR START $width $height $bitrate $maxFps\n")
+        val socketName = withTimeoutOrNull(MIRROR_START_TIMEOUT_MS) { deferred.await() }
+        mirrorStartDeferred = null
+        AppLog.i(TAG, "startMirror($width x $height @$maxFps fps, $bitrate bps) → $socketName")
+        return socketName
+    }
+
+    /**
+     * Stops the privileged-mirror server child. Returns `true` if the daemon
+     * acknowledged with `MIRROR_STOPPED`, `false` on timeout / disconnect.
+     */
+    suspend fun stopMirror(): Boolean {
+        if (!isConnected) return false
+        val deferred = CompletableDeferred<Boolean>()
+        mirrorStopDeferred = deferred
+        send("MIRROR STOP\n")
+        val ok = withTimeoutOrNull(MIRROR_STOP_TIMEOUT_MS) { deferred.await() } ?: false
+        mirrorStopDeferred = null
+        AppLog.i(TAG, "stopMirror() → $ok")
+        return ok
+    }
+
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
@@ -179,6 +214,19 @@ object PrivdClient {
             }
             if (line == "PONG") {
                 pingDeferred?.complete(true)
+                continue
+            }
+            if (line.startsWith("MIRROR_READY ")) {
+                val name = line.substringAfter("MIRROR_READY ").trim()
+                mirrorStartDeferred?.complete(name.ifEmpty { null })
+                continue
+            }
+            if (line == "MIRROR_ERR") {
+                mirrorStartDeferred?.complete(null)
+                continue
+            }
+            if (line == "MIRROR_STOPPED") {
+                mirrorStopDeferred?.complete(true)
                 continue
             }
             if (line.startsWith("EVT ")) {
