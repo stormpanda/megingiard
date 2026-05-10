@@ -1,14 +1,14 @@
 package com.stormpanda.megingiard.mirror
 
 /**
- * Pure decision helper that selects between the legacy MediaProjection
+ * Pure decision helper that selects between the standard MediaProjection
  * mirror path and the privileged on-device daemon path.
  *
  * Kept in `:core` so it has no Android dependencies and is unit-testable
  * without Robolectric.
  */
 enum class MirrorStrategy {
-    /** Legacy `MediaProjection` + `VirtualDisplay` path (requires user consent). */
+    /** Standard `MediaProjection` + `VirtualDisplay` path (requires user consent). */
     MEDIA_PROJECTION,
 
     /** Privileged daemon spawns `app_process` mirror server (no consent dialog). */

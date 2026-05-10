@@ -11,23 +11,7 @@ private const val DIRECT_SURFACE_SERVICE_NAME = "megingiard.direct.surface"
 private const val DIRECT_SURFACE_DESCRIPTOR = "com.stormpanda.megingiard.mirrorserver.IDirectSurfaceReceiver"
 private const val TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION
 
-internal object DirectMirrorSurfaceRegistry {
-    private var surface: Surface? = null
-
-    fun publish(surface: Surface) {
-        AppLog.i(TAG, "publish surface valid=${surface.isValid}")
-        this.surface = surface
-    }
-
-    fun clear(surface: Surface? = null) {
-        if (surface == null || this.surface === surface) {
-            AppLog.i(TAG, "clear surface")
-            this.surface = null
-        }
-    }
-
-    fun currentSurface(): Surface? = surface?.takeIf { it.isValid }
-
+internal object DirectMirrorSurfaceBridge {
     fun sendToDirectServer(surface: Surface): Boolean {
         if (!surface.isValid) {
             AppLog.w(TAG, "sendToDirectServer: invalid surface")

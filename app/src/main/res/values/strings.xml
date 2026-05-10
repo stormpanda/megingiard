@@ -301,7 +301,7 @@ Open Settings to create a layout.</string>
     <string name="privd_auto_connect_desc">When enabled, Megingiard silently re-opens the daemon socket on launch. Set automatically after a successful first-time setup.</string>
 
     <string name="privd_feature_gamepad_merge">Gamepad merge</string>
-    <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the legacy virtual gamepad.</string>
+    <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the standard virtual gamepad.</string>
 
     <string name="privd_feature_gamepad_recording">Physical gamepad recording</string>
     <string name="privd_feature_gamepad_recording_desc">Capture macro steps directly from the physical gamepad (analog sticks, buttons). When enabled, the Record button in the timeline editor uses the physical controller instead of the on-screen virtual gamepad.</string>

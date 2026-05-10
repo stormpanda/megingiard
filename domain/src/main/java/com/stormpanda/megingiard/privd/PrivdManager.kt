@@ -23,9 +23,9 @@ import kotlinx.coroutines.launch
  */
 enum class PrivdFeature {
     /**
-     * MacroPad gamepad events are merged into the physical controller's evdev
-     * node (single-controller emulation). When disabled, the app falls back
-     * to the legacy virtual uinput gamepad.
+        * MacroPad gamepad events are merged into the physical controller's evdev
+        * node (single-controller emulation). When disabled, the app falls back
+        * to the virtual uinput gamepad.
      */
     GAMEPAD_MERGE,
     /**
@@ -38,11 +38,12 @@ enum class PrivdFeature {
     /**
      * Primary-display mirror is captured via the on-device privileged daemon
      * spawning an `app_process` server child (no MediaProjection consent
-     * dialog, lower CPU). When disabled, the legacy MediaProjection +
+        * dialog, lower CPU). When disabled, the standard MediaProjection +
      * VirtualDisplay path is used. DRM frames render black on the privileged
      * path — same limitation as scrcpy.
      */
-    MIRROR,}
+    MIRROR,
+}
 
 /**
  * Lifecycle state of the privileged-mode subsystem.

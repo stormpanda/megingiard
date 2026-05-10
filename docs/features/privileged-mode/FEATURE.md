@@ -146,7 +146,7 @@ Display.DEFAULT_DISPLAY)` so it opens on the primary screen.
      The same step also pushes `megingiard_mirror.dex` to
      `/data/local/tmp/megingiard_mirror.dex` (mode `0100644`) — required by
      the privileged-mirror path (FR-M9). DEX push failure is logged as a
-     warning but does not abort bootstrap; the legacy MediaProjection mirror
+     warning but does not abort bootstrap; the standard MediaProjection mirror
      remains available as a fallback.
    - `SPAWNING_DAEMON` opens a fresh stream and runs
      `/data/local/tmp/megingiard_privd </dev/null >/dev/null 2>&1 &` — the
@@ -302,7 +302,7 @@ main thread.
 if (PrivdClient.isConnected && MacroPadSettings.privdGamepadMergeEnabled) {
     backend = PrivdGamepadInjector  // physical-pad merge
 } else {
-    backend = ShellGamepadInjector  // legacy virtual uinput
+    backend = ShellGamepadInjector  // standard virtual uinput
 }
 ```
 

@@ -213,8 +213,8 @@ class ScreenCaptureService : Service() {
     }
 
     /**
-    * Starts the privileged direct-Surface mirror path. If direct setup fails,
-    * the service launches the normal MediaProjection consent flow.
+     * Starts the privileged direct-Surface mirror path. If direct setup fails,
+     * the service launches the normal MediaProjection consent flow.
      */
     private fun startPrivdPath(): Int {
         if (ScreenCaptureManager.isCapturing.value) {
@@ -260,7 +260,7 @@ class ScreenCaptureService : Service() {
                     srcHeight,
                 )
                 directPrivdSession = directSession
-                if (directSession.start() && DirectMirrorSurfaceRegistry.sendToDirectServer(surface)) {
+                if (directSession.start() && DirectMirrorSurfaceBridge.sendToDirectServer(surface)) {
                     AppLog.i(TAG, "direct privileged mirror session started")
                     return@launch
                 }

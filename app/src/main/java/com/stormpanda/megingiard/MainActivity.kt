@@ -368,7 +368,7 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Decides whether to start the privileged mirror path (no consent dialog,
-        * direct SurfaceControl output) or the legacy MediaProjection path. The
+        * direct SurfaceControl output) or the standard MediaProjection path. The
         * privileged path requires the per-feature flag to be enabled and a RUNNING
         * privd connection.
      */
