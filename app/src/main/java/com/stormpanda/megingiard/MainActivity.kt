@@ -259,10 +259,11 @@ class MainActivity : ComponentActivity() {
                 var lastPolicyLayoutId: String? = null
                 combine(
                     AppStateManager.promptInFlight,
+                    AppStateManager.mirrorAutoStartSuppressedLayoutId,
                     ScreenCaptureManager.isCapturing,
                     SettingsManager.autoStartCapture,
                     MacroPadState.activeLayout,
-                ) { promptInFlight, capturing, globalAutoStart, currentLayout ->
+                ) { promptInFlight, suppressedLayoutId, capturing, globalAutoStart, currentLayout ->
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
                         isOnValidScreen = isOnValidScreenLocal,
@@ -270,6 +271,7 @@ class MainActivity : ComponentActivity() {
                         globalAutoStart = globalAutoStart,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
+                        autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
                     )
                 }
                     .distinctUntilChanged()
@@ -309,6 +311,7 @@ class MainActivity : ComponentActivity() {
                 val requestedLayoutId = activeLayout?.id
                 if (requestedLayoutId != null) {
                     val layoutId = requestedLayoutId
+                    AppStateManager.clearMirrorAutoStartSuppression(layoutId)
                     MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
                     MacroPadState.activeLayout
                         .map { layout -> layout?.id == layoutId && layout.mirrorAutoStart }
@@ -328,6 +331,7 @@ class MainActivity : ComponentActivity() {
                 AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
                 AppStateManager.consumeMirrorStopRequest()
                 activeLayout?.id?.let { layoutId ->
+                    AppStateManager.suppressMirrorAutoStart(layoutId)
                     MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                 }
                 if (isCapturing) stopMirrorService()

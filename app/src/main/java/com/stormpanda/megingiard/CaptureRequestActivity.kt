@@ -28,6 +28,7 @@ class CaptureRequestActivity : ComponentActivity() {
             } else {
                 AppLog.i(TAG, "RESULT_CANCELED → clearing active layout mirrorAutoStart")
                 MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                    AppStateManager.suppressMirrorAutoStart(layoutId)
                     MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                 }
                 AppStateManager.setPromptInFlight(false)

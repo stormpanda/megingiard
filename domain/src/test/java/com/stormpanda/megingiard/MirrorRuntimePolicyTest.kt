@@ -21,6 +21,7 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
+                autoStartSuppressed = false,
             )
         )
 
@@ -37,6 +38,7 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
+                autoStartSuppressed = false,
             )
         )
 
@@ -53,6 +55,7 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
+                autoStartSuppressed = false,
             )
         )
 
@@ -69,6 +72,7 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
+                autoStartSuppressed = false,
             )
         )
 
@@ -85,6 +89,7 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = false,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
+                autoStartSuppressed = false,
             )
         )
 
@@ -101,6 +106,7 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
+                autoStartSuppressed = false,
             )
         )
 
@@ -117,6 +123,7 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
+                autoStartSuppressed = false,
             )
         )
 
@@ -133,6 +140,24 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = null,
                 layoutWantsMirror = false,
+                autoStartSuppressed = false,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
+
+    @Test
+    fun `does not start when active layout auto-start is suppressed`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = true,
+                isCapturing = false,
+                globalAutoStart = true,
+                layoutId = LAYOUT_A,
+                layoutWantsMirror = true,
+                autoStartSuppressed = true,
             )
         )
 

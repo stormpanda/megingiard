@@ -44,6 +44,9 @@ object AppStateManager {
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
+    private val _mirrorAutoStartSuppressedLayoutId = MutableStateFlow<String?>(null)
+    val mirrorAutoStartSuppressedLayoutId: StateFlow<String?> = _mirrorAutoStartSuppressedLayoutId.asStateFlow()
+
     // ── Mirror control signals ────────────────────────────────────────────────
     // One-shot fire-and-forget flags: MainActivity resets them after handling.
 
@@ -88,6 +91,18 @@ object AppStateManager {
     fun setPromptInFlight(inFlight: Boolean) {
         AppLog.d(TAG, "setPromptInFlight($inFlight)")
         _promptInFlight.value = inFlight
+    }
+
+    fun suppressMirrorAutoStart(layoutId: String) {
+        AppLog.d(TAG, "suppressMirrorAutoStart($layoutId)")
+        _mirrorAutoStartSuppressedLayoutId.value = layoutId
+    }
+
+    fun clearMirrorAutoStartSuppression(layoutId: String) {
+        if (_mirrorAutoStartSuppressedLayoutId.value == layoutId) {
+            AppLog.d(TAG, "clearMirrorAutoStartSuppression($layoutId)")
+            _mirrorAutoStartSuppressedLayoutId.value = null
+        }
     }
 
     // ── Touch / gesture state ─────────────────────────────────────────────────
