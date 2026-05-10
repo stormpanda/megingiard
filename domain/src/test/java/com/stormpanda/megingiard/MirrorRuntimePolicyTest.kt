@@ -106,4 +106,36 @@ class MirrorRuntimePolicyTest {
 
         assertEquals(MirrorRuntimeAction.NONE, decision)
     }
+
+    @Test
+    fun `does nothing when not on valid screen even if layout wants mirror`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = false,
+                isCapturing = false,
+                globalAutoStart = true,
+                layoutId = LAYOUT_A,
+                layoutWantsMirror = true,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
+
+    @Test
+    fun `does nothing when no layout is active even if capture is running`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = true,
+                isCapturing = true,
+                globalAutoStart = true,
+                layoutId = null,
+                layoutWantsMirror = false,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
 }
