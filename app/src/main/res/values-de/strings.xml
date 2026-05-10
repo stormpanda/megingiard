@@ -46,6 +46,8 @@
     <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
+    <string name="settings_mirror_auto_start">Spiegelung automatisch starten</string>
+    <string name="settings_mirror_auto_start_desc">Wenn aktiviert, wird die Spiegelung beim App-Start und beim Layout-Wechsel automatisch fortgesetzt für Layouts, in denen sie zuletzt aktiv war</string>
     <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>

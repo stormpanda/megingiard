@@ -102,6 +102,7 @@ fun GlobalSettingsScreen(
     val showNavigationCoachMarks by viewModel.showNavigationCoachMarks.collectAsState()
     val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
+    val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
@@ -206,6 +207,14 @@ fun GlobalSettingsScreen(
                             checked = showFullscreenExitHints,
                             accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setShowFullscreenExitHints(it) },
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_mirror_auto_start),
+                            description = stringResource(R.string.settings_mirror_auto_start_desc),
+                            checked = mirrorAutoStart,
+                            accentColor = effectiveAccent,
+                            onCheckedChange = { viewModel.setMirrorAutoStart(it) },
                         )
                         HorizontalDivider(color = colors.divider)
                         LanguagePickerRow(

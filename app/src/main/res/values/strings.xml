@@ -41,6 +41,8 @@
     <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
+    <string name="settings_mirror_auto_start">Auto-start mirroring</string>
+    <string name="settings_mirror_auto_start_desc">When enabled, mirroring resumes on app launch and on layout switch for layouts that were last running with mirror on</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>

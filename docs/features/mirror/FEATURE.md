@@ -72,6 +72,17 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
 
+### FR-M8: Auto-start Gating (Global + Per-Layout Memory)
+
+- A global "Auto-start mirroring" setting (in Global Settings → General) MUST control whether mirroring resumes automatically on app launch and on layout switch.
+- Each MacroPad layout MUST remember its last mirror state independently:
+  - `PadLayout.mirrorAutoStart = true` is recorded when capture starts on that layout.
+  - `PadLayout.mirrorAutoStart = false` is recorded when capture stops on that layout.
+- The capture-prompt MUST auto-launch only when **both** the global setting is enabled **and** the active layout's remembered state is `true`.
+- Switching to a layout whose remembered state is `false` while currently capturing MUST stop the mirror.
+- Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt (subject to the in-session decline guard).
+- The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the global setting or the layout's remembered state.
+
 ---
 
 ## Technical Implementation
@@ -284,6 +295,33 @@ An optional setting ("Pinch-to-zoom while projecting", default off) allows the u
 - Two-finger touches are **never forwarded** to the primary display.
 
 **Setting storage:** `mirror_pinch_while_projecting` (`BooleanPreference`) in DataStore. Default: `false`.
+
+### Auto-start Gating
+
+The auto-start logic in `MainActivity` derives an "effective auto-start" signal by combining two inputs:
+
+| Input                                                | Source                                                  |
+| ---------------------------------------------------- | ------------------------------------------------------- |
+| Global "Auto-start mirroring" toggle                 | `SettingsManager.autoStartCapture` (`StateFlow<Boolean>`) — DataStore key `auto_start_capture`. |
+| Active layout's remembered state                     | `MacroPadState.activeLayout.mirrorAutoStart` (`Boolean`) — persisted inside the MacroPad profile JSON via `PadLayout.mirrorAutoStart`. |
+
+**Recording the layout state.** `ScreenCaptureService` records the layout's remembered state at two moments:
+
+- On capture start (after `restoreMirrorSessionState` / `setCapturing(true)`): `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, true)`.
+- On `onDestroy()` (Stop button, system kill, or app exit): `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
+
+**Auto-launch.** `MainActivity` runs a `snapshotFlow` that emits `true` when:
+
+```
+!promptInFlight && isOnValidScreen && !isCapturing && !userDeclinedCapture &&
+    globalMirrorAutoStart && layoutMirrorAutoStart
+```
+
+When the predicate becomes `true`, `launchCaptureRequest()` opens `CaptureRequestActivity` on the primary display. The flow re-evaluates on every layout switch — switching to a layout whose remembered state is `true` (with global on, not capturing, no decline) re-fires the prompt.
+
+**Auto-stop on layout switch.** A separate `LaunchedEffect` watches `(isCapturing, layoutMirrorAutoStart)`. When the active layout switches to one whose remembered state is `false` while currently capturing, an explicit `STOP` intent is sent to `ScreenCaptureService`. The global setting is intentionally **not** part of this predicate — toggling the global setting off does not stop an active capture (matching the same "remembered" intent for the currently-active layout).
+
+**Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the global setting is off.
 
 ### Source Files
 

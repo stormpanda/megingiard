@@ -286,6 +286,11 @@ data class PadButton(
  * @param mirrorSavedScale            Persisted mirror zoom level.
  * @param mirrorSavedOffsetX          Persisted mirror pan X offset.
  * @param mirrorSavedOffsetY          Persisted mirror pan Y offset.
+ * @param mirrorAutoStart             Remembered mirror state for this layout. Set to `true`
+ *                                    when capture is running on this layout, and to `false`
+ *                                    when capture is stopped on it. The auto-start logic only
+ *                                    acts on this flag when the global mirror auto-start
+ *                                    setting is enabled.
  */
 @Serializable
 data class PadLayout(
@@ -303,6 +308,7 @@ data class PadLayout(
     val mirrorSavedScale: Float = 1f,
     val mirrorSavedOffsetX: Float = 0f,
     val mirrorSavedOffsetY: Float = 0f,
+    val mirrorAutoStart: Boolean = false,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -40,6 +40,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val showNavigationCoachMarks: StateFlow<Boolean> = SettingsManager.showNavigationCoachMarks
     val showMirrorControlLabels: StateFlow<Boolean> = SettingsManager.showMirrorControlLabels
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
+    val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
 
     // Privileged Mode
@@ -60,6 +61,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setShowNavigationCoachMarks(value: Boolean) = SettingsManager.setShowNavigationCoachMarks(value)
     fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
+    fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
 
     // Privileged Mode actions

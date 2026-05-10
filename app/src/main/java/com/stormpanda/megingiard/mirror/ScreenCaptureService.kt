@@ -19,6 +19,7 @@ import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.MirrorSettings
@@ -143,6 +144,11 @@ class ScreenCaptureService : Service() {
                 ScreenCaptureManager.setCapturing(true)
                 AppStateManager.setPromptInFlight(false)
                 presentation.show()
+                // Remember "mirror was last running" on the active layout so it
+                // auto-resumes on next launch (when the global auto-start is on).
+                MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                    MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+                }
             }
 
             scope.launch {
@@ -195,6 +201,12 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
+        // Remember "mirror is no longer running" on the active layout so it does
+        // not auto-resume on next launch (regardless of whether the global
+        // auto-start setting is on).
+        MacroPadState.activeLayout.value?.id?.let { layoutId ->
+            MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+        }
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.

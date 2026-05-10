@@ -400,6 +400,33 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
+    /**
+     * Records whether the mirror was last running on the specified layout.
+     * Persists the [PadLayout.mirrorAutoStart] flag.
+     *
+     * Called by `ScreenCaptureService` on capture start (`true`) and stop (`false`).
+     * The auto-start logic in `MainActivity` only acts on this flag when the global
+     * `SettingsManager.autoStartCapture` setting is enabled. A no-op if the value
+     * is unchanged.
+     */
+    fun setLayoutMirrorAutoStart(layoutId: String, value: Boolean) {
+        var changed = false
+        val updatedProfiles = _profiles.value.map { profile ->
+            var profileChanged = false
+            val updatedLayouts = profile.layouts.map { layout ->
+                if (layout.id != layoutId || layout.mirrorAutoStart == value) return@map layout
+                changed = true
+                profileChanged = true
+                layout.copy(mirrorAutoStart = value)
+            }
+            if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        }
+        if (!changed) return
+        AppLog.d(TAG, "setLayoutMirrorAutoStart layoutId=$layoutId value=$value")
+        _profiles.value = updatedProfiles
+        MacroPadSettings.saveMacroPadData()
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Ambient Peek state
     // ─────────────────────────────────────────────────────────────────────────

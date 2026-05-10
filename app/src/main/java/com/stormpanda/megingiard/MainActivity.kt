@@ -35,6 +35,7 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.macropad.MacroExecutor
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.AppLanguage
 import androidx.compose.ui.graphics.Color
@@ -257,6 +258,9 @@ class MainActivity : ComponentActivity() {
             val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
 
             val macropadAmbientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
+            val globalMirrorAutoStart by SettingsManager.autoStartCapture.collectAsState()
+            val activeLayout by MacroPadState.activeLayout.collectAsState()
+            val layoutMirrorAutoStart = activeLayout?.mirrorAutoStart == true
 
             // Auto-start capture when Ambient Display is enabled.
             // Declining within a session is respected until the next mode entry.
@@ -269,22 +273,41 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Launch capture proxy on the main screen when conditions are met.
-            // With autoStartCapture=false (default) the user must tap "Start mirroring" manually.
-            // With autoStartCapture=true the prompt fires once per app session (on resume);
-            // declining within a session is respected — the dialog will not re-appear until the next resume.
+            // Auto-start the capture prompt when:
+            //   - the active layout was last seen with mirroring on
+            //     (PadLayout.mirrorAutoStart == true), AND
+            //   - the global "auto-start mirroring" setting is enabled.
+            //
+            // The flow re-evaluates on every layout switch, so switching to a layout
+            // that was last running with mirror on will re-trigger the prompt (when
+            // not already capturing). Switching to a layout that was last off while
+            // currently capturing is handled by the separate stop-on-switch effect
+            // below.
             LaunchedEffect(Unit) {
-                snapshotFlow { !promptInFlight && isOnValidScreenLocal && !isCapturing && !userDeclinedCapture }
+                snapshotFlow {
+                    !promptInFlight && isOnValidScreenLocal && !isCapturing &&
+                        !userDeclinedCapture && globalMirrorAutoStart && layoutMirrorAutoStart
+                }
                     .collect { shouldLaunch ->
                         if (shouldLaunch) {
-                            AppLog.i(TAG, "launching CaptureRequestActivity on display DEFAULT")
-                            AppStateManager.setPromptInFlight(true)
-                            val options = ActivityOptions.makeBasic()
-                            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                            val intent = Intent(this@MainActivity, CaptureRequestActivity::class.java).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                            AppLog.i(TAG, "auto-start: launching CaptureRequestActivity on display DEFAULT")
+                            launchCaptureRequest()
+                        }
+                    }
+            }
+
+            // Stop mirroring when the user switches to a layout whose remembered
+            // state is "off" (mirrorAutoStart == false). This honors the per-layout
+            // remembered state on layout switch as well as on app launch.
+            LaunchedEffect(Unit) {
+                snapshotFlow { isCapturing to layoutMirrorAutoStart }
+                    .collect { (capturing, layoutFlag) ->
+                        if (capturing && !layoutFlag) {
+                            AppLog.i(TAG, "layout switched to off-state while capturing → STOP")
+                            val stopIntent = Intent(this@MainActivity, ScreenCaptureService::class.java).apply {
+                                action = "STOP"
                             }
-                            startActivity(intent, options.toBundle())
+                            startService(stopIntent)
                         }
                     }
             }
@@ -302,6 +325,10 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.consumeMirrorStartRequest()
                 // Override any in-session decline so the capture prompt fires.
                 AppStateManager.setUserDeclinedCapture(false)
+                // Manual start bypasses the global auto-start gate — launch directly.
+                if (isOnValidScreenLocal && !isCapturing && !promptInFlight) {
+                    launchCaptureRequest()
+                }
             }
 
             LaunchedEffect(mirrorStopRequested) {
@@ -345,6 +372,22 @@ class MainActivity : ComponentActivity() {
             AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive app overlay)")
             window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
+    }
+
+    /**
+     * Launches [CaptureRequestActivity] on the primary display so the system MediaProjection
+     * consent dialog appears on the correct screen. Used by both the auto-start path
+     * and the manual "Start mirroring" button. Sets `promptInFlight` to suppress
+     * concurrent launches.
+     */
+    private fun launchCaptureRequest() {
+        AppStateManager.setPromptInFlight(true)
+        val options = ActivityOptions.makeBasic()
+        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        val intent = Intent(this, CaptureRequestActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+        }
+        startActivity(intent, options.toBundle())
     }
 
     /** Called when the app is already running and receives a new ACTION_VIEW intent. */
