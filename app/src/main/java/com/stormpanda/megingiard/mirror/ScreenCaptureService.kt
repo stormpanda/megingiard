@@ -147,15 +147,19 @@ class ScreenCaptureService : Service() {
             scope.launch {
                 MirrorSettings.restoreMirrorSessionState()
                 MirrorViewportController.restoreFromLayout()
+                // Mark the active layout's mirror flag BEFORE flipping isCapturing.
+                // MainActivity's snapshotFlow { isCapturing to layoutMirrorAutoStart }
+                // would otherwise observe a transient (true, false) tuple — when the
+                // user starts mirror on a layout whose remembered flag is still false —
+                // and immediately fire the "layout switched to off-state while
+                // capturing → STOP" gate, killing the session it just started.
+                MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                    MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+                }
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
                 AppStateManager.setPromptInFlight(false)
                 presentation.show()
-                // Remember "mirror was last running" on the active layout so it
-                // auto-resumes on next launch (when the global auto-start is on).
-                MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                    MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
-                }
             }
 
             scope.launch {
@@ -276,13 +280,16 @@ class ScreenCaptureService : Service() {
         scope.launch {
             MirrorSettings.restoreMirrorSessionState()
             MirrorViewportController.restoreFromLayout()
+            // Set the layout flag BEFORE setCapturing(true) — see comment in the
+            // MediaProjection path above. The privd path is more sensitive to this
+            // race because no consent dialog delays the transition.
+            MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+            }
             AppLog.i(TAG, "privd session state restored → setCapturing(true)")
             ScreenCaptureManager.setCapturing(true)
             AppStateManager.setPromptInFlight(false)
             presentation.show()
-            MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
-            }
         }
         return START_NOT_STICKY
     }
