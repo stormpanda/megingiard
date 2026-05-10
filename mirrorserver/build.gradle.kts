@@ -63,6 +63,9 @@ abstract class DexTask : DefaultTask() {
         out.parentFile.mkdirs()
         val tmpDir = temporaryDir.apply { mkdirs() }
         execOps.exec {
+            // Pass the JVM that Gradle itself is running on as JAVA_HOME so
+            // the d8 shell wrapper (macOS) can locate the java executable.
+            environment("JAVA_HOME", System.getProperty("java.home"))
             commandLine(
                 d8.absolutePath,
                 "--min-api", "33",

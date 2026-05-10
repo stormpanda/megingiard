@@ -45,6 +45,10 @@
             android:foregroundServiceType="mediaProjection|connectedDevice"
             android:exported="false" />
 
+        <service
+            android:name=".mirror.DirectMirrorSurfaceService"
+            android:exported="true" />
+
     </application>
 
 </manifest>

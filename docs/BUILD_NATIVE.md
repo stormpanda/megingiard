@@ -341,10 +341,21 @@ child with `CLASSPATH=/data/local/tmp/megingiard_mirror.dex` and
 `/system/bin/app_process /data/local/tmp com.stormpanda.megingiard.mirrorserver.MirrorServer
 <socket> <w> <h> <bitrate> <fps>`.
 
-The daemon also reserves `MIRROR START_DIRECT <w> <h>` for the direct-Surface
-privileged mirror transport. Until the Surface/layer handoff is implemented,
-the daemon responds with `MIRROR_DIRECT_ERR UNSUPPORTED` and the app falls back
-to the H.264 transport below.
+For direct-Surface privileged mirroring, the daemon spawns:
+
+```bash
+CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
+   /system/bin/app_process /data/local/tmp \
+   com.stormpanda.megingiard.mirrorserver.DirectMirrorServer \
+   <socket> <w> <h>
+```
+
+`DirectMirrorServer` binds the exported app-side `DirectMirrorSurfaceService`,
+acquires the current `MirrorPresentation.SurfaceView` `Surface` over Binder,
+and configures `SurfaceControl.setDisplaySurface()` directly against that
+surface. The readiness socket is bound only after display configuration
+succeeds, so daemon `/proc/net/unix` polling remains the readiness signal.
+If this path fails, the app falls back to the H.264 transport below.
 
 ### Wire format
 

@@ -248,11 +248,13 @@ class ScreenCaptureService : Service() {
         mirrorPresentation = presentation
 
         presentation.onSurfaceDestroyed = {
+            DirectMirrorSurfaceRegistry.clear()
             directPrivdSession?.stop()
             privdSession?.stop()
         }
         presentation.onSurfaceReady = { surface ->
             // Tear down any existing session and start a fresh one bound to the new surface.
+            DirectMirrorSurfaceRegistry.publish(surface)
             directPrivdSession?.release()
             directPrivdSession = null
             privdSession?.release()
@@ -266,6 +268,7 @@ class ScreenCaptureService : Service() {
                 }
                 directSession.release()
                 directPrivdSession = null
+                DirectMirrorSurfaceRegistry.clear(surface)
 
                 AppLog.w(TAG, "direct privileged mirror unavailable — falling back to H.264 stream")
                 val session = PrivdMirrorSession(surface, srcWidth, srcHeight)
@@ -302,6 +305,7 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
+        DirectMirrorSurfaceRegistry.clear()
         directPrivdSession?.release()
         directPrivdSession = null
         privdSession?.release()

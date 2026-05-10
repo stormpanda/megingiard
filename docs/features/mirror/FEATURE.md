@@ -87,7 +87,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - When **Global Settings → Privileged Mode → Privileged Mirror** is enabled **and** the privileged daemon is `RUNNING`, the mirror MUST start without showing the system MediaProjection consent dialog.
 - The privileged path MUST be transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
-- The privileged path SHOULD use direct SurfaceControl output when the daemon and mirror server support the required Surface/layer handoff. Until that handoff is available, it MUST fall back to the existing H.264 LocalSocket transport without interrupting startup.
+- The privileged path SHOULD use direct SurfaceControl output by passing the app-owned `SurfaceView` `Surface` to the shell `app_process` mirror server. If direct setup fails, it MUST fall back to the existing H.264 LocalSocket transport without interrupting startup.
 - DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
 - When the per-feature flag is off, or the daemon is not `RUNNING`, the legacy MediaProjection path MUST remain in use unchanged.
 
@@ -120,19 +120,22 @@ Primary Display
 When the Privileged Mirror flag is enabled and the daemon is `RUNNING`, the
 capture pipeline bypasses `MediaProjection` entirely. The app first attempts
 the direct-Surface transport, then falls back to the existing H.264 LocalSocket
-transport when the daemon reports that direct Surface/layer handoff is not yet
-available:
+transport if direct setup fails:
 
 ```
 App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s0)
   │                                          │
   │  "MIRROR START_DIRECT w h\n"             │
   ├─────────────── socket ──────────────────►│
-  │  "MIRROR_DIRECT_ERR UNSUPPORTED\n"       │  current daemon response
+  │                                          │ fork() + execv("/system/bin/app_process")
+  │                                          │ CLASSPATH=/data/local/tmp/megingiard_mirror.dex
+  │                                          ▼
+  │                              DirectMirrorServer (Java, in app_process)
+  │                                          │ bind exported app service
+  │                                          │ acquire SurfaceView Surface via Binder
+  │                                          │ SurfaceControl.createDisplay() + setDisplaySurface(surface)
+  │  "MIRROR_DIRECT_READY\n"                 │ after direct display is configured
   │◄────────────── socket ───────────────────┤
-  │                                          │
-  │  Fallback: "MIRROR START w h br fps\n"   │
-  ├─────────────── socket ──────────────────►│
 ```
 
 The direct-Surface target architecture is:
@@ -142,8 +145,7 @@ Primary Display
    │
    ▼ SurfaceControl virtual display (shell UID)
    │
-   └──── direct Surface/layer output ─────► MirrorPresentation.SurfaceView or
-                    server-owned secondary-display layer
+  └──── direct Surface output ─────► MirrorPresentation.SurfaceView
 ```
 
 The production fallback remains the H.264 transport:
@@ -177,8 +179,10 @@ App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s
 
 - **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `app/src/main/assets/`.
 - **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (legacy MediaProjection path remains usable).
-- **Daemon control protocol** adds `MIRROR START_DIRECT w h`, `MIRROR START w h br fps`, and `MIRROR STOP` commands. `START_DIRECT` is reserved for the direct Surface/layer handoff and currently returns `MIRROR_DIRECT_ERR UNSUPPORTED`, causing the app to fall back immediately. The H.264 path `fork()`+`execv("/system/bin/app_process")` with `CLASSPATH` set to the dex, polls `/proc/net/unix` for the child's abstract socket, and replies `MIRROR_READY <abstract-socket-name>` or `MIRROR_ERR`. `QUIT` and connection-end paths terminate any running mirror child.
-- **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, logs direct availability, and intentionally falls back until Surface/layer handoff support exists in the daemon/server.
+- **Daemon control protocol** adds `MIRROR START_DIRECT w h`, `MIRROR START w h br fps`, and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. The H.264 path launches `MirrorServer`, polls `/proc/net/unix` for the child's abstract socket, and replies `MIRROR_READY <abstract-socket-name>` or `MIRROR_ERR`. `QUIT` and connection-end paths terminate any running mirror child.
+- **`DirectMirrorSurfaceService`** is an exported app service guarded by an explicit shell-UID Binder check. During `MirrorPresentation.onSurfaceReady`, `ScreenCaptureService` publishes the current `SurfaceView` `Surface`; only UID 2000 can acquire it through the raw Binder transaction. Non-shell callers receive no surface.
+- **`DirectMirrorServer.java`** runs in the shell `app_process`, binds `DirectMirrorSurfaceService`, recreates the app-owned `Surface` from the Binder reply `Parcel`, and configures a `SurfaceControl` virtual display directly against that surface. This removes the H.264 encoder, NAL socket, app-side decoder, and compression artifacts from the steady-state direct path.
+- **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, logs direct availability, and falls back cleanly when direct setup fails.
 - **`MirrorServer.java`** binds an abstract `LocalServerSocket` named `megingiard.mirror.<pid>`, then `accept()`s the app's connection. `ScreenEncoder.java` builds the `SurfaceControl` virtual display via reflection (`SurfaceControlReflect.java` caches all hidden methods in a static initializer) and feeds a `MediaCodec` H.264 encoder via `createInputSurface()`. NAL units are framed with a 4-byte big-endian length prefix.
 - **`PrivdMirrorSession`** (app, in `:domain`) connects to the abstract socket, configures a `MediaCodec` decoder bound directly to the `MirrorPresentation` `SurfaceView` `Surface`, and reads framed NALs on a daemon reader thread. `releaseOutputBuffer(index, render=true)` performs a zero-copy GPU render. Lifecycle (`start` / `stop` / `release`) is idempotent and survives surface recreation by re-issuing `start()` from `MirrorPresentation.onSurfaceReady`.
 - **`ScreenCaptureService`** routes `ACTION_START_PRIVD` to a separate `startPrivdPath()` which uses `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` (vs. `FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION` for the legacy path). All viewport/touch-projection state is shared between the two paths.

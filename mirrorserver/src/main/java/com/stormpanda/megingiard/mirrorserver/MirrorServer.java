@@ -85,7 +85,7 @@ public final class MirrorServer {
      * <p>This is the same technique used by Shizuku, scrcpy, and similar
      * ADB-level tools.</p>
      */
-    private static void bypassHiddenApiEnforcement() {
+    static void bypassHiddenApiEnforcement() {
         try {
             Class<?> vmRuntimeClass = Class.forName("dalvik.system.VMRuntime");
             Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");

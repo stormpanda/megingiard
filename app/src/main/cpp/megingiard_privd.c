@@ -86,6 +86,7 @@ static volatile pid_t g_mirror_pid = -1;
 static char g_mirror_socket[64] = {0};
 #define MIRROR_DEX_PATH "/data/local/tmp/megingiard_mirror.dex"
 #define MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.MirrorServer"
+#define DIRECT_MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.DirectMirrorServer"
 
 /*
  * Returns 1 if the evdev event (type, code) should be streamed to the client.
@@ -295,9 +296,9 @@ static int read_line(int fd, char *out) {
 }
 
 /*
- * Spawns the privileged mirror server (app_process + megingiard_mirror.dex)
- * as a child process. Reads "READY\n" from the child's stdout pipe to confirm
- * the LocalServerSocket has been bound before returning.
+ * Spawns the privileged H.264 mirror server (app_process +
+ * megingiard_mirror.dex) as a child process. Readiness is detected by
+ * polling /proc/net/unix for the child's abstract LocalServerSocket.
  *
  * On success: stores child PID in g_mirror_pid, copies the chosen abstract
  * socket name into g_mirror_socket (caller-readable), returns 0.
@@ -386,6 +387,74 @@ static int start_mirror_child(int width, int height, int bitrate, int maxfps) {
     return 0;
 }
 
+static int start_direct_mirror_child(int width, int height) {
+    if (g_mirror_pid > 0) return 0; /* already running */
+
+    snprintf(g_mirror_socket, sizeof(g_mirror_socket),
+             "megingiard.mirror.direct.%d", (int)getpid());
+
+    pid_t pid = fork();
+    if (pid < 0) return -1;
+    if (pid == 0) {
+        char w[16], h[16];
+        snprintf(w, sizeof(w), "%d", width);
+        snprintf(h, sizeof(h), "%d", height);
+
+        setenv("CLASSPATH", MIRROR_DEX_PATH, 1);
+        char *const argv[] = {
+            (char *)"app_process",
+            (char *)"/data/local/tmp",
+            (char *)DIRECT_MIRROR_MAIN_CLASS,
+            g_mirror_socket,
+            w, h,
+            NULL
+        };
+        execv("/system/bin/app_process", argv);
+        _exit(127);
+    }
+
+    char search_name[96];
+    snprintf(search_name, sizeof(search_name), "@%s", g_mirror_socket);
+
+    int ready = 0;
+    struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+    for (int i = 0; i < 50 && !ready; i++) {
+        nanosleep(&ts, NULL);
+
+        int status;
+        pid_t r = waitpid(pid, &status, WNOHANG);
+        if (r == pid || r < 0) {
+            g_mirror_pid = -1;
+            g_mirror_socket[0] = '\0';
+            return -1;
+        }
+
+        FILE *f = fopen("/proc/net/unix", "r");
+        if (f) {
+            char line[512];
+            while (fgets(line, sizeof(line), f)) {
+                if (strstr(line, search_name)) {
+                    ready = 1;
+                    break;
+                }
+            }
+            fclose(f);
+        }
+    }
+
+    if (!ready) {
+        kill(pid, SIGTERM);
+        int status;
+        waitpid(pid, &status, 0);
+        g_mirror_pid = -1;
+        g_mirror_socket[0] = '\0';
+        return -1;
+    }
+
+    g_mirror_pid = pid;
+    return 0;
+}
+
 /*
  * Stops the mirror child if running. Sends SIGTERM, reaps with waitpid().
  */
@@ -418,7 +487,7 @@ static void stop_mirror_child(void) {
  *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
  *   UNSUB GAMEPAD\n — stop streaming
  *   MIRROR START <w> <h> <bitrate> <maxfps>\n  — spawn mirror server child
- *   MIRROR START_DIRECT <w> <h>\n              — reserve direct-Surface mirror protocol
+ *   MIRROR START_DIRECT <w> <h>\n              — spawn direct-Surface mirror child
  *   MIRROR STOP\n                              — terminate mirror server
  */
 static int serve_client(int client_fd) {
@@ -474,14 +543,20 @@ static int serve_client(int client_fd) {
 
         if (strncmp(line, "MIRROR START_DIRECT", 19) == 0) {
             int w, h;
-            const char *resp;
+            char resp[96];
+            int rl;
             if (sscanf(line, "MIRROR START_DIRECT %d %d", &w, &h) == 2 && w > 0 && h > 0) {
-                resp = "MIRROR_DIRECT_ERR UNSUPPORTED\n";
+                int rc = start_direct_mirror_child(w, h);
+                if (rc == 0) {
+                    rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_READY\n");
+                } else {
+                    rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_ERR START_FAILED\n");
+                }
             } else {
-                resp = "MIRROR_DIRECT_ERR INVALID\n";
+                rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_ERR INVALID\n");
             }
             pthread_mutex_lock(&g_send_mutex);
-            (void)write(client_fd, resp, strlen(resp));
+            (void)write(client_fd, resp, rl);
             pthread_mutex_unlock(&g_send_mutex);
             continue;
         }
