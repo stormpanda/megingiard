@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import android.media.projection.MediaProjectionManager
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 
 private const val TAG = "CaptureRequestActivity"
@@ -24,10 +25,11 @@ class CaptureRequestActivity : ComponentActivity() {
                 // setCapturing(true) and setPromptInFlight(false), so promptInFlight
                 // stays true throughout the restore — preventing MainActivity from
                 // re-triggering the capture prompt before isCapturing becomes true.
-                AppStateManager.setUserDeclinedCapture(false)
             } else {
-                AppLog.i(TAG, "RESULT_CANCELED → user declined capture, setUserDeclinedCapture(true)")
-                AppStateManager.setUserDeclinedCapture(true)
+                AppLog.i(TAG, "RESULT_CANCELED → clearing active layout mirrorAutoStart")
+                MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                    MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+                }
                 AppStateManager.setPromptInFlight(false)
             }
             finish()

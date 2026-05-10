@@ -33,8 +33,6 @@ private const val TAG = "ScreenCaptureService"
 
 const val ACTION_START_PRIVD = "START_PRIVD"
 const val ACTION_STOP = "STOP"
-const val EXTRA_CLEAR_LAYOUT_MIRROR_STATE = "CLEAR_LAYOUT_MIRROR_STATE"
-const val EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID = "LAYOUT_MIRROR_STATE_LAYOUT_ID"
 
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
@@ -45,18 +43,13 @@ class ScreenCaptureService : Service() {
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
-    private var capturedLayoutId: String? = null
-    private var clearLayoutMirrorStateOnDestroy: Boolean = false
-    private var layoutMirrorStateTargetId: String? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            clearLayoutMirrorStateOnDestroy = intent.getBooleanExtra(EXTRA_CLEAR_LAYOUT_MIRROR_STATE, false)
-            layoutMirrorStateTargetId = intent.getStringExtra(EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID)
-            AppLog.i(TAG, "onStartCommand STOP → stopping self clearLayoutState=$clearLayoutMirrorStateOnDestroy")
+            AppLog.i(TAG, "onStartCommand STOP → stopping self")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -161,7 +154,6 @@ class ScreenCaptureService : Service() {
                 // and immediately fire the "layout switched to off-state while
                 // capturing → STOP" gate, killing the session it just started.
                 MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                    capturedLayoutId = layoutId
                     MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
                 }
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
@@ -292,7 +284,6 @@ class ScreenCaptureService : Service() {
             // MediaProjection path above. The privd path is more sensitive to this
             // race because no consent dialog delays the transition.
             MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                capturedLayoutId = layoutId
                 MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
             }
             AppLog.i(TAG, "privd session state restored → setCapturing(true)")
@@ -307,23 +298,11 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
-        // Only an explicit user stop changes the remembered per-layout mirror
-        // state to false. A layout/profile switch to an off-layout also stops the
-        // running service, but must keep the previous layout's true flag intact so
-        // switching back restores its remembered on-state.
-        if (clearLayoutMirrorStateOnDestroy) (layoutMirrorStateTargetId ?: capturedLayoutId)?.let { layoutId ->
-            MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
-            AppLog.d(TAG, "onDestroy: cleared mirrorAutoStart for layout $layoutId")
-        }
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         AppStateManager.setPromptInFlight(false)
-        // Only explicit user stops suppress immediate auto-start. Layout/profile
-        // switch stops are policy-driven transitions: once the service is down,
-        // the active layout's persisted mirrorAutoStart decides whether to restart.
-        AppStateManager.setUserDeclinedCapture(clearLayoutMirrorStateOnDestroy)
         virtualDisplay?.release()
         mediaProjection?.stop()
         recordingPresentation?.dismiss()

@@ -41,10 +41,6 @@ object AppStateManager {
     private val _isOnValidScreen = MutableStateFlow(true)
     val isOnValidScreen: StateFlow<Boolean> = _isOnValidScreen.asStateFlow()
 
-    // Defaults to true so mirror capture requires an explicit user action (button press).
-    private val _userDeclinedCapture = MutableStateFlow(true)
-    val userDeclinedCapture: StateFlow<Boolean> = _userDeclinedCapture.asStateFlow()
-
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
@@ -52,8 +48,7 @@ object AppStateManager {
     // One-shot fire-and-forget flags: MainActivity resets them after handling.
 
     /** Set to true by MirrorPlayStop when mirror is not yet capturing; MainActivity launches
-     * CaptureRequestActivity and resets. Distinct from userDeclinedCapture so that a "declined"
-     * state within the session can be overridden by an explicit button press. */
+     * CaptureRequestActivity and resets. */
     private val _mirrorStartRequested = MutableStateFlow(false)
     val mirrorStartRequested: StateFlow<Boolean> = _mirrorStartRequested.asStateFlow()
 
@@ -89,10 +84,6 @@ object AppStateManager {
     fun setOnValidScreen(valid: Boolean) {
         AppLog.i(TAG, "setOnValidScreen($valid)")
         _isOnValidScreen.value = valid
-    }
-    fun setUserDeclinedCapture(declined: Boolean) {
-        AppLog.d(TAG, "setUserDeclinedCapture($declined)")
-        _userDeclinedCapture.value = declined
     }
     fun setPromptInFlight(inFlight: Boolean) {
         AppLog.d(TAG, "setPromptInFlight($inFlight)")

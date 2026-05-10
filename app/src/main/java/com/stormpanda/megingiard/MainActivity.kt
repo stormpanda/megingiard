@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -27,22 +28,21 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.stormpanda.megingiard.mirror.ACTION_STOP
-import com.stormpanda.megingiard.mirror.EXTRA_CLEAR_LAYOUT_MIRROR_STATE
-import com.stormpanda.megingiard.mirror.EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.mirror.ScreenCaptureService
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
+import com.stormpanda.megingiard.mirror.ACTION_STOP
 import com.stormpanda.megingiard.mirror.DisplayDetector
+import com.stormpanda.megingiard.mirror.MirrorStrategy
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCaptureService
+import com.stormpanda.megingiard.mirror.selectMirrorStrategy
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.AppLanguage
-import androidx.compose.ui.graphics.Color
-import com.stormpanda.megingiard.settings.AmbientSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
@@ -60,6 +60,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "MainActivity"
+
+private data class MirrorLayoutPolicy(
+    val promptInFlight: Boolean,
+    val isOnValidScreen: Boolean,
+    val isCapturing: Boolean,
+    val globalAutoStart: Boolean,
+    val layoutId: String?,
+    val layoutWantsMirror: Boolean,
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -108,11 +117,6 @@ class MainActivity : ComponentActivity() {
         super.onConfigurationChanged(newConfig)
         val displayId = display?.displayId ?: Display.DEFAULT_DISPLAY
         DisplayDetector.updateDisplayValidity(displayId)
-        // Mirror the ON_RESUME auto-start behaviour: if the app just moved onto the
-        // valid screen, let the capture prompt fire (if the user enabled auto-start).
-        if (AppStateManager.isOnValidScreen.value && SettingsManager.autoStartCapture.value) {
-            AppStateManager.setUserDeclinedCapture(false)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -227,16 +231,6 @@ class MainActivity : ComponentActivity() {
                         Lifecycle.Event.ON_RESUME -> {
                             AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value} autoStart=${SettingsManager.autoStartCapture.value}")
                             AppStateManager.setActivityResumed(true)
-                            // Auto-start: treat each app resume as a fresh opportunity.
-                            // Only clear the decline flag here — not in the LaunchedEffect,
-                            // so a decline within a session is respected until the next resume.
-                            // Guard: only on the secondary (valid) screen — prevents a
-                            // capture prompt from firing if the app is on the primary display.
-                            if (SettingsManager.autoStartCapture.value
-                                && AppStateManager.isOnValidScreen.value
-                            ) {
-                                AppStateManager.setUserDeclinedCapture(false)
-                            }
                         }
                         Lifecycle.Event.ON_STOP -> {
                             AppLog.i(TAG, "ON_STOP")
@@ -258,93 +252,37 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.setOnValidScreen(isOnValidScreenLocal)
             }
 
-            val userDeclinedCapture by AppStateManager.userDeclinedCapture.collectAsState()
-
-            val macropadAmbientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
             val globalMirrorAutoStart by SettingsManager.autoStartCapture.collectAsState()
             val activeLayout by MacroPadState.activeLayout.collectAsState()
             val layoutMirrorAutoStart = activeLayout?.mirrorAutoStart == true
 
-            // Auto-start capture when Ambient Display is enabled.
-            // Declining within a session is respected until the next mode entry.
-            // Guard: skip when on the primary display — no capture should start there.
-            LaunchedEffect(macropadAmbientEnabled, isOnValidScreenLocal) {
-                if (macropadAmbientEnabled
-                    && isOnValidScreenLocal && !isCapturing
-                ) {
-                    AppStateManager.setUserDeclinedCapture(false)
-                }
-            }
-
-            // Auto-start the capture prompt when:
-            //   - the active layout was last seen with mirroring on
-            //     (PadLayout.mirrorAutoStart == true), AND
-            //   - the global "auto-start mirroring" setting is enabled.
-            //
-            // The flow re-evaluates on every layout switch, so switching to a layout
-            // that was last running with mirror on will re-trigger the prompt (when
-            // not already capturing). Switching to a layout that was last off while
-            // currently capturing is handled by the separate stop-on-switch effect
-            // below.
+            // Reconcile the running mirror session with the active layout's persisted
+            // desired state. PadLayout.mirrorAutoStart is the single source of truth:
+            // true means this layout should mirror (subject to the global auto-start
+            // gate when not already running), false means this layout should not mirror.
             LaunchedEffect(Unit) {
                 snapshotFlow {
-                    !promptInFlight && isOnValidScreenLocal && !isCapturing &&
-                        !userDeclinedCapture && globalMirrorAutoStart && layoutMirrorAutoStart
+                    MirrorLayoutPolicy(
+                        promptInFlight = promptInFlight,
+                        isOnValidScreen = isOnValidScreenLocal,
+                        isCapturing = isCapturing,
+                        globalAutoStart = globalMirrorAutoStart,
+                        layoutId = activeLayout?.id,
+                        layoutWantsMirror = layoutMirrorAutoStart,
+                    )
                 }
-                    .collect { shouldLaunch ->
-                        if (shouldLaunch) {
-                            AppLog.i(TAG, "auto-start: routing mirror start by policy")
+                    .distinctUntilChanged()
+                    .collect { policy ->
+                        if (!policy.isOnValidScreen) return@collect
+                        if (policy.layoutWantsMirror && policy.globalAutoStart &&
+                            !policy.isCapturing && !policy.promptInFlight
+                        ) {
+                            AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
                             startMirrorByPolicy()
                         }
-                    }
-            }
-
-            // Stop mirroring when the user switches to a layout whose remembered
-            // state is "off" (mirrorAutoStart == false). This honors the per-layout
-            // remembered state on layout switch as well as on app launch.
-            //
-            // IMPORTANT: The gate only fires once the session is *confirmed* (i.e. we
-            // have previously observed isCapturing=true AND layoutFlag=true in the same
-            // snapshot). This prevents a false-positive STOP during service start-up:
-            // activeLayout is a two-level derived StateFlow (_profiles → activeProfile →
-            // activeLayout), so its mirrorAutoStart field propagates two async coroutine
-            // hops after setLayoutMirrorAutoStart() is called. isCapturing only needs
-            // one hop. Compose may therefore see (isCapturing=true, layoutFlag=false) at
-            // the next vsync before the stateIn chain has settled — this was firing the
-            // STOP gate spuriously every time the privd mirror session started.
-            LaunchedEffect(Unit) {
-                var confirmedCapturingWithFlagOn = false
-                snapshotFlow { isCapturing to layoutMirrorAutoStart }
-                    .collect { (capturing, layoutFlag) ->
-                        if (!capturing) confirmedCapturingWithFlagOn = false
-                        if (capturing && layoutFlag) confirmedCapturingWithFlagOn = true
-                        if (confirmedCapturingWithFlagOn && capturing && !layoutFlag) {
-                            confirmedCapturingWithFlagOn = false
-                            AppLog.i(TAG, "layout switched to off-state while capturing → STOP")
-                            val stopIntent = Intent(this@MainActivity, ScreenCaptureService::class.java).apply {
-                                action = ACTION_STOP
-                                putExtra(EXTRA_CLEAR_LAYOUT_MIRROR_STATE, false)
-                            }
-                            startService(stopIntent)
-                        }
-                    }
-            }
-
-            // Reset "user declined capture" sentinel on layout switch so the auto-start
-            // gate can fire for the new layout when it has mirrorAutoStart=true.
-            // Guard: skip while currently capturing — the stop gate handles that
-            // transition and userDeclinedCapture is set to true in onDestroy() after
-            // the service stops, not before. At the moment the layout changes the
-            // service is still alive (isCapturing=true), so the guard suppresses the
-            // reset until the user switches to yet another layout after the service
-            // has stopped.
-            LaunchedEffect(Unit) {
-                snapshotFlow { activeLayout?.id }
-                    .drop(1) // skip initial emission at composition
-                    .collect {
-                        if (!ScreenCaptureManager.isCapturing.value) {
-                            AppLog.d(TAG, "layout changed while not capturing → reset userDeclinedCapture")
-                            AppStateManager.setUserDeclinedCapture(false)
+                        if (!policy.layoutWantsMirror && policy.isCapturing) {
+                            AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
+                            stopMirrorService()
                         }
                     }
             }
@@ -360,8 +298,9 @@ class MainActivity : ComponentActivity() {
                 if (!mirrorStartRequested) return@LaunchedEffect
                 AppLog.i(TAG, "mirrorStartRequested → triggering capture flow")
                 AppStateManager.consumeMirrorStartRequest()
-                // Override any in-session decline so the capture prompt fires.
-                AppStateManager.setUserDeclinedCapture(false)
+                activeLayout?.id?.let { layoutId ->
+                    MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+                }
                 // Manual start bypasses the global auto-start gate — launch directly.
                 if (isOnValidScreenLocal && !isCapturing && !promptInFlight) {
                     startMirrorByPolicy()
@@ -372,12 +311,10 @@ class MainActivity : ComponentActivity() {
                 if (!mirrorStopRequested) return@LaunchedEffect
                 AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
                 AppStateManager.consumeMirrorStopRequest()
-                val stopIntent = Intent(this@MainActivity, ScreenCaptureService::class.java).apply {
-                    action = ACTION_STOP
-                    putExtra(EXTRA_CLEAR_LAYOUT_MIRROR_STATE, true)
-                    activeLayout?.id?.let { putExtra(EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID, it) }
+                activeLayout?.id?.let { layoutId ->
+                    MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                 }
-                startService(stopIntent)
+                if (isCapturing) stopMirrorService()
             }
 
             val themeMode by SettingsManager.themeMode.collectAsState()
@@ -421,18 +358,18 @@ class MainActivity : ComponentActivity() {
      */
     private fun startMirrorByPolicy() {
         val privdEnabled = MacroPadSettings.privdMirrorEnabled.value
-        val privdRunning = PrivdManager.state.value == com.stormpanda.megingiard.privd.PrivdState.RUNNING
-        val strategy = com.stormpanda.megingiard.mirror.selectMirrorStrategy(privdEnabled, privdRunning)
+        val privdRunning = PrivdManager.state.value == PrivdState.RUNNING
+        val strategy = selectMirrorStrategy(privdEnabled, privdRunning)
         when (strategy) {
-            com.stormpanda.megingiard.mirror.MirrorStrategy.PRIVILEGED -> {
+            MirrorStrategy.PRIVILEGED -> {
                 AppLog.i(TAG, "startMirrorByPolicy: privd path")
                 AppStateManager.setPromptInFlight(true)
                 val intent = Intent(this, ScreenCaptureService::class.java).apply {
-                    action = com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
+                    action = ACTION_START_PRIVD
                 }
                 startForegroundService(intent)
             }
-            com.stormpanda.megingiard.mirror.MirrorStrategy.MEDIA_PROJECTION -> {
+            MirrorStrategy.MEDIA_PROJECTION -> {
                 AppLog.i(TAG, "startMirrorByPolicy: MediaProjection path")
                 launchCaptureRequest()
             }
@@ -453,6 +390,13 @@ class MainActivity : ComponentActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
         }
         startActivity(intent, options.toBundle())
+    }
+
+    private fun stopMirrorService() {
+        val stopIntent = Intent(this, ScreenCaptureService::class.java).apply {
+            action = ACTION_STOP
+        }
+        startService(stopIntent)
     }
 
     /** Called when the app is already running and receives a new ACTION_VIEW intent. */
