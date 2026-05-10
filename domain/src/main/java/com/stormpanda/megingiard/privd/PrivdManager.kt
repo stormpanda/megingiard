@@ -34,7 +34,15 @@ enum class PrivdFeature {
      * When disabled, the existing virtual touch-controller overlay recording
      * path is used instead.
      */
-    GAMEPAD_RECORDING,}
+    GAMEPAD_RECORDING,
+    /**
+     * Primary-display mirror is captured via the on-device privileged daemon
+     * spawning an `app_process` server child (no MediaProjection consent
+     * dialog, lower CPU). When disabled, the legacy MediaProjection +
+     * VirtualDisplay path is used. DRM frames render black on the privileged
+     * path — same limitation as scrcpy.
+     */
+    MIRROR,}
 
 /**
  * Lifecycle state of the privileged-mode subsystem.

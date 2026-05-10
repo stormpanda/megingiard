@@ -383,16 +383,20 @@ class MainActivity : ComponentActivity() {
     private fun startMirrorByPolicy() {
         val privdEnabled = MacroPadSettings.privdMirrorEnabled.value
         val privdRunning = PrivdManager.state.value == com.stormpanda.megingiard.privd.PrivdState.RUNNING
-        if (privdEnabled && privdRunning) {
-            AppLog.i(TAG, "startMirrorByPolicy: privd path")
-            AppStateManager.setPromptInFlight(true)
-            val intent = Intent(this, ScreenCaptureService::class.java).apply {
-                action = com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
+        val strategy = com.stormpanda.megingiard.mirror.selectMirrorStrategy(privdEnabled, privdRunning)
+        when (strategy) {
+            com.stormpanda.megingiard.mirror.MirrorStrategy.PRIVILEGED -> {
+                AppLog.i(TAG, "startMirrorByPolicy: privd path")
+                AppStateManager.setPromptInFlight(true)
+                val intent = Intent(this, ScreenCaptureService::class.java).apply {
+                    action = com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
+                }
+                startForegroundService(intent)
             }
-            startForegroundService(intent)
-        } else {
-            AppLog.i(TAG, "startMirrorByPolicy: MediaProjection path")
-            launchCaptureRequest()
+            com.stormpanda.megingiard.mirror.MirrorStrategy.MEDIA_PROJECTION -> {
+                AppLog.i(TAG, "startMirrorByPolicy: MediaProjection path")
+                launchCaptureRequest()
+            }
         }
     }
 

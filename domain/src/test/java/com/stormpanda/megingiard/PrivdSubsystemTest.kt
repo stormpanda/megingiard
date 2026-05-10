@@ -54,7 +54,8 @@ class PrivdSubsystemTest {
     fun `PrivdFeature enum lists known features`() {
         assertNotNull(PrivdFeature.valueOf("GAMEPAD_MERGE"))
         assertNotNull(PrivdFeature.valueOf("GAMEPAD_RECORDING"))
-        assertEquals(2, PrivdFeature.entries.size)
+        assertNotNull(PrivdFeature.valueOf("MIRROR"))
+        assertEquals(3, PrivdFeature.entries.size)
     }
 
     @Test
