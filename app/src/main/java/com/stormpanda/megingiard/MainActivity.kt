@@ -56,6 +56,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -298,11 +300,19 @@ class MainActivity : ComponentActivity() {
                 if (!mirrorStartRequested) return@LaunchedEffect
                 AppLog.i(TAG, "mirrorStartRequested → triggering capture flow")
                 AppStateManager.consumeMirrorStartRequest()
-                activeLayout?.id?.let { layoutId ->
+                val requestedLayoutId = activeLayout?.id
+                if (requestedLayoutId != null) {
+                    val layoutId = requestedLayoutId
                     MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+                    MacroPadState.activeLayout
+                        .map { layout -> layout?.id == layoutId && layout.mirrorAutoStart }
+                        .first { it }
                 }
                 // Manual start bypasses the global auto-start gate — launch directly.
-                if (isOnValidScreenLocal && !isCapturing && !promptInFlight) {
+                if (isOnValidScreenLocal &&
+                    !ScreenCaptureManager.isCapturing.value &&
+                    !AppStateManager.promptInFlight.value
+                ) {
                     startMirrorByPolicy()
                 }
             }

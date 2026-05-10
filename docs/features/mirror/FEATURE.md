@@ -76,7 +76,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - A global "Auto-start mirroring" setting (in Global Settings → General) MUST control whether mirroring resumes automatically on app launch and on layout switch.
 - Each MacroPad layout MUST remember its last mirror state independently:
-  - `PadLayout.mirrorAutoStart = true` is recorded when capture starts on that layout.
+  - `PadLayout.mirrorAutoStart = true` is recorded when the user explicitly starts mirroring for that layout.
   - `PadLayout.mirrorAutoStart = false` is recorded when the user explicitly stops mirroring for that layout or cancels the MediaProjection consent prompt.
 - The capture-prompt MUST auto-launch only when **both** the global setting is enabled **and** the active layout's remembered state is `true`.
 - Switching to a layout whose remembered state is `false` while currently capturing MUST stop the runtime mirror session without changing any layout's persisted remembered state.
@@ -358,11 +358,10 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 **Recording the layout state.** `PadLayout.mirrorAutoStart` is the single source of truth for whether each layout last wanted mirroring on or off. It is persisted in the MacroPad profile JSON:
 
 - On explicit user start via the MirrorPlayStop button: `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, true)`.
-- On capture start (after `restoreMirrorSessionState` / before `setCapturing(true)`): `ScreenCaptureService` also confirms `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, true)`.
 - On explicit user stop via the MirrorPlayStop button: `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
 - On MediaProjection consent cancellation: `CaptureRequestActivity` records `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
 
-`ScreenCaptureService.onDestroy()` does not write `mirrorAutoStart`; teardown only cleans up runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
+`ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
 
 **Runtime reconciliation.** `MainActivity` runs a single `snapshotFlow` over the active layout and capture state. If the active layout wants mirroring on and global auto-start is enabled, it starts mirroring when no session is running. If the active layout wants mirroring off while a session is running, it stops only the runtime service; it does not mutate any layout's remembered state.
 
