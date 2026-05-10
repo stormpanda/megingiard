@@ -67,8 +67,8 @@ object MacroPadSettings {
     private val _privdMirrorEnabled = MutableStateFlow(false)
     /**
      * When true (and [com.stormpanda.megingiard.privd.PrivdManager] is RUNNING),
-     * mirroring is performed via the on-device privd mirror server (hidden
-     * SurfaceControl + MediaCodec) instead of MediaProjection. Default off.
+        * mirroring is performed via direct SurfaceControl output instead of
+        * MediaProjection. Default off.
      */
     val privdMirrorEnabled: StateFlow<Boolean> = _privdMirrorEnabled.asStateFlow()
 

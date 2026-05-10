@@ -21,10 +21,6 @@ import java.util.concurrent.LinkedBlockingQueue
 private const val TAG = "PrivdClient"
 private const val ABSTRACT_NAME = "megingiard.privd"
 private const val PING_TIMEOUT_MS = 1_500L
-private const val MIRROR_START_TIMEOUT_MS = 8_000L
-/** Shorter timeout for the direct-surface path: the child exits within ~2 s on
- * failure (ActivityThread.systemMain() FutureTask timeout) so 4 s is sufficient
- * and avoids the full 8 s black screen if the path is unavailable. */
 private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
@@ -77,7 +73,6 @@ object PrivdClient {
 
     private val queue = LinkedBlockingQueue<String>()
     @Volatile private var pingDeferred: CompletableDeferred<Boolean>? = null
-    @Volatile private var mirrorStartDeferred: CompletableDeferred<String?>? = null
     @Volatile private var mirrorDirectStartDeferred: CompletableDeferred<Boolean>? = null
     @Volatile private var mirrorStopDeferred: CompletableDeferred<Boolean>? = null
 
@@ -157,22 +152,6 @@ object PrivdClient {
     }
 
     /**
-     * Requests the daemon to spawn the privileged-mirror server child.
-     * Returns the abstract socket name to connect to for NAL streaming, or
-     * `null` on failure / timeout.
-     */
-    suspend fun startMirror(width: Int, height: Int, bitrate: Int, maxFps: Int): String? {
-        if (!isConnected) return null
-        val deferred = CompletableDeferred<String?>()
-        mirrorStartDeferred = deferred
-        send("MIRROR START $width $height $bitrate $maxFps\n")
-        val socketName = withTimeoutOrNull(MIRROR_START_TIMEOUT_MS) { deferred.await() }
-        mirrorStartDeferred = null
-        AppLog.i(TAG, "startMirror($width x $height @$maxFps fps, $bitrate bps) → $socketName")
-        return socketName
-    }
-
-    /**
      * Requests the daemon to start the direct-Surface privileged mirror path.
      * Returns `false` when the daemon build does not support the direct handoff yet.
      */
@@ -237,15 +216,6 @@ object PrivdClient {
             }
             if (line == "PONG") {
                 pingDeferred?.complete(true)
-                continue
-            }
-            if (line.startsWith("MIRROR_READY ")) {
-                val name = line.substringAfter("MIRROR_READY ").trim()
-                mirrorStartDeferred?.complete(name.ifEmpty { null })
-                continue
-            }
-            if (line == "MIRROR_ERR") {
-                mirrorStartDeferred?.complete(null)
                 continue
             }
             if (line.startsWith("MIRROR_DIRECT_READY")) {

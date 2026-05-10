@@ -81,11 +81,10 @@ static pthread_t g_reader_thread;
 static volatile int g_client_fd_for_reader = -1;
 static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* Mirror server child (MIRROR START/STOP). */
+/* Direct mirror server child (MIRROR START_DIRECT/STOP). */
 static volatile pid_t g_mirror_pid = -1;
 static char g_mirror_socket[64] = {0};
 #define MIRROR_DEX_PATH "/data/local/tmp/megingiard_mirror.dex"
-#define MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.MirrorServer"
 #define DIRECT_MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.DirectMirrorServer"
 
 /*
@@ -295,98 +294,6 @@ static int read_line(int fd, char *out) {
     return n;
 }
 
-/*
- * Spawns the privileged H.264 mirror server (app_process +
- * megingiard_mirror.dex) as a child process. Readiness is detected by
- * polling /proc/net/unix for the child's abstract LocalServerSocket.
- *
- * On success: stores child PID in g_mirror_pid, copies the chosen abstract
- * socket name into g_mirror_socket (caller-readable), returns 0.
- * On failure: returns -1.
- */
-static int start_mirror_child(int width, int height, int bitrate, int maxfps) {
-    if (g_mirror_pid > 0) return 0; /* already running */
-
-    /* Per-process unique socket name so a stale child from a previous
-     * session cannot shadow ours. */
-    snprintf(g_mirror_socket, sizeof(g_mirror_socket),
-             "megingiard.mirror.%d", (int)getpid());
-
-    pid_t pid = fork();
-    if (pid < 0) return -1;
-    if (pid == 0) {
-        /* Child: exec app_process. No stdout pipe needed — readiness is
-         * detected by the parent via /proc/net/unix (see below). */
-        char w[16], h[16], br[16], fps[16];
-        snprintf(w,   sizeof(w),   "%d", width);
-        snprintf(h,   sizeof(h),   "%d", height);
-        snprintf(br,  sizeof(br),  "%d", bitrate);
-        snprintf(fps, sizeof(fps), "%d", maxfps);
-
-        setenv("CLASSPATH", MIRROR_DEX_PATH, 1);
-        char *const argv[] = {
-            (char *)"app_process",
-            (char *)"/data/local/tmp",
-            (char *)MIRROR_MAIN_CLASS,
-            g_mirror_socket,
-            w, h, br, fps,
-            NULL
-        };
-        execv("/system/bin/app_process", argv);
-        /* exec failed */
-        _exit(127);
-    }
-
-    /* Parent: poll /proc/net/unix every 100 ms (up to 5 s) for the abstract
-     * socket "@megingiard.mirror.<pid>" to appear.  Binding the socket is the
-     * true readiness signal from MirrorServer — more reliable than reading
-     * "READY\n" from a stdout pipe because android.os.RuntimeInit calls
-     * redirectLogStreams() before MirrorServer.main() runs, which silently
-     * redirects System.out to logcat rather than fd 1. */
-    char search_name[80];
-    snprintf(search_name, sizeof(search_name), "@%s", g_mirror_socket);
-
-    int ready = 0;
-    struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 }; /* 100 ms */
-    for (int i = 0; i < 50 && !ready; i++) { /* 50 × 100 ms = 5 s */
-        nanosleep(&ts, NULL);
-
-        /* Detect premature child exit (exec failure, early crash, etc.). */
-        int status;
-        pid_t r = waitpid(pid, &status, WNOHANG);
-        if (r == pid || r < 0) {
-            g_mirror_pid = -1;
-            g_mirror_socket[0] = '\0';
-            return -1;
-        }
-
-        /* Check /proc/net/unix for the abstract socket. */
-        FILE *f = fopen("/proc/net/unix", "r");
-        if (f) {
-            char line[512];
-            while (fgets(line, sizeof(line), f)) {
-                if (strstr(line, search_name)) {
-                    ready = 1;
-                    break;
-                }
-            }
-            fclose(f);
-        }
-    }
-
-    if (!ready) {
-        kill(pid, SIGTERM);
-        int status;
-        waitpid(pid, &status, 0);
-        g_mirror_pid = -1;
-        g_mirror_socket[0] = '\0';
-        return -1;
-    }
-
-    g_mirror_pid = pid;
-    return 0;
-}
-
 static int start_direct_mirror_child(int width, int height) {
     if (g_mirror_pid > 0) return 0; /* already running */
 
@@ -501,7 +408,6 @@ static void stop_mirror_child(void) {
  * Extended protocol commands:
  *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
  *   UNSUB GAMEPAD\n — stop streaming
- *   MIRROR START <w> <h> <bitrate> <maxfps>\n  — spawn mirror server child
  *   MIRROR START_DIRECT <w> <h>\n               — spawn direct-Surface mirror child
  *   MIRROR STOP\n                              — terminate mirror server
  */
@@ -577,29 +483,6 @@ static int serve_client(int client_fd) {
             continue;
         }
 
-        if (strncmp(line, "MIRROR START", 12) == 0) {
-            int w, h, br, fps;
-            if (sscanf(line, "MIRROR START %d %d %d %d", &w, &h, &br, &fps) == 4 &&
-                w > 0 && h > 0 && br > 0 && fps > 0 && fps <= 120) {
-                int rc = start_mirror_child(w, h, br, fps);
-                char resp[96];
-                int rl;
-                if (rc == 0) {
-                    rl = snprintf(resp, sizeof(resp), "MIRROR_READY %s\n", g_mirror_socket);
-                } else {
-                    rl = snprintf(resp, sizeof(resp), "MIRROR_ERR\n");
-                }
-                pthread_mutex_lock(&g_send_mutex);
-                (void)write(client_fd, resp, rl);
-                pthread_mutex_unlock(&g_send_mutex);
-            } else {
-                const char *resp = "MIRROR_ERR\n";
-                pthread_mutex_lock(&g_send_mutex);
-                (void)write(client_fd, resp, strlen(resp));
-                pthread_mutex_unlock(&g_send_mutex);
-            }
-            continue;
-        }
         if (strcmp(line, "MIRROR STOP") == 0) {
             stop_mirror_child();
             const char *resp = "MIRROR_STOPPED\n";

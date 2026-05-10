@@ -368,9 +368,9 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Decides whether to start the privileged mirror path (no consent dialog,
-     * MediaCodec H.264 over a privd-spawned server) or the legacy MediaProjection
-     * path. The privileged path requires the per-feature flag to be enabled and
-     * a RUNNING privd connection.
+        * direct SurfaceControl output) or the legacy MediaProjection path. The
+        * privileged path requires the per-feature flag to be enabled and a RUNNING
+        * privd connection.
      */
     private fun startMirrorByPolicy() {
         val privdEnabled = MacroPadSettings.privdMirrorEnabled.value

@@ -75,11 +75,11 @@ every device since Android 11 (API 30).
 
 ## Features That Require Privileged Mode
 
-| Feature                                      | What it gains                                                                                                                                           | Without Privileged Mode                                                                                                                                        |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                                                                             | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
-| **Gamepad recording** (physical pad → macro) | Macro recording from the real controller while the target game still receives the same input.                                                           | Falls back to the on-screen virtual controller recording overlay.                                                                                              |
-| **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog. Direct SurfaceControl output is preferred when supported; the current production fallback is H.264 over LocalSocket. | Falls back to `MediaProjection` + `VirtualDisplay`. DRM content keeps working; user sees the system consent dialog every cold start.                           |
+| Feature                                      | What it gains                                                                                 | Without Privileged Mode                                                                                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                   | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
+| **Gamepad recording** (physical pad → macro) | Macro recording from the real controller while the target game still receives the same input. | Falls back to the on-screen virtual controller recording overlay.                                                                                              |
+| **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog when direct SurfaceControl output starts successfully.      | Falls back to `MediaProjection` + `VirtualDisplay` with the system consent dialog. DRM content keeps working.                                                  |
 
 > _New entries get added here whenever a feature opts in. Examples that
 > may join the list later: writing to `/dev/input/event*` for special
@@ -204,23 +204,23 @@ ASCII, newline-terminated, both directions. Each feature uses a two-letter
 command prefix; new feature modules can claim new prefixes without breaking
 the existing protocol.
 
-| Direction | Command                       | Meaning                                                  |
-| --------- | ----------------------------- | -------------------------------------------------------- |
-| App → D   | `PING\n`                      | Health-check                                             |
-| D → App   | `PONG\n`                      | Reply to PING                                            |
-| App → D   | `QUIT\n`                      | Daemon exits cleanly                                     |
-| App → D   | `GD <btn>\n`                  | Gamepad button DOWN (Linux `BTN_*`)                      |
-| App → D   | `GU <btn>\n`                  | Gamepad button UP                                        |
-| App → D   | `HD <axis> <val>\n`           | D-Pad hat (axis 0=X 1=Y, val −1/0/+1)                    |
-| App → D   | `JS <axis> <val>\n`           | Analog stick (axis ABS_X=0…ABS_RZ=5, int16)              |
-| App → D   | `SUB GAMEPAD\n`               | Start streaming physical gamepad evdev events to the app |
-| App → D   | `UNSUB GAMEPAD\n`             | Stop streaming physical gamepad evdev events             |
-| D → App   | `EVT <type> <code> <value>\n` | Physical evdev event while subscribed                    |
-| App → D   | `MIRROR START w h br fps\n`   | Spawn `app_process` mirror server child (FR-M9)          |
-| D → App   | `MIRROR_READY <socket>\n`     | Mirror child READY; `<socket>` is abstract LocalSocket   |
-| D → App   | `MIRROR_ERR\n`                | Mirror child failed to spawn or signal READY             |
-| App → D   | `MIRROR STOP\n`               | Terminate the running mirror child (idempotent)          |
-| D → App   | `MIRROR_STOPPED\n`            | Mirror child has been reaped                             |
+| Direction | Command                        | Meaning                                                  |
+| --------- | ------------------------------ | -------------------------------------------------------- |
+| App → D   | `PING\n`                       | Health-check                                             |
+| D → App   | `PONG\n`                       | Reply to PING                                            |
+| App → D   | `QUIT\n`                       | Daemon exits cleanly                                     |
+| App → D   | `GD <btn>\n`                   | Gamepad button DOWN (Linux `BTN_*`)                      |
+| App → D   | `GU <btn>\n`                   | Gamepad button UP                                        |
+| App → D   | `HD <axis> <val>\n`            | D-Pad hat (axis 0=X 1=Y, val −1/0/+1)                    |
+| App → D   | `JS <axis> <val>\n`            | Analog stick (axis ABS_X=0…ABS_RZ=5, int16)              |
+| App → D   | `SUB GAMEPAD\n`                | Start streaming physical gamepad evdev events to the app |
+| App → D   | `UNSUB GAMEPAD\n`              | Stop streaming physical gamepad evdev events             |
+| D → App   | `EVT <type> <code> <value>\n`  | Physical evdev event while subscribed                    |
+| App → D   | `MIRROR START_DIRECT w h\n`    | Spawn direct-Surface `app_process` mirror child (FR-M9)  |
+| D → App   | `MIRROR_DIRECT_READY\n`        | Direct mirror child bound its readiness socket           |
+| D → App   | `MIRROR_DIRECT_ERR <reason>\n` | Direct mirror child failed to start                      |
+| App → D   | `MIRROR STOP\n`                | Terminate the running mirror child (idempotent)          |
+| D → App   | `MIRROR_STOPPED\n`             | Mirror child has been reaped                             |
 
 `SUB GAMEPAD` opens the physical evdev node read-only and starts a reader thread that forwards filtered `EVT` lines to the app. The fd is **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
 

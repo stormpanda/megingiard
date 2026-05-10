@@ -41,25 +41,4 @@ class MirrorStrategyTest {
     fun `enum has stable shape`() {
         assertEquals(2, MirrorStrategy.entries.size)
     }
-
-    @Test
-    fun `selects direct surface transport when available`() {
-        assertEquals(
-            PrivdMirrorTransport.DIRECT_SURFACE,
-            selectPrivdMirrorTransport(directSurfaceAvailable = true),
-        )
-    }
-
-    @Test
-    fun `selects H264 transport when direct surface is unavailable`() {
-        assertEquals(
-            PrivdMirrorTransport.H264_STREAM,
-            selectPrivdMirrorTransport(directSurfaceAvailable = false),
-        )
-    }
-
-    @Test
-    fun `transport enum has stable shape`() {
-        assertEquals(2, PrivdMirrorTransport.entries.size)
-    }
 }

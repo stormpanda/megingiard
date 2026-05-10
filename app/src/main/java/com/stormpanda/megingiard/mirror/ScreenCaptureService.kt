@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import android.app.Activity
+import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -17,6 +18,7 @@ import android.view.Display
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CaptureRequestActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.AmbientSettings
@@ -38,10 +40,10 @@ class ScreenCaptureService : Service() {
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
     private var directPrivdSession: DirectPrivdMirrorSession? = null
-    private var privdSession: PrivdMirrorSession? = null
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
+    private var consentFallbackInFlight = false
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -211,10 +213,8 @@ class ScreenCaptureService : Service() {
     }
 
     /**
-     * Starts the privileged mirror path: no MediaProjection consent, no
-     * VirtualDisplay. The MirrorPresentation's SurfaceView is fed by a
-     * MediaCodec H.264 decoder whose input is a NAL stream from the
-     * privd-spawned mirror server child.
+    * Starts the privileged direct-Surface mirror path. If direct setup fails,
+    * the service launches the normal MediaProjection consent flow.
      */
     private fun startPrivdPath(): Int {
         if (ScreenCaptureManager.isCapturing.value) {
@@ -249,14 +249,11 @@ class ScreenCaptureService : Service() {
 
         presentation.onSurfaceDestroyed = {
             directPrivdSession?.stop()
-            privdSession?.stop()
         }
         presentation.onSurfaceReady = { surface ->
             // Tear down any existing session and start a fresh one bound to the new surface.
             directPrivdSession?.release()
             directPrivdSession = null
-            privdSession?.release()
-            privdSession = null
             scope.launch {
                 val directSession = DirectPrivdMirrorSession(
                     srcWidth,
@@ -269,14 +266,7 @@ class ScreenCaptureService : Service() {
                 }
                 directSession.release()
                 directPrivdSession = null
-
-                AppLog.w(TAG, "direct privileged mirror unavailable — falling back to H.264 stream")
-                val session = PrivdMirrorSession(surface, srcWidth, srcHeight)
-                privdSession = session
-                if (!session.start()) {
-                    AppLog.e(TAG, "H.264 PrivdMirrorSession failed to start")
-                    stopSelf()
-                }
+                launchConsentFallback("direct privileged mirror unavailable")
             }
         }
 
@@ -292,6 +282,28 @@ class ScreenCaptureService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun launchConsentFallback(reason: String) {
+        if (consentFallbackInFlight) return
+        AppLog.w(TAG, "$reason — falling back to MediaProjection consent")
+        consentFallbackInFlight = true
+        directPrivdSession?.release()
+        directPrivdSession = null
+        recordingPresentation?.dismiss()
+        recordingPresentation = null
+        mirrorPresentation?.dismiss()
+        mirrorPresentation = null
+        if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
+        AppStateManager.setPromptInFlight(true)
+
+        val options = ActivityOptions.makeBasic()
+        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        val intent = Intent(this, CaptureRequestActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+        }
+        startActivity(intent, options.toBundle())
+        stopSelf()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
@@ -300,14 +312,12 @@ class ScreenCaptureService : Service() {
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
-        AppStateManager.setPromptInFlight(false)
+        if (!consentFallbackInFlight) AppStateManager.setPromptInFlight(false)
         virtualDisplay?.release()
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
         directPrivdSession?.release()
         directPrivdSession = null
-        privdSession?.release()
-        privdSession = null
     }
 }

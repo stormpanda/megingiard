@@ -308,9 +308,7 @@ dexed automatically — there is no manual build step for normal contributors.
 
 ```
 mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
-├── MirrorServer.java          ← H.264 entry point: binds abstract LocalServerSocket
 ├── DirectMirrorServer.java    ← direct-to-app-Surface entry point
-├── ScreenEncoder.java         ← MediaCodec H.264 encoder + virtual display loop
 └── SurfaceControlReflect.java ← cached reflection wrappers for hidden SurfaceControl APIs
 ```
 
@@ -337,12 +335,8 @@ mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
 ### Runtime deployment
 
 `PrivdBootstrapper` pushes the DEX to `/data/local/tmp/megingiard_mirror.dex`
-during ADB-Wireless bootstrap (mode `0100644`). The daemon spawns the mirror
-child with `CLASSPATH=/data/local/tmp/megingiard_mirror.dex` and
-`/system/bin/app_process /data/local/tmp com.stormpanda.megingiard.mirrorserver.MirrorServer
-<socket> <w> <h> <bitrate> <fps>`.
-
-For direct-Surface privileged mirroring, the daemon spawns:
+during ADB-Wireless bootstrap (mode `0100644`). For direct-Surface privileged
+mirroring, the daemon spawns:
 
 ```bash
 CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
@@ -355,17 +349,5 @@ CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
 `megingiard.direct.surface`, binds its readiness socket, then waits for the app
 to send the currently published `MirrorPresentation.SurfaceView` `Surface` over
 Binder. Once received, it configures a hidden `SurfaceControl` virtual display
-directly onto that Surface. If this path fails, the app falls back to the H.264
-transport below.
-
-### Wire format
-
-The server writes raw H.264 NAL units, each prefixed by a 4-byte big-endian length:
-
-```
-[len:int32 BE][NAL bytes ...][len:int32 BE][NAL bytes ...]
-```
-
-The app's `PrivdMirrorSession` reads this stream on a daemon thread, feeds
-the decoder, and renders zero-copy via `MediaCodec.releaseOutputBuffer(idx, true)`
-into the `MirrorPresentation.SurfaceView`'s `Surface`.
+directly onto that Surface. If this path fails, the app falls back to the normal
+MediaProjection consent flow.

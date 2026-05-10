@@ -21,7 +21,7 @@ public final class DirectMirrorServer {
     private DirectMirrorServer() {}
 
     public static void main(String[] args) {
-        MirrorServer.bypassHiddenApiEnforcement();
+        bypassHiddenApiEnforcement();
 
         if (args.length < 3) {
             System.err.println("usage: DirectMirrorServer <socket> <w> <h>");
@@ -80,6 +80,21 @@ public final class DirectMirrorServer {
         Method addService = serviceManager.getDeclaredMethod("addService", String.class, IBinder.class);
         addService.setAccessible(true);
         addService.invoke(null, name, binder);
+    }
+
+    private static void bypassHiddenApiEnforcement() {
+        try {
+            Class<?> vmRuntimeClass = Class.forName("dalvik.system.VMRuntime");
+            Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");
+            getRuntime.setAccessible(true);
+            Object vmRuntime = getRuntime.invoke(null);
+            Method setHiddenApiExemptions = vmRuntimeClass.getDeclaredMethod(
+                    "setHiddenApiExemptions", String[].class);
+            setHiddenApiExemptions.setAccessible(true);
+            setHiddenApiExemptions.invoke(vmRuntime, new Object[]{new String[]{""}});
+        } catch (Exception e) {
+            System.err.println("Warning: hidden-API bypass failed: " + e);
+        }
     }
 
     private static final class SurfaceReceiverBinder extends Binder {

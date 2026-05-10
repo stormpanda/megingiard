@@ -5,7 +5,7 @@ import java.util.Properties
  * mirrorserver — produces megingiard_mirror.dex used by Privileged Mirror.
  * The DEX is loaded by /system/bin/app_process at runtime under shell UID
  * (spawned by megingiard_privd). It uses reflection to call hidden
- * SurfaceControl APIs and MediaCodec to encode the primary display.
+ * SurfaceControl APIs for direct-to-Surface mirroring.
  */
 plugins {
     java
