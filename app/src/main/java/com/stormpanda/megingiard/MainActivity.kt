@@ -290,8 +290,8 @@ class MainActivity : ComponentActivity() {
                 }
                     .collect { shouldLaunch ->
                         if (shouldLaunch) {
-                            AppLog.i(TAG, "auto-start: launching CaptureRequestActivity on display DEFAULT")
-                            launchCaptureRequest()
+                            AppLog.i(TAG, "auto-start: routing mirror start by policy")
+                            startMirrorByPolicy()
                         }
                     }
             }
@@ -327,7 +327,7 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.setUserDeclinedCapture(false)
                 // Manual start bypasses the global auto-start gate — launch directly.
                 if (isOnValidScreenLocal && !isCapturing && !promptInFlight) {
-                    launchCaptureRequest()
+                    startMirrorByPolicy()
                 }
             }
 
@@ -371,6 +371,28 @@ class MainActivity : ComponentActivity() {
         } else {
             AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive app overlay)")
             window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        }
+    }
+
+    /**
+     * Decides whether to start the privileged mirror path (no consent dialog,
+     * MediaCodec H.264 over a privd-spawned server) or the legacy MediaProjection
+     * path. The privileged path requires the per-feature flag to be enabled and
+     * a RUNNING privd connection.
+     */
+    private fun startMirrorByPolicy() {
+        val privdEnabled = MacroPadSettings.privdMirrorEnabled.value
+        val privdRunning = PrivdManager.state.value == com.stormpanda.megingiard.privd.PrivdState.RUNNING
+        if (privdEnabled && privdRunning) {
+            AppLog.i(TAG, "startMirrorByPolicy: privd path")
+            AppStateManager.setPromptInFlight(true)
+            val intent = Intent(this, ScreenCaptureService::class.java).apply {
+                action = com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
+            }
+            startForegroundService(intent)
+        } else {
+            AppLog.i(TAG, "startMirrorByPolicy: MediaProjection path")
+            launchCaptureRequest()
         }
     }
 

@@ -84,6 +84,7 @@ internal fun PrivdSettingsCard(
     val lastError by viewModel.privdLastError.collectAsState()
     val mergeEnabled by viewModel.privdGamepadMergeEnabled.collectAsState()
     val recordingEnabled by viewModel.privdGamepadRecordingEnabled.collectAsState()
+    val mirrorEnabled by viewModel.privdMirrorEnabled.collectAsState()
     val autoConnect by viewModel.privdAutoConnect.collectAsState()
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
@@ -279,6 +280,32 @@ internal fun PrivdSettingsCard(
             Switch(
                 checked = recordingEnabled,
                 onCheckedChange = { viewModel.setPrivdGamepadRecordingEnabled(it) },
+            )
+        }
+
+        // ── Per-feature toggle: Privileged Mirror ─────────────────────────────
+        HorizontalDivider(color = colors.divider)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = PR_ROW_V_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.privd_feature_mirror),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.privd_feature_mirror_desc),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = mirrorEnabled,
+                onCheckedChange = { viewModel.setPrivdMirrorEnabled(it) },
             )
         }
 

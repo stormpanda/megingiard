@@ -31,11 +31,15 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenCaptureService"
 
+const val ACTION_START_PRIVD = "START_PRIVD"
+const val ACTION_STOP = "STOP"
+
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
+    private var privdSession: PrivdMirrorSession? = null
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
@@ -44,10 +48,13 @@ class ScreenCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "STOP") {
+        if (intent?.action == ACTION_STOP) {
             AppLog.i(TAG, "onStartCommand STOP → stopping self")
             stopSelf()
             return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_START_PRIVD) {
+            return startPrivdPath()
         }
 
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
@@ -197,6 +204,89 @@ class ScreenCaptureService : Service() {
         startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
     }
 
+    private fun startForegroundNotificationConnectedDevice() {
+        val channelId = "screen_capture_channel"
+        val channel = NotificationChannel(channelId, "Screen Mirroring", NotificationManager.IMPORTANCE_LOW)
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+
+        val notification = Notification.Builder(this, channelId)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.notification_mirroring_active))
+            .setSmallIcon(android.R.drawable.ic_menu_view)
+            .build()
+
+        startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+    }
+
+    /**
+     * Starts the privileged mirror path: no MediaProjection consent, no
+     * VirtualDisplay. The MirrorPresentation's SurfaceView is fed by a
+     * MediaCodec H.264 decoder whose input is a NAL stream from the
+     * privd-spawned mirror server child.
+     */
+    private fun startPrivdPath(): Int {
+        if (ScreenCaptureManager.isCapturing.value) {
+            AppLog.w(TAG, "startPrivdPath: already capturing — ignoring duplicate start")
+            return START_NOT_STICKY
+        }
+        startForegroundNotificationConnectedDevice()
+
+        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val secondaryDisplay = displayManager.getDisplays()
+            .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        if (secondaryDisplay == null) {
+            AppLog.e(TAG, "startPrivdPath: no secondary display")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+        val windowContext = createWindowContext(primaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
+        val windowMetrics = windowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
+        val bounds = windowMetrics.bounds
+        val srcWidth = bounds.width()
+        val srcHeight = bounds.height()
+
+        capturedSrcWidth = srcWidth
+        capturedSrcHeight = srcHeight
+        capturedSecondaryDisplay = secondaryDisplay
+        ScreenCaptureManager.setCaptureSourceSize(srcWidth, srcHeight)
+
+        val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
+        mirrorPresentation = presentation
+
+        presentation.onSurfaceDestroyed = {
+            privdSession?.stop()
+        }
+        presentation.onSurfaceReady = { surface ->
+            // Tear down any existing session and start a fresh one bound to the new surface.
+            privdSession?.release()
+            val session = PrivdMirrorSession(surface, srcWidth, srcHeight)
+            privdSession = session
+            scope.launch {
+                val ok = session.start()
+                if (!ok) {
+                    AppLog.e(TAG, "PrivdMirrorSession failed to start")
+                    stopSelf()
+                }
+            }
+        }
+
+        MirrorViewportController.startPersistence(scope)
+        scope.launch {
+            MirrorSettings.restoreMirrorSessionState()
+            MirrorViewportController.restoreFromLayout()
+            AppLog.i(TAG, "privd session state restored → setCapturing(true)")
+            ScreenCaptureManager.setCapturing(true)
+            AppStateManager.setPromptInFlight(false)
+            presentation.show()
+            MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+            }
+        }
+        return START_NOT_STICKY
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
@@ -219,5 +309,7 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
+        privdSession?.release()
+        privdSession = null
     }
 }

@@ -306,6 +306,9 @@ Open Settings to create a layout.</string>
     <string name="privd_feature_gamepad_recording">Physical gamepad recording</string>
     <string name="privd_feature_gamepad_recording_desc">Capture macro steps directly from the physical gamepad (analog sticks, buttons). When enabled, the Record button in the timeline editor uses the physical controller instead of the on-screen virtual gamepad.</string>
 
+    <string name="privd_feature_mirror">Privileged mirror</string>
+    <string name="privd_feature_mirror_desc">Mirror the primary screen via the on-device privileged daemon (no MediaProjection consent dialog, lower CPU). DRM-protected video frames will appear black — same as scrcpy.</string>
+
     <!-- Dead-zone settings row + dialog -->
     <string name="privd_deadzone_title">Configure dead zones</string>
     <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>

@@ -268,6 +268,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_feature_gamepad_recording">Physisches Gamepad aufzeichnen</string>
     <string name="privd_feature_gamepad_recording_desc">Nimmt Makro-Schritte direkt vom physischen Gamepad auf (Analogsticks, Tasten). Wenn aktiviert, nutzt die Aufnahme-Schaltfläche im Timeline-Editor den physischen Controller statt des virtuellen On-Screen-Gamepads.</string>
 
+    <string name="privd_feature_mirror">Privilegierte Spiegelung</string>
+    <string name="privd_feature_mirror_desc">Spiegelt den Primärbildschirm über den geräteinternen privilegierten Daemon (kein MediaProjection-Dialog, geringere CPU-Last). DRM-geschützte Videoframes erscheinen schwarz — wie bei scrcpy.</string>
+
     <!-- Dead-zone-Einstellungen Zeile + Dialog -->
     <string name="privd_deadzone_title">Deadzones einstellen</string>
     <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>
