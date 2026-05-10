@@ -14,7 +14,6 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.IBinder
 import android.view.Display
-import android.view.Surface
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -247,12 +246,6 @@ class ScreenCaptureService : Service() {
 
         val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
         mirrorPresentation = presentation
-        val targetMode = secondaryDisplay.mode
-        val targetRotated = secondaryDisplay.rotation == Surface.ROTATION_90 ||
-            secondaryDisplay.rotation == Surface.ROTATION_270
-        val targetWidth = if (targetRotated) targetMode.physicalHeight else targetMode.physicalWidth
-        val targetHeight = if (targetRotated) targetMode.physicalWidth else targetMode.physicalHeight
-        val targetLayerStack = secondaryDisplay.displayId
 
         presentation.onSurfaceDestroyed = {
             directPrivdSession?.stop()
@@ -268,9 +261,6 @@ class ScreenCaptureService : Service() {
                 val directSession = DirectPrivdMirrorSession(
                     srcWidth,
                     srcHeight,
-                    targetWidth,
-                    targetHeight,
-                    targetLayerStack,
                 )
                 directPrivdSession = directSession
                 if (directSession.start()) {

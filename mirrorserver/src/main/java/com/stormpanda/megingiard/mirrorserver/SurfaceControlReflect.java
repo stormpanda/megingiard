@@ -4,7 +4,6 @@ import android.graphics.Rect;
 import android.os.IBinder;
 import android.view.Surface;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
@@ -24,8 +23,6 @@ final class SurfaceControlReflect {
     private static final Class<?> SURFACE_CONTROL;
     private static final Method M_CREATE_DISPLAY;
     private static final Method M_DESTROY_DISPLAY;
-    private static final Method M_GET_PHYSICAL_DISPLAY_IDS;
-    private static final Method M_GET_PHYSICAL_DISPLAY_TOKEN;
 
     // SurfaceControl.Transaction — replaces openTransaction/closeTransaction on API 31+
     private static final Constructor<?> TRANSACTION_CTOR;
@@ -48,9 +45,6 @@ final class SurfaceControlReflect {
                     "createDisplay", String.class, boolean.class);
             M_DESTROY_DISPLAY = SURFACE_CONTROL.getMethod(
                     "destroyDisplay", IBinder.class);
-            M_GET_PHYSICAL_DISPLAY_IDS = SURFACE_CONTROL.getMethod("getPhysicalDisplayIds");
-            M_GET_PHYSICAL_DISPLAY_TOKEN = SURFACE_CONTROL.getMethod(
-                    "getPhysicalDisplayToken", long.class);
 
             Class<?> txClass = Class.forName("android.view.SurfaceControl$Transaction");
             TRANSACTION_CTOR = txClass.getConstructor();
@@ -100,21 +94,6 @@ final class SurfaceControlReflect {
         }
     }
 
-    static IBinder physicalDisplayTokenForIndex(int index) {
-        try {
-            Object ids = M_GET_PHYSICAL_DISPLAY_IDS.invoke(null);
-            int count = Array.getLength(ids);
-            if (index < 0 || index >= count) {
-                throw new IllegalArgumentException(
-                        "physical display index " + index + " outside 0.." + (count - 1));
-            }
-            long physicalId = Array.getLong(ids, index);
-            return (IBinder) M_GET_PHYSICAL_DISPLAY_TOKEN.invoke(null, physicalId);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     /**
      * Creates a {@link android.view.SurfaceControl.Transaction}, configures the
      * virtual display projection atomically, and applies it.
@@ -133,19 +112,6 @@ final class SurfaceControlReflect {
             Object tx = TRANSACTION_CTOR.newInstance();
             M_TX_SET_DISPLAY_SURFACE.invoke(tx, displayToken, surface);
             configureDisplayTransaction(tx, displayToken, layerStack, 0, layerStackRect, displayRect);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static void configurePhysicalDisplay(IBinder displayToken,
-                                         int layerStack,
-                                         int orientation,
-                                         Rect layerStackRect,
-                                         Rect displayRect) {
-        try {
-            Object tx = TRANSACTION_CTOR.newInstance();
-            configureDisplayTransaction(tx, displayToken, layerStack, orientation, layerStackRect, displayRect);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }

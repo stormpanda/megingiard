@@ -179,17 +179,14 @@ object PrivdClient {
     suspend fun startDirectMirror(
         width: Int,
         height: Int,
-        targetWidth: Int,
-        targetHeight: Int,
-        targetLayerStack: Int,
     ): Boolean {
         if (!isConnected) return false
         val deferred = CompletableDeferred<Boolean>()
         mirrorDirectStartDeferred = deferred
-        send("MIRROR START_DIRECT $width $height $targetWidth $targetHeight $targetLayerStack\n")
+        send("MIRROR START_DIRECT $width $height\n")
         val ok = withTimeoutOrNull(MIRROR_DIRECT_START_TIMEOUT_MS) { deferred.await() } ?: false
         mirrorDirectStartDeferred = null
-        AppLog.i(TAG, "startDirectMirror($width x $height -> $targetWidth x $targetHeight layerStack=$targetLayerStack) -> $ok")
+        AppLog.i(TAG, "startDirectMirror($width x $height -> app surface) -> $ok")
         return ok
     }
 

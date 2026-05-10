@@ -470,12 +470,14 @@ class MirrorPresentation(
 
         sv.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
+                DirectMirrorSurfaceRegistry.publish(holder.surface)
                 onSurfaceReady?.invoke(holder.surface)
             }
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
                 // no-op
             }
             override fun surfaceDestroyed(holder: SurfaceHolder) {
+                DirectMirrorSurfaceRegistry.clear(holder.surface)
                 onSurfaceDestroyed?.invoke()
             }
         })

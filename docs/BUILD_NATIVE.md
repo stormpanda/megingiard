@@ -308,7 +308,9 @@ dexed automatically — there is no manual build step for normal contributors.
 
 ```
 mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
-├── MirrorServer.java          ← entry point: binds abstract LocalServerSocket, prints "READY"
+├── MirrorServer.java          ← H.264 entry point: binds abstract LocalServerSocket
+├── DirectMirrorServer.java    ← direct-to-app-Surface entry point
+├── DirectSurfaceClient.java   ← binds the app service and acquires its Surface
 ├── ScreenEncoder.java         ← MediaCodec H.264 encoder + virtual display loop
 └── SurfaceControlReflect.java ← cached reflection wrappers for hidden SurfaceControl APIs
 ```
@@ -347,18 +349,15 @@ For direct-Surface privileged mirroring, the daemon spawns:
 CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
    /system/bin/app_process /data/local/tmp \
    com.stormpanda.megingiard.mirrorserver.DirectMirrorServer \
-   <socket> <w> <h> <target-w> <target-h> <target-layer-stack>
+   <socket> <w> <h>
 ```
 
-`DirectMirrorServer` configures the secondary physical display directly via
-hidden `SurfaceControl.Transaction` APIs. It selects physical display index `1`,
-sets its layer stack to the primary display layer stack (`0`), applies the
-device's rotated physical-display projection, and aspect-fits the primary source
-rectangle into the secondary display bounds. The readiness socket is bound only
-after display configuration succeeds, so daemon `/proc/net/unix` polling remains
-the readiness signal. On shutdown the server restores the secondary display to
-the original target layer stack passed by the app. If this path fails, the app
-falls back to the H.264 transport below.
+`DirectMirrorServer` binds the app's exported `DirectMirrorSurfaceService`,
+receives the currently published `MirrorPresentation.SurfaceView` `Surface`, and
+configures a hidden `SurfaceControl` virtual display directly onto that Surface.
+The readiness socket is bound only after the app Surface is acquired and display
+configuration succeeds, so daemon `/proc/net/unix` polling remains the readiness
+signal. If this path fails, the app falls back to the H.264 transport below.
 
 ### Wire format
 

@@ -3,48 +3,39 @@ package com.stormpanda.megingiard.mirrorserver;
 import android.graphics.Rect;
 import android.net.LocalServerSocket;
 import android.os.IBinder;
+import android.view.Surface;
 
 public final class DirectMirrorServer {
-    private static final int DISPLAY_ROTATION_90 = 1;
-    private static final int PRIMARY_LAYER_STACK = 0;
-    private static final int SECONDARY_PHYSICAL_DISPLAY_INDEX = 1;
+    private static final long SURFACE_BIND_TIMEOUT_MS = 5_000L;
 
     private DirectMirrorServer() {}
 
     public static void main(String[] args) {
         MirrorServer.bypassHiddenApiEnforcement();
 
-        if (args.length < 6) {
-            System.err.println("usage: DirectMirrorServer <socket> <srcW> <srcH> <targetW> <targetH> <targetLayerStack>");
+        if (args.length < 3) {
+            System.err.println("usage: DirectMirrorServer <socket> <w> <h>");
             System.exit(2);
             return;
         }
 
         String socketName = args[0];
-        int sourceWidth = Integer.parseInt(args[1]);
-        int sourceHeight = Integer.parseInt(args[2]);
-        int targetWidth = Integer.parseInt(args[3]);
-        int targetHeight = Integer.parseInt(args[4]);
-        int targetLayerStack = Integer.parseInt(args[5]);
-        IBinder targetDisplayToken = null;
+        int width = Integer.parseInt(args[1]);
+        int height = Integer.parseInt(args[2]);
+        Surface surface = null;
+        IBinder displayToken = null;
         LocalServerSocket readinessSocket = null;
         try {
-            targetDisplayToken = SurfaceControlReflect.physicalDisplayTokenForIndex(
-                    SECONDARY_PHYSICAL_DISPLAY_INDEX);
-            if (targetDisplayToken == null) {
-                System.err.println("secondary physical display unavailable");
+            surface = DirectSurfaceClient.acquireSurface(SURFACE_BIND_TIMEOUT_MS);
+            if (surface == null || !surface.isValid()) {
+                System.err.println("direct surface unavailable");
                 System.exit(1);
                 return;
             }
-                IBinder restoreToken = targetDisplayToken;
-                Runtime.getRuntime().addShutdownHook(new Thread(
-                    () -> restoreDisplay(restoreToken, targetWidth, targetHeight, targetLayerStack),
-                    "DirectMirrorRestoreDisplay"));
 
-            Rect sourceRect = new Rect(0, 0, sourceWidth, sourceHeight);
-                Rect targetRect = fitCenter(sourceWidth, sourceHeight, targetWidth, targetHeight);
-            SurfaceControlReflect.configurePhysicalDisplay(
-                    targetDisplayToken, PRIMARY_LAYER_STACK, DISPLAY_ROTATION_90, sourceRect, targetRect);
+            displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-mirror", false);
+            Rect rect = new Rect(0, 0, width, height);
+            SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
 
             readinessSocket = new LocalServerSocket(socketName);
             synchronized (DirectMirrorServer.class) {
@@ -54,34 +45,15 @@ public final class DirectMirrorServer {
             System.err.println("direct mirror ended: " + t);
             System.exit(1);
         } finally {
-            if (targetDisplayToken != null) {
-                restoreDisplay(targetDisplayToken, targetWidth, targetHeight, targetLayerStack);
+            if (displayToken != null) {
+                try { SurfaceControlReflect.destroyDisplay(displayToken); } catch (Throwable ignored) {}
+            }
+            if (surface != null) {
+                try { surface.release(); } catch (Throwable ignored) {}
             }
             if (readinessSocket != null) {
                 try { readinessSocket.close(); } catch (Throwable ignored) {}
             }
         }
-    }
-
-    private static Rect fitCenter(int sourceWidth, int sourceHeight, int targetWidth, int targetHeight) {
-        double sourceAspect = (double) sourceWidth / (double) sourceHeight;
-        double targetAspect = (double) targetWidth / (double) targetHeight;
-        if (targetAspect > sourceAspect) {
-            int fittedWidth = (int) Math.round(targetHeight * sourceAspect);
-            int left = (targetWidth - fittedWidth) / 2;
-            return new Rect(left, 0, left + fittedWidth, targetHeight);
-        }
-        int fittedHeight = (int) Math.round(targetWidth / sourceAspect);
-        int top = (targetHeight - fittedHeight) / 2;
-        return new Rect(0, top, targetWidth, top + fittedHeight);
-    }
-
-    private static void restoreDisplay(IBinder targetDisplayToken, int targetWidth, int targetHeight,
-                                       int targetLayerStack) {
-        try {
-            Rect rect = new Rect(0, 0, targetWidth, targetHeight);
-            SurfaceControlReflect.configurePhysicalDisplay(
-                    targetDisplayToken, targetLayerStack, DISPLAY_ROTATION_90, rect, rect);
-        } catch (Throwable ignored) {}
     }
 }
