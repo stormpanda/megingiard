@@ -37,8 +37,11 @@ import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.MirrorStrategy
+import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
+import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
+import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
@@ -276,23 +279,27 @@ class MainActivity : ComponentActivity() {
                 }
                     .distinctUntilChanged()
                     .collect { policy ->
-                        if (!policy.isOnValidScreen) return@collect
-                        if (!policy.isCapturing) confirmedCapturingWithMirrorOn = false
-                        if (policy.isCapturing && policy.layoutWantsMirror) {
-                            confirmedCapturingWithMirrorOn = true
-                        }
-                        if (policy.layoutWantsMirror && policy.globalAutoStart &&
-                            !policy.isCapturing && !policy.promptInFlight
-                        ) {
-                            AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
-                            startMirrorByPolicy()
-                        }
-                        if (confirmedCapturingWithMirrorOn &&
-                            !policy.layoutWantsMirror && policy.isCapturing
-                        ) {
-                            confirmedCapturingWithMirrorOn = false
-                            AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
-                            stopMirrorService()
+                        val decision = decideMirrorRuntimeAction(
+                            MirrorRuntimePolicyState(
+                                promptInFlight = policy.promptInFlight,
+                                isOnValidScreen = policy.isOnValidScreen,
+                                isCapturing = policy.isCapturing,
+                                globalAutoStart = policy.globalAutoStart,
+                                layoutWantsMirror = policy.layoutWantsMirror,
+                                confirmedCapturingWithMirrorOn = confirmedCapturingWithMirrorOn,
+                            )
+                        )
+                        confirmedCapturingWithMirrorOn = decision.confirmedCapturingWithMirrorOn
+                        when (decision.action) {
+                            MirrorRuntimeAction.START -> {
+                                AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
+                                startMirrorByPolicy()
+                            }
+                            MirrorRuntimeAction.STOP -> {
+                                AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
+                                stopMirrorService()
+                            }
+                            MirrorRuntimeAction.NONE -> Unit
                         }
                     }
             }
