@@ -326,6 +326,25 @@ class MainActivity : ComponentActivity() {
                     }
             }
 
+            // Reset "user declined capture" sentinel on layout switch so the auto-start
+            // gate can fire for the new layout when it has mirrorAutoStart=true.
+            // Guard: skip while currently capturing — the stop gate handles that
+            // transition and userDeclinedCapture is set to true in onDestroy() after
+            // the service stops, not before. At the moment the layout changes the
+            // service is still alive (isCapturing=true), so the guard suppresses the
+            // reset until the user switches to yet another layout after the service
+            // has stopped.
+            LaunchedEffect(Unit) {
+                snapshotFlow { activeLayout?.id }
+                    .drop(1) // skip initial emission at composition
+                    .collect {
+                        if (!ScreenCaptureManager.isCapturing.value) {
+                            AppLog.d(TAG, "layout changed while not capturing → reset userDeclinedCapture")
+                            AppStateManager.setUserDeclinedCapture(false)
+                        }
+                    }
+            }
+
             // ── Mirror button signals from MacroPad ───────────────────────────────
             // MirrorPlayStop button sets these flags in AppStateManager; MainActivity
             // handles them here because sending intents or launching Activities requires
