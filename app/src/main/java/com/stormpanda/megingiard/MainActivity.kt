@@ -263,6 +263,7 @@ class MainActivity : ComponentActivity() {
             // true means this layout should mirror (subject to the global auto-start
             // gate when not already running), false means this layout should not mirror.
             LaunchedEffect(Unit) {
+                var confirmedCapturingWithMirrorOn = false
                 snapshotFlow {
                     MirrorLayoutPolicy(
                         promptInFlight = promptInFlight,
@@ -276,13 +277,20 @@ class MainActivity : ComponentActivity() {
                     .distinctUntilChanged()
                     .collect { policy ->
                         if (!policy.isOnValidScreen) return@collect
+                        if (!policy.isCapturing) confirmedCapturingWithMirrorOn = false
+                        if (policy.isCapturing && policy.layoutWantsMirror) {
+                            confirmedCapturingWithMirrorOn = true
+                        }
                         if (policy.layoutWantsMirror && policy.globalAutoStart &&
                             !policy.isCapturing && !policy.promptInFlight
                         ) {
                             AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
                             startMirrorByPolicy()
                         }
-                        if (!policy.layoutWantsMirror && policy.isCapturing) {
+                        if (confirmedCapturingWithMirrorOn &&
+                            !policy.layoutWantsMirror && policy.isCapturing
+                        ) {
+                            confirmedCapturingWithMirrorOn = false
                             AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
                             stopMirrorService()
                         }
