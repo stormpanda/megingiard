@@ -27,6 +27,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.stormpanda.megingiard.mirror.ACTION_STOP
+import com.stormpanda.megingiard.mirror.EXTRA_CLEAR_LAYOUT_MIRROR_STATE
+import com.stormpanda.megingiard.mirror.EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -319,7 +322,8 @@ class MainActivity : ComponentActivity() {
                             confirmedCapturingWithFlagOn = false
                             AppLog.i(TAG, "layout switched to off-state while capturing → STOP")
                             val stopIntent = Intent(this@MainActivity, ScreenCaptureService::class.java).apply {
-                                action = "STOP"
+                                action = ACTION_STOP
+                                putExtra(EXTRA_CLEAR_LAYOUT_MIRROR_STATE, false)
                             }
                             startService(stopIntent)
                         }
@@ -369,7 +373,9 @@ class MainActivity : ComponentActivity() {
                 AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
                 AppStateManager.consumeMirrorStopRequest()
                 val stopIntent = Intent(this@MainActivity, ScreenCaptureService::class.java).apply {
-                    action = "STOP"
+                    action = ACTION_STOP
+                    putExtra(EXTRA_CLEAR_LAYOUT_MIRROR_STATE, true)
+                    activeLayout?.id?.let { putExtra(EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID, it) }
                 }
                 startService(stopIntent)
             }

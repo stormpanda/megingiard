@@ -355,10 +355,12 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 | Global "Auto-start mirroring" toggle | `SettingsManager.autoStartCapture` (`StateFlow<Boolean>`) — DataStore key `auto_start_capture`.                                        |
 | Active layout's remembered state     | `MacroPadState.activeLayout.mirrorAutoStart` (`Boolean`) — persisted inside the MacroPad profile JSON via `PadLayout.mirrorAutoStart`. |
 
-**Recording the layout state.** `ScreenCaptureService` records the layout's remembered state at two moments:
+**Recording the layout state.** `ScreenCaptureService` records the layout's remembered state as a per-layout desired state, persisted in the MacroPad profile JSON:
 
 - On capture start (after `restoreMirrorSessionState` / `setCapturing(true)`): `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, true)`.
-- On `onDestroy()` (Stop button, system kill, or app exit): `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
+- On explicit user stop via the MirrorPlayStop button: `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
+
+`ScreenCaptureService` stores the `capturedLayoutId` at capture start as a fallback, and explicit stop intents include the currently active layout ID. Teardown must not blindly read `MacroPadState.activeLayout` to decide which layout to update, because a layout/profile switch may already have changed the active layout by the time the service is destroyed.
 
 **Auto-launch.** `MainActivity` runs a `snapshotFlow` that emits `true` when:
 
@@ -369,7 +371,7 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 
 When the predicate becomes `true`, `launchCaptureRequest()` opens `CaptureRequestActivity` on the primary display. The flow re-evaluates on every layout switch — switching to a layout whose remembered state is `true` (with global on, not capturing, no decline) re-fires the prompt.
 
-**Auto-stop on layout switch.** A separate `LaunchedEffect` watches `(isCapturing, layoutMirrorAutoStart)`. When the active layout switches to one whose remembered state is `false` while currently capturing, an explicit `STOP` intent is sent to `ScreenCaptureService`. The global setting is intentionally **not** part of this predicate — toggling the global setting off does not stop an active capture (matching the same "remembered" intent for the currently-active layout).
+**Auto-stop on layout switch.** A separate `LaunchedEffect` watches `(isCapturing, layoutMirrorAutoStart)`. When the active layout switches to one whose remembered state is `false` while currently capturing, an explicit `STOP` intent is sent to `ScreenCaptureService` with `EXTRA_CLEAR_LAYOUT_MIRROR_STATE=false`. This stops the running mirror session without clearing the previous layout's remembered `true` state, so switching back to that layout can restore mirroring. The global setting is intentionally **not** part of this predicate — toggling the global setting off does not stop an active capture (matching the same "remembered" intent for the currently-active layout).
 
 **Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the global setting is off.
 

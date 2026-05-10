@@ -33,6 +33,8 @@ private const val TAG = "ScreenCaptureService"
 
 const val ACTION_START_PRIVD = "START_PRIVD"
 const val ACTION_STOP = "STOP"
+const val EXTRA_CLEAR_LAYOUT_MIRROR_STATE = "CLEAR_LAYOUT_MIRROR_STATE"
+const val EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID = "LAYOUT_MIRROR_STATE_LAYOUT_ID"
 
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
@@ -43,18 +45,18 @@ class ScreenCaptureService : Service() {
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
-    // ID of the layout that was active when this capture session started.
-    // Saved here because onDestroy() may run after a layout switch, at which
-    // point activeLayout.value is already the NEW layout — using that ID would
-    // stamp false on the wrong layout and leave the old one stuck at true.
     private var capturedLayoutId: String? = null
+    private var clearLayoutMirrorStateOnDestroy: Boolean = false
+    private var layoutMirrorStateTargetId: String? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            AppLog.i(TAG, "onStartCommand STOP → stopping self")
+            clearLayoutMirrorStateOnDestroy = intent.getBooleanExtra(EXTRA_CLEAR_LAYOUT_MIRROR_STATE, false)
+            layoutMirrorStateTargetId = intent.getStringExtra(EXTRA_LAYOUT_MIRROR_STATE_LAYOUT_ID)
+            AppLog.i(TAG, "onStartCommand STOP → stopping self clearLayoutState=$clearLayoutMirrorStateOnDestroy")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -305,22 +307,23 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
-        // Remember "mirror is no longer running" on the layout that was actually
-        // being captured. Do NOT use activeLayout.value here — when a layout switch
-        // triggers this stop, activeLayout is already the NEW layout and stamping
-        // false on it would leave the old layout stuck at mirrorAutoStart=true forever.
-        capturedLayoutId?.let { layoutId ->
+        // Only an explicit user stop changes the remembered per-layout mirror
+        // state to false. A layout/profile switch to an off-layout also stops the
+        // running service, but must keep the previous layout's true flag intact so
+        // switching back restores its remembered on-state.
+        if (clearLayoutMirrorStateOnDestroy) (layoutMirrorStateTargetId ?: capturedLayoutId)?.let { layoutId ->
             MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
-            AppLog.d(TAG, "onDestroy: cleared mirrorAutoStart for captured layout $layoutId")
+            AppLog.d(TAG, "onDestroy: cleared mirrorAutoStart for layout $layoutId")
         }
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         AppStateManager.setPromptInFlight(false)
-        // Prevent the auto-start LaunchedEffect in MainActivity from re-triggering capture
-        // as soon as isCapturing transitions to false. The user must explicitly press Start again.
-        AppStateManager.setUserDeclinedCapture(true)
+        // Only explicit user stops suppress immediate auto-start. Layout/profile
+        // switch stops are policy-driven transitions: once the service is down,
+        // the active layout's persisted mirrorAutoStart decides whether to restart.
+        AppStateManager.setUserDeclinedCapture(clearLayoutMirrorStateOnDestroy)
         virtualDisplay?.release()
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
