@@ -6,8 +6,9 @@ data class MirrorRuntimePolicyState(
     val isOnValidScreen: Boolean,
     val isCapturing: Boolean,
     val globalAutoStart: Boolean,
+    val layoutId: String?,
     val layoutWantsMirror: Boolean,
-    val confirmedCapturingWithMirrorOn: Boolean,
+    val confirmedMirrorLayoutId: String?,
 )
 
 enum class MirrorRuntimeAction {
@@ -18,27 +19,30 @@ enum class MirrorRuntimeAction {
 
 data class MirrorRuntimeDecision(
     val action: MirrorRuntimeAction,
-    val confirmedCapturingWithMirrorOn: Boolean,
+    val confirmedMirrorLayoutId: String?,
 )
 
 /**
  * Reconciles runtime capture state with the active layout's persisted mirror state.
  *
- * The confirmed-on latch prevents a stale `layoutWantsMirror=false` snapshot from
- * stopping a freshly-started session before the active-layout StateFlow has observed
- * the persisted `mirrorAutoStart=true` update.
+ * The confirmed-layout latch prevents a stale `layoutWantsMirror=false` snapshot
+ * from stopping a freshly-started session before the active-layout StateFlow has
+ * observed the persisted `mirrorAutoStart=true` update. Once a running session has
+ * been confirmed on any layout, switching to an off-layout stops the runtime.
  */
 fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeDecision {
     if (!state.isOnValidScreen) {
         return MirrorRuntimeDecision(
             action = MirrorRuntimeAction.NONE,
-            confirmedCapturingWithMirrorOn = state.confirmedCapturingWithMirrorOn,
+            confirmedMirrorLayoutId = state.confirmedMirrorLayoutId,
         )
     }
 
-    var confirmed = state.confirmedCapturingWithMirrorOn
-    if (!state.isCapturing) confirmed = false
-    if (state.isCapturing && state.layoutWantsMirror) confirmed = true
+    var confirmedLayoutId = state.confirmedMirrorLayoutId
+    if (!state.isCapturing) confirmedLayoutId = null
+    if (state.isCapturing && state.layoutWantsMirror) {
+        confirmedLayoutId = state.layoutId
+    }
 
     val action = when {
         state.layoutWantsMirror &&
@@ -46,10 +50,10 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeDec
             !state.isCapturing &&
             !state.promptInFlight -> MirrorRuntimeAction.START
 
-        confirmed &&
+        confirmedLayoutId != null &&
             !state.layoutWantsMirror &&
             state.isCapturing -> {
-                confirmed = false
+                confirmedLayoutId = null
                 MirrorRuntimeAction.STOP
             }
 
@@ -58,6 +62,6 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeDec
 
     return MirrorRuntimeDecision(
         action = action,
-        confirmedCapturingWithMirrorOn = confirmed,
+        confirmedMirrorLayoutId = confirmedLayoutId,
     )
 }

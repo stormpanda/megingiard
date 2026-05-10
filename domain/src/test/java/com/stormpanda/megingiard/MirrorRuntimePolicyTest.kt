@@ -4,11 +4,13 @@ import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MirrorRuntimePolicyTest {
+    private companion object {
+        const val LAYOUT_A = "layout-a"
+        const val LAYOUT_B = "layout-b"
+    }
 
     @Test
     fun `starts when active layout wants mirror and no capture is running`() {
@@ -18,13 +20,14 @@ class MirrorRuntimePolicyTest {
                 isOnValidScreen = true,
                 isCapturing = false,
                 globalAutoStart = true,
+                layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
-                confirmedCapturingWithMirrorOn = false,
+                confirmedMirrorLayoutId = null,
             )
         )
 
         assertEquals(MirrorRuntimeAction.START, decision.action)
-        assertFalse(decision.confirmedCapturingWithMirrorOn)
+        assertEquals(null, decision.confirmedMirrorLayoutId)
     }
 
     @Test
@@ -35,13 +38,14 @@ class MirrorRuntimePolicyTest {
                 isOnValidScreen = true,
                 isCapturing = true,
                 globalAutoStart = true,
+                layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
-                confirmedCapturingWithMirrorOn = false,
+                confirmedMirrorLayoutId = null,
             )
         )
 
         assertEquals(MirrorRuntimeAction.NONE, decision.action)
-        assertFalse(decision.confirmedCapturingWithMirrorOn)
+        assertEquals(null, decision.confirmedMirrorLayoutId)
     }
 
     @Test
@@ -52,30 +56,50 @@ class MirrorRuntimePolicyTest {
                 isOnValidScreen = true,
                 isCapturing = true,
                 globalAutoStart = true,
+                layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
-                confirmedCapturingWithMirrorOn = false,
+                confirmedMirrorLayoutId = null,
             )
         )
 
         assertEquals(MirrorRuntimeAction.NONE, decision.action)
-        assertTrue(decision.confirmedCapturingWithMirrorOn)
+        assertEquals(LAYOUT_A, decision.confirmedMirrorLayoutId)
     }
 
     @Test
-    fun `stops after confirmed running session switches to off layout`() {
+    fun `stops after confirmed running session switches same layout to off`() {
         val decision = decideMirrorRuntimeAction(
             MirrorRuntimePolicyState(
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = true,
                 globalAutoStart = true,
+                layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
-                confirmedCapturingWithMirrorOn = true,
+                confirmedMirrorLayoutId = LAYOUT_A,
             )
         )
 
         assertEquals(MirrorRuntimeAction.STOP, decision.action)
-        assertFalse(decision.confirmedCapturingWithMirrorOn)
+        assertEquals(null, decision.confirmedMirrorLayoutId)
+    }
+
+    @Test
+    fun `stops after confirmed running session switches to different off layout`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = true,
+                isCapturing = true,
+                globalAutoStart = true,
+                layoutId = LAYOUT_B,
+                layoutWantsMirror = false,
+                confirmedMirrorLayoutId = LAYOUT_A,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.STOP, decision.action)
+        assertEquals(null, decision.confirmedMirrorLayoutId)
     }
 
     @Test
@@ -86,12 +110,13 @@ class MirrorRuntimePolicyTest {
                 isOnValidScreen = true,
                 isCapturing = false,
                 globalAutoStart = true,
+                layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
-                confirmedCapturingWithMirrorOn = true,
+                confirmedMirrorLayoutId = LAYOUT_A,
             )
         )
 
         assertEquals(MirrorRuntimeAction.NONE, decision.action)
-        assertFalse(decision.confirmedCapturingWithMirrorOn)
+        assertEquals(null, decision.confirmedMirrorLayoutId)
     }
 }

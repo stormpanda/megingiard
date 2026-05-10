@@ -266,7 +266,8 @@ class MainActivity : ComponentActivity() {
             // true means this layout should mirror (subject to the global auto-start
             // gate when not already running), false means this layout should not mirror.
             LaunchedEffect(Unit) {
-                var confirmedCapturingWithMirrorOn = false
+                var confirmedMirrorLayoutId: String? = null
+                var lastPolicyLayoutId: String? = null
                 snapshotFlow {
                     MirrorLayoutPolicy(
                         promptInFlight = promptInFlight,
@@ -279,17 +280,25 @@ class MainActivity : ComponentActivity() {
                 }
                     .distinctUntilChanged()
                     .collect { policy ->
+                        if (policy.layoutId != lastPolicyLayoutId) {
+                            AppLog.i(
+                                TAG,
+                                "mirror policy: active layout changed ${lastPolicyLayoutId ?: "<none>"} -> ${policy.layoutId ?: "<none>"} wantsMirror=${policy.layoutWantsMirror} isCapturing=${policy.isCapturing} confirmed=${confirmedMirrorLayoutId ?: "<none>"}",
+                            )
+                            lastPolicyLayoutId = policy.layoutId
+                        }
                         val decision = decideMirrorRuntimeAction(
                             MirrorRuntimePolicyState(
                                 promptInFlight = policy.promptInFlight,
                                 isOnValidScreen = policy.isOnValidScreen,
                                 isCapturing = policy.isCapturing,
                                 globalAutoStart = policy.globalAutoStart,
+                                layoutId = policy.layoutId,
                                 layoutWantsMirror = policy.layoutWantsMirror,
-                                confirmedCapturingWithMirrorOn = confirmedCapturingWithMirrorOn,
+                                confirmedMirrorLayoutId = confirmedMirrorLayoutId,
                             )
                         )
-                        confirmedCapturingWithMirrorOn = decision.confirmedCapturingWithMirrorOn
+                        confirmedMirrorLayoutId = decision.confirmedMirrorLayoutId
                         when (decision.action) {
                             MirrorRuntimeAction.START -> {
                                 AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
