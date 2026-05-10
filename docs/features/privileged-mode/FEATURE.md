@@ -178,19 +178,25 @@ responsibility of the auto-connect retry path or a fresh wizard run).
 
 ```kotlin
 combine(MacroPadSettings.privdAutoConnect, PrivdManager.state) { auto, state ->
-    auto && state == PrivdState.OFF
-}.collect { shouldAutoConnect ->
-    if (shouldAutoConnect && !triggered) {
-        triggered = true
-        withContext(Dispatchers.IO) { PrivdManager.connect() }
+  auto to state
+}.collect { (autoConnect, state) ->
+  when {
+    !autoConnect || state == PrivdState.RUNNING -> triggered = false
+    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
+      triggered = true
+      withContext(Dispatchers.IO) { PrivdManager.connect() }
+    }
     }
 }
 ```
 
-The `triggered` guard ensures the auto-connect runs at most once per
-process; failure does not retry — the user-visible state ends up at
-`FAILED` with `PrivdError.DAEMON_UNREACHABLE`, prompting them to re-run
-the wizard.
+The `triggered` guard ensures auto-connect runs at most once for a given
+OFF/FAILED transition and therefore cannot spin in a tight retry loop when the
+daemon is unreachable. The guard resets when Privileged Mode reaches `RUNNING`
+or when auto-connect is disabled. This lets the app recover from a dropped or
+manually killed daemon after an update: `RUNNING → FAILED` triggers one fresh
+connect attempt, so the newly deployed daemon binary can be picked up without a
+full app restart.
 
 ### Wire Protocol
 

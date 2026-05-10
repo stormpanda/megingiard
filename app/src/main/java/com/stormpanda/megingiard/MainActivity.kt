@@ -191,12 +191,15 @@ class MainActivity : ComponentActivity() {
                 MacroPadSettings.privdAutoConnect,
                 PrivdManager.state,
             ) { auto, state ->
-                auto && state == PrivdState.OFF
-            }.collect { shouldAutoConnect ->
-                if (shouldAutoConnect && !triggered) {
-                    triggered = true
-                    AppLog.i(TAG, "Auto-connecting Privileged Mode")
-                    withContext(Dispatchers.IO) { PrivdManager.connect() }
+                auto to state
+            }.collect { (autoConnect, state) ->
+                when {
+                    !autoConnect || state == PrivdState.RUNNING -> triggered = false
+                    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
+                        triggered = true
+                        AppLog.i(TAG, "Auto-connecting Privileged Mode")
+                        withContext(Dispatchers.IO) { PrivdManager.connect() }
+                    }
                 }
             }
         }
