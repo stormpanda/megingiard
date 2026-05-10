@@ -44,6 +44,16 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Ensure the privileged-mirror DEX asset is built before any app packaging task.
+afterEvaluate {
+    tasks.matching { it.name.startsWith("merge") && it.name.contains("Assets") }.configureEach {
+        dependsOn(":mirrorserver:dex")
+    }
+    tasks.matching { it.name.startsWith("package") || it.name.startsWith("generate") && it.name.contains("Assets") }.configureEach {
+        dependsOn(":mirrorserver:dex")
+    }
+}
+
 dependencies {
     implementation(project(":domain"))
 

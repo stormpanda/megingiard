@@ -300,10 +300,10 @@ An optional setting ("Pinch-to-zoom while projecting", default off) allows the u
 
 The auto-start logic in `MainActivity` derives an "effective auto-start" signal by combining two inputs:
 
-| Input                                                | Source                                                  |
-| ---------------------------------------------------- | ------------------------------------------------------- |
-| Global "Auto-start mirroring" toggle                 | `SettingsManager.autoStartCapture` (`StateFlow<Boolean>`) — DataStore key `auto_start_capture`. |
-| Active layout's remembered state                     | `MacroPadState.activeLayout.mirrorAutoStart` (`Boolean`) — persisted inside the MacroPad profile JSON via `PadLayout.mirrorAutoStart`. |
+| Input                                | Source                                                                                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Global "Auto-start mirroring" toggle | `SettingsManager.autoStartCapture` (`StateFlow<Boolean>`) — DataStore key `auto_start_capture`.                                        |
+| Active layout's remembered state     | `MacroPadState.activeLayout.mirrorAutoStart` (`Boolean`) — persisted inside the MacroPad profile JSON via `PadLayout.mirrorAutoStart`. |
 
 **Recording the layout state.** `ScreenCaptureService` records the layout's remembered state at two moments:
 
