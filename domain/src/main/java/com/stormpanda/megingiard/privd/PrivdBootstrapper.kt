@@ -17,6 +17,9 @@ import java.util.concurrent.TimeUnit
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val DAEMON_REMOTE_PATH = "/data/local/tmp/megingiard_privd"
+private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
+private const val MIRROR_DEX_REMOTE_PATH = "/data/local/tmp/megingiard_mirror.dex"
+private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
 private const val VERIFY_INITIAL_DELAY_MS = 500L
@@ -227,11 +230,26 @@ object PrivdBootstrapper {
     private fun pushDaemon(context: Context, mgr: PrivdAdbConnectionManager): Boolean {
         val binaryBytes = context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }
         AppLog.d(TAG, "push: ${binaryBytes.size} bytes -> $DAEMON_REMOTE_PATH")
-        val stream = mgr.openStream(SYNC_SERVICE) ?: return false
-        return stream.use { s ->
+        val daemonOk = mgr.openStream(SYNC_SERVICE)?.use { s ->
             syncSendFile(s, binaryBytes, DAEMON_REMOTE_PATH, REMOTE_FILE_MODE) &&
                 verifyRemoteSize(s, DAEMON_REMOTE_PATH, binaryBytes.size)
+        } ?: false
+        if (!daemonOk) return false
+
+        // Also push the privileged-mirror DEX (used by Privileged Mode mirror).
+        // The DEX is harmless if Privileged Mirror is never enabled, so we always
+        // push it as part of the bootstrap to avoid a separate setup flow.
+        val dexBytes = context.assets.open(MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+        AppLog.d(TAG, "push: ${dexBytes.size} bytes -> $MIRROR_DEX_REMOTE_PATH")
+        val dexOk = mgr.openStream(SYNC_SERVICE)?.use { s ->
+            syncSendFile(s, dexBytes, MIRROR_DEX_REMOTE_PATH, MIRROR_DEX_REMOTE_MODE_RAW) &&
+                verifyRemoteSize(s, MIRROR_DEX_REMOTE_PATH, dexBytes.size)
+        } ?: false
+        if (!dexOk) {
+            AppLog.w(TAG, "mirror DEX push failed — privileged mirror will be unavailable until next bootstrap")
         }
+        // Daemon push is the gating step; DEX failure is non-fatal.
+        return true
     }
 
     private fun syncSendFile(
