@@ -311,21 +311,11 @@ static int start_mirror_child(int width, int height, int bitrate, int maxfps) {
     snprintf(g_mirror_socket, sizeof(g_mirror_socket),
              "megingiard.mirror.%d", (int)getpid());
 
-    int pipefd[2];
-    if (pipe(pipefd) < 0) return -1;
-
     pid_t pid = fork();
-    if (pid < 0) {
-        close(pipefd[0]);
-        close(pipefd[1]);
-        return -1;
-    }
+    if (pid < 0) return -1;
     if (pid == 0) {
-        /* Child: stdout → pipe write end, then exec app_process. */
-        close(pipefd[0]);
-        dup2(pipefd[1], STDOUT_FILENO);
-        if (pipefd[1] != STDOUT_FILENO) close(pipefd[1]);
-
+        /* Child: exec app_process. No stdout pipe needed — readiness is
+         * detected by the parent via /proc/net/unix (see below). */
         char w[16], h[16], br[16], fps[16];
         snprintf(w,   sizeof(w),   "%d", width);
         snprintf(h,   sizeof(h),   "%d", height);
@@ -346,25 +336,42 @@ static int start_mirror_child(int width, int height, int bitrate, int maxfps) {
         _exit(127);
     }
 
-    /* Parent: wait for "READY\n" on the pipe with a 5 s timeout. */
-    close(pipefd[1]);
-    char buf[32] = {0};
-    int total = 0;
+    /* Parent: poll /proc/net/unix every 100 ms (up to 5 s) for the abstract
+     * socket "@megingiard.mirror.<pid>" to appear.  Binding the socket is the
+     * true readiness signal from MirrorServer — more reliable than reading
+     * "READY\n" from a stdout pipe because android.os.RuntimeInit calls
+     * redirectLogStreams() before MirrorServer.main() runs, which silently
+     * redirects System.out to logcat rather than fd 1. */
+    char search_name[80];
+    snprintf(search_name, sizeof(search_name), "@%s", g_mirror_socket);
+
     int ready = 0;
-    struct pollfd pfd = { .fd = pipefd[0], .events = POLLIN };
-    int waited = 0;
-    while (waited < 5000) {
-        int pr = poll(&pfd, 1, 200);
-        waited += 200;
-        if (pr <= 0) continue;
-        ssize_t r = read(pipefd[0], buf + total, sizeof(buf) - 1 - total);
-        if (r <= 0) break;
-        total += r;
-        buf[total] = '\0';
-        if (strstr(buf, "READY") != NULL) { ready = 1; break; }
-        if (total >= (int)sizeof(buf) - 1) break;
+    struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 }; /* 100 ms */
+    for (int i = 0; i < 50 && !ready; i++) { /* 50 × 100 ms = 5 s */
+        nanosleep(&ts, NULL);
+
+        /* Detect premature child exit (exec failure, early crash, etc.). */
+        int status;
+        pid_t r = waitpid(pid, &status, WNOHANG);
+        if (r == pid || r < 0) {
+            g_mirror_pid = -1;
+            g_mirror_socket[0] = '\0';
+            return -1;
+        }
+
+        /* Check /proc/net/unix for the abstract socket. */
+        FILE *f = fopen("/proc/net/unix", "r");
+        if (f) {
+            char line[512];
+            while (fgets(line, sizeof(line), f)) {
+                if (strstr(line, search_name)) {
+                    ready = 1;
+                    break;
+                }
+            }
+            fclose(f);
+        }
     }
-    close(pipefd[0]);
 
     if (!ready) {
         kill(pid, SIGTERM);

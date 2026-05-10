@@ -1,57 +1,76 @@
 package com.stormpanda.megingiard.mirrorserver;
 
+import android.graphics.Rect;
 import android.os.IBinder;
 import android.view.Surface;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
 /**
  * Reflection wrappers for hidden {@code android.view.SurfaceControl} APIs.
  *
- * <p>API 33 (Android 13) only — Megingiard targets a single device (AYN
- * Thor) so we do not branch on SDK versions or fall back to alternate
- * signatures.</p>
+ * <p>Targets API 31+ (Android 12+): uses {@code SurfaceControl.Transaction}
+ * for display configuration, replacing the removed static
+ * {@code openTransaction}/{@code closeTransaction}/{@code setDisplay*} methods.</p>
  *
- * <p>The signatures used here mirror Android 13 AOSP source:
- * <pre>
- *   public static IBinder createDisplay(String name, boolean secure);
- *   public static void destroyDisplay(IBinder displayToken);
- *   public static void openTransaction();
- *   public static void closeTransaction();
- *   public static void setDisplaySurface(IBinder displayToken, Surface surface);
- *   public static void setDisplayLayerStack(IBinder displayToken, int layerStack);
- *   public static void setDisplayProjection(IBinder displayToken, int orientation,
- *       Rect layerStackRect, Rect displayRect);
- *   public static void setDisplaySize(IBinder displayToken, int width, int height);
- * </pre>
- * </p>
+ * <p>The {@code setDisplayLayerStack} signature changed in Android 12 from
+ * {@code (IBinder, int)} to {@code (IBinder, LayerStack)}. Both variants are
+ * probed at static-init time so the code works on either API level.</p>
  */
 final class SurfaceControlReflect {
 
     private static final Class<?> SURFACE_CONTROL;
     private static final Method M_CREATE_DISPLAY;
     private static final Method M_DESTROY_DISPLAY;
-    private static final Method M_OPEN_TRANSACTION;
-    private static final Method M_CLOSE_TRANSACTION;
-    private static final Method M_SET_DISPLAY_SURFACE;
-    private static final Method M_SET_DISPLAY_LAYER_STACK;
-    private static final Method M_SET_DISPLAY_PROJECTION;
-    private static final Method M_SET_DISPLAY_SIZE;
+
+    // SurfaceControl.Transaction — replaces openTransaction/closeTransaction on API 31+
+    private static final Constructor<?> TRANSACTION_CTOR;
+    private static final Method M_TX_SET_DISPLAY_SURFACE;
+    private static final Method M_TX_SET_DISPLAY_LAYER_STACK;
+    private static final Method M_TX_SET_DISPLAY_PROJECTION;
+    private static final Method M_TX_APPLY;
+
+    /**
+     * {@code LayerStack.from(int)} — non-null only on Android 12+ where
+     * {@code setDisplayLayerStack} takes a {@code LayerStack} object rather than
+     * a plain {@code int}.
+     */
+    private static final Method M_LAYER_STACK_FROM;
 
     static {
         try {
             SURFACE_CONTROL = Class.forName("android.view.SurfaceControl");
-            M_CREATE_DISPLAY = SURFACE_CONTROL.getMethod("createDisplay", String.class, boolean.class);
-            M_DESTROY_DISPLAY = SURFACE_CONTROL.getMethod("destroyDisplay", IBinder.class);
-            M_OPEN_TRANSACTION = SURFACE_CONTROL.getMethod("openTransaction");
-            M_CLOSE_TRANSACTION = SURFACE_CONTROL.getMethod("closeTransaction");
-            M_SET_DISPLAY_SURFACE = SURFACE_CONTROL.getMethod("setDisplaySurface", IBinder.class, Surface.class);
-            M_SET_DISPLAY_LAYER_STACK = SURFACE_CONTROL.getMethod("setDisplayLayerStack", IBinder.class, int.class);
-            M_SET_DISPLAY_PROJECTION = SURFACE_CONTROL.getMethod(
-                "setDisplayProjection", IBinder.class, int.class,
-                android.graphics.Rect.class, android.graphics.Rect.class);
-            M_SET_DISPLAY_SIZE = SURFACE_CONTROL.getMethod(
-                "setDisplaySize", IBinder.class, int.class, int.class);
+            M_CREATE_DISPLAY = SURFACE_CONTROL.getMethod(
+                    "createDisplay", String.class, boolean.class);
+            M_DESTROY_DISPLAY = SURFACE_CONTROL.getMethod(
+                    "destroyDisplay", IBinder.class);
+
+            Class<?> txClass = Class.forName("android.view.SurfaceControl$Transaction");
+            TRANSACTION_CTOR = txClass.getConstructor();
+            M_TX_SET_DISPLAY_SURFACE = txClass.getMethod(
+                    "setDisplaySurface", IBinder.class, Surface.class);
+            M_TX_SET_DISPLAY_PROJECTION = txClass.getMethod(
+                    "setDisplayProjection",
+                    IBinder.class, int.class, Rect.class, Rect.class);
+            M_TX_APPLY = txClass.getMethod("apply");
+
+            // setDisplayLayerStack signature changed in Android 12 from int to LayerStack.
+            // Try the int form first (Android ≤11); fall back to LayerStack (Android 12+).
+            Method setLayerStack;
+            Method layerStackFrom = null;
+            try {
+                setLayerStack = txClass.getMethod(
+                        "setDisplayLayerStack", IBinder.class, int.class);
+            } catch (NoSuchMethodException ignored) {
+                Class<?> lsClass = Class.forName("android.view.SurfaceControl$LayerStack");
+                layerStackFrom = lsClass.getMethod("from", int.class);
+                setLayerStack = txClass.getMethod(
+                        "setDisplayLayerStack", IBinder.class, lsClass);
+            }
+            M_TX_SET_DISPLAY_LAYER_STACK = setLayerStack;
+            M_LAYER_STACK_FROM = layerStackFrom;
+
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("SurfaceControl reflection setup failed", e);
         }
@@ -75,50 +94,33 @@ final class SurfaceControlReflect {
         }
     }
 
-    static void openTransaction() {
+    /**
+     * Creates a {@link android.view.SurfaceControl.Transaction}, configures the
+     * virtual display projection atomically, and applies it.
+     *
+     * <p>Replaces the former {@code openTransaction / setDisplay* / closeTransaction}
+     * sequence that was removed in Android 12 (API 31).</p>
+     *
+     * @param layerStack   layer-stack id of the physical display to capture
+     *                     (0 = main display)
+     * @param layerStackRect source region on the display layer stack
+     * @param displayRect  destination region on the virtual display surface
+     */
+    static void configureDisplay(IBinder displayToken, Surface surface,
+                                 int layerStack, Rect layerStackRect, Rect displayRect) {
         try {
-            M_OPEN_TRANSACTION.invoke(null);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static void closeTransaction() {
-        try {
-            M_CLOSE_TRANSACTION.invoke(null);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static void setDisplaySurface(IBinder token, Surface surface) {
-        try {
-            M_SET_DISPLAY_SURFACE.invoke(null, token, surface);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static void setDisplayLayerStack(IBinder token, int layerStack) {
-        try {
-            M_SET_DISPLAY_LAYER_STACK.invoke(null, token, layerStack);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static void setDisplayProjection(IBinder token, int orientation,
-                                     android.graphics.Rect layerStack, android.graphics.Rect display) {
-        try {
-            M_SET_DISPLAY_PROJECTION.invoke(null, token, orientation, layerStack, display);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    static void setDisplaySize(IBinder token, int width, int height) {
-        try {
-            M_SET_DISPLAY_SIZE.invoke(null, token, width, height);
+            Object tx = TRANSACTION_CTOR.newInstance();
+            M_TX_SET_DISPLAY_SURFACE.invoke(tx, displayToken, surface);
+            if (M_LAYER_STACK_FROM != null) {
+                // Android 12+: setDisplayLayerStack takes a LayerStack object.
+                Object ls = M_LAYER_STACK_FROM.invoke(null, layerStack);
+                M_TX_SET_DISPLAY_LAYER_STACK.invoke(tx, displayToken, ls);
+            } else {
+                // Android ≤11: setDisplayLayerStack takes a plain int.
+                M_TX_SET_DISPLAY_LAYER_STACK.invoke(tx, displayToken, layerStack);
+            }
+            M_TX_SET_DISPLAY_PROJECTION.invoke(tx, displayToken, 0, layerStackRect, displayRect);
+            M_TX_APPLY.invoke(tx);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }

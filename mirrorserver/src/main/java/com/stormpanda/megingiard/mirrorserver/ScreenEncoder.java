@@ -59,15 +59,7 @@ final class ScreenEncoder {
 
         IBinder displayToken = SurfaceControlReflect.createDisplay("megingiard-mirror", false);
         Rect rect = new Rect(0, 0, width, height);
-        SurfaceControlReflect.openTransaction();
-        try {
-            SurfaceControlReflect.setDisplaySurface(displayToken, inputSurface);
-            SurfaceControlReflect.setDisplayProjection(displayToken, 0, rect, rect);
-            SurfaceControlReflect.setDisplayLayerStack(displayToken, 0);
-            SurfaceControlReflect.setDisplaySize(displayToken, width, height);
-        } finally {
-            SurfaceControlReflect.closeTransaction();
-        }
+        SurfaceControlReflect.configureDisplay(displayToken, inputSurface, 0, rect, rect);
 
         codec.start();
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();

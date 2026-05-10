@@ -4,6 +4,7 @@ import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 
 /**
  * Entrypoint for the mirror server, launched by {@code megingiard_privd} via:
@@ -16,11 +17,14 @@ import java.io.OutputStream;
  *
  * <p>Behaviour:
  * <ol>
+ *   <li>Bypass hidden-API enforcement so that {@code SurfaceControl.Transaction}
+ *       reflection works on API 31+.</li>
  *   <li>Bind a {@link LocalServerSocket} on the abstract namespace name
  *       provided by the daemon.</li>
- *   <li>Print exactly {@code "READY\n"} on stdout so the daemon can confirm
- *       the bind happened before it sends {@code MIRROR_READY} to the app.</li>
- *   <li>Block on {@code accept()} for the app to connect.</li>
+ *   <li>Block on {@code accept()} for the app to connect.  The daemon detects
+ *       readiness by polling {@code /proc/net/unix} for the abstract socket
+ *       name rather than reading from a stdout pipe (which ART silently
+ *       redirects to logcat via {@code RuntimeInit.redirectLogStreams()}).</li>
  *   <li>Run the {@link ScreenEncoder} loop, writing length-prefixed H.264
  *       NAL units into the socket's output stream.</li>
  *   <li>On any I/O error or stream close, exit with status 0.</li>
@@ -32,6 +36,10 @@ public final class MirrorServer {
     private MirrorServer() {}
 
     public static void main(String[] args) {
+        // Unlock hidden-API enforcement before any SurfaceControl reflection.
+        // Required on API 31+ where SurfaceControl.Transaction methods are @hide.
+        bypassHiddenApiEnforcement();
+
         if (args.length < 5) {
             System.err.println("usage: MirrorServer <socket> <w> <h> <bitrate> <maxfps>");
             System.exit(2);
@@ -52,9 +60,9 @@ public final class MirrorServer {
             return;
         }
 
-        // Signal readiness on stdout BEFORE blocking on accept().
-        System.out.println("READY");
-        System.out.flush();
+        // The daemon detects readiness via /proc/net/unix (socket binding above).
+        // System.out.println("READY") would go to logcat rather than the pipe
+        // because RuntimeInit.redirectLogStreams() runs before main().
 
         try (LocalSocket client = server.accept();
              OutputStream out = client.getOutputStream()) {
@@ -63,6 +71,33 @@ public final class MirrorServer {
             System.err.println("encoder ended: " + t);
         } finally {
             try { server.close(); } catch (Throwable ignored) {}
+        }
+    }
+
+    /**
+     * Exempts all hidden APIs from enforcement for this process.
+     *
+     * <p>On Android 9+ (API 28+) ART enforces restrictions on reflection access
+     * to {@code @hide} methods even when called by privileged processes.
+     * Calling {@code VMRuntime.setHiddenApiExemptions([""])} before any hidden-API
+     * access disables that enforcement for the lifetime of the process.</p>
+     *
+     * <p>This is the same technique used by Shizuku, scrcpy, and similar
+     * ADB-level tools.</p>
+     */
+    private static void bypassHiddenApiEnforcement() {
+        try {
+            Class<?> vmRuntimeClass = Class.forName("dalvik.system.VMRuntime");
+            Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");
+            getRuntime.setAccessible(true);
+            Object vmRuntime = getRuntime.invoke(null);
+            Method setHiddenApiExemptions = vmRuntimeClass.getDeclaredMethod(
+                    "setHiddenApiExemptions", String[].class);
+            setHiddenApiExemptions.setAccessible(true);
+            // An empty-string prefix matches every hidden API signature.
+            setHiddenApiExemptions.invoke(vmRuntime, new Object[]{new String[]{""}});
+        } catch (Exception e) {
+            System.err.println("Warning: hidden-API bypass failed: " + e);
         }
     }
 }
