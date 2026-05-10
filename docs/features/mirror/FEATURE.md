@@ -125,15 +125,15 @@ transport if direct setup fails:
 ```
 App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s0)
   │                                          │
-  │  "MIRROR START_DIRECT w h\n"             │
+  │  "MIRROR START_DIRECT w h tw th\n"       │
   ├─────────────── socket ──────────────────►│
   │                                          │ fork() + execv("/system/bin/app_process")
   │                                          │ CLASSPATH=/data/local/tmp/megingiard_mirror.dex
   │                                          ▼
   │                              DirectMirrorServer (Java, in app_process)
-  │                                          │ bind exported app service
-  │                                          │ acquire SurfaceView Surface via Binder
-  │                                          │ SurfaceControl.createDisplay() + setDisplaySurface(surface)
+  │                                          │ SurfaceControl.getPhysicalDisplayIds()
+  │                                          │ select secondary physical display
+  │                                          │ setDisplayLayerStack(primary) + projection
   │  "MIRROR_DIRECT_READY\n"                 │ after direct display is configured
   │◄────────────── socket ───────────────────┤
 ```
@@ -141,11 +141,11 @@ App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s
 The direct-Surface target architecture is:
 
 ```
-Primary Display
+Primary display layer stack (0)
    │
-   ▼ SurfaceControl virtual display (shell UID)
+   ▼ SurfaceControl.Transaction (shell UID)
    │
-  └──── direct Surface output ─────► MirrorPresentation.SurfaceView
+   └──── setDisplayLayerStack/projection ────► secondary physical display
 ```
 
 The production fallback remains the H.264 transport:
@@ -179,9 +179,9 @@ App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s
 
 - **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `app/src/main/assets/`.
 - **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (legacy MediaProjection path remains usable).
-- **Daemon control protocol** adds `MIRROR START_DIRECT w h`, `MIRROR START w h br fps`, and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. The H.264 path launches `MirrorServer`, polls `/proc/net/unix` for the child's abstract socket, and replies `MIRROR_READY <abstract-socket-name>` or `MIRROR_ERR`. `QUIT` and connection-end paths terminate any running mirror child.
-- **`DirectMirrorSurfaceService`** is an exported app service guarded by an explicit shell-UID Binder check. During `MirrorPresentation.onSurfaceReady`, `ScreenCaptureService` publishes the current `SurfaceView` `Surface`; only UID 2000 can acquire it through the raw Binder transaction. Non-shell callers receive no surface.
-- **`DirectMirrorServer.java`** runs in the shell `app_process`, binds `DirectMirrorSurfaceService`, recreates the app-owned `Surface` from the Binder reply `Parcel`, and configures a `SurfaceControl` virtual display directly against that surface. This removes the H.264 encoder, NAL socket, app-side decoder, and compression artifacts from the steady-state direct path.
+- **Daemon control protocol** adds `MIRROR START_DIRECT w h tw th`, `MIRROR START w h br fps`, and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. The H.264 path launches `MirrorServer`, polls `/proc/net/unix` for the child's abstract socket, and replies `MIRROR_READY <abstract-socket-name>` or `MIRROR_ERR`. `QUIT` and connection-end paths terminate any running mirror child.
+- **`DirectMirrorServer.java`** runs in the shell `app_process` and configures the secondary physical display directly via hidden `SurfaceControl` APIs. It selects physical display index `1`, maps it to the primary display layer stack (`0`), applies the primary source rectangle to the secondary display bounds, and binds the readiness socket only after the transaction succeeds. On shutdown it restores the secondary display to its own layer stack. This removes the H.264 encoder, NAL socket, app-side decoder, and compression artifacts from the steady-state direct path.
+- **Direct-path UI caveat:** because the shell process remaps the physical secondary display's layer stack directly, the app's `MirrorPresentation` `ComposeView` overlay is not composited over the mirrored image while direct mode is active. The app still owns session lifecycle and falls back to H.264 when direct configuration fails.
 - **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, logs direct availability, and falls back cleanly when direct setup fails.
 - **`MirrorServer.java`** binds an abstract `LocalServerSocket` named `megingiard.mirror.<pid>`, then `accept()`s the app's connection. `ScreenEncoder.java` builds the `SurfaceControl` virtual display via reflection (`SurfaceControlReflect.java` caches all hidden methods in a static initializer) and feeds a `MediaCodec` H.264 encoder via `createInputSurface()`. NAL units are framed with a 4-byte big-endian length prefix.
 - **`PrivdMirrorSession`** (app, in `:domain`) connects to the abstract socket, configures a `MediaCodec` decoder bound directly to the `MirrorPresentation` `SurfaceView` `Surface`, and reads framed NALs on a daemon reader thread. `releaseOutputBuffer(index, render=true)` performs a zero-copy GPU render. Lifecycle (`start` / `stop` / `release`) is idempotent and survives surface recreation by re-issuing `start()` from `MirrorPresentation.onSurfaceReady`.

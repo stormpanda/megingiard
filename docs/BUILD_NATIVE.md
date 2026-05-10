@@ -347,15 +347,17 @@ For direct-Surface privileged mirroring, the daemon spawns:
 CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
    /system/bin/app_process /data/local/tmp \
    com.stormpanda.megingiard.mirrorserver.DirectMirrorServer \
-   <socket> <w> <h>
+   <socket> <w> <h> <target-w> <target-h>
 ```
 
-`DirectMirrorServer` binds the exported app-side `DirectMirrorSurfaceService`,
-acquires the current `MirrorPresentation.SurfaceView` `Surface` over Binder,
-and configures `SurfaceControl.setDisplaySurface()` directly against that
-surface. The readiness socket is bound only after display configuration
-succeeds, so daemon `/proc/net/unix` polling remains the readiness signal.
-If this path fails, the app falls back to the H.264 transport below.
+`DirectMirrorServer` configures the secondary physical display directly via
+hidden `SurfaceControl.Transaction` APIs. It selects physical display index `1`,
+sets its layer stack to the primary display layer stack (`0`), and applies the
+primary source rectangle to the secondary display bounds. The readiness socket
+is bound only after display configuration succeeds, so daemon `/proc/net/unix`
+polling remains the readiness signal. On shutdown the server restores the
+secondary display to its own layer stack. If this path fails, the app falls back
+to the H.264 transport below.
 
 ### Wire format
 

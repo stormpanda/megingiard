@@ -246,21 +246,27 @@ class ScreenCaptureService : Service() {
 
         val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
         mirrorPresentation = presentation
+        val targetMode = secondaryDisplay.mode
+        val targetWidth = targetMode.physicalWidth
+        val targetHeight = targetMode.physicalHeight
 
         presentation.onSurfaceDestroyed = {
-            DirectMirrorSurfaceRegistry.clear()
             directPrivdSession?.stop()
             privdSession?.stop()
         }
         presentation.onSurfaceReady = { surface ->
             // Tear down any existing session and start a fresh one bound to the new surface.
-            DirectMirrorSurfaceRegistry.publish(surface)
             directPrivdSession?.release()
             directPrivdSession = null
             privdSession?.release()
             privdSession = null
             scope.launch {
-                val directSession = DirectPrivdMirrorSession(surface, srcWidth, srcHeight)
+                val directSession = DirectPrivdMirrorSession(
+                    srcWidth,
+                    srcHeight,
+                    targetWidth,
+                    targetHeight,
+                )
                 directPrivdSession = directSession
                 if (directSession.start()) {
                     AppLog.i(TAG, "direct privileged mirror session started")
@@ -268,7 +274,6 @@ class ScreenCaptureService : Service() {
                 }
                 directSession.release()
                 directPrivdSession = null
-                DirectMirrorSurfaceRegistry.clear(surface)
 
                 AppLog.w(TAG, "direct privileged mirror unavailable — falling back to H.264 stream")
                 val session = PrivdMirrorSession(surface, srcWidth, srcHeight)
@@ -305,7 +310,6 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
-        DirectMirrorSurfaceRegistry.clear()
         directPrivdSession?.release()
         directPrivdSession = null
         privdSession?.release()

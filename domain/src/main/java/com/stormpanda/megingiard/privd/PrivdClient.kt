@@ -22,6 +22,10 @@ private const val TAG = "PrivdClient"
 private const val ABSTRACT_NAME = "megingiard.privd"
 private const val PING_TIMEOUT_MS = 1_500L
 private const val MIRROR_START_TIMEOUT_MS = 8_000L
+/** Shorter timeout for the direct-surface path: the child exits within ~2 s on
+ * failure (ActivityThread.systemMain() FutureTask timeout) so 4 s is sufficient
+ * and avoids the full 8 s black screen if the path is unavailable. */
+private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
@@ -172,14 +176,19 @@ object PrivdClient {
      * Requests the daemon to start the direct-Surface privileged mirror path.
      * Returns `false` when the daemon build does not support the direct handoff yet.
      */
-    suspend fun startDirectMirror(width: Int, height: Int): Boolean {
+    suspend fun startDirectMirror(
+        width: Int,
+        height: Int,
+        targetWidth: Int,
+        targetHeight: Int,
+    ): Boolean {
         if (!isConnected) return false
         val deferred = CompletableDeferred<Boolean>()
         mirrorDirectStartDeferred = deferred
-        send("MIRROR START_DIRECT $width $height\n")
-        val ok = withTimeoutOrNull(MIRROR_START_TIMEOUT_MS) { deferred.await() } ?: false
+        send("MIRROR START_DIRECT $width $height $targetWidth $targetHeight\n")
+        val ok = withTimeoutOrNull(MIRROR_DIRECT_START_TIMEOUT_MS) { deferred.await() } ?: false
         mirrorDirectStartDeferred = null
-        AppLog.i(TAG, "startDirectMirror($width x $height) → $ok")
+        AppLog.i(TAG, "startDirectMirror($width x $height -> $targetWidth x $targetHeight) -> $ok")
         return ok
     }
 

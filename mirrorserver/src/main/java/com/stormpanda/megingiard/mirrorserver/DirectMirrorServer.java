@@ -3,39 +3,46 @@ package com.stormpanda.megingiard.mirrorserver;
 import android.graphics.Rect;
 import android.net.LocalServerSocket;
 import android.os.IBinder;
-import android.view.Surface;
 
 public final class DirectMirrorServer {
-    private static final long SURFACE_BIND_TIMEOUT_MS = 5_000L;
+    private static final int PRIMARY_LAYER_STACK = 0;
+    private static final int SECONDARY_PHYSICAL_DISPLAY_INDEX = 1;
 
     private DirectMirrorServer() {}
 
     public static void main(String[] args) {
         MirrorServer.bypassHiddenApiEnforcement();
 
-        if (args.length < 3) {
-            System.err.println("usage: DirectMirrorServer <socket> <w> <h>");
+        if (args.length < 5) {
+            System.err.println("usage: DirectMirrorServer <socket> <srcW> <srcH> <targetW> <targetH>");
             System.exit(2);
             return;
         }
 
         String socketName = args[0];
-        int width = Integer.parseInt(args[1]);
-        int height = Integer.parseInt(args[2]);
-        Surface surface = null;
-        IBinder displayToken = null;
+        int sourceWidth = Integer.parseInt(args[1]);
+        int sourceHeight = Integer.parseInt(args[2]);
+        int targetWidth = Integer.parseInt(args[3]);
+        int targetHeight = Integer.parseInt(args[4]);
+        IBinder targetDisplayToken = null;
         LocalServerSocket readinessSocket = null;
         try {
-            surface = DirectSurfaceClient.acquireSurface(SURFACE_BIND_TIMEOUT_MS);
-            if (surface == null || !surface.isValid()) {
-                System.err.println("direct surface unavailable");
+            targetDisplayToken = SurfaceControlReflect.physicalDisplayTokenForIndex(
+                    SECONDARY_PHYSICAL_DISPLAY_INDEX);
+            if (targetDisplayToken == null) {
+                System.err.println("secondary physical display unavailable");
                 System.exit(1);
                 return;
             }
+                IBinder restoreToken = targetDisplayToken;
+                Runtime.getRuntime().addShutdownHook(new Thread(
+                    () -> restoreDisplay(restoreToken, targetWidth, targetHeight),
+                    "DirectMirrorRestoreDisplay"));
 
-            displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-mirror", false);
-            Rect rect = new Rect(0, 0, width, height);
-            SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
+            Rect sourceRect = new Rect(0, 0, sourceWidth, sourceHeight);
+            Rect targetRect = new Rect(0, 0, targetWidth, targetHeight);
+            SurfaceControlReflect.configurePhysicalDisplay(
+                    targetDisplayToken, PRIMARY_LAYER_STACK, sourceRect, targetRect);
 
             readinessSocket = new LocalServerSocket(socketName);
             synchronized (DirectMirrorServer.class) {
@@ -45,15 +52,20 @@ public final class DirectMirrorServer {
             System.err.println("direct mirror ended: " + t);
             System.exit(1);
         } finally {
-            if (displayToken != null) {
-                try { SurfaceControlReflect.destroyDisplay(displayToken); } catch (Throwable ignored) {}
-            }
-            if (surface != null) {
-                try { surface.release(); } catch (Throwable ignored) {}
+            if (targetDisplayToken != null) {
+                restoreDisplay(targetDisplayToken, targetWidth, targetHeight);
             }
             if (readinessSocket != null) {
                 try { readinessSocket.close(); } catch (Throwable ignored) {}
             }
         }
+    }
+
+    private static void restoreDisplay(IBinder targetDisplayToken, int targetWidth, int targetHeight) {
+        try {
+            Rect rect = new Rect(0, 0, targetWidth, targetHeight);
+            SurfaceControlReflect.configurePhysicalDisplay(
+                    targetDisplayToken, SECONDARY_PHYSICAL_DISPLAY_INDEX, rect, rect);
+        } catch (Throwable ignored) {}
     }
 }

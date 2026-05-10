@@ -387,7 +387,7 @@ static int start_mirror_child(int width, int height, int bitrate, int maxfps) {
     return 0;
 }
 
-static int start_direct_mirror_child(int width, int height) {
+static int start_direct_mirror_child(int width, int height, int target_width, int target_height) {
     if (g_mirror_pid > 0) return 0; /* already running */
 
     snprintf(g_mirror_socket, sizeof(g_mirror_socket),
@@ -396,9 +396,11 @@ static int start_direct_mirror_child(int width, int height) {
     pid_t pid = fork();
     if (pid < 0) return -1;
     if (pid == 0) {
-        char w[16], h[16];
+        char w[16], h[16], tw[16], th[16];
         snprintf(w, sizeof(w), "%d", width);
         snprintf(h, sizeof(h), "%d", height);
+        snprintf(tw, sizeof(tw), "%d", target_width);
+        snprintf(th, sizeof(th), "%d", target_height);
 
         setenv("CLASSPATH", MIRROR_DEX_PATH, 1);
         char *const argv[] = {
@@ -406,7 +408,7 @@ static int start_direct_mirror_child(int width, int height) {
             (char *)"/data/local/tmp",
             (char *)DIRECT_MIRROR_MAIN_CLASS,
             g_mirror_socket,
-            w, h,
+            w, h, tw, th,
             NULL
         };
         execv("/system/bin/app_process", argv);
@@ -444,8 +446,23 @@ static int start_direct_mirror_child(int width, int height) {
 
     if (!ready) {
         kill(pid, SIGTERM);
+        /* Bounded teardown: up to 1 s grace for the child to respond to
+         * SIGTERM, then SIGKILL.  This prevents the command loop from
+         * blocking for more than ~6 s total (5 s poll + 1 s grace), which
+         * would otherwise cause the Kotlin MIRROR_START_TIMEOUT_MS to fire
+         * before MIRROR_DIRECT_ERR is ever sent. */
         int status;
-        waitpid(pid, &status, 0);
+        int reaped = 0;
+        struct timespec grace_ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+        for (int j = 0; j < 10 && !reaped; j++) {
+            nanosleep(&grace_ts, NULL);
+            pid_t r = waitpid(pid, &status, WNOHANG);
+            if (r == pid || r < 0) reaped = 1;
+        }
+        if (!reaped) {
+            kill(pid, SIGKILL);
+            waitpid(pid, &status, 0);
+        }
         g_mirror_pid = -1;
         g_mirror_socket[0] = '\0';
         return -1;
@@ -487,7 +504,7 @@ static void stop_mirror_child(void) {
  *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
  *   UNSUB GAMEPAD\n — stop streaming
  *   MIRROR START <w> <h> <bitrate> <maxfps>\n  — spawn mirror server child
- *   MIRROR START_DIRECT <w> <h>\n              — spawn direct-Surface mirror child
+ *   MIRROR START_DIRECT <w> <h> <tw> <th>\n   — spawn direct-Surface mirror child
  *   MIRROR STOP\n                              — terminate mirror server
  */
 static int serve_client(int client_fd) {
@@ -542,11 +559,12 @@ static int serve_client(int client_fd) {
         }
 
         if (strncmp(line, "MIRROR START_DIRECT", 19) == 0) {
-            int w, h;
+            int w, h, tw, th;
             char resp[96];
             int rl;
-            if (sscanf(line, "MIRROR START_DIRECT %d %d", &w, &h) == 2 && w > 0 && h > 0) {
-                int rc = start_direct_mirror_child(w, h);
+            if (sscanf(line, "MIRROR START_DIRECT %d %d %d %d", &w, &h, &tw, &th) == 4 &&
+                w > 0 && h > 0 && tw > 0 && th > 0) {
+                int rc = start_direct_mirror_child(w, h, tw, th);
                 if (rc == 0) {
                     rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_READY\n");
                 } else {

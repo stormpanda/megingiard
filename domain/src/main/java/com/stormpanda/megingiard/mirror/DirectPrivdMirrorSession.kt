@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.mirror
 
-import android.view.Surface
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.CoroutineScope
@@ -15,9 +14,10 @@ import kotlinx.coroutines.launch
 private const val TAG = "DirectPrivdMirror"
 
 class DirectPrivdMirrorSession(
-    private val outputSurface: Surface,
     private val width: Int,
     private val height: Int,
+    private val targetWidth: Int,
+    private val targetHeight: Int,
 ) {
     enum class State { IDLE, STARTING, RUNNING, STOPPED, FAILED }
 
@@ -30,9 +30,12 @@ class DirectPrivdMirrorSession(
     suspend fun start(): Boolean {
         if (_state.value != State.IDLE) return _state.value == State.RUNNING
         _state.value = State.STARTING
-        AppLog.i(TAG, "start() direct surface ${width}x${height} surfaceValid=${outputSurface.isValid}")
+        AppLog.i(
+            TAG,
+            "start() direct physical display ${width}x${height} -> ${targetWidth}x${targetHeight}",
+        )
 
-        val ok = PrivdClient.startDirectMirror(width, height)
+        val ok = PrivdClient.startDirectMirror(width, height, targetWidth, targetHeight)
         if (!ok) {
             AppLog.w(TAG, "daemon does not support direct surface mirror yet")
             _state.value = State.FAILED
