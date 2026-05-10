@@ -14,7 +14,6 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.IBinder
 import android.view.Display
-import android.view.Surface
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -99,7 +98,6 @@ class ScreenCaptureService : Service() {
             capturedSecondaryDisplay = secondaryDisplay
             ScreenCaptureManager.setCaptureSourceSize(srcWidth, srcHeight)
 
-            var currentSurface: Surface? = null
             // NOTE: freeze is handled entirely by MirrorPresentation.bindStateFlows:
             // PixelCopy captures the last frame, then sv.visibility = INVISIBLE hides the
             // SurfaceView overlay so the ComposeView frozen-bitmap Image is visible.
@@ -115,7 +113,6 @@ class ScreenCaptureService : Service() {
             }
 
             presentation.onSurfaceReady = { surface ->
-                currentSurface = surface
                 virtualDisplay?.release()
                 val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
                 if (ambientEnabled) {

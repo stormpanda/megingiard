@@ -19,7 +19,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -65,15 +64,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "MainActivity"
-
-private data class MirrorLayoutPolicy(
-    val promptInFlight: Boolean,
-    val isOnValidScreen: Boolean,
-    val isCapturing: Boolean,
-    val globalAutoStart: Boolean,
-    val layoutId: String?,
-    val layoutWantsMirror: Boolean,
-)
 
 class MainActivity : ComponentActivity() {
 
@@ -226,9 +216,7 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
-            val isCapturingState = ScreenCaptureManager.isCapturing.collectAsState()
-            val promptInFlightState = AppStateManager.promptInFlight.collectAsState()
-            val isCapturing = isCapturingState.value
+            val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
             val lifecycleOwner = LocalLifecycleOwner.current
             LaunchedEffect(lifecycleOwner) {
@@ -258,23 +246,25 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.setOnValidScreen(isOnValidScreenLocal)
             }
 
-            val globalMirrorAutoStartState = SettingsManager.autoStartCapture.collectAsState()
-            val activeLayoutState = MacroPadState.activeLayout.collectAsState()
-            val activeLayout = activeLayoutState.value
+            val activeLayout by MacroPadState.activeLayout.collectAsState()
 
             // Reconcile the running mirror session with the active layout's persisted
             // desired state. PadLayout.mirrorAutoStart is the single source of truth:
             // true means this layout should mirror (subject to the global auto-start
             // gate when not already running), false means this layout should not mirror.
-            LaunchedEffect(Unit) {
+            LaunchedEffect(isOnValidScreenLocal) {
                 var lastPolicyLayoutId: String? = null
-                snapshotFlow {
-                    val currentLayout = activeLayoutState.value
-                    MirrorLayoutPolicy(
-                        promptInFlight = promptInFlightState.value,
+                combine(
+                    AppStateManager.promptInFlight,
+                    ScreenCaptureManager.isCapturing,
+                    SettingsManager.autoStartCapture,
+                    MacroPadState.activeLayout,
+                ) { promptInFlight, capturing, globalAutoStart, currentLayout ->
+                    MirrorRuntimePolicyState(
+                        promptInFlight = promptInFlight,
                         isOnValidScreen = isOnValidScreenLocal,
-                        isCapturing = isCapturingState.value,
-                        globalAutoStart = globalMirrorAutoStartState.value,
+                        isCapturing = capturing,
+                        globalAutoStart = globalAutoStart,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                     )
@@ -288,16 +278,7 @@ class MainActivity : ComponentActivity() {
                             )
                             lastPolicyLayoutId = policy.layoutId
                         }
-                        when (decideMirrorRuntimeAction(
-                            MirrorRuntimePolicyState(
-                                promptInFlight = policy.promptInFlight,
-                                isOnValidScreen = policy.isOnValidScreen,
-                                isCapturing = policy.isCapturing,
-                                globalAutoStart = policy.globalAutoStart,
-                                layoutId = policy.layoutId,
-                                layoutWantsMirror = policy.layoutWantsMirror,
-                            )
-                        )) {
+                        when (decideMirrorRuntimeAction(policy)) {
                             MirrorRuntimeAction.START -> {
                                 AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
                                 startMirrorByPolicy()

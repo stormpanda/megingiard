@@ -401,13 +401,11 @@ object MacroPadState {
     }
 
     /**
-     * Records whether the mirror was last running on the specified layout.
-     * Persists the [PadLayout.mirrorAutoStart] flag.
+     * Persists the active mirror preference for the specified layout.
      *
-     * Called by `ScreenCaptureService` on capture start (`true`) and stop (`false`).
-     * The auto-start logic in `MainActivity` only acts on this flag when the global
-     * `SettingsManager.autoStartCapture` setting is enabled. A no-op if the value
-     * is unchanged.
+     * This is changed only by explicit user start/stop decisions and MediaProjection
+     * consent cancellation. Runtime service start/teardown must not mutate it.
+     * A no-op if the value is unchanged.
      */
     fun setLayoutMirrorAutoStart(layoutId: String, value: Boolean) {
         var changed = false

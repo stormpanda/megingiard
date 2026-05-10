@@ -286,11 +286,11 @@ data class PadButton(
  * @param mirrorSavedScale            Persisted mirror zoom level.
  * @param mirrorSavedOffsetX          Persisted mirror pan X offset.
  * @param mirrorSavedOffsetY          Persisted mirror pan Y offset.
- * @param mirrorAutoStart             Remembered mirror state for this layout. Set to `true`
- *                                    when capture is running on this layout, and to `false`
- *                                    when capture is stopped on it. The auto-start logic only
- *                                    acts on this flag when the global mirror auto-start
- *                                    setting is enabled.
+ * @param mirrorAutoStart             Remembered mirror preference for this layout. Set to
+ *                                    `true` when the user explicitly starts mirroring on
+ *                                    this layout, and to `false` when the user explicitly
+ *                                    stops mirroring or cancels the consent prompt. Runtime
+ *                                    service teardown does not mutate this flag.
  */
 @Serializable
 data class PadLayout(

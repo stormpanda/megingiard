@@ -363,7 +363,7 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 
 `ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
 
-**Runtime reconciliation.** `MainActivity` runs a single `snapshotFlow` over the active layout and capture state. The active layout's `mirrorAutoStart` flag is evaluated directly on every emission: if it is `false` while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If it is `true` while no session is running, global auto-start decides whether `MainActivity` starts the mirror flow.
+**Runtime reconciliation.** `MainActivity` combines the prompt, capture, global auto-start, and active-layout `StateFlow`s into a `MirrorRuntimePolicyState`. The active layout's `mirrorAutoStart` flag is evaluated directly on every emission: if it is `false` while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If it is `true` while no session is running, global auto-start decides whether `MainActivity` starts the mirror flow.
 
 ```
 isOnValidScreen && !promptInFlight && !isCapturing &&
