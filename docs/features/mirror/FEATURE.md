@@ -83,6 +83,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt (subject to the in-session decline guard).
 - The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the global setting or the layout's remembered state.
 
+### FR-M9: Privileged Mirror (No-Consent Path)
+
+- When **Global Settings → Privileged Mode → Privileged Mirror** is enabled **and** the privileged daemon is `RUNNING`, the mirror MUST start without showing the system MediaProjection consent dialog.
+- The privileged path MUST be transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
+- DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
+- When the per-feature flag is off, or the daemon is not `RUNNING`, the legacy MediaProjection path MUST remain in use unchanged.
+
 ---
 
 ## Technical Implementation
@@ -106,6 +113,49 @@ Primary Display
 - **`MirrorPresentation`** is an `android.app.Presentation` instance anchored to the secondary physical display (`displayId != DEFAULT_DISPLAY`, auto-discovered via `DisplayManager`). It contains both the `SurfaceView` (hardware buffer recipient) and a `ComposeView` (UI overlay with `MirrorScreen`).
 - **Presentation focus policy:** while the Presentation hosts the ambient MacroPad and no PillMenu/editor/settings/file-picker overlay is open, its window is marked `FLAG_NOT_FOCUSABLE`. This allows the secondary display to keep receiving touch input without stealing focus from a primary-display game that owns Android pointer capture.
 - **`SurfaceView.setZOrderMediaOverlay(true)`** is critical: without it, the hardware buffer renders _behind_ the window background, producing a black screen even though GPU rendering succeeds.
+
+### Architecture: Privileged Capture Pipeline (FR-M9)
+
+When the Privileged Mirror flag is enabled and the daemon is `RUNNING`, the
+capture pipeline switches to a `scrcpy`-style architecture that bypasses
+`MediaProjection` entirely:
+
+```
+App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s0)
+     │                                          │
+     │  "MIRROR START w h br fps\n"             │
+     ├─────────────── socket ──────────────────►│
+     │                                          │  fork() + execv("/system/bin/app_process")
+     │                                          │  CLASSPATH=/data/local/tmp/megingiard_mirror.dex
+     │                                          ▼
+     │                              MirrorServer (Java, in app_process)
+     │                                          │  SurfaceControl.createDisplay() (hidden API)
+     │                                          │  MediaCodec H.264 (createInputSurface)
+     │  "READY\n" on stdout pipe                │
+     │◄─────────────────────────────────────────┤
+     │  "MIRROR_READY <abstract socket>\n"      │
+     │◄────────── socket ───────────────────────┤
+     │                                          │
+     │  LocalSocket.connect("megingiard.mirror.<pid>")
+     ├──────────────────────────────────────────►│  LocalServerSocket.accept()
+     │                                          │
+     │       4-byte BE length + H.264 NAL       │
+     │◄────────────────────────────────────────┤  loop: encoder dequeue → write frame
+     │                                          │
+  PrivdMirrorSession (app side)                 │
+     │  MediaCodec decoder.configure(format, surface=MirrorPresentation.SurfaceView.Surface)
+     │  decoder.releaseOutputBuffer(idx, render=true)  ← zero-copy GPU render
+     ▼
+  MirrorPresentation.SurfaceView (secondary display)
+```
+
+- **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `app/src/main/assets/`.
+- **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (legacy MediaProjection path remains usable).
+- **Daemon control protocol** adds `MIRROR START w h br fps` and `MIRROR STOP` commands. The daemon `fork()`+`execv("/system/bin/app_process")` with `CLASSPATH` set to the dex, polls the child's stdout for `READY`, and replies `MIRROR_READY <abstract-socket-name>` or `MIRROR_ERR`. `QUIT` and connection-end paths terminate any running mirror child.
+- **`MirrorServer.java`** binds an abstract `LocalServerSocket` named `megingiard.mirror.<pid>`, prints `READY` + flushes stdout, then `accept()`s the app's connection. `ScreenEncoder.java` builds the `SurfaceControl` virtual display via reflection (`SurfaceControlReflect.java` caches all hidden methods in a static initializer) and feeds a `MediaCodec` H.264 encoder via `createInputSurface()`. NAL units are framed with a 4-byte big-endian length prefix.
+- **`PrivdMirrorSession`** (app, in `:domain`) connects to the abstract socket, configures a `MediaCodec` decoder bound directly to the `MirrorPresentation` `SurfaceView` `Surface`, and reads framed NALs on a daemon reader thread. `releaseOutputBuffer(index, render=true)` performs a zero-copy GPU render. Lifecycle (`start` / `stop` / `release`) is idempotent and survives surface recreation by re-issuing `start()` from `MirrorPresentation.onSurfaceReady`.
+- **`ScreenCaptureService`** routes `ACTION_START_PRIVD` to a separate `startPrivdPath()` which uses `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` (vs. `FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION` for the legacy path). All viewport/touch-projection state is shared between the two paths.
+- **DRM caveat:** `SurfaceControl.createDisplay(name, secure=false)` produces a non-secure virtual display. DRM-protected surfaces (Widevine, Netflix, etc.) are blanked by SurfaceFlinger when composited to a non-secure target — the same behaviour as `scrcpy`. Setting `secure=true` would require `INTERNAL_SYSTEM_WINDOW`, which the shell UID does not have.
 
 ### Synthetic Lifecycle Owner
 

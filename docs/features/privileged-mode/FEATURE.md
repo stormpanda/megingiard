@@ -79,6 +79,7 @@ every device since Android 11 (API 30).
 | -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Gamepad merge** (MacroPad → physical pad)  | Single-controller emulation: games see only one controller.                                   | Falls back to a virtual uinput gamepad. Most games still recognise both, but a few (e.g. some Steam Big Picture flows) only accept the first-connected device. |
 | **Gamepad recording** (physical pad → macro) | Macro recording from the real controller while the target game still receives the same input. | Falls back to the on-screen virtual controller recording overlay.                                                                                              |
+| **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog, lower CPU (scrcpy-style H.264 over LocalSocket).           | Falls back to `MediaProjection` + `VirtualDisplay`. DRM content keeps working; user sees the system consent dialog every cold start.                           |
 
 > _New entries get added here whenever a feature opts in. Examples that
 > may join the list later: writing to `/dev/input/event*` for special
@@ -142,6 +143,11 @@ Display.DEFAULT_DISPLAY)` so it opens on the primary screen.
    - `PUSHING_BINARY` opens the ADB `sync:` service, sends the daemon asset
      with `SEND` / `DATA` / `DONE`, waits for `OKAY`, then issues `STAT` and
      verifies the remote byte size matches the bundled asset before continuing.
+     The same step also pushes `megingiard_mirror.dex` to
+     `/data/local/tmp/megingiard_mirror.dex` (mode `0100644`) — required by
+     the privileged-mirror path (FR-M9). DEX push failure is logged as a
+     warning but does not abort bootstrap; the legacy MediaProjection mirror
+     remains available as a fallback.
    - `SPAWNING_DAEMON` opens a fresh stream and runs
      `/data/local/tmp/megingiard_privd </dev/null >/dev/null 2>&1 &` — the
      daemon detaches via `setsid()` + `signal(SIGHUP, SIG_IGN)` and
@@ -204,6 +210,11 @@ the existing protocol.
 | App → D   | `SUB GAMEPAD\n`               | Start streaming physical gamepad evdev events to the app |
 | App → D   | `UNSUB GAMEPAD\n`             | Stop streaming physical gamepad evdev events             |
 | D → App   | `EVT <type> <code> <value>\n` | Physical evdev event while subscribed                    |
+| App → D   | `MIRROR START w h br fps\n`   | Spawn `app_process` mirror server child (FR-M9)          |
+| D → App   | `MIRROR_READY <socket>\n`     | Mirror child READY; `<socket>` is abstract LocalSocket   |
+| D → App   | `MIRROR_ERR\n`                | Mirror child failed to spawn or signal READY             |
+| App → D   | `MIRROR STOP\n`               | Terminate the running mirror child (idempotent)          |
+| D → App   | `MIRROR_STOPPED\n`            | Mirror child has been reaped                             |
 
 `SUB GAMEPAD` opens the physical evdev node read-only and starts a reader thread that forwards filtered `EVT` lines to the app. The fd is **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
 
