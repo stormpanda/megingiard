@@ -132,7 +132,7 @@ final class SurfaceControlReflect {
         try {
             Object tx = TRANSACTION_CTOR.newInstance();
             M_TX_SET_DISPLAY_SURFACE.invoke(tx, displayToken, surface);
-            configureDisplayTransaction(tx, displayToken, layerStack, layerStackRect, displayRect);
+            configureDisplayTransaction(tx, displayToken, layerStack, 0, layerStackRect, displayRect);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
@@ -140,11 +140,12 @@ final class SurfaceControlReflect {
 
     static void configurePhysicalDisplay(IBinder displayToken,
                                          int layerStack,
+                                         int orientation,
                                          Rect layerStackRect,
                                          Rect displayRect) {
         try {
             Object tx = TRANSACTION_CTOR.newInstance();
-            configureDisplayTransaction(tx, displayToken, layerStack, layerStackRect, displayRect);
+            configureDisplayTransaction(tx, displayToken, layerStack, orientation, layerStackRect, displayRect);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
@@ -152,6 +153,7 @@ final class SurfaceControlReflect {
 
     private static void configureDisplayTransaction(Object tx, IBinder displayToken,
                                                     int layerStack,
+                                                    int orientation,
                                                     Rect layerStackRect,
                                                     Rect displayRect)
             throws ReflectiveOperationException {
@@ -161,7 +163,7 @@ final class SurfaceControlReflect {
         } else {
             M_TX_SET_DISPLAY_LAYER_STACK.invoke(tx, displayToken, layerStack);
         }
-        M_TX_SET_DISPLAY_PROJECTION.invoke(tx, displayToken, 0, layerStackRect, displayRect);
+        M_TX_SET_DISPLAY_PROJECTION.invoke(tx, displayToken, orientation, layerStackRect, displayRect);
         M_TX_APPLY.invoke(tx);
     }
 }

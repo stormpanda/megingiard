@@ -387,7 +387,7 @@ static int start_mirror_child(int width, int height, int bitrate, int maxfps) {
     return 0;
 }
 
-static int start_direct_mirror_child(int width, int height, int target_width, int target_height) {
+static int start_direct_mirror_child(int width, int height, int target_width, int target_height, int target_layer_stack) {
     if (g_mirror_pid > 0) return 0; /* already running */
 
     snprintf(g_mirror_socket, sizeof(g_mirror_socket),
@@ -396,11 +396,12 @@ static int start_direct_mirror_child(int width, int height, int target_width, in
     pid_t pid = fork();
     if (pid < 0) return -1;
     if (pid == 0) {
-        char w[16], h[16], tw[16], th[16];
+        char w[16], h[16], tw[16], th[16], tls[16];
         snprintf(w, sizeof(w), "%d", width);
         snprintf(h, sizeof(h), "%d", height);
         snprintf(tw, sizeof(tw), "%d", target_width);
         snprintf(th, sizeof(th), "%d", target_height);
+        snprintf(tls, sizeof(tls), "%d", target_layer_stack);
 
         setenv("CLASSPATH", MIRROR_DEX_PATH, 1);
         char *const argv[] = {
@@ -408,7 +409,7 @@ static int start_direct_mirror_child(int width, int height, int target_width, in
             (char *)"/data/local/tmp",
             (char *)DIRECT_MIRROR_MAIN_CLASS,
             g_mirror_socket,
-            w, h, tw, th,
+            w, h, tw, th, tls,
             NULL
         };
         execv("/system/bin/app_process", argv);
@@ -504,7 +505,7 @@ static void stop_mirror_child(void) {
  *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
  *   UNSUB GAMEPAD\n — stop streaming
  *   MIRROR START <w> <h> <bitrate> <maxfps>\n  — spawn mirror server child
- *   MIRROR START_DIRECT <w> <h> <tw> <th>\n   — spawn direct-Surface mirror child
+ *   MIRROR START_DIRECT <w> <h> <tw> <th> <tls>\n — spawn direct-Surface mirror child
  *   MIRROR STOP\n                              — terminate mirror server
  */
 static int serve_client(int client_fd) {
@@ -559,12 +560,12 @@ static int serve_client(int client_fd) {
         }
 
         if (strncmp(line, "MIRROR START_DIRECT", 19) == 0) {
-            int w, h, tw, th;
+            int w, h, tw, th, tls;
             char resp[96];
             int rl;
-            if (sscanf(line, "MIRROR START_DIRECT %d %d %d %d", &w, &h, &tw, &th) == 4 &&
-                w > 0 && h > 0 && tw > 0 && th > 0) {
-                int rc = start_direct_mirror_child(w, h, tw, th);
+            if (sscanf(line, "MIRROR START_DIRECT %d %d %d %d %d", &w, &h, &tw, &th, &tls) == 5 &&
+                w > 0 && h > 0 && tw > 0 && th > 0 && tls >= 0) {
+                int rc = start_direct_mirror_child(w, h, tw, th, tls);
                 if (rc == 0) {
                     rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_READY\n");
                 } else {

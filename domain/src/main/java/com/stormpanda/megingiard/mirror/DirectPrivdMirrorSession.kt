@@ -18,6 +18,7 @@ class DirectPrivdMirrorSession(
     private val height: Int,
     private val targetWidth: Int,
     private val targetHeight: Int,
+    private val targetLayerStack: Int,
 ) {
     enum class State { IDLE, STARTING, RUNNING, STOPPED, FAILED }
 
@@ -32,10 +33,10 @@ class DirectPrivdMirrorSession(
         _state.value = State.STARTING
         AppLog.i(
             TAG,
-            "start() direct physical display ${width}x${height} -> ${targetWidth}x${targetHeight}",
+            "start() direct physical display ${width}x${height} -> ${targetWidth}x${targetHeight} layerStack=$targetLayerStack",
         )
 
-        val ok = PrivdClient.startDirectMirror(width, height, targetWidth, targetHeight)
+        val ok = PrivdClient.startDirectMirror(width, height, targetWidth, targetHeight, targetLayerStack)
         if (!ok) {
             AppLog.w(TAG, "daemon does not support direct surface mirror yet")
             _state.value = State.FAILED

@@ -5,6 +5,7 @@ import android.net.LocalServerSocket;
 import android.os.IBinder;
 
 public final class DirectMirrorServer {
+    private static final int DISPLAY_ROTATION_90 = 1;
     private static final int PRIMARY_LAYER_STACK = 0;
     private static final int SECONDARY_PHYSICAL_DISPLAY_INDEX = 1;
 
@@ -13,8 +14,8 @@ public final class DirectMirrorServer {
     public static void main(String[] args) {
         MirrorServer.bypassHiddenApiEnforcement();
 
-        if (args.length < 5) {
-            System.err.println("usage: DirectMirrorServer <socket> <srcW> <srcH> <targetW> <targetH>");
+        if (args.length < 6) {
+            System.err.println("usage: DirectMirrorServer <socket> <srcW> <srcH> <targetW> <targetH> <targetLayerStack>");
             System.exit(2);
             return;
         }
@@ -24,6 +25,7 @@ public final class DirectMirrorServer {
         int sourceHeight = Integer.parseInt(args[2]);
         int targetWidth = Integer.parseInt(args[3]);
         int targetHeight = Integer.parseInt(args[4]);
+        int targetLayerStack = Integer.parseInt(args[5]);
         IBinder targetDisplayToken = null;
         LocalServerSocket readinessSocket = null;
         try {
@@ -36,13 +38,13 @@ public final class DirectMirrorServer {
             }
                 IBinder restoreToken = targetDisplayToken;
                 Runtime.getRuntime().addShutdownHook(new Thread(
-                    () -> restoreDisplay(restoreToken, targetWidth, targetHeight),
+                    () -> restoreDisplay(restoreToken, targetWidth, targetHeight, targetLayerStack),
                     "DirectMirrorRestoreDisplay"));
 
             Rect sourceRect = new Rect(0, 0, sourceWidth, sourceHeight);
-            Rect targetRect = new Rect(0, 0, targetWidth, targetHeight);
+                Rect targetRect = fitCenter(sourceWidth, sourceHeight, targetWidth, targetHeight);
             SurfaceControlReflect.configurePhysicalDisplay(
-                    targetDisplayToken, PRIMARY_LAYER_STACK, sourceRect, targetRect);
+                    targetDisplayToken, PRIMARY_LAYER_STACK, DISPLAY_ROTATION_90, sourceRect, targetRect);
 
             readinessSocket = new LocalServerSocket(socketName);
             synchronized (DirectMirrorServer.class) {
@@ -53,7 +55,7 @@ public final class DirectMirrorServer {
             System.exit(1);
         } finally {
             if (targetDisplayToken != null) {
-                restoreDisplay(targetDisplayToken, targetWidth, targetHeight);
+                restoreDisplay(targetDisplayToken, targetWidth, targetHeight, targetLayerStack);
             }
             if (readinessSocket != null) {
                 try { readinessSocket.close(); } catch (Throwable ignored) {}
@@ -61,11 +63,25 @@ public final class DirectMirrorServer {
         }
     }
 
-    private static void restoreDisplay(IBinder targetDisplayToken, int targetWidth, int targetHeight) {
+    private static Rect fitCenter(int sourceWidth, int sourceHeight, int targetWidth, int targetHeight) {
+        double sourceAspect = (double) sourceWidth / (double) sourceHeight;
+        double targetAspect = (double) targetWidth / (double) targetHeight;
+        if (targetAspect > sourceAspect) {
+            int fittedWidth = (int) Math.round(targetHeight * sourceAspect);
+            int left = (targetWidth - fittedWidth) / 2;
+            return new Rect(left, 0, left + fittedWidth, targetHeight);
+        }
+        int fittedHeight = (int) Math.round(targetWidth / sourceAspect);
+        int top = (targetHeight - fittedHeight) / 2;
+        return new Rect(0, top, targetWidth, top + fittedHeight);
+    }
+
+    private static void restoreDisplay(IBinder targetDisplayToken, int targetWidth, int targetHeight,
+                                       int targetLayerStack) {
         try {
             Rect rect = new Rect(0, 0, targetWidth, targetHeight);
             SurfaceControlReflect.configurePhysicalDisplay(
-                    targetDisplayToken, SECONDARY_PHYSICAL_DISPLAY_INDEX, rect, rect);
+                    targetDisplayToken, targetLayerStack, DISPLAY_ROTATION_90, rect, rect);
         } catch (Throwable ignored) {}
     }
 }
