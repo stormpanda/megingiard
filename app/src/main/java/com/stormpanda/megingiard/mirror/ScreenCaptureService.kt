@@ -263,7 +263,7 @@ class ScreenCaptureService : Service() {
                     srcHeight,
                 )
                 directPrivdSession = directSession
-                if (directSession.start()) {
+                if (directSession.start() && DirectMirrorSurfaceRegistry.sendToDirectServer(surface)) {
                     AppLog.i(TAG, "direct privileged mirror session started")
                     return@launch
                 }
