@@ -80,7 +80,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - `PadLayout.mirrorAutoStart = false` is recorded when the user explicitly stops mirroring for that layout or cancels the MediaProjection consent prompt.
 - The capture-prompt MUST auto-launch only when **both** the global setting is enabled **and** the active layout's remembered state is `true`.
 - Switching to a layout whose remembered state is `false` while currently capturing MUST stop the runtime mirror session without changing any layout's persisted remembered state.
-- Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt (subject to the in-session decline guard).
+- Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt when the global auto-start setting is enabled.
 - The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the global setting or the layout's remembered state.
 
 ### FR-M9: Privileged Mirror (No-Consent Path)
@@ -363,7 +363,7 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 
 `ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
 
-**Runtime reconciliation.** `MainActivity` runs a single `snapshotFlow` over the active layout and capture state. If the active layout wants mirroring on and global auto-start is enabled, it starts mirroring when no session is running. If the active layout wants mirroring off while a session is running, it stops only the runtime service; it does not mutate any layout's remembered state.
+**Runtime reconciliation.** `MainActivity` runs a single `snapshotFlow` over the active layout and capture state. The active layout's `mirrorAutoStart` flag is evaluated directly on every emission: if it is `false` while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If it is `true` while no session is running, global auto-start decides whether `MainActivity` starts the mirror flow.
 
 ```
 isOnValidScreen && !promptInFlight && !isCapturing &&

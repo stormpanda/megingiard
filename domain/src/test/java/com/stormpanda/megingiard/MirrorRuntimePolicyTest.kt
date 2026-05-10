@@ -9,7 +9,6 @@ import org.junit.Test
 class MirrorRuntimePolicyTest {
     private companion object {
         const val LAYOUT_A = "layout-a"
-        const val LAYOUT_B = "layout-b"
     }
 
     @Test
@@ -22,16 +21,14 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
-                confirmedMirrorLayoutId = null,
             )
         )
 
-        assertEquals(MirrorRuntimeAction.START, decision.action)
-        assertEquals(null, decision.confirmedMirrorLayoutId)
+        assertEquals(MirrorRuntimeAction.START, decision)
     }
 
     @Test
-    fun `does not stop fresh capture on stale false layout snapshot`() {
+    fun `stops when active layout does not want mirror while capture is running`() {
         val decision = decideMirrorRuntimeAction(
             MirrorRuntimePolicyState(
                 promptInFlight = false,
@@ -40,16 +37,14 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
-                confirmedMirrorLayoutId = null,
             )
         )
 
-        assertEquals(MirrorRuntimeAction.NONE, decision.action)
-        assertEquals(null, decision.confirmedMirrorLayoutId)
+        assertEquals(MirrorRuntimeAction.STOP, decision)
     }
 
     @Test
-    fun `latches confirmed mirror-on once capture and layout agree`() {
+    fun `does nothing when active layout wants mirror while capture is already running`() {
         val decision = decideMirrorRuntimeAction(
             MirrorRuntimePolicyState(
                 promptInFlight = false,
@@ -58,52 +53,14 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
-                confirmedMirrorLayoutId = null,
             )
         )
 
-        assertEquals(MirrorRuntimeAction.NONE, decision.action)
-        assertEquals(LAYOUT_A, decision.confirmedMirrorLayoutId)
+        assertEquals(MirrorRuntimeAction.NONE, decision)
     }
 
     @Test
-    fun `stops after confirmed running session switches same layout to off`() {
-        val decision = decideMirrorRuntimeAction(
-            MirrorRuntimePolicyState(
-                promptInFlight = false,
-                isOnValidScreen = true,
-                isCapturing = true,
-                globalAutoStart = true,
-                layoutId = LAYOUT_A,
-                layoutWantsMirror = false,
-                confirmedMirrorLayoutId = LAYOUT_A,
-            )
-        )
-
-        assertEquals(MirrorRuntimeAction.STOP, decision.action)
-        assertEquals(null, decision.confirmedMirrorLayoutId)
-    }
-
-    @Test
-    fun `stops after confirmed running session switches to different off layout`() {
-        val decision = decideMirrorRuntimeAction(
-            MirrorRuntimePolicyState(
-                promptInFlight = false,
-                isOnValidScreen = true,
-                isCapturing = true,
-                globalAutoStart = true,
-                layoutId = LAYOUT_B,
-                layoutWantsMirror = false,
-                confirmedMirrorLayoutId = LAYOUT_A,
-            )
-        )
-
-        assertEquals(MirrorRuntimeAction.STOP, decision.action)
-        assertEquals(null, decision.confirmedMirrorLayoutId)
-    }
-
-    @Test
-    fun `clears confirmation when capture stops`() {
+    fun `does nothing when active layout does not want mirror and capture is stopped`() {
         val decision = decideMirrorRuntimeAction(
             MirrorRuntimePolicyState(
                 promptInFlight = false,
@@ -112,11 +69,41 @@ class MirrorRuntimePolicyTest {
                 globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
-                confirmedMirrorLayoutId = LAYOUT_A,
             )
         )
 
-        assertEquals(MirrorRuntimeAction.NONE, decision.action)
-        assertEquals(null, decision.confirmedMirrorLayoutId)
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
+
+    @Test
+    fun `does not start when global auto-start is disabled`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = true,
+                isCapturing = false,
+                globalAutoStart = false,
+                layoutId = LAYOUT_A,
+                layoutWantsMirror = true,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
+
+    @Test
+    fun `does not start while prompt is already in flight`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = true,
+                isOnValidScreen = true,
+                isCapturing = false,
+                globalAutoStart = true,
+                layoutId = LAYOUT_A,
+                layoutWantsMirror = true,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
     }
 }
