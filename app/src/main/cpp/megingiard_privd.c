@@ -54,6 +54,8 @@
 #include <linux/input.h>
 #include <pthread.h>
 #include <poll.h>
+#include <sys/wait.h>
+#include <time.h>
 
 #define ABSTRACT_SOCKET_NAME "megingiard.privd"
 #define SCAN_MAX 32
@@ -78,6 +80,12 @@ static volatile int g_reader_active = 0;
 static pthread_t g_reader_thread;
 static volatile int g_client_fd_for_reader = -1;
 static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Mirror server child (MIRROR START/STOP). */
+static volatile pid_t g_mirror_pid = -1;
+static char g_mirror_socket[64] = {0};
+#define MIRROR_DEX_PATH "/data/local/tmp/megingiard_mirror.dex"
+#define MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.MirrorServer"
 
 /*
  * Returns 1 if the evdev event (type, code) should be streamed to the client.
@@ -287,12 +295,123 @@ static int read_line(int fd, char *out) {
 }
 
 /*
+ * Spawns the privileged mirror server (app_process + megingiard_mirror.dex)
+ * as a child process. Reads "READY\n" from the child's stdout pipe to confirm
+ * the LocalServerSocket has been bound before returning.
+ *
+ * On success: stores child PID in g_mirror_pid, copies the chosen abstract
+ * socket name into g_mirror_socket (caller-readable), returns 0.
+ * On failure: returns -1.
+ */
+static int start_mirror_child(int width, int height, int bitrate, int maxfps) {
+    if (g_mirror_pid > 0) return 0; /* already running */
+
+    /* Per-process unique socket name so a stale child from a previous
+     * session cannot shadow ours. */
+    snprintf(g_mirror_socket, sizeof(g_mirror_socket),
+             "megingiard.mirror.%d", (int)getpid());
+
+    int pipefd[2];
+    if (pipe(pipefd) < 0) return -1;
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return -1;
+    }
+    if (pid == 0) {
+        /* Child: stdout → pipe write end, then exec app_process. */
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        if (pipefd[1] != STDOUT_FILENO) close(pipefd[1]);
+
+        char w[16], h[16], br[16], fps[16];
+        snprintf(w,   sizeof(w),   "%d", width);
+        snprintf(h,   sizeof(h),   "%d", height);
+        snprintf(br,  sizeof(br),  "%d", bitrate);
+        snprintf(fps, sizeof(fps), "%d", maxfps);
+
+        setenv("CLASSPATH", MIRROR_DEX_PATH, 1);
+        char *const argv[] = {
+            (char *)"app_process",
+            (char *)"/data/local/tmp",
+            (char *)MIRROR_MAIN_CLASS,
+            g_mirror_socket,
+            w, h, br, fps,
+            NULL
+        };
+        execv("/system/bin/app_process", argv);
+        /* exec failed */
+        _exit(127);
+    }
+
+    /* Parent: wait for "READY\n" on the pipe with a 5 s timeout. */
+    close(pipefd[1]);
+    char buf[32] = {0};
+    int total = 0;
+    int ready = 0;
+    struct pollfd pfd = { .fd = pipefd[0], .events = POLLIN };
+    int waited = 0;
+    while (waited < 5000) {
+        int pr = poll(&pfd, 1, 200);
+        waited += 200;
+        if (pr <= 0) continue;
+        ssize_t r = read(pipefd[0], buf + total, sizeof(buf) - 1 - total);
+        if (r <= 0) break;
+        total += r;
+        buf[total] = '\0';
+        if (strstr(buf, "READY") != NULL) { ready = 1; break; }
+        if (total >= (int)sizeof(buf) - 1) break;
+    }
+    close(pipefd[0]);
+
+    if (!ready) {
+        kill(pid, SIGTERM);
+        int status;
+        waitpid(pid, &status, 0);
+        g_mirror_pid = -1;
+        g_mirror_socket[0] = '\0';
+        return -1;
+    }
+
+    g_mirror_pid = pid;
+    return 0;
+}
+
+/*
+ * Stops the mirror child if running. Sends SIGTERM, reaps with waitpid().
+ */
+static void stop_mirror_child(void) {
+    if (g_mirror_pid <= 0) return;
+    kill(g_mirror_pid, SIGTERM);
+    int status;
+    /* Bounded wait: 1 s grace, then SIGKILL. */
+    for (int i = 0; i < 10; ++i) {
+        pid_t r = waitpid(g_mirror_pid, &status, WNOHANG);
+        if (r == g_mirror_pid || r < 0) {
+            g_mirror_pid = -1;
+            g_mirror_socket[0] = '\0';
+            return;
+        }
+        struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+        nanosleep(&ts, NULL);
+    }
+    kill(g_mirror_pid, SIGKILL);
+    waitpid(g_mirror_pid, &status, 0);
+    g_mirror_pid = -1;
+    g_mirror_socket[0] = '\0';
+}
+
+/*
  * Handles a single client connection.
  * Returns 0 on normal disconnect, 1 if the client requested QUIT.
  *
  * Extended protocol commands:
  *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
  *   UNSUB GAMEPAD\n — stop streaming
+ *   MIRROR START <w> <h> <bitrate> <maxfps>\n  — spawn mirror server child
+ *   MIRROR STOP\n                              — terminate mirror server
  */
 static int serve_client(int client_fd) {
     char line[MAX_LINE];
@@ -315,6 +434,7 @@ static int serve_client(int client_fd) {
         }
         if (line[0] == 'Q' && strcmp(line, "QUIT") == 0) {
             stop_reader_thread();
+            stop_mirror_child();
             return 1;
         }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
@@ -341,6 +461,38 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "UNSUB GAMEPAD") == 0) {
             stop_reader_thread();
+            continue;
+        }
+
+        if (strncmp(line, "MIRROR START", 12) == 0) {
+            int w, h, br, fps;
+            if (sscanf(line, "MIRROR START %d %d %d %d", &w, &h, &br, &fps) == 4 &&
+                w > 0 && h > 0 && br > 0 && fps > 0 && fps <= 120) {
+                int rc = start_mirror_child(w, h, br, fps);
+                char resp[96];
+                int rl;
+                if (rc == 0) {
+                    rl = snprintf(resp, sizeof(resp), "MIRROR_READY %s\n", g_mirror_socket);
+                } else {
+                    rl = snprintf(resp, sizeof(resp), "MIRROR_ERR\n");
+                }
+                pthread_mutex_lock(&g_send_mutex);
+                (void)write(client_fd, resp, rl);
+                pthread_mutex_unlock(&g_send_mutex);
+            } else {
+                const char *resp = "MIRROR_ERR\n";
+                pthread_mutex_lock(&g_send_mutex);
+                (void)write(client_fd, resp, strlen(resp));
+                pthread_mutex_unlock(&g_send_mutex);
+            }
+            continue;
+        }
+        if (strcmp(line, "MIRROR STOP") == 0) {
+            stop_mirror_child();
+            const char *resp = "MIRROR_STOPPED\n";
+            pthread_mutex_lock(&g_send_mutex);
+            (void)write(client_fd, resp, strlen(resp));
+            pthread_mutex_unlock(&g_send_mutex);
             continue;
         }
 
@@ -375,6 +527,7 @@ static int serve_client(int client_fd) {
          * feature prefixes. */
     }
     stop_reader_thread();
+    stop_mirror_child();
     return 0;
 }
 
