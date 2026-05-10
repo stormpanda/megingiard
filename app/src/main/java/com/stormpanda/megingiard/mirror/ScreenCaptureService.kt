@@ -43,6 +43,11 @@ class ScreenCaptureService : Service() {
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
+    // ID of the layout that was active when this capture session started.
+    // Saved here because onDestroy() may run after a layout switch, at which
+    // point activeLayout.value is already the NEW layout — using that ID would
+    // stamp false on the wrong layout and leave the old one stuck at true.
+    private var capturedLayoutId: String? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -154,6 +159,7 @@ class ScreenCaptureService : Service() {
                 // and immediately fire the "layout switched to off-state while
                 // capturing → STOP" gate, killing the session it just started.
                 MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                    capturedLayoutId = layoutId
                     MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
                 }
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
@@ -284,6 +290,7 @@ class ScreenCaptureService : Service() {
             // MediaProjection path above. The privd path is more sensitive to this
             // race because no consent dialog delays the transition.
             MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                capturedLayoutId = layoutId
                 MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
             }
             AppLog.i(TAG, "privd session state restored → setCapturing(true)")
@@ -298,11 +305,13 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
-        // Remember "mirror is no longer running" on the active layout so it does
-        // not auto-resume on next launch (regardless of whether the global
-        // auto-start setting is on).
-        MacroPadState.activeLayout.value?.id?.let { layoutId ->
+        // Remember "mirror is no longer running" on the layout that was actually
+        // being captured. Do NOT use activeLayout.value here — when a layout switch
+        // triggers this stop, activeLayout is already the NEW layout and stamping
+        // false on it would leave the old layout stuck at mirrorAutoStart=true forever.
+        capturedLayoutId?.let { layoutId ->
             MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+            AppLog.d(TAG, "onDestroy: cleared mirrorAutoStart for captured layout $layoutId")
         }
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
