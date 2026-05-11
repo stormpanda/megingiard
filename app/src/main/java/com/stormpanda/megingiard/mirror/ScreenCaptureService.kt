@@ -48,6 +48,26 @@ class ScreenCaptureService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        // Hide the mirror / recording presentations whenever the app is backgrounded
+        // (e.g. Home button press) and restore them when the app comes back to the
+        // foreground. The VirtualDisplay and session remain alive — only the window
+        // visibility changes, so mirroring resumes instantly without re-consent.
+        scope.launch {
+            AppStateManager.isActivityResumed.collect { resumed ->
+                AppLog.d(TAG, "isActivityResumed=$resumed → ${if (resumed) "show" else "hide"} presentations")
+                if (resumed) {
+                    mirrorPresentation?.show()
+                    recordingPresentation?.show()
+                } else {
+                    mirrorPresentation?.hide()
+                    recordingPresentation?.hide()
+                }
+            }
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             AppLog.i(TAG, "onStartCommand STOP → stopping self")
