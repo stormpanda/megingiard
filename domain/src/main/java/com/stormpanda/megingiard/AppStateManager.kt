@@ -38,6 +38,18 @@ object AppStateManager {
     private val _isActivityResumed = MutableStateFlow(true)
     val isActivityResumed: StateFlow<Boolean> = _isActivityResumed.asStateFlow()
 
+    /**
+     * True from the moment [onUserLeaveHint][android.app.Activity.onUserLeaveHint] fires
+     * (Home button, Recents navigation) until the next [ON_RESUME][androidx.lifecycle.Lifecycle.Event.ON_RESUME].
+     *
+     * Unlike [isActivityResumed], this flag is NOT set when a [android.app.Presentation]
+     * or other window owned by the same process covers the Activity — only genuine
+     * user-initiated navigation away sets it. This makes it safe to use for
+     * hiding/showing mirror presentations without creating a feedback loop.
+     */
+    private val _isUserLeaving = MutableStateFlow(false)
+    val isUserLeaving: StateFlow<Boolean> = _isUserLeaving.asStateFlow()
+
     private val _isOnValidScreen = MutableStateFlow(true)
     val isOnValidScreen: StateFlow<Boolean> = _isOnValidScreen.asStateFlow()
 
@@ -83,6 +95,10 @@ object AppStateManager {
     fun setActivityResumed(resumed: Boolean) {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed
+    }
+    fun setUserLeaving(leaving: Boolean) {
+        AppLog.d(TAG, "setUserLeaving($leaving)")
+        _isUserLeaving.value = leaving
     }
     fun setOnValidScreen(valid: Boolean) {
         AppLog.i(TAG, "setOnValidScreen($valid)")

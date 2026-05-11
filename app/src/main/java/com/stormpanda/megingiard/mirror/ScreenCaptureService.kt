@@ -50,19 +50,24 @@ class ScreenCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        // Hide the mirror / recording presentations whenever the app is backgrounded
-        // (e.g. Home button press) and restore them when the app comes back to the
-        // foreground. The VirtualDisplay and session remain alive — only the window
-        // visibility changes, so mirroring resumes instantly without re-consent.
+        // Hide the mirror / recording presentations when the user explicitly navigates
+        // away (Home button, Recents). Show them again when the user returns.
+        //
+        // We use isUserLeaving (set in onUserLeaveHint / cleared on ON_RESUME) rather
+        // than isActivityResumed to avoid a feedback loop: the Presentation window sits
+        // above the Activity on the secondary display, which causes ON_PAUSE/ON_STOP to
+        // fire immediately after show() — isActivityResumed would then toggle hide() and
+        // trigger an indefinite cycle. onUserLeaveHint is NOT called for Presentation
+        // coverage, only for genuine user navigation.
         scope.launch {
-            AppStateManager.isActivityResumed.collect { resumed ->
-                AppLog.d(TAG, "isActivityResumed=$resumed → ${if (resumed) "show" else "hide"} presentations")
-                if (resumed) {
-                    mirrorPresentation?.show()
-                    recordingPresentation?.show()
-                } else {
+            AppStateManager.isUserLeaving.collect { leaving ->
+                AppLog.d(TAG, "isUserLeaving=$leaving → ${if (leaving) "hide" else "show"} presentations")
+                if (leaving) {
                     mirrorPresentation?.hide()
                     recordingPresentation?.hide()
+                } else {
+                    mirrorPresentation?.show()
+                    recordingPresentation?.show()
                 }
             }
         }

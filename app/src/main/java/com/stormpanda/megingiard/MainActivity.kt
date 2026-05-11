@@ -114,6 +114,18 @@ class MainActivity : ComponentActivity() {
         DisplayDetector.updateDisplayValidity(displayId)
     }
 
+    /**
+     * Called when the user explicitly navigates away from the app (Home button,
+     * Recents). NOT called when a Presentation or other same-process window covers
+     * the Activity. This is the correct signal for hiding mirror presentations
+     * without triggering the show/hide feedback loop that [isActivityResumed] causes.
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        AppLog.i(TAG, "onUserLeaveHint → user navigating away, hiding presentations")
+        AppStateManager.setUserLeaving(true)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate")
@@ -228,6 +240,8 @@ class MainActivity : ComponentActivity() {
                         Lifecycle.Event.ON_RESUME -> {
                             AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value} autoStart=${SettingsManager.autoStartCapture.value}")
                             AppStateManager.setActivityResumed(true)
+                            // Clear the user-leaving flag: the user has returned to the app.
+                            AppStateManager.setUserLeaving(false)
                         }
                         Lifecycle.Event.ON_STOP -> {
                             AppLog.i(TAG, "ON_STOP")
