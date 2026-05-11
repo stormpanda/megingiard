@@ -54,6 +54,8 @@
 #include <linux/input.h>
 #include <pthread.h>
 #include <poll.h>
+#include <sys/wait.h>
+#include <time.h>
 
 #define ABSTRACT_SOCKET_NAME "megingiard.privd"
 #define SCAN_MAX 32
@@ -78,6 +80,12 @@ static volatile int g_reader_active = 0;
 static pthread_t g_reader_thread;
 static volatile int g_client_fd_for_reader = -1;
 static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Direct mirror server child (MIRROR START_DIRECT/STOP). */
+static volatile pid_t g_mirror_pid = -1;
+static char g_mirror_socket[64] = {0};
+#define MIRROR_DEX_PATH "/data/local/tmp/megingiard_mirror.dex"
+#define DIRECT_MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.DirectMirrorServer"
 
 /*
  * Returns 1 if the evdev event (type, code) should be streamed to the client.
@@ -286,6 +294,113 @@ static int read_line(int fd, char *out) {
     return n;
 }
 
+static int start_direct_mirror_child(int width, int height) {
+    if (g_mirror_pid > 0) return 0; /* already running */
+
+    snprintf(g_mirror_socket, sizeof(g_mirror_socket),
+             "megingiard.mirror.direct.%d", (int)getpid());
+
+    pid_t pid = fork();
+    if (pid < 0) return -1;
+    if (pid == 0) {
+        char w[16], h[16];
+        snprintf(w, sizeof(w), "%d", width);
+        snprintf(h, sizeof(h), "%d", height);
+
+        setenv("CLASSPATH", MIRROR_DEX_PATH, 1);
+        char *const argv[] = {
+            (char *)"app_process",
+            (char *)"/data/local/tmp",
+            (char *)DIRECT_MIRROR_MAIN_CLASS,
+            g_mirror_socket,
+            w, h,
+            NULL
+        };
+        execv("/system/bin/app_process", argv);
+        _exit(127);
+    }
+
+    char search_name[96];
+    snprintf(search_name, sizeof(search_name), "@%s", g_mirror_socket);
+
+    int ready = 0;
+    struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+    for (int i = 0; i < 50 && !ready; i++) {
+        nanosleep(&ts, NULL);
+
+        int status;
+        pid_t r = waitpid(pid, &status, WNOHANG);
+        if (r == pid || r < 0) {
+            g_mirror_pid = -1;
+            g_mirror_socket[0] = '\0';
+            return -1;
+        }
+
+        FILE *f = fopen("/proc/net/unix", "r");
+        if (f) {
+            char line[512];
+            while (fgets(line, sizeof(line), f)) {
+                if (strstr(line, search_name)) {
+                    ready = 1;
+                    break;
+                }
+            }
+            fclose(f);
+        }
+    }
+
+    if (!ready) {
+        kill(pid, SIGTERM);
+        /* Bounded teardown: up to 1 s grace for the child to respond to
+         * SIGTERM, then SIGKILL.  This prevents the command loop from
+         * blocking for more than ~6 s total (5 s poll + 1 s grace), which
+         * would otherwise cause the Kotlin MIRROR_START_TIMEOUT_MS to fire
+         * before MIRROR_DIRECT_ERR is ever sent. */
+        int status;
+        int reaped = 0;
+        struct timespec grace_ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+        for (int j = 0; j < 10 && !reaped; j++) {
+            nanosleep(&grace_ts, NULL);
+            pid_t r = waitpid(pid, &status, WNOHANG);
+            if (r == pid || r < 0) reaped = 1;
+        }
+        if (!reaped) {
+            kill(pid, SIGKILL);
+            waitpid(pid, &status, 0);
+        }
+        g_mirror_pid = -1;
+        g_mirror_socket[0] = '\0';
+        return -1;
+    }
+
+    g_mirror_pid = pid;
+    return 0;
+}
+
+/*
+ * Stops the mirror child if running. Sends SIGTERM, reaps with waitpid().
+ */
+static void stop_mirror_child(void) {
+    if (g_mirror_pid <= 0) return;
+    kill(g_mirror_pid, SIGTERM);
+    int status;
+    /* Bounded wait: 1 s grace, then SIGKILL. */
+    for (int i = 0; i < 10; ++i) {
+        pid_t r = waitpid(g_mirror_pid, &status, WNOHANG);
+        if (r == g_mirror_pid || r < 0) {
+            g_mirror_pid = -1;
+            g_mirror_socket[0] = '\0';
+            return;
+        }
+        struct timespec ts = { .tv_sec = 0, .tv_nsec = 100 * 1000 * 1000 };
+        nanosleep(&ts, NULL);
+    }
+    kill(g_mirror_pid, SIGKILL);
+    waitpid(g_mirror_pid, &status, 0);
+    g_mirror_pid = -1;
+    g_mirror_socket[0] = '\0';
+}
+
 /*
  * Handles a single client connection.
  * Returns 0 on normal disconnect, 1 if the client requested QUIT.
@@ -293,6 +408,8 @@ static int read_line(int fd, char *out) {
  * Extended protocol commands:
  *   SUB GAMEPAD\n   — start streaming physical evdev events (EVT lines)
  *   UNSUB GAMEPAD\n — stop streaming
+ *   MIRROR START_DIRECT <w> <h>\n               — spawn direct-Surface mirror child
+ *   MIRROR STOP\n                              — terminate mirror server
  */
 static int serve_client(int client_fd) {
     char line[MAX_LINE];
@@ -315,6 +432,7 @@ static int serve_client(int client_fd) {
         }
         if (line[0] == 'Q' && strcmp(line, "QUIT") == 0) {
             stop_reader_thread();
+            stop_mirror_child();
             return 1;
         }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
@@ -341,6 +459,36 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "UNSUB GAMEPAD") == 0) {
             stop_reader_thread();
+            continue;
+        }
+
+        if (strncmp(line, "MIRROR START_DIRECT", 19) == 0) {
+            int w, h;
+            char resp[96];
+            int rl;
+            if (sscanf(line, "MIRROR START_DIRECT %d %d", &w, &h) == 2 &&
+                w > 0 && h > 0) {
+                int rc = start_direct_mirror_child(w, h);
+                if (rc == 0) {
+                    rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_READY\n");
+                } else {
+                    rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_ERR START_FAILED\n");
+                }
+            } else {
+                rl = snprintf(resp, sizeof(resp), "MIRROR_DIRECT_ERR INVALID\n");
+            }
+            pthread_mutex_lock(&g_send_mutex);
+            (void)write(client_fd, resp, rl);
+            pthread_mutex_unlock(&g_send_mutex);
+            continue;
+        }
+
+        if (strcmp(line, "MIRROR STOP") == 0) {
+            stop_mirror_child();
+            const char *resp = "MIRROR_STOPPED\n";
+            pthread_mutex_lock(&g_send_mutex);
+            (void)write(client_fd, resp, strlen(resp));
+            pthread_mutex_unlock(&g_send_mutex);
             continue;
         }
 
@@ -375,6 +523,7 @@ static int serve_client(int client_fd) {
          * feature prefixes. */
     }
     stop_reader_thread();
+    stop_mirror_child();
     return 0;
 }
 
@@ -394,6 +543,12 @@ static void detach_from_shell(void) {
 }
 
 int main(void) {
+    /* Ignore SIGHUP immediately so the daemon survives the ADB shell stream
+     * closing before setsid() is called.  The bootstrapper spawns with '&'
+     * and closes the stream as soon as it reads MGRD_SPAWN_OK; the default
+     * SIGHUP disposition would kill the process if the shell exits before
+     * setsid() completes.  detach_from_shell() still calls setsid() later. */
+    signal(SIGHUP,  SIG_IGN);
     /* Graceful shutdown on SIGTERM/SIGINT. */
     signal(SIGTERM, signal_handler);
     signal(SIGINT,  signal_handler);

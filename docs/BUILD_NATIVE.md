@@ -295,3 +295,59 @@ $TOOLCHAIN/bin/aarch64-linux-android35-clang \
 
 The binary signals readiness with `R\n` on stdout once the virtual device is created.
 On stdin EOF it destroys the virtual device and exits.
+
+---
+
+## Building the Mirror Server DEX (`megingiard_mirror.dex`)
+
+The privileged-mirror path (FR-M9) runs a small Java server inside `app_process` on the
+device. The server is built from the **`:mirrorserver` Gradle module** (Java only) and
+dexed automatically — there is no manual build step for normal contributors.
+
+### Source
+
+```
+mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
+├── DirectMirrorServer.java    ← direct-to-app-Surface entry point
+└── SurfaceControlReflect.java ← cached reflection wrappers for hidden SurfaceControl APIs
+```
+
+### How it builds
+
+1. The `:mirrorserver` module is a plain `java` Gradle module configured in
+   `mirrorserver/build.gradle.kts`. It compiles against the local Android SDK's
+   `platforms/android-33/android.jar` as `compileOnly` (the hidden APIs are accessed
+   via reflection at runtime).
+2. A custom `DexTask` invokes the SDK's `d8` with `--min-api 33`, packaging the
+   compiled `.class` files into a single classes.dex.
+3. The dex output is written directly to
+   `app/src/main/assets/megingiard_mirror.dex`, where it is bundled with the APK.
+4. `app/build.gradle.kts` declares `dependsOn(":mirrorserver:dex")` on the relevant
+   asset/package tasks, so a normal `./gradlew :app:assembleDebug` always produces a
+   fresh DEX.
+
+### Manual rebuild (rarely needed)
+
+```bash
+./gradlew :mirrorserver:dex
+```
+
+### Runtime deployment
+
+`PrivdBootstrapper` pushes the DEX to `/data/local/tmp/megingiard_mirror.dex`
+during ADB-Wireless bootstrap (mode `0100644`). For direct-Surface privileged
+mirroring, the daemon spawns:
+
+```bash
+CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
+   /system/bin/app_process /data/local/tmp \
+   com.stormpanda.megingiard.mirrorserver.DirectMirrorServer \
+   <socket> <w> <h>
+```
+
+`DirectMirrorServer` registers a temporary `ServiceManager` Binder named
+`megingiard.direct.surface`, binds its readiness socket, then waits for the app
+to send the currently published `MirrorPresentation.SurfaceView` `Surface` over
+Binder. Once received, it configures a hidden `SurfaceControl` virtual display
+directly onto that Surface. If this path fails, the app falls back to the normal
+MediaProjection consent flow.

@@ -286,6 +286,11 @@ data class PadButton(
  * @param mirrorSavedScale            Persisted mirror zoom level.
  * @param mirrorSavedOffsetX          Persisted mirror pan X offset.
  * @param mirrorSavedOffsetY          Persisted mirror pan Y offset.
+ * @param mirrorAutoStart             Remembered mirror preference for this layout. Set to
+ *                                    `true` when the user explicitly starts mirroring on
+ *                                    this layout, and to `false` when the user explicitly
+ *                                    stops mirroring or cancels the consent prompt. Runtime
+ *                                    service teardown does not mutate this flag.
  */
 @Serializable
 data class PadLayout(
@@ -303,6 +308,7 @@ data class PadLayout(
     val mirrorSavedScale: Float = 1f,
     val mirrorSavedOffsetX: Float = 0f,
     val mirrorSavedOffsetY: Float = 0f,
+    val mirrorAutoStart: Boolean = false,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -72,6 +72,25 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
 
+### FR-M8: Auto-start Gating (Global + Per-Layout Memory)
+
+- A global "Auto-start mirroring" setting (in Global Settings → General) MUST control whether mirroring resumes automatically on app launch and on layout switch.
+- Each MacroPad layout MUST remember its last mirror state independently:
+  - `PadLayout.mirrorAutoStart = true` is recorded when the user explicitly starts mirroring for that layout.
+  - `PadLayout.mirrorAutoStart = false` is recorded when the user explicitly stops mirroring for that layout or cancels the MediaProjection consent prompt.
+- The capture-prompt MUST auto-launch only when **both** the global setting is enabled **and** the active layout's remembered state is `true`.
+- Switching to a layout whose remembered state is `false` while currently capturing MUST stop the runtime mirror session without changing any layout's persisted remembered state.
+- Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt when the global auto-start setting is enabled.
+- The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the global setting or the layout's remembered state.
+
+### FR-M9: Privileged Mirror (No-Consent Path)
+
+- When **Global Settings → Privileged Mode → Privileged Mirror** is enabled **and** the privileged daemon is `RUNNING`, the mirror MUST start without showing the system MediaProjection consent dialog.
+- The privileged path MUST be transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
+- The privileged path MUST use direct SurfaceControl output by passing the app-owned `SurfaceView` `Surface` to the shell `app_process` mirror server. If direct setup fails, it MUST fall back to the normal MediaProjection consent flow.
+- DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
+- When the per-feature flag is off, or the daemon is not `RUNNING`, the standard MediaProjection path MUST remain in use unchanged.
+
 ---
 
 ## Technical Implementation
@@ -95,6 +114,50 @@ Primary Display
 - **`MirrorPresentation`** is an `android.app.Presentation` instance anchored to the secondary physical display (`displayId != DEFAULT_DISPLAY`, auto-discovered via `DisplayManager`). It contains both the `SurfaceView` (hardware buffer recipient) and a `ComposeView` (UI overlay with `MirrorScreen`).
 - **Presentation focus policy:** while the Presentation hosts the ambient MacroPad and no PillMenu/editor/settings/file-picker overlay is open, its window is marked `FLAG_NOT_FOCUSABLE`. This allows the secondary display to keep receiving touch input without stealing focus from a primary-display game that owns Android pointer capture.
 - **`SurfaceView.setZOrderMediaOverlay(true)`** is critical: without it, the hardware buffer renders _behind_ the window background, producing a black screen even though GPU rendering succeeds.
+
+### Architecture: Privileged Capture Pipeline (FR-M9)
+
+When the Privileged Mirror flag is enabled and the daemon is `RUNNING`, the
+capture pipeline bypasses `MediaProjection` entirely when direct-Surface setup
+succeeds. If direct setup fails, the app tears down the privileged attempt and
+launches the normal MediaProjection consent flow:
+
+```
+App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s0)
+  │                                          │
+  │  "MIRROR START_DIRECT w h\n"             │
+  ├─────────────── socket ──────────────────►│
+  │                                          │ fork() + execv("/system/bin/app_process")
+  │                                          │ CLASSPATH=/data/local/tmp/megingiard_mirror.dex
+  │                                          ▼
+  │                              DirectMirrorServer (Java, in app_process)
+  │                                          │ register ServiceManager Binder
+  │  "MIRROR_DIRECT_READY\n"                 │ after readiness socket is bound
+  │◄────────────── socket ───────────────────┤
+  │                                          │
+  │  send MirrorPresentation Surface          │
+  ├─────────────── Binder ───────────────────►│ createDisplay() + setDisplaySurface(surface)
+```
+
+The direct-Surface target architecture is:
+
+```
+Primary display layer stack (0)
+   │
+   ▼ SurfaceControl virtual display (shell UID)
+   │
+   └──── setDisplaySurface(app Surface) ─────► MirrorPresentation.SurfaceView
+                                                Compose / Macro overlays stay above it
+```
+
+- **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `app/src/main/assets/`.
+- **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (standard MediaProjection path remains usable).
+- **Daemon control protocol** adds `MIRROR START_DIRECT w h` and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. `QUIT` and connection-end paths terminate any running mirror child.
+- **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current `MirrorPresentation.SurfaceView` `Surface` to the server.
+- **`DirectMirrorServer.java`** runs in the shell `app_process`, registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, receives the app-owned `Surface` over Binder, creates a hidden `SurfaceControl` display, and points that display at the app Surface with `setDisplaySurface()`. This preserves the app's `MirrorPresentation` `ComposeView` overlay without an intermediate codec stream.
+- **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, while `ScreenCaptureService` sends the current app Surface to the direct server and launches the MediaProjection consent flow when either step fails.
+- **`ScreenCaptureService`** routes `ACTION_START_PRIVD` to a separate `startPrivdPath()` which uses `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` (vs. `FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION` for the standard path). All viewport/touch-projection state is shared between the two paths.
+- **DRM caveat:** `SurfaceControl.createDisplay(name, secure=false)` produces a non-secure virtual display. DRM-protected surfaces (Widevine, Netflix, etc.) are blanked by SurfaceFlinger when composited to a non-secure target — the same behaviour as `scrcpy`. Setting `secure=true` would require `INTERNAL_SYSTEM_WINDOW`, which the shell UID does not have.
 
 ### Synthetic Lifecycle Owner
 
@@ -284,6 +347,37 @@ An optional setting ("Pinch-to-zoom while projecting", default off) allows the u
 - Two-finger touches are **never forwarded** to the primary display.
 
 **Setting storage:** `mirror_pinch_while_projecting` (`BooleanPreference`) in DataStore. Default: `false`.
+
+### Auto-start Gating
+
+The auto-start logic in `MainActivity` derives an "effective auto-start" signal by combining two inputs:
+
+| Input                                | Source                                                                                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Global "Auto-start mirroring" toggle | `SettingsManager.autoStartCapture` (`StateFlow<Boolean>`) — DataStore key `auto_start_capture`.                                        |
+| Active layout's remembered state     | `MacroPadState.activeLayout.mirrorAutoStart` (`Boolean`) — persisted inside the MacroPad profile JSON via `PadLayout.mirrorAutoStart`. |
+
+**Recording the layout state.** `PadLayout.mirrorAutoStart` is the single source of truth for whether each layout last wanted mirroring on or off. It is persisted in the MacroPad profile JSON:
+
+- On explicit user start via the MirrorPlayStop button: `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, true)`.
+- On explicit user stop via the MirrorPlayStop button: `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
+- On MediaProjection consent cancellation: `CaptureRequestActivity` records `MacroPadState.setLayoutMirrorAutoStart(activeLayoutId, false)`.
+
+`ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
+
+**Runtime reconciliation.** `MainActivity` combines the prompt, capture, global auto-start, active-layout, and privd-connection `StateFlow`s into a `MirrorRuntimePolicyState`. The active layout's `mirrorAutoStart` flag is evaluated directly on every emission: if it is `false` while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If it is `true` while no session is running, global auto-start decides whether `MainActivity` starts the mirror flow.
+
+```
+isOnValidScreen && !promptInFlight && !isCapturing &&
+  globalMirrorAutoStart && activeLayout.mirrorAutoStart &&
+  !privdMirrorConnecting
+```
+
+`privdMirrorConnecting` is `true` while privd mirror is enabled and the daemon is in a transient state (`CONNECTING`, `BOOTSTRAPPING`, or `OFF` with auto-connect pending). This prevents the policy from selecting the `MEDIA_PROJECTION` consent path on fresh app launch before the privd auto-connect coroutine has had a chance to establish the connection. Once the daemon settles (`RUNNING` → privd path; `FAILED`/`OFF` → consent fallback), the combine re-emits and the policy re-evaluates with the correct strategy.
+
+When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror strategy and either starts the privileged service (`ACTION_START_PRIVD`) or opens `CaptureRequestActivity` on the primary display. The flow re-evaluates on every layout switch, so switching to a layout whose remembered state is `true` (with global auto-start on and no active session) starts mirroring.
+
+**Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the global setting is off.
 
 ### Source Files
 

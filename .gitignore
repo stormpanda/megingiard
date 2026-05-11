@@ -12,6 +12,7 @@
 /app/build
 /core/build
 /domain/build
+/mirrorserver/build
 /captures
 .externalNativeBuild
 .cxx

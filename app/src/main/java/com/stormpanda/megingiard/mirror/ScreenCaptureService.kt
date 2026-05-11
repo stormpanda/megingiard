@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import android.app.Activity
+import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,10 +15,10 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.IBinder
 import android.view.Display
-import android.view.Surface
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CaptureRequestActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.AmbientSettings
@@ -30,23 +31,56 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenCaptureService"
 
+const val ACTION_START_PRIVD = "START_PRIVD"
+const val ACTION_STOP = "STOP"
+
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
+    private var directPrivdSession: DirectPrivdMirrorSession? = null
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
+    private var consentFallbackInFlight = false
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        // Hide the mirror / recording presentations when the user explicitly navigates
+        // away (Home button, Recents). Show them again when the user returns.
+        //
+        // We use isUserLeaving (set in onUserLeaveHint / cleared on ON_RESUME) rather
+        // than isActivityResumed to avoid a feedback loop: the Presentation window sits
+        // above the Activity on the secondary display, which causes ON_PAUSE/ON_STOP to
+        // fire immediately after show() — isActivityResumed would then toggle hide() and
+        // trigger an indefinite cycle. onUserLeaveHint is NOT called for Presentation
+        // coverage, only for genuine user navigation.
+        scope.launch {
+            AppStateManager.isUserLeaving.collect { leaving ->
+                AppLog.d(TAG, "isUserLeaving=$leaving → ${if (leaving) "hide" else "show"} presentations")
+                if (leaving) {
+                    mirrorPresentation?.hide()
+                    recordingPresentation?.hide()
+                } else {
+                    mirrorPresentation?.show()
+                    recordingPresentation?.show()
+                }
+            }
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "STOP") {
+        if (intent?.action == ACTION_STOP) {
             AppLog.i(TAG, "onStartCommand STOP → stopping self")
             stopSelf()
             return START_NOT_STICKY
+        }
+        if (intent?.action == ACTION_START_PRIVD) {
+            return startPrivdPath()
         }
 
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
@@ -92,7 +126,6 @@ class ScreenCaptureService : Service() {
             capturedSecondaryDisplay = secondaryDisplay
             ScreenCaptureManager.setCaptureSourceSize(srcWidth, srcHeight)
 
-            var currentSurface: Surface? = null
             // NOTE: freeze is handled entirely by MirrorPresentation.bindStateFlows:
             // PixelCopy captures the last frame, then sv.visibility = INVISIBLE hides the
             // SurfaceView overlay so the ComposeView frozen-bitmap Image is visible.
@@ -103,26 +136,38 @@ class ScreenCaptureService : Service() {
             mirrorPresentation = presentation
 
             presentation.onSurfaceDestroyed = {
-                virtualDisplay?.release()
-                virtualDisplay = null
+                // Detach the surface but keep the VirtualDisplay alive. Releasing here
+                // would remove a virtual display from the system, causing the launcher on
+                // the secondary display to react (detect display change) and push
+                // Megingiard off the secondary screen the next time show() creates a NEW
+                // VirtualDisplay. By keeping it alive with surface=null we avoid any
+                // system display lifecycle event. The VirtualDisplay is properly released
+                // in onDestroy().
+                virtualDisplay?.setSurface(null)
             }
 
             presentation.onSurfaceReady = { surface ->
-                currentSurface = surface
-                virtualDisplay?.release()
-                val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
-                if (ambientEnabled) {
-                    try {
-                        val isFrozen = ScreenCaptureManager.isFrozen.value
-                        virtualDisplay = mediaProjection?.createVirtualDisplay(
-                            "ScreenCapture",
-                            srcWidth, srcHeight, dpi,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                            if (isFrozen) null else surface, null, null
-                        )
-                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Exception creating VirtualDisplay", e)
+                val isFrozen = ScreenCaptureManager.isFrozen.value
+                val activeSurface = if (isFrozen) null else surface
+                if (virtualDisplay != null) {
+                    // Reattach surface after a hide/show cycle — VirtualDisplay was kept
+                    // alive with surface=null while the Presentation window was hidden.
+                    virtualDisplay?.setSurface(activeSurface)
+                    AppLog.d(TAG, "VirtualDisplay surface reattached after show()")
+                } else {
+                    val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
+                    if (ambientEnabled) {
+                        try {
+                            virtualDisplay = mediaProjection?.createVirtualDisplay(
+                                "ScreenCapture",
+                                srcWidth, srcHeight, dpi,
+                                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                                activeSurface, null, null
+                            )
+                            AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Exception creating VirtualDisplay", e)
+                        }
                     }
                 }
             }
@@ -191,6 +236,112 @@ class ScreenCaptureService : Service() {
         startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
     }
 
+    private fun startForegroundNotificationConnectedDevice() {
+        val channelId = "screen_capture_channel"
+        val channel = NotificationChannel(channelId, "Screen Mirroring", NotificationManager.IMPORTANCE_LOW)
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+
+        val notification = Notification.Builder(this, channelId)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(getString(R.string.notification_mirroring_active))
+            .setSmallIcon(android.R.drawable.ic_menu_view)
+            .build()
+
+        startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+    }
+
+    /**
+     * Starts the privileged direct-Surface mirror path. If direct setup fails,
+     * the service launches the normal MediaProjection consent flow.
+     */
+    private fun startPrivdPath(): Int {
+        if (ScreenCaptureManager.isCapturing.value) {
+            AppLog.w(TAG, "startPrivdPath: already capturing — ignoring duplicate start")
+            return START_NOT_STICKY
+        }
+        startForegroundNotificationConnectedDevice()
+
+        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val secondaryDisplay = displayManager.getDisplays()
+            .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        if (secondaryDisplay == null) {
+            AppLog.e(TAG, "startPrivdPath: no secondary display")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+        val windowContext = createWindowContext(primaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
+        val windowMetrics = windowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
+        val bounds = windowMetrics.bounds
+        val srcWidth = bounds.width()
+        val srcHeight = bounds.height()
+
+        capturedSrcWidth = srcWidth
+        capturedSrcHeight = srcHeight
+        capturedSecondaryDisplay = secondaryDisplay
+        ScreenCaptureManager.setCaptureSourceSize(srcWidth, srcHeight)
+
+        val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
+        mirrorPresentation = presentation
+
+        presentation.onSurfaceDestroyed = {
+            directPrivdSession?.stop()
+        }
+        presentation.onSurfaceReady = { surface ->
+            // Tear down any existing session and start a fresh one bound to the new surface.
+            directPrivdSession?.release()
+            directPrivdSession = null
+            scope.launch {
+                val directSession = DirectPrivdMirrorSession(
+                    srcWidth,
+                    srcHeight,
+                )
+                directPrivdSession = directSession
+                if (directSession.start() && DirectMirrorSurfaceBridge.sendToDirectServer(surface)) {
+                    AppLog.i(TAG, "direct privileged mirror session started")
+                    return@launch
+                }
+                directSession.release()
+                directPrivdSession = null
+                launchConsentFallback("direct privileged mirror unavailable")
+            }
+        }
+
+        MirrorViewportController.startPersistence(scope)
+        scope.launch {
+            MirrorSettings.restoreMirrorSessionState()
+            MirrorViewportController.restoreFromLayout()
+            AppLog.i(TAG, "privd session state restored → setCapturing(true)")
+            ScreenCaptureManager.setCapturing(true)
+            AppStateManager.setPromptInFlight(false)
+            presentation.show()
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun launchConsentFallback(reason: String) {
+        if (consentFallbackInFlight) return
+        AppLog.w(TAG, "$reason — falling back to MediaProjection consent")
+        consentFallbackInFlight = true
+        directPrivdSession?.release()
+        directPrivdSession = null
+        recordingPresentation?.dismiss()
+        recordingPresentation = null
+        mirrorPresentation?.dismiss()
+        mirrorPresentation = null
+        if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
+        AppStateManager.setPromptInFlight(true)
+
+        val options = ActivityOptions.makeBasic()
+        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        val intent = Intent(this, CaptureRequestActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+        }
+        startActivity(intent, options.toBundle())
+        stopSelf()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
@@ -199,13 +350,12 @@ class ScreenCaptureService : Service() {
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
-        AppStateManager.setPromptInFlight(false)
-        // Prevent the auto-start LaunchedEffect in MainActivity from re-triggering capture
-        // as soon as isCapturing transitions to false. The user must explicitly press Start again.
-        AppStateManager.setUserDeclinedCapture(true)
+        if (!consentFallbackInFlight) AppStateManager.setPromptInFlight(false)
         virtualDisplay?.release()
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
+        directPrivdSession?.release()
+        directPrivdSession = null
     }
 }

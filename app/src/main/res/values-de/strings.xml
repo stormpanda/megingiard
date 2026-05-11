@@ -46,6 +46,8 @@
     <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
+    <string name="settings_mirror_auto_start">Spiegelung automatisch starten</string>
+    <string name="settings_mirror_auto_start_desc">Wenn aktiviert, wird die Spiegelung beim App-Start und beim Layout-Wechsel automatisch fortgesetzt für Layouts, in denen sie zuletzt aktiv war</string>
     <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>
@@ -261,10 +263,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_auto_connect_desc">Wenn aktiviert, öffnet Megingiard den Daemon-Socket beim Start lautlos erneut. Wird nach erfolgreicher Erst-Einrichtung automatisch gesetzt.</string>
 
     <string name="privd_feature_gamepad_merge">Gamepad-Merge</string>
-    <string name="privd_feature_gamepad_merge_desc">Sendet MacroPad-Gamepad-Aktionen direkt an den verbundenen physischen Controller, sodass Spiele nur ein Gerät sehen. Deaktivieren, um das klassische virtuelle Gamepad zu verwenden.</string>
+    <string name="privd_feature_gamepad_merge_desc">Sendet MacroPad-Gamepad-Aktionen direkt an den verbundenen physischen Controller, sodass Spiele nur ein Gerät sehen. Deaktivieren, um das virtuelle Standard-Gamepad zu verwenden.</string>
 
     <string name="privd_feature_gamepad_recording">Physisches Gamepad aufzeichnen</string>
     <string name="privd_feature_gamepad_recording_desc">Nimmt Makro-Schritte direkt vom physischen Gamepad auf (Analogsticks, Tasten). Wenn aktiviert, nutzt die Aufnahme-Schaltfläche im Timeline-Editor den physischen Controller statt des virtuellen On-Screen-Gamepads.</string>
+
+    <string name="privd_feature_mirror">Privilegierte Spiegelung</string>
+    <string name="privd_feature_mirror_desc">Spiegelt den Primärbildschirm über den geräteinternen privilegierten Daemon (kein MediaProjection-Dialog, geringere CPU-Last). DRM-geschützte Videoframes erscheinen schwarz — wie bei scrcpy.</string>
 
     <!-- Dead-zone-Einstellungen Zeile + Dialog -->
     <string name="privd_deadzone_title">Deadzones einstellen</string>

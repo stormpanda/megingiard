@@ -41,6 +41,8 @@
     <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
+    <string name="settings_mirror_auto_start">Auto-start mirroring</string>
+    <string name="settings_mirror_auto_start_desc">When enabled, mirroring resumes on app launch and on layout switch for layouts that were last running with mirror on</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
@@ -299,10 +301,13 @@ Open Settings to create a layout.</string>
     <string name="privd_auto_connect_desc">When enabled, Megingiard silently re-opens the daemon socket on launch. Set automatically after a successful first-time setup.</string>
 
     <string name="privd_feature_gamepad_merge">Gamepad merge</string>
-    <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the legacy virtual gamepad.</string>
+    <string name="privd_feature_gamepad_merge_desc">Inject MacroPad gamepad actions into the connected physical controller so games see only one device. Disable to use the standard virtual gamepad.</string>
 
     <string name="privd_feature_gamepad_recording">Physical gamepad recording</string>
     <string name="privd_feature_gamepad_recording_desc">Capture macro steps directly from the physical gamepad (analog sticks, buttons). When enabled, the Record button in the timeline editor uses the physical controller instead of the on-screen virtual gamepad.</string>
+
+    <string name="privd_feature_mirror">Privileged mirror</string>
+    <string name="privd_feature_mirror_desc">Mirror the primary screen via the on-device privileged daemon (no MediaProjection consent dialog, lower CPU). DRM-protected video frames will appear black — same as scrcpy.</string>
 
     <!-- Dead-zone settings row + dialog -->
     <string name="privd_deadzone_title">Configure dead zones</string>

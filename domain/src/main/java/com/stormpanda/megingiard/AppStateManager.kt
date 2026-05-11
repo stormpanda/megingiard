@@ -38,22 +38,32 @@ object AppStateManager {
     private val _isActivityResumed = MutableStateFlow(true)
     val isActivityResumed: StateFlow<Boolean> = _isActivityResumed.asStateFlow()
 
+    /**
+     * True from the moment [onUserLeaveHint][android.app.Activity.onUserLeaveHint] fires
+     * (Home button, Recents navigation) until the next [ON_RESUME][androidx.lifecycle.Lifecycle.Event.ON_RESUME].
+     *
+     * Unlike [isActivityResumed], this flag is NOT set when a [android.app.Presentation]
+     * or other window owned by the same process covers the Activity — only genuine
+     * user-initiated navigation away sets it. This makes it safe to use for
+     * hiding/showing mirror presentations without creating a feedback loop.
+     */
+    private val _isUserLeaving = MutableStateFlow(false)
+    val isUserLeaving: StateFlow<Boolean> = _isUserLeaving.asStateFlow()
+
     private val _isOnValidScreen = MutableStateFlow(true)
     val isOnValidScreen: StateFlow<Boolean> = _isOnValidScreen.asStateFlow()
 
-    // Defaults to true so mirror capture requires an explicit user action (button press).
-    private val _userDeclinedCapture = MutableStateFlow(true)
-    val userDeclinedCapture: StateFlow<Boolean> = _userDeclinedCapture.asStateFlow()
-
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
+
+    private val _mirrorAutoStartSuppressedLayoutId = MutableStateFlow<String?>(null)
+    val mirrorAutoStartSuppressedLayoutId: StateFlow<String?> = _mirrorAutoStartSuppressedLayoutId.asStateFlow()
 
     // ── Mirror control signals ────────────────────────────────────────────────
     // One-shot fire-and-forget flags: MainActivity resets them after handling.
 
     /** Set to true by MirrorPlayStop when mirror is not yet capturing; MainActivity launches
-     * CaptureRequestActivity and resets. Distinct from userDeclinedCapture so that a "declined"
-     * state within the session can be overridden by an explicit button press. */
+     * CaptureRequestActivity and resets. */
     private val _mirrorStartRequested = MutableStateFlow(false)
     val mirrorStartRequested: StateFlow<Boolean> = _mirrorStartRequested.asStateFlow()
 
@@ -86,17 +96,29 @@ object AppStateManager {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed
     }
+    fun setUserLeaving(leaving: Boolean) {
+        AppLog.d(TAG, "setUserLeaving($leaving)")
+        _isUserLeaving.value = leaving
+    }
     fun setOnValidScreen(valid: Boolean) {
         AppLog.i(TAG, "setOnValidScreen($valid)")
         _isOnValidScreen.value = valid
     }
-    fun setUserDeclinedCapture(declined: Boolean) {
-        AppLog.d(TAG, "setUserDeclinedCapture($declined)")
-        _userDeclinedCapture.value = declined
-    }
     fun setPromptInFlight(inFlight: Boolean) {
         AppLog.d(TAG, "setPromptInFlight($inFlight)")
         _promptInFlight.value = inFlight
+    }
+
+    fun suppressMirrorAutoStart(layoutId: String) {
+        AppLog.d(TAG, "suppressMirrorAutoStart($layoutId)")
+        _mirrorAutoStartSuppressedLayoutId.value = layoutId
+    }
+
+    fun clearMirrorAutoStartSuppression(layoutId: String) {
+        if (_mirrorAutoStartSuppressedLayoutId.value == layoutId) {
+            AppLog.d(TAG, "clearMirrorAutoStartSuppression($layoutId)")
+            _mirrorAutoStartSuppressedLayoutId.value = null
+        }
     }
 
     // ── Touch / gesture state ─────────────────────────────────────────────────

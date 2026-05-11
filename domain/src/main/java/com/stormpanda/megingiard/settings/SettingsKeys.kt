@@ -70,6 +70,7 @@ internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap
 // Privileged Mode — per-feature enable flags (only effective while PrivdManager is RUNNING)
 internal val KEY_PRIVD_GAMEPAD_MERGE_ENABLED = booleanPreferencesKey("privd_gamepad_merge_enabled")
 internal val KEY_PRIVD_GAMEPAD_RECORDING_ENABLED = booleanPreferencesKey("privd_gamepad_recording_enabled")
+internal val KEY_PRIVD_MIRROR_ENABLED = booleanPreferencesKey("privd_mirror_enabled")
 
 // Privileged Mode — auto-connect on app start once the user has bootstrapped at least once.
 internal val KEY_PRIVD_AUTO_CONNECT = booleanPreferencesKey("privd_auto_connect")
@@ -120,6 +121,7 @@ private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_GAMEPAD_SWAP_FACE_BUTTONS,
     KEY_PRIVD_GAMEPAD_MERGE_ENABLED,
     KEY_PRIVD_GAMEPAD_RECORDING_ENABLED,
+    KEY_PRIVD_MIRROR_ENABLED,
     KEY_PRIVD_AUTO_CONNECT,
     KEY_PRIVD_DEADZONE_LEFT,
     KEY_PRIVD_DEADZONE_RIGHT,

@@ -30,3 +30,4 @@ rootProject.name = "Megingiard"
 include(":app")
 include(":domain")
 include(":core")
+include(":mirrorserver")
