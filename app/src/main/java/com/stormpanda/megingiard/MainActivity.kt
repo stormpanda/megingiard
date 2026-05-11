@@ -257,6 +257,18 @@ class MainActivity : ComponentActivity() {
             // gate when not already running), false means this layout should not mirror.
             LaunchedEffect(isOnValidScreenLocal) {
                 var lastPolicyLayoutId: String? = null
+                // True while privd mirror is enabled and the daemon is still connecting
+                // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
+                // auto-start so the strategy decision waits for the daemon to settle.
+                val privdMirrorConnectingFlow = combine(
+                    MacroPadSettings.privdMirrorEnabled,
+                    MacroPadSettings.privdAutoConnect,
+                    PrivdManager.state,
+                ) { enabled, autoConnect, privdState ->
+                    enabled && (privdState == PrivdState.CONNECTING ||
+                        privdState == PrivdState.BOOTSTRAPPING ||
+                        (privdState == PrivdState.OFF && autoConnect))
+                }
                 combine(
                     AppStateManager.promptInFlight,
                     AppStateManager.mirrorAutoStartSuppressedLayoutId,
@@ -274,6 +286,9 @@ class MainActivity : ComponentActivity() {
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
                     )
                 }
+                    .combine(privdMirrorConnectingFlow) { policy, connecting ->
+                        policy.copy(privdMirrorConnecting = connecting)
+                    }
                     .distinctUntilChanged()
                     .collect { policy ->
                         if (policy.layoutId != lastPolicyLayoutId) {

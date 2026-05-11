@@ -163,4 +163,40 @@ class MirrorRuntimePolicyTest {
 
         assertEquals(MirrorRuntimeAction.NONE, decision)
     }
+
+    @Test
+    fun `does not start while privd mirror daemon is connecting`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = true,
+                isCapturing = false,
+                globalAutoStart = true,
+                layoutId = LAYOUT_A,
+                layoutWantsMirror = true,
+                autoStartSuppressed = false,
+                privdMirrorConnecting = true,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
+
+    @Test
+    fun `starts when privd mirror daemon is settled (not connecting)`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = true,
+                isCapturing = false,
+                globalAutoStart = true,
+                layoutId = LAYOUT_A,
+                layoutWantsMirror = true,
+                autoStartSuppressed = false,
+                privdMirrorConnecting = false,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.START, decision)
+    }
 }

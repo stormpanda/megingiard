@@ -9,6 +9,13 @@ data class MirrorRuntimePolicyState(
     val layoutId: String?,
     val layoutWantsMirror: Boolean,
     val autoStartSuppressed: Boolean,
+    /**
+     * True while the privd mirror daemon is in a transient connecting state
+     * (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending).
+     * Blocks policy auto-start until the daemon settles so the correct
+     * strategy (privd vs. MediaProjection consent) can be selected.
+     */
+    val privdMirrorConnecting: Boolean = false,
 )
 
 enum class MirrorRuntimeAction {
@@ -36,7 +43,8 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
             state.globalAutoStart &&
             !state.autoStartSuppressed &&
             !state.isCapturing &&
-            !state.promptInFlight -> MirrorRuntimeAction.START
+            !state.promptInFlight &&
+            !state.privdMirrorConnecting -> MirrorRuntimeAction.START
         else -> MirrorRuntimeAction.NONE
     }
 }
