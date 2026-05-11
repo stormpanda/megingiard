@@ -136,25 +136,38 @@ class ScreenCaptureService : Service() {
             mirrorPresentation = presentation
 
             presentation.onSurfaceDestroyed = {
-                virtualDisplay?.release()
-                virtualDisplay = null
+                // Detach the surface but keep the VirtualDisplay alive. Releasing here
+                // would remove a virtual display from the system, causing the launcher on
+                // the secondary display to react (detect display change) and push
+                // Megingiard off the secondary screen the next time show() creates a NEW
+                // VirtualDisplay. By keeping it alive with surface=null we avoid any
+                // system display lifecycle event. The VirtualDisplay is properly released
+                // in onDestroy().
+                virtualDisplay?.setSurface(null)
             }
 
             presentation.onSurfaceReady = { surface ->
-                virtualDisplay?.release()
-                val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
-                if (ambientEnabled) {
-                    try {
-                        val isFrozen = ScreenCaptureManager.isFrozen.value
-                        virtualDisplay = mediaProjection?.createVirtualDisplay(
-                            "ScreenCapture",
-                            srcWidth, srcHeight, dpi,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                            if (isFrozen) null else surface, null, null
-                        )
-                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Exception creating VirtualDisplay", e)
+                val isFrozen = ScreenCaptureManager.isFrozen.value
+                val activeSurface = if (isFrozen) null else surface
+                if (virtualDisplay != null) {
+                    // Reattach surface after a hide/show cycle — VirtualDisplay was kept
+                    // alive with surface=null while the Presentation window was hidden.
+                    virtualDisplay?.setSurface(activeSurface)
+                    AppLog.d(TAG, "VirtualDisplay surface reattached after show()")
+                } else {
+                    val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
+                    if (ambientEnabled) {
+                        try {
+                            virtualDisplay = mediaProjection?.createVirtualDisplay(
+                                "ScreenCapture",
+                                srcWidth, srcHeight, dpi,
+                                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                                activeSurface, null, null
+                            )
+                            AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Exception creating VirtualDisplay", e)
+                        }
                     }
                 }
             }
