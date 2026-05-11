@@ -29,7 +29,24 @@ fun resolveSdkRoot(): File {
     return file("${System.getProperty("user.home")}/Library/Android/sdk")
 }
 
-val androidJarFile: File = resolveSdkRoot().resolve("platforms/android-33/android.jar")
+fun resolveAndroidJar(sdkRoot: File): File {
+    // Prefer the same API level used to compile the app module (35).
+    // Fall back to the highest installed platform so the build works on
+    // machines where only an older SDK platform is present.
+    val preferred = sdkRoot.resolve("platforms/android-35/android.jar")
+    if (preferred.exists()) return preferred
+    val platformsDir = sdkRoot.resolve("platforms")
+    val fallback = platformsDir.listFiles()
+        ?.filter { it.isDirectory && it.resolve("android.jar").exists() }
+        ?.maxByOrNull { it.name.removePrefix("android-").toIntOrNull() ?: 0 }
+        ?.resolve("android.jar")
+    checkNotNull(fallback) {
+        "No android.jar found under $platformsDir. Install at least one Android SDK platform."
+    }
+    return fallback
+}
+
+val androidJarFile: File = resolveAndroidJar(resolveSdkRoot())
 
 dependencies {
     compileOnly(files(androidJarFile))

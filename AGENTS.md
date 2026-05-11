@@ -8,15 +8,15 @@
 
 ## 1 Project Identity
 
-| Key               | Value                                                     |
-| ----------------- | --------------------------------------------------------- |
-| **Package**       | `com.stormpanda.megingiard`                               |
-| **Language**      | Kotlin 2.0+ (no Java files)                               |
-| **UI Framework**  | Jetpack Compose (Material 3, BOM-managed)                 |
-| **Min SDK**       | 33 — **must not be raised**                               |
-| **Target SDK**    | 35                                                        |
-| **Build System**  | Gradle (Kotlin DSL), version catalog `libs.versions.toml` |
-| **Device Target** | AYN Thor dual-screen Android handheld                     |
+| Key               | Value                                                                                                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Package**       | `com.stormpanda.megingiard`                                                                                                                                                                            |
+| **Language**      | Kotlin 2.0+ (no Java files). **Exception:** the `:mirrorserver` module uses Java because it produces a standalone shell-UID DEX loaded by `/system/bin/app_process`. No new Java modules may be added. |
+| **UI Framework**  | Jetpack Compose (Material 3, BOM-managed)                                                                                                                                                              |
+| **Min SDK**       | 33 — **must not be raised**                                                                                                                                                                            |
+| **Target SDK**    | 35                                                                                                                                                                                                     |
+| **Build System**  | Gradle (Kotlin DSL), version catalog `libs.versions.toml`                                                                                                                                              |
+| **Device Target** | AYN Thor dual-screen Android handheld                                                                                                                                                                  |
 
 ---
 

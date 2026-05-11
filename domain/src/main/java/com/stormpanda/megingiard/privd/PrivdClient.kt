@@ -265,6 +265,8 @@ object PrivdClient {
         pingDeferred = null
         mirrorDirectStartDeferred?.complete(false)
         mirrorDirectStartDeferred = null
+        mirrorStopDeferred?.complete(false)
+        mirrorStopDeferred = null
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null

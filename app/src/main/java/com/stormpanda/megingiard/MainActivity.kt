@@ -314,7 +314,7 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.clearMirrorAutoStartSuppression(layoutId)
                     MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
                     MacroPadState.activeLayout
-                        .map { layout -> layout?.id == layoutId && layout.mirrorAutoStart }
+                        .map { layout -> layout?.id == layoutId && layout?.mirrorAutoStart == true }
                         .first { it }
                 }
                 // Manual start bypasses the global auto-start gate — launch directly.
