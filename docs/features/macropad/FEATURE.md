@@ -141,8 +141,7 @@ Each button supports one of the following actions:
 - Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable **layout bar** with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
 - Each layout chip has an **enable/disable toggle** and, when more than one layout exists, a delete action. Disabled layouts are skipped in the Pill Menu layout list in use mode.
 - **At least one layout must remain enabled** — disabling the last enabled layout is prevented.
-- A new layout can be created as **blank** or from a **template**. The template picker (`NewLayoutOverlay`) lists all layouts from all profiles; selecting one deep-copies its buttons with new UUIDs.
-- Quick layout creation from the **PillMenu** creates a blank layout with a user-provided name (no template selection).
+- A new layout can be created as **blank** or from a **template**. The unified `NewLayoutOverlay` (used in both the MacroPad Editor and PillMenu) lists all layouts from all profiles; selecting one deep-copies its buttons with new UUIDs. The template list is **scrollable with a maximum height limit** and includes small padding above and below for consistent visual spacing.
 - Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all enabled layouts** in the profile (via `withSyncedDeviceFlags()`).
 - Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). If a stored `PadProfile` does not contain a `layouts` list, a default layout named "Layout 1" is created on load, populated with the profile's top-level `buttons` list.
 
