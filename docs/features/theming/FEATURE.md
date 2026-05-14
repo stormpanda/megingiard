@@ -26,7 +26,7 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 ### FR-TH2: Token-Based Colour Architecture
 
-- All screen and component colours MUST be expressed through the 26 semantic tokens defined in `AppColors`.
+- All screen and component colours MUST be expressed through the 30 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
   - HSV colour-wheel rendering math in `ColorWheelPicker.kt` (saturation gradient, brightness overlay, selector dot ring).
   - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour (e.g. white in Dark/Light, dark red in Cyberpunk).
@@ -45,7 +45,7 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 ### Token Definitions — `ui/AppTheme.kt`
 
-Twenty-six semantic `AppColors` tokens cover all theming needs:
+Thirty semantic `AppColors` tokens cover all theming needs:
 
 | Token                    | Semantic purpose                                                        |
 | ------------------------ | ----------------------------------------------------------------------- |
@@ -75,6 +75,14 @@ Twenty-six semantic `AppColors` tokens cover all theming needs:
 | `navPillBorder`          | Border/outline of the navigation pill                                   |
 | `mirrorPillBorder`       | Border/outline of the mirror control pill                               |
 | `buttonIconTint`         | Icon tint on mirror control buttons                                     |
+| `error`                  | Destructive/error action color                                          |
+| `onError`                | Text/icons on error-colored surfaces                                    |
+| `actionColorGamepad`     | Badge tint for gamepad/joystick macro step chips                        |
+| `actionColorSystem`      | Badge tint for system/d-pad macro step chips                            |
+| `macroPadSurface`        | MacroPad button-placement canvas/surface                                |
+| `macroPadOnSurface`      | MacroPad button-placement text/icons                                    |
+| `macroPadAccentBorder`   | MacroPad placement border/outline tint                                  |
+| `sectionHeaderColor`     | Uppercase section-header label tint                                     |
 
 ### Palettes
 
@@ -82,7 +90,7 @@ Three palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `lightPalette` — white/light-grey surfaces with near-black text.
-- `cyberpunkPalette` — dark blood-red surfaces, vivid red text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red overlay/icon tint, with cyan borders on interactive controls and a yellow pull-tab pill (inspired by the Cyberpunk 2077 menu).
+- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white pull-tab/section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -278,8 +286,12 @@ Modifier.padding(dimens.paddingLarge)
 | Token                | Dark          | Light         | Cyberpunk     | Usage                                 |
 | -------------------- | ------------- | ------------- | ------------- | ------------------------------------- |
 | `error`              | `0xFFCF6679`  | `0xFFB00020`  | `CP_ACCENT`   | Destructive action text, error states |
-| `onError`            | `Color.White` | `Color.White` | `Color.Black` | Text on error-colored surfaces        |
+| `onError`            | `Color.White` | `Color.White` | `CP_DARK_RED` | Text on error-colored surfaces        |
 | `actionColorGamepad` | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`  | Gamepad button step indicators        |
 | `actionColorSystem`  | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`   | System/mirror action indicators       |
+| `macroPadSurface`    | `0xFF1C1C1E`  | `0xFF1C1C1E`  | `CP_SURFACE`  | MacroPad placement canvas surface     |
+| `macroPadOnSurface`  | `Color.White` | `Color.White` | `CP_TEXT`     | MacroPad placement labels/icons       |
+| `macroPadAccentBorder` | `White@30%` | `White@30%`   | `CP_ACCENT@35%` | MacroPad placement border tint      |
+| `sectionHeaderColor` | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
 
 Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` in screen code.

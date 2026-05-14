@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.SystemClock
 import android.os.Vibrator
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,9 +49,9 @@ import kotlinx.coroutines.delay
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val MP_CORNER_RADIUS = 8.dp
+private val MP_CORNER_RADIUS = 0.dp
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
-internal val MP_SCREEN_PADDING = 4.dp
+internal val MP_SCREEN_PADDING = 0.dp
 
 // Sensitivity of trackpoint drag: px input → mouse delta
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
@@ -214,11 +213,7 @@ internal fun PadSurface(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(MP_CORNER_RADIUS))
-                .background(if (transparentBackground) Color.Transparent else colors.surface)
-                .then(
-                    if (transparentBackground) Modifier
-                    else Modifier.border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
-                )
+                .background(if (transparentBackground) Color.Transparent else colors.macroPadSurface)
                 .onSizeChanged { canvasSizeState.value = it }
                 .pointerInput(profile, layout, canvasSizeState.value) {
                     awaitPointerEventScope {

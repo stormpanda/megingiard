@@ -106,7 +106,7 @@ internal fun PadButton(
     val effectiveBg           = if (neutralStyle) MP_AMBIENT_NEUTRAL_BG     else accentColor
     val effectiveBorder       = if (neutralStyle) MP_AMBIENT_NEUTRAL_BORDER else accentColor
     val effectiveContentAccent = if (neutralStyle) MP_AMBIENT_NEUTRAL_TEXT  else accentColor
-    val effectiveTextTint     = if (neutralStyle) MP_AMBIENT_NEUTRAL_TEXT   else colors.onSurface
+    val effectiveTextTint     = if (neutralStyle) MP_AMBIENT_NEUTRAL_TEXT   else colors.macroPadOnSurface
 
     val alphaTarget  = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS

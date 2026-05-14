@@ -333,7 +333,7 @@ fun PillMenu(
 private fun SectionLabel(text: String, colors: AppColors) {
     Text(
         text = text.uppercase(Locale.ROOT),
-        color = colors.onControlOverlay.copy(alpha = 0.55f),
+        color = colors.sectionHeaderColor,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 0.8.sp,
