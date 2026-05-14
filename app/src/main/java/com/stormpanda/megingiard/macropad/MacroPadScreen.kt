@@ -50,9 +50,9 @@ import kotlinx.coroutines.delay
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val MP_CORNER_RADIUS = 8.dp
+private val MP_CORNER_RADIUS = 0.dp
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
-internal val MP_SCREEN_PADDING = 4.dp
+internal val MP_SCREEN_PADDING = 0.dp
 
 // Sensitivity of trackpoint drag: px input → mouse delta
 private const val MP_TRACKPOINT_SENSITIVITY = 3f

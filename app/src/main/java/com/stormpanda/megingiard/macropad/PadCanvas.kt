@@ -109,8 +109,8 @@ internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Col
     val padModifier = Modifier
         .width(padWidth)
         .height(padHeight)
-        .border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(4.dp))
-        .clip(RoundedCornerShape(4.dp))
+        .border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(0.dp))
+        .clip(RoundedCornerShape(0.dp))
         .background(colors.macroPadSurface)
         .onSizeChanged { canvasSize = it }
 
