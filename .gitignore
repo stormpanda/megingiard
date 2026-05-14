@@ -15,6 +15,7 @@
 /domain/build
 /mirrorserver/build
 /captures
+/screenshots
 .externalNativeBuild
 .cxx
 local.properties

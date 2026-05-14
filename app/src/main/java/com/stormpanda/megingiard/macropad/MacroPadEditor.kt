@@ -511,9 +511,8 @@ private fun EditorBody(
     }
 
     LazyColumn(
-        state          = lazyListState,
-        modifier       = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = ED_PADDING),
+        state    = lazyListState,
+        modifier = modifier.fillMaxSize(),
     ) {
         // 1. Layout section header
         item(key = "section_layout") {
@@ -631,7 +630,6 @@ private fun EditorBody(
                         },
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
-                        modifier           = Modifier.padding(horizontal = ED_PADDING),
                     )
                     HorizontalDivider(
                         color    = colors.divider,
@@ -883,7 +881,7 @@ private fun ButtonListItem(
             .alpha(if (isDeviceDisabled) 0.38f else 1f)
             .background(if (isDragging) colors.surfaceVariant else colors.surface)
             .clickable { onEdit() }
-            .padding(horizontal = 4.dp, vertical = 10.dp),
+            .padding(start = ED_PADDING, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Shape indicator
