@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.SystemClock
 import android.os.Vibrator
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -215,10 +214,6 @@ internal fun PadSurface(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(MP_CORNER_RADIUS))
                 .background(if (transparentBackground) Color.Transparent else colors.macroPadSurface)
-                .then(
-                    if (transparentBackground) Modifier
-                    else Modifier.border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
-                )
                 .onSizeChanged { canvasSizeState.value = it }
                 .pointerInput(profile, layout, canvasSizeState.value) {
                     awaitPointerEventScope {
