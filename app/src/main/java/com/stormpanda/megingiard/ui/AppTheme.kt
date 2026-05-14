@@ -87,6 +87,12 @@ data class AppColors(
     val actionColorGamepad: Color,
     /** Action-type badge color for system / d-pad macro steps. */
     val actionColorSystem: Color,
+    /** MacroPad button-placement surface. */
+    val macroPadSurface: Color,
+    /** MacroPad button-placement text/icons. */
+    val macroPadOnSurface: Color,
+    /** MacroPad button-placement border. */
+    val macroPadAccentBorder: Color,
 )
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
@@ -125,6 +131,9 @@ private val darkPalette = AppColors(
     onError                = Color.White,
     actionColorGamepad     = Color(0xFFFF9800),
     actionColorSystem      = Color(0xFF2196F3),
+    macroPadSurface        = Color(0xFF1C1C1E),
+    macroPadOnSurface      = Color.White,
+    macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
 )
 
 private val lightPalette = AppColors(
@@ -158,6 +167,9 @@ private val lightPalette = AppColors(
     onError                = Color.White,
     actionColorGamepad     = Color(0xFFFF9800),
     actionColorSystem      = Color(0xFF2196F3),
+    macroPadSurface        = Color(0xFF1C1C1E),
+    macroPadOnSurface      = Color.White,
+    macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
 )
 
 // ─── Cyberpunk palette ────────────────────────────────────────────────────────
@@ -204,6 +216,9 @@ private val cyberpunkPalette = AppColors(
     onError                = CP_DARK_RED,
     actionColorGamepad     = Color(0xFFFF9800),
     actionColorSystem      = CP_ACCENT,
+    macroPadSurface        = CP_SURFACE,
+    macroPadOnSurface      = CP_TEXT,
+    macroPadAccentBorder   = CP_ACCENT.copy(alpha = 0.35f),
 )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────

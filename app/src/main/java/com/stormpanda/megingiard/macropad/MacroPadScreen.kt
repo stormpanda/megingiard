@@ -214,10 +214,10 @@ internal fun PadSurface(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(MP_CORNER_RADIUS))
-                .background(if (transparentBackground) Color.Transparent else colors.surface)
+                .background(if (transparentBackground) Color.Transparent else colors.macroPadSurface)
                 .then(
                     if (transparentBackground) Modifier
-                    else Modifier.border(1.dp, colors.accentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
+                    else Modifier.border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(MP_CORNER_RADIUS))
                 )
                 .onSizeChanged { canvasSizeState.value = it }
                 .pointerInput(profile, layout, canvasSizeState.value) {

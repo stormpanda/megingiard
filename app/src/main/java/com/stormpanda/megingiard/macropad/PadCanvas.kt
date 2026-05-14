@@ -109,9 +109,9 @@ internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Col
     val padModifier = Modifier
         .width(padWidth)
         .height(padHeight)
-        .border(1.dp, colors.accentBorder, RoundedCornerShape(4.dp))
+        .border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(4.dp))
         .clip(RoundedCornerShape(4.dp))
-        .background(colors.surface)
+        .background(colors.macroPadSurface)
         .onSizeChanged { canvasSize = it }
 
     Box(modifier = padModifier) {
@@ -300,11 +300,11 @@ private fun DraggableButton(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(14.dp))
-                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = colors.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = colors.macroPadOnSurface, modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = colors.macroPadOnSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                 Spacer(Modifier.height(2.dp))
-                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
-                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.onSurface, modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.macroPadOnSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.macroPadOnSurface, modifier = Modifier.size(14.dp))
             }
         } else {
             val iconName = btn.iconName
@@ -312,11 +312,11 @@ private fun DraggableButton(
                 MaterialSymbol(
                     name = iconName,
                     size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                    tint = colors.onSurface,
+                    tint = colors.macroPadOnSurface,
                     filled = btn.iconFilled,
                 )
             } else {
-                Text(btn.label, color = colors.onSurface, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.label, color = colors.macroPadOnSurface, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
