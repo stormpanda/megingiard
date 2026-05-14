@@ -191,8 +191,7 @@ private val CP_SURFACE         = Color(0xFF220C0F)   // slightly lighter surface
 private val CP_SURFACE2        = Color(0xFF2E1115)   // elevated / dragged surface
 private val CP_TEXT            = Color(0xFFB41B1D)   // vivid red text
 private val CP_DARK_RED        = Color(0xFFA00000)   // dark red for overlay and button text
-internal val CP_TP_YELLOW      = Color(0xFFFFED00)   // bright yellow for trackpoint dot only
-private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section header labels
+private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section headers and pill idle color
 
 private val cyberpunkPalette = AppColors(
     appBackground          = CP_BG,
@@ -213,7 +212,7 @@ private val cyberpunkPalette = AppColors(
     accentBorder           = CP_ACCENT.copy(alpha = 0.35f),
     accent                 = CP_ACCENT,
     onAccent               = CP_DARK_RED,
-    pillIdleColor          = CP_TP_YELLOW,
+    pillIdleColor          = CP_SECTION_HEADER,
     controlIndicatorActive = CP_ACCENT,
     navPillBody            = CP_SURFACE,
     buttonBody             = CP_SURFACE,
