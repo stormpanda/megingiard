@@ -229,7 +229,7 @@ private fun MacroListView(
             item(key = "section_list") {
                 Text(
                     text     = stringResource(R.string.macropad_macro_section_list).uppercase(Locale.ROOT),
-                    color    = accentColor,
+                    color    = colors.sectionHeaderColor,
                     style    = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
                         .fillMaxWidth()

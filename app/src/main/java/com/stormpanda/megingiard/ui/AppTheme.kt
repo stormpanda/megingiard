@@ -185,12 +185,12 @@ private val lightPalette = AppColors(
 //   Background → dark blood red     ~0xFF160709
 //   Menu text  → vivid red          ~0xFFED2224
 //   Selection  → cyan               ~0xFF00CCFF
-private val CP_ACCENT          = Color(0xFF00CCFF)   // cyan — primary interactive / accent
+private val CP_ACCENT          = Color(0xFF8CF4FF)   // cyan — primary interactive / accent
 private val CP_BG              = Color(0xFF160709)   // dark blood-red background
 private val CP_SURFACE         = Color(0xFF220C0F)   // slightly lighter surface
 private val CP_SURFACE2        = Color(0xFF2E1115)   // elevated / dragged surface
-private val CP_TEXT            = Color(0xFFED2224)   // vivid red text
-private val CP_DARK_RED        = Color(0xFF8B0000)   // dark red for overlay and button text
+private val CP_TEXT            = Color(0xFFB41B1D)   // vivid red text
+private val CP_DARK_RED        = Color(0xFFA00000)   // dark red for overlay and button text
 internal val CP_TP_YELLOW      = Color(0xFFFFED00)   // bright yellow for trackpoint dot only
 private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section header labels
 
