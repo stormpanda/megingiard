@@ -93,6 +93,12 @@ data class AppColors(
     val macroPadOnSurface: Color,
     /** MacroPad button-placement border. */
     val macroPadAccentBorder: Color,
+    /**
+     * Color used for section-header label text (uppercase strip above setting groups,
+     * editor section dividers, etc.).  Equals [accent] for themes that support a custom
+     * accent; fixed per-palette for themes like Cyberpunk that use a distinct header tint.
+     */
+    val sectionHeaderColor: Color,
 )
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
@@ -134,6 +140,7 @@ private val darkPalette = AppColors(
     macroPadSurface        = Color(0xFF1C1C1E),
     macroPadOnSurface      = Color.White,
     macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
+    sectionHeaderColor     = DEFAULT_DARK_LIGHT_ACCENT,
 )
 
 private val lightPalette = AppColors(
@@ -170,6 +177,7 @@ private val lightPalette = AppColors(
     macroPadSurface        = Color(0xFF1C1C1E),
     macroPadOnSurface      = Color.White,
     macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
+    sectionHeaderColor     = DEFAULT_DARK_LIGHT_ACCENT,
 )
 
 // ─── Cyberpunk palette ────────────────────────────────────────────────────────
@@ -177,13 +185,14 @@ private val lightPalette = AppColors(
 //   Background → dark blood red     ~0xFF160709
 //   Menu text  → vivid red          ~0xFFED2224
 //   Selection  → cyan               ~0xFF00CCFF
-private val CP_ACCENT   = Color(0xFF00CCFF)   // cyan — primary interactive / accent
-private val CP_BG       = Color(0xFF160709)   // dark blood-red background
-private val CP_SURFACE  = Color(0xFF220C0F)   // slightly lighter surface
-private val CP_SURFACE2 = Color(0xFF2E1115)   // elevated / dragged surface
-private val CP_TEXT     = Color(0xFFED2224)   // vivid red text
-private val CP_DARK_RED = Color(0xFF8B0000)   // dark red for overlay and button text
-internal val CP_TP_YELLOW = Color(0xFFFFED00) // bright yellow for trackpoint dot only
+private val CP_ACCENT          = Color(0xFF00CCFF)   // cyan — primary interactive / accent
+private val CP_BG              = Color(0xFF160709)   // dark blood-red background
+private val CP_SURFACE         = Color(0xFF220C0F)   // slightly lighter surface
+private val CP_SURFACE2        = Color(0xFF2E1115)   // elevated / dragged surface
+private val CP_TEXT            = Color(0xFFED2224)   // vivid red text
+private val CP_DARK_RED        = Color(0xFF8B0000)   // dark red for overlay and button text
+internal val CP_TP_YELLOW      = Color(0xFFFFED00)   // bright yellow for trackpoint dot only
+private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section header labels
 
 private val cyberpunkPalette = AppColors(
     appBackground          = CP_BG,
@@ -219,6 +228,7 @@ private val cyberpunkPalette = AppColors(
     macroPadSurface        = CP_SURFACE,
     macroPadOnSurface      = CP_TEXT,
     macroPadAccentBorder   = CP_ACCENT.copy(alpha = 0.35f),
+    sectionHeaderColor     = CP_SECTION_HEADER,
 )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────
@@ -236,7 +246,7 @@ fun paletteFor(mode: ThemeMode, userAccent: Color? = null): AppColors {
     }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent
-        base.copy(accent = eff, navPillBody = eff, buttonBody = eff)
+        base.copy(accent = eff, navPillBody = eff, buttonBody = eff, sectionHeaderColor = eff)
     } else base
 }
 

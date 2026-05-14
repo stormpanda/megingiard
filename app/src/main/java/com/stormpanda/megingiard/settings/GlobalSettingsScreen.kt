@@ -532,7 +532,7 @@ private fun SettingsSection(
 ) {
     Text(
         text = title.uppercase(Locale.ROOT),
-        color = accentColor,
+        color = colors.sectionHeaderColor,
         style = MaterialTheme.typography.labelSmall,
         letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
         modifier = Modifier

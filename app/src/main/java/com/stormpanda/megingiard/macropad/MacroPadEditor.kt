@@ -801,7 +801,7 @@ private fun EditorSectionHeader(@StringRes textRes: Int) {
     val colors = LocalAppColors.current
     Text(
         text     = stringResource(textRes).uppercase(Locale.ROOT),
-        color    = colors.accent,
+        color    = colors.sectionHeaderColor,
         style    = MaterialTheme.typography.labelSmall,
         modifier = Modifier
             .fillMaxWidth()
