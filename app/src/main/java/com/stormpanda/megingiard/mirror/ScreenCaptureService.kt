@@ -44,6 +44,7 @@ class ScreenCaptureService : Service() {
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
     private var consentFallbackInFlight = false
+    private var directPrivdStartGeneration = 0L
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -286,20 +287,38 @@ class ScreenCaptureService : Service() {
         mirrorPresentation = presentation
 
         presentation.onSurfaceDestroyed = {
+            directPrivdStartGeneration += 1L
             directPrivdSession?.stop()
         }
         presentation.onSurfaceReady = { surface ->
             // Tear down any existing session and start a fresh one bound to the new surface.
+            directPrivdStartGeneration += 1L
+            val startGeneration = directPrivdStartGeneration
             directPrivdSession?.release()
             directPrivdSession = null
             scope.launch {
+                if (startGeneration != directPrivdStartGeneration) {
+                    AppLog.d(TAG, "stale privileged mirror launch ignored")
+                    return@launch
+                }
                 val directSession = DirectPrivdMirrorSession(
                     srcWidth,
                     srcHeight,
                 )
                 directPrivdSession = directSession
-                if (directSession.start() && DirectMirrorSurfaceBridge.sendToDirectServer(surface)) {
+                val directStarted = directSession.start()
+                if (startGeneration != directPrivdStartGeneration || directPrivdSession !== directSession) {
+                    AppLog.d(TAG, "stale privileged mirror start ignored")
+                    directSession.release()
+                    return@launch
+                }
+                if (directStarted && DirectMirrorSurfaceBridge.sendToDirectServer(surface)) {
                     AppLog.i(TAG, "direct privileged mirror session started")
+                    return@launch
+                }
+                if (startGeneration != directPrivdStartGeneration || directPrivdSession !== directSession) {
+                    AppLog.d(TAG, "stale privileged mirror fallback ignored")
+                    directSession.release()
                     return@launch
                 }
                 directSession.release()
@@ -324,6 +343,7 @@ class ScreenCaptureService : Service() {
         if (consentFallbackInFlight) return
         AppLog.w(TAG, "$reason — falling back to MediaProjection consent")
         consentFallbackInFlight = true
+        directPrivdStartGeneration += 1L
         directPrivdSession?.release()
         directPrivdSession = null
         recordingPresentation?.dismiss()
