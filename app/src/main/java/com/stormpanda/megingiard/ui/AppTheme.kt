@@ -189,8 +189,7 @@ private val CP_ACCENT          = Color(0xFF8CF4FF)   // cyan — primary interac
 private val CP_BG              = Color(0xFF160709)   // dark blood-red background
 private val CP_SURFACE         = Color(0xFF220C0F)   // slightly lighter surface
 private val CP_SURFACE2        = Color(0xFF2E1115)   // elevated / dragged surface
-private val CP_TEXT            = Color(0xFFF8EDEE)   // high-contrast readable text on CP_SURFACE
-private val CP_TEXT_DECORATIVE = Color(0xFFB41B1D)   // vivid red for decorative accents/dividers
+private val CP_TEXT            = Color(0xFFB41B1D)   // vivid red text
 private val CP_DARK_RED        = Color(0xFFA00000)   // dark red for overlay and button text
 private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section headers and pill idle color
 
@@ -200,7 +199,7 @@ private val cyberpunkPalette = AppColors(
     surfaceVariant         = CP_SURFACE2,
     onSurface              = CP_TEXT,
     onSurfaceSecondary     = CP_TEXT.copy(alpha = 0.55f),
-    divider                = CP_TEXT_DECORATIVE.copy(alpha = 0.10f),
+    divider                = CP_TEXT.copy(alpha = 0.10f),
     controlOverlay         = CP_SURFACE,
     onControlOverlay       = CP_DARK_RED,
     fingerCircle           = Color.White.copy(alpha = 0.45f),
