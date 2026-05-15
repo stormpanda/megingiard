@@ -35,7 +35,7 @@ object BinaryIntegrity {
         }
         val actual = sha256Hex(bytes)
         return if (actual.equals(expected, ignoreCase = true)) {
-            AppLog.d(TAG, "Integrity OK: $assetName")
+            AppLog.w(TAG, "Integrity OK: $assetName")
             true
         } else {
             AppLog.e(

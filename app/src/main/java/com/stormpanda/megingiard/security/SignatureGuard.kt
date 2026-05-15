@@ -61,7 +61,7 @@ object SignatureGuard {
 
         val actualHashes = signatures.map { sha256Hex(it.toByteArray()) }
         return if (actualHashes.any { it.equals(expected, ignoreCase = true) }) {
-            AppLog.i(TAG, "Signature pinning OK")
+            AppLog.w(TAG, "Signature pinning OK")
             Result.Ok
         } else {
             AppLog.e(
