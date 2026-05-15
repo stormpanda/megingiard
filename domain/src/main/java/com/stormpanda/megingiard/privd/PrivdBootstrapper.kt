@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val DAEMON_REMOTE_PATH = "/data/local/tmp/megingiard_privd"
+// Process name as seen by pidof/kill — equals the basename of DAEMON_REMOTE_PATH.
+private const val DAEMON_PROCESS_NAME = "megingiard_privd"
 private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_PATH = "/data/local/tmp/megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
@@ -351,7 +353,15 @@ object PrivdBootstrapper {
     private fun currentEpochSeconds(): Int = ((System.currentTimeMillis() / MS_PER_SECOND) and UINT_MASK).toInt()
 
     private fun spawnDaemon(mgr: PrivdAdbConnectionManager): Boolean {
-        val cmd = "shell:$DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"
+        // Kill any previous daemon instance before spawning a fresh one.
+        // An old daemon (e.g. built without HMAC support) holds the abstract Unix
+        // socket and prevents the new binary from binding it.  Without this kill step
+        // the new binary exits immediately with EADDRINUSE and the old one continues
+        // to serve connections without the expected HMAC challenge — which is exactly
+        // the failure mode we saw after the HMAC feature was added in commit 6de02b3.
+        // The `|| true` / `2>/dev/null` patterns make the kill a no-op if no process exists.
+        val killCmd = "kill \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null"
+        val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->
