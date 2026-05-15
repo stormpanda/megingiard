@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.input
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.security.BinaryIntegrity
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
@@ -171,9 +172,15 @@ abstract class NativeBinaryInjector<T>(
     private fun deployBinary(context: Context): File? {
         val dest = File(context.filesDir, assetName)
         return try {
-            context.assets.open(assetName).use { input ->
-                dest.outputStream().use { output -> input.copyTo(output) }
+            // Read fully into memory first so we can verify SHA-256 before the
+            // bytes touch the filesystem and become executable. The injector
+            // binaries are < 500 KiB each so the heap cost is negligible.
+            val bytes = context.assets.open(assetName).use { it.readBytes() }
+            if (!BinaryIntegrity.verify(assetName, bytes)) {
+                AppLog.e(tag, "Refusing to deploy $assetName — integrity check failed")
+                return null
             }
+            dest.outputStream().use { output -> output.write(bytes) }
             dest.setExecutable(true, false)
             dest
         } catch (e: Exception) {

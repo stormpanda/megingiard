@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.privd
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.security.BinaryIntegrity
 import io.github.muntashirakon.adb.AdbStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -229,6 +230,10 @@ object PrivdBootstrapper {
 
     private fun pushDaemon(context: Context, mgr: PrivdAdbConnectionManager): Boolean {
         val binaryBytes = context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(DAEMON_ASSET_NAME, binaryBytes)) {
+            AppLog.e(TAG, "Refusing to push $DAEMON_ASSET_NAME — integrity check failed")
+            return false
+        }
         AppLog.d(TAG, "push: ${binaryBytes.size} bytes -> $DAEMON_REMOTE_PATH")
         val daemonOk = mgr.openStream(SYNC_SERVICE)?.use { s ->
             syncSendFile(s, binaryBytes, DAEMON_REMOTE_PATH, REMOTE_FILE_MODE) &&
@@ -240,6 +245,11 @@ object PrivdBootstrapper {
         // The DEX is harmless if Privileged Mirror is never enabled, so we always
         // push it as part of the bootstrap to avoid a separate setup flow.
         val dexBytes = context.assets.open(MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(MIRROR_DEX_ASSET_NAME, dexBytes)) {
+            AppLog.e(TAG, "Refusing to push $MIRROR_DEX_ASSET_NAME — integrity check failed")
+            // Daemon push already succeeded; treat as DEX failure (non-fatal below).
+            return true
+        }
         AppLog.d(TAG, "push: ${dexBytes.size} bytes -> $MIRROR_DEX_REMOTE_PATH")
         val dexOk = mgr.openStream(SYNC_SERVICE)?.use { s ->
             syncSendFile(s, dexBytes, MIRROR_DEX_REMOTE_PATH, MIRROR_DEX_REMOTE_MODE_RAW) &&

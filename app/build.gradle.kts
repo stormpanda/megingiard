@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,9 +17,9 @@ plugins {
 // local.properties.
 // ---------------------------------------------------------------------------
 val expectedSigningSha256: String = run {
-    val props = java.util.Properties()
+    val props = Properties()
     val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { props.load(it) }
+    if (f.exists()) f.inputStream().use { stream -> props.load(stream) }
     (props.getProperty("megingiard.signing.sha256") ?: "")
         .replace(":", "")
         .replace(" ", "")
