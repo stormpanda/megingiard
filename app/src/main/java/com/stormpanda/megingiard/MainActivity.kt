@@ -129,6 +129,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Init settings first so the persisted log level is active before anything
+        // else runs (including SignatureGuard below). SettingsManager.init() reads
+        // just the log level synchronously from DataStore then continues async.
+        SettingsManager.init(this)
+
         AppLog.i(TAG, "onCreate")
 
         // APK signature pinning — abort on tampered/re-signed release builds,
@@ -227,7 +233,6 @@ class MainActivity : ComponentActivity() {
                 .distinctUntilChanged()
                 .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
         }
-        SettingsManager.init(this)
         // Auto-connect Privileged Mode if the user previously bootstrapped the daemon.
         // The daemon survives app restarts (it's a separate shell-UID process); we just
         // re-open the abstract socket. Failure is silent: the user can re-bootstrap from

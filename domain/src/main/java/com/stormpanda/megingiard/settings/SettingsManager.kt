@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -85,6 +86,25 @@ object SettingsManager {
         if (initialized) return
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
+
+        // Apply the persisted log level synchronously before returning so that
+        // code that runs immediately after init() — like SignatureGuard in
+        // MainActivity.onCreate — already logs at the user-configured level.
+        // runBlocking here is intentional and safe: DataStore reads from an
+        // in-process memory-mapped file; on a warm start this completes in
+        // < 5 ms. The call is on the main thread but happens before the first
+        // frame is drawn, so no ANR risk.
+        runBlocking(Dispatchers.IO) {
+            try {
+                val prefs = dataStore.data.first()
+                val level = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
+                    ?: AppLog.Level.WARN
+                _logLevel.value = level
+                AppLog.level = level
+            } catch (_: Exception) {
+                // DataStore not yet written (first launch) — keep default WARN.
+            }
+        }
 
         // Hand the shared DataStore + scope to feature-scoped sub-managers so they
         // can persist their own settings without each one opening its own DataStore.
