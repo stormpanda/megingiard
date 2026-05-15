@@ -44,6 +44,7 @@ import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.security.SignatureGuard
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -129,6 +130,29 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate")
+
+        // APK signature pinning — abort on tampered/re-signed release builds.
+        when (val res = SignatureGuard.verify(this)) {
+            is SignatureGuard.Result.Tampered -> {
+                if (!BuildConfig.DEBUG) {
+                    AppLog.e(TAG, "Aborting: APK signature does not match pinned hash")
+                    finishAffinity()
+                    kotlin.system.exitProcess(10)
+                    return
+                } else {
+                    AppLog.w(TAG, "Debug build: signature mismatch ignored ($res)")
+                }
+            }
+            is SignatureGuard.Result.Error -> {
+                if (!BuildConfig.DEBUG) {
+                    AppLog.e(TAG, "Aborting: signature verification failed (${res.message})")
+                    finishAffinity()
+                    kotlin.system.exitProcess(11)
+                    return
+                }
+            }
+            SignatureGuard.Result.Ok, SignatureGuard.Result.Skipped -> Unit
+        }
 
         // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
         // steps can start TouchInjector without needing the caller to supply a Context.

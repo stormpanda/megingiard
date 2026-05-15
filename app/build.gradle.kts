@@ -5,6 +5,25 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// ---------------------------------------------------------------------------
+// Signature pinning: read the expected release signing-certificate SHA-256
+// from local.properties (key: `megingiard.signing.sha256`). When empty,
+// runtime pinning becomes a no-op — appropriate for debug builds signed with
+// the Android default debug keystore. To populate, run:
+//   keytool -list -v -keystore <release.jks> -alias <alias> | grep SHA-256
+// and paste the uppercase hex value (with or without colons) into
+// local.properties.
+// ---------------------------------------------------------------------------
+val expectedSigningSha256: String = run {
+    val props = java.util.Properties()
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { props.load(it) }
+    (props.getProperty("megingiard.signing.sha256") ?: "")
+        .replace(":", "")
+        .replace(" ", "")
+        .uppercase()
+}
+
 android {
     namespace = "com.stormpanda.megingiard"
     compileSdk = 35
@@ -20,6 +39,12 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField(
+            "String",
+            "EXPECTED_SIGNING_SHA256",
+            "\"$expectedSigningSha256\""
+        )
     }
 
     buildTypes {
@@ -48,6 +73,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
