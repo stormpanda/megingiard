@@ -16,6 +16,7 @@
 /mirrorserver/build
 /captures
 /screenshots
+megingiard.jks
 .externalNativeBuild
 .cxx
 local.properties

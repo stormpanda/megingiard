@@ -131,7 +131,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate")
 
-        // APK signature pinning — abort on tampered/re-signed release builds.
+        // APK signature pinning — abort on tampered/re-signed release builds,
+        // and refuse to run a release build that ships without a pinned hash
+        // (fail-closed; this is the second line of defence behind the Gradle
+        // guard in app/build.gradle.kts).
         when (val res = SignatureGuard.verify(this)) {
             is SignatureGuard.Result.Tampered -> {
                 if (!BuildConfig.DEBUG) {
@@ -151,7 +154,15 @@ class MainActivity : ComponentActivity() {
                     return
                 }
             }
-            SignatureGuard.Result.Ok, SignatureGuard.Result.Skipped -> Unit
+            SignatureGuard.Result.Skipped -> {
+                if (!BuildConfig.DEBUG) {
+                    AppLog.e(TAG, "Aborting: release build ships without a pinned signing hash")
+                    finishAffinity()
+                    kotlin.system.exitProcess(12)
+                    return
+                }
+            }
+            SignatureGuard.Result.Ok -> Unit
         }
 
         // Provide a stable applicationContext to MacroExecutor so that TouchTap macro

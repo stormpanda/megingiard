@@ -91,6 +91,38 @@ afterEvaluate {
     tasks.matching { it.name.startsWith("package") || it.name.startsWith("generate") && it.name.contains("Assets") }.configureEach {
         dependsOn(":mirrorserver:dex")
     }
+
+    // Fail release builds when no signing-certificate SHA-256 has been
+    // configured. Without it, SignatureGuard runs in "Skipped" mode and the
+    // shipped APK has no tamper protection — almost certainly a mistake.
+    // Devs who knowingly want an unpinned local release build can opt out via
+    //   ./gradlew assembleRelease -Pmegingiard.allowUnpinnedRelease=true
+    val allowUnpinned = (project.findProperty("megingiard.allowUnpinnedRelease") as? String)
+        ?.equals("true", ignoreCase = true) == true
+    val releaseGuardTasks = listOf(
+        "assembleRelease",
+        "bundleRelease",
+        "packageRelease",
+    )
+    releaseGuardTasks.forEach { taskName ->
+        tasks.matching { it.name == taskName }.configureEach {
+            doFirst {
+                if (expectedSigningSha256.isBlank() && !allowUnpinned) {
+                    throw GradleException(
+                        "Release build aborted: 'megingiard.signing.sha256' is not set in " +
+                            "local.properties. Without it, SignatureGuard runs in skipped " +
+                            "mode and the APK has no tamper protection.\n" +
+                            "  1. Read your release cert SHA-256:\n" +
+                            "       keytool -list -v -keystore megingiard.jks -alias release\n" +
+                            "  2. Add to local.properties:\n" +
+                            "       megingiard.signing.sha256=AB:CD:…\n" +
+                            "Override (NOT for distribution) with " +
+                            "-Pmegingiard.allowUnpinnedRelease=true"
+                    )
+                }
+            }
+        }
+    }
 }
 
 dependencies {
