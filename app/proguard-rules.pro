@@ -10,7 +10,12 @@
 #  - Reflection into android.os.ServiceManager (DirectMirrorSurfaceBridge)
 #    targets a framework class — no keep rule needed for our own code.
 
-# Stack trace readability for release crashes
+# Stack trace readability for release crashes:
+#  - LineNumberTable: preserves line numbers so `retrace` can pinpoint exact lines.
+#  - SourceFile:      kept as an attribute so the format is valid; the value is
+#                     replaced with the constant "SourceFile" by the next rule,
+#                     which intentionally hides real source file names from
+#                     reverse-engineering while keeping line numbers functional.
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 

@@ -15,8 +15,8 @@ import org.junit.Test
  * [BinaryIntegrity.verify] is intentionally not tested here: it calls [AppLog]
  * which routes through `android.util.Log` \u2014 a stub that throws in the local JVM
  * test runtime.  Testing [verify] would require Robolectric.  The branching logic
- * inside [verify] (hash match / no-pin / mismatch) is trivial; [sha256Hex] is the
- * only non-trivial part and is fully covered below.
+ * inside [verify] (hash match / no-pin fail-closed / mismatch) is trivial; [sha256Hex]
+ * is the only non-trivial part and is fully covered below.
  */
 class BinaryIntegrityTest {
 

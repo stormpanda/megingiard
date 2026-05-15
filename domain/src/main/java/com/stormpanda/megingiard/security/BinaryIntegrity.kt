@@ -22,16 +22,17 @@ private const val TAG = "BinaryIntegrity"
 object BinaryIntegrity {
 
     /**
-     * @return `true` if [bytes] matches the pinned SHA-256 for [assetName], or
-     *         if no pin exists (in which case a warning is logged so the
-     *         developer notices). `false` means the bytes are tampered and
-     *         must NOT be executed/pushed/loaded.
+     * @return `true` if [bytes] matches the pinned SHA-256 for [assetName].
+     *         `false` if the hash does not match **or if no pin is registered** for
+     *         the asset — the latter is fail-closed: a missing pin means the Gradle
+     *         task was not run or the entry was accidentally removed, which is a
+     *         build error rather than a reason to silently skip the check.
      */
     fun verify(assetName: String, bytes: ByteArray): Boolean {
         val expected = NativeBinaryHashes.EXPECTED[assetName]
         if (expected == null) {
-            AppLog.w(TAG, "No expected hash configured for '$assetName' — accepting by default")
-            return true
+            AppLog.e(TAG, "No expected hash configured for '$assetName' — refusing deploy (fail-closed)")
+            return false
         }
         val actual = sha256Hex(bytes)
         return if (actual.equals(expected, ignoreCase = true)) {

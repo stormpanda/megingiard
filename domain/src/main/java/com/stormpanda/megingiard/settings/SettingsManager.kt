@@ -17,6 +17,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -37,6 +38,10 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 
 private const val TAG = "SettingsManager"
+// Max wait for DataStore on the main thread during the synchronous bootstrap in init().
+// If DataStore does not respond within this window, the default log level (WARN) is kept
+// and startup continues normally — preventing an ANR on slow/unavailable storage.
+private const val DATASTORE_BOOTSTRAP_TIMEOUT_MS = 500L
 
 object SettingsManager {
     // Preference keys + section maps live in SettingsKeys.kt (same package, internal).
@@ -88,19 +93,23 @@ object SettingsManager {
         dataStore = context.applicationContext.settingsDataStore
 
         // Apply the persisted log level synchronously before returning so that
-        // code that runs immediately after init() — like SignatureGuard in
-        // MainActivity.onCreate — already logs at the user-configured level.
-        // runBlocking here is intentional and safe: DataStore reads from an
-        // in-process memory-mapped file; on a warm start this completes in
-        // < 5 ms. The call is on the main thread but happens before the first
-        // frame is drawn, so no ANR risk.
+        // code running immediately after init() (e.g. SignatureGuard) already
+        // logs at the user-configured level.  A bounded timeout prevents ANR on
+        // pathological I/O — if DataStore does not respond within the window, the
+        // default WARN level is retained and startup proceeds normally.
         runBlocking(Dispatchers.IO) {
             try {
-                val prefs = dataStore.data.first()
-                val level = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
-                    ?: AppLog.Level.WARN
-                _logLevel.value = level
-                AppLog.level = level
+                val prefs = withTimeoutOrNull(DATASTORE_BOOTSTRAP_TIMEOUT_MS) {
+                    dataStore.data.first()
+                }
+                if (prefs != null) {
+                    val level = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
+                        ?: AppLog.Level.WARN
+                    _logLevel.value = level
+                    AppLog.level = level
+                } else {
+                    AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
+                }
             } catch (_: Exception) {
                 // DataStore not yet written (first launch) — keep default WARN.
             }

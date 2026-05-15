@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.LocaleList
+import android.os.Process
 import android.view.Display
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -152,7 +153,7 @@ class MainActivity : ComponentActivity() {
                 if (!BuildConfig.DEBUG) {
                     AppLog.e(TAG, "Aborting: APK signature does not match pinned hash")
                     finishAffinity()
-                    kotlin.system.exitProcess(10)
+                    Process.killProcess(Process.myPid())
                     return
                 } else {
                     AppLog.w(TAG, "Debug build: signature mismatch ignored ($res)")
@@ -162,7 +163,7 @@ class MainActivity : ComponentActivity() {
                 if (!BuildConfig.DEBUG) {
                     AppLog.e(TAG, "Aborting: signature verification failed (${res.message})")
                     finishAffinity()
-                    kotlin.system.exitProcess(11)
+                    Process.killProcess(Process.myPid())
                     return
                 }
             }
@@ -170,7 +171,7 @@ class MainActivity : ComponentActivity() {
                 if (!BuildConfig.DEBUG) {
                     AppLog.e(TAG, "Aborting: release build ships without a pinned signing hash")
                     finishAffinity()
-                    kotlin.system.exitProcess(12)
+                    Process.killProcess(Process.myPid())
                     return
                 }
             }

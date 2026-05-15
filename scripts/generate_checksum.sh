@@ -39,8 +39,11 @@ out="$APK_DIR/${apk_name}-checksum-sha256.txt"
 # shasum for cross-platform consistency.
 if command -v shasum >/dev/null 2>&1; then
   shasum -a 256 "$apk" | awk '{ print $1 }' > "$out"
-else
+elif command -v sha256sum >/dev/null 2>&1; then
   sha256sum "$apk" | awk '{ print $1 }' > "$out"
+else
+  echo "Error: neither 'shasum' nor 'sha256sum' found — cannot generate checksum" >&2
+  exit 1
 fi
 
 # Clean up any stale MD5 checksum file from earlier releases so the
