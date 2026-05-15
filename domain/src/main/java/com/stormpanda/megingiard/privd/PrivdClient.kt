@@ -17,8 +17,7 @@ import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.util.concurrent.LinkedBlockingQueue
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
+import com.stormpanda.megingiard.security.HmacUtil
 
 private const val TAG = "PrivdClient"
 private const val ABSTRACT_NAME = "megingiard.privd"
@@ -74,7 +73,7 @@ object PrivdClient {
     )
     val evdevEvents: SharedFlow<EvdevEvent> = _evdevEvents.asSharedFlow()
 
-    @Volatile private var hmacKeyBytes: ByteArray = hexToBytes(DEFAULT_PRIVD_HMAC_KEY)
+    @Volatile private var hmacKeyBytes: ByteArray = HmacUtil.hexToBytes(DEFAULT_PRIVD_HMAC_KEY)
 
     /**
      * Sets the pre-shared HMAC key used in the daemon challenge-response handshake.
@@ -89,7 +88,7 @@ object PrivdClient {
             AppLog.w(TAG, "setHmacKey: invalid key length ${clean.length} — retaining default")
             return
         }
-        hmacKeyBytes = hexToBytes(clean)
+        hmacKeyBytes = HmacUtil.hexToBytes(clean)
         AppLog.d(TAG, "setHmacKey: key updated")
     }
 
@@ -360,12 +359,8 @@ object PrivdClient {
                 AppLog.w(TAG, "handshake: nonce length ${nonceHex.length} != $NONCE_HEX_LEN")
                 return false
             }
-            val nonceBytes = hexToBytes(nonceHex)
-
-            val mac = Mac.getInstance("HmacSHA256")
-            mac.init(SecretKeySpec(hmacKeyBytes, "HmacSHA256"))
-            val hmac = mac.doFinal(nonceBytes)
-            val hmacHex = hmac.joinToString("") { b -> "%02X".format(b) }
+            val nonceBytes = HmacUtil.hexToBytes(nonceHex)
+            val hmacHex = HmacUtil.computeHmacHex(hmacKeyBytes, nonceBytes)
 
             writer.write("AUTH $hmacHex\n")
             writer.flush()
@@ -385,9 +380,4 @@ object PrivdClient {
         }
     }
 
-    /** Decodes a 64-char uppercase hex string to 32 bytes. */
-    private fun hexToBytes(hex: String): ByteArray =
-        ByteArray(hex.length / 2) { i ->
-            hex.substring(i * 2, i * 2 + 2).toInt(16).toByte()
-        }
 }

@@ -46,7 +46,7 @@ object BinaryIntegrity {
         }
     }
 
-    private fun sha256Hex(bytes: ByteArray): String {
+    internal fun sha256Hex(bytes: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
         val sb = StringBuilder(digest.size * 2)
         for (b in digest) {
