@@ -17,6 +17,8 @@ import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.util.concurrent.LinkedBlockingQueue
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 private const val TAG = "PrivdClient"
 private const val ABSTRACT_NAME = "megingiard.privd"
@@ -25,6 +27,14 @@ private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
+private const val HANDSHAKE_TIMEOUT_MS = 5_000
+private const val NONCE_HEX_LEN = 32   // 16 nonce bytes → 32 hex chars
+private const val HMAC_HEX_LEN = 64    // SHA-256 digest → 64 hex chars
+// Default key matching the C daemon default in megingiard_privd.c.
+// Users who want genuine secrecy must set megingiard.privd.hmac.key in
+// local.properties and rebuild the daemon via build_megingiard_privd.sh.
+private const val DEFAULT_PRIVD_HMAC_KEY =
+    "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
 
 /**
  * Async LocalSocket transport to the `megingiard_privd` daemon.
@@ -64,6 +74,25 @@ object PrivdClient {
     )
     val evdevEvents: SharedFlow<EvdevEvent> = _evdevEvents.asSharedFlow()
 
+    @Volatile private var hmacKeyBytes: ByteArray = hexToBytes(DEFAULT_PRIVD_HMAC_KEY)
+
+    /**
+     * Sets the pre-shared HMAC key used in the daemon challenge-response handshake.
+     * Must be called before the first [connect] — typically in MainActivity.onCreate
+     * via `PrivdClient.setHmacKey(BuildConfig.PRIVD_HMAC_KEY)`.  The key must be
+     * a 64-character uppercase hex string (32 bytes).  If the string is invalid the
+     * default key is retained.
+     */
+    fun setHmacKey(hexKey: String) {
+        val clean = hexKey.uppercase().replace(":", "").replace(" ", "")
+        if (clean.length != 64) {
+            AppLog.w(TAG, "setHmacKey: invalid key length ${clean.length} — retaining default")
+            return
+        }
+        hmacKeyBytes = hexToBytes(clean)
+        AppLog.d(TAG, "setHmacKey: key updated")
+    }
+
     @Volatile private var socket: LocalSocket? = null
     @Volatile private var writer: BufferedWriter? = null
     @Volatile private var reader: BufferedReader? = null
@@ -90,9 +119,21 @@ object PrivdClient {
         return try {
             val s = LocalSocket()
             s.connect(LocalSocketAddress(ABSTRACT_NAME, LocalSocketAddress.Namespace.ABSTRACT))
+            val w = BufferedWriter(OutputStreamWriter(s.outputStream))
+            val r = BufferedReader(InputStreamReader(s.inputStream))
+            // HMAC challenge-response: prove to the app that the daemon is the
+            // legitimate megingiard_privd binary (not a rogue process claiming
+            // the abstract socket). The daemon sends a random nonce, the app
+            // responds with HMAC-SHA256(key, nonce), and the daemon replies OK.
+            if (!performHmacHandshake(s, r, w)) {
+                AppLog.w(TAG, "connect() rejected: HMAC handshake failed")
+                try { s.close() } catch (_: Exception) {}
+                _state.value = PrivdConnectionState.DISCONNECTED
+                return false
+            }
             socket = s
-            writer = BufferedWriter(OutputStreamWriter(s.outputStream))
-            reader = BufferedReader(InputStreamReader(s.inputStream))
+            writer = w
+            reader = r
             queue.clear()
             running = true
             writerThread = Thread(::writerLoop, WRITER_THREAD_NAME).apply {
@@ -284,4 +325,69 @@ object PrivdClient {
         reader = null
         socket = null
     }
+
+    // -------------------------------------------------------------------------
+    // HMAC handshake helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Synchronous challenge-response handshake.
+     *
+     * Protocol (server-first):
+     *   S→C  `CHAL <32-hex-nonce>\n`   (16 random bytes, hex-encoded)
+     *   C→S  `AUTH <64-hex-hmac>\n`    (HMAC-SHA256(key, nonce_bytes))
+     *   S→C  `OK\n`                    (authentication accepted)
+     *
+     * The socket read timeout ([HANDSHAKE_TIMEOUT_MS]) is set before reading
+     * the CHAL and reset to 0 (blocking) on success.  Returns `false` on any
+     * failure so [connect] can close the socket and back off.
+     */
+    private fun performHmacHandshake(
+        s: LocalSocket,
+        reader: BufferedReader,
+        writer: BufferedWriter,
+    ): Boolean {
+        return try {
+            s.soTimeout = HANDSHAKE_TIMEOUT_MS
+
+            val chalLine = reader.readLine() ?: return false
+            if (!chalLine.startsWith("CHAL ")) {
+                AppLog.w(TAG, "handshake: expected CHAL, got: $chalLine")
+                return false
+            }
+            val nonceHex = chalLine.substring(5)
+            if (nonceHex.length != NONCE_HEX_LEN) {
+                AppLog.w(TAG, "handshake: nonce length ${nonceHex.length} != $NONCE_HEX_LEN")
+                return false
+            }
+            val nonceBytes = hexToBytes(nonceHex)
+
+            val mac = Mac.getInstance("HmacSHA256")
+            mac.init(SecretKeySpec(hmacKeyBytes, "HmacSHA256"))
+            val hmac = mac.doFinal(nonceBytes)
+            val hmacHex = hmac.joinToString("") { b -> "%02X".format(b) }
+
+            writer.write("AUTH $hmacHex\n")
+            writer.flush()
+
+            val okLine = reader.readLine() ?: return false
+            if (okLine != "OK") {
+                AppLog.w(TAG, "handshake: expected OK, got: $okLine")
+                return false
+            }
+
+            s.soTimeout = 0 // reset to blocking
+            AppLog.d(TAG, "handshake: authenticated successfully")
+            true
+        } catch (e: Exception) {
+            AppLog.w(TAG, "handshake: exception — $e")
+            false
+        }
+    }
+
+    /** Decodes a 64-char uppercase hex string to 32 bytes. */
+    private fun hexToBytes(hex: String): ByteArray =
+        ByteArray(hex.length / 2) { i ->
+            hex.substring(i * 2, i * 2 + 2).toInt(16).toByte()
+        }
 }

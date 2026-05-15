@@ -42,6 +42,7 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
+import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.security.SignatureGuard
@@ -134,6 +135,11 @@ class MainActivity : ComponentActivity() {
         // else runs (including SignatureGuard below). SettingsManager.init() reads
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
+
+        // Configure the Privd socket HMAC key before any connect() attempt.
+        // The key is baked into BuildConfig at compile time from local.properties
+        // and must match the key baked into the daemon binary.
+        PrivdClient.setHmacKey(BuildConfig.PRIVD_HMAC_KEY)
 
         AppLog.i(TAG, "onCreate")
 
