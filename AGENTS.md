@@ -610,8 +610,10 @@ setOnDismissListener {
 
 - All dependency versions live in `gradle/libs.versions.toml`.
   Never hardcode version strings in `build.gradle.kts`.
-- `isMinifyEnabled = false` for now (release builds).
-  When enabling R8, add keep rules for `ScreenCaptureService` (referenced by the system via manifest).
+- `isMinifyEnabled = true` for release builds (R8 + resource shrinking).
+  Keep rules live in `app/proguard-rules.pro`. When adding new components
+  referenced by name from `AndroidManifest.xml`, by reflection, or by
+  kotlinx.serialization, add explicit keep rules.
 
 ---
 

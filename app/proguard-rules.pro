@@ -1,21 +1,78 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# =====================================================================
+# Megingiard ProGuard / R8 keep rules
+# =====================================================================
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# General principles:
+#  - kotlinx.serialization needs the @Serializable classes preserved
+#    along with their synthetic Companion + $serializer members.
+#  - Components declared in AndroidManifest.xml are referenced by name
+#    from the framework and must stay un-obfuscated and un-shrunk.
+#  - Reflection into android.os.ServiceManager (DirectMirrorSurfaceBridge)
+#    targets a framework class — no keep rule needed for our own code.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Stack trace readability for release crashes
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ---------------------------------------------------------------------
+# Android components referenced by name in AndroidManifest.xml
+# ---------------------------------------------------------------------
+-keep class com.stormpanda.megingiard.MainActivity { *; }
+-keep class com.stormpanda.megingiard.CaptureRequestActivity { *; }
+-keep class com.stormpanda.megingiard.mirror.ScreenCaptureService { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ---------------------------------------------------------------------
+# kotlinx.serialization
+# ---------------------------------------------------------------------
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+# Keep `Companion` object fields of serializable classes.
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
+}
+
+# Keep `serializer()` on companion objects of serializable classes.
+-if @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+-keepclassmembers class <2>$<3> {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep `INSTANCE.serializer()` of serializable objects.
+-if @kotlinx.serialization.Serializable class ** {
+    public static ** INSTANCE;
+}
+-keepclassmembers class <1> {
+    public static <1> INSTANCE;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep all @Serializable classes from our packages so polymorphic
+# (sealed) hierarchies survive shrinking.
+-keep,includedescriptorclasses class com.stormpanda.megingiard.**$$serializer { *; }
+-keepclassmembers class com.stormpanda.megingiard.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.stormpanda.megingiard.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep @kotlinx.serialization.Serializable class com.stormpanda.megingiard.** { *; }
+
+# ---------------------------------------------------------------------
+# Compose / lifecycle reflective lookups
+# ---------------------------------------------------------------------
+-keep class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
+}
+-keep class * extends androidx.lifecycle.AndroidViewModel {
+    <init>(android.app.Application);
+}
+
+# ---------------------------------------------------------------------
+# Suppress noisy warnings
+# ---------------------------------------------------------------------
+-dontwarn org.jetbrains.annotations.**
+-dontwarn javax.annotation.**
