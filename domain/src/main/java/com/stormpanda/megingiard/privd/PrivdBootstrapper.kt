@@ -367,7 +367,12 @@ object PrivdBootstrapper {
         // re-evaluated, so the process stays alive indefinitely.
         // SIGKILL cannot be caught, blocked, or ignored — it unconditionally removes
         // the process and releases the abstract socket immediately.
-        val killCmd = "kill -9 \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null"
+        // The `sleep 1` after kill gives the kernel time to fully release the abstract
+        // socket before the new binary tries to bind it.  Without this delay there is
+        // a race: kill(2) returns as soon as the signal is queued, but the process may
+        // not have been fully reaped yet when the shell continues to the next command,
+        // causing the new binary to fail with EADDRINUSE and exit immediately.
+        val killCmd = "kill -9 \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null; sleep 1"
         val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
