@@ -76,3 +76,9 @@
 # ---------------------------------------------------------------------
 -dontwarn org.jetbrains.annotations.**
 -dontwarn javax.annotation.**
+
+# Conscrypt references legacy SSL parameter classes that don't exist on
+# modern Android. They're only used on pre-KitKat / hidden-API paths we
+# never hit, but R8 still chokes without explicit dontwarn rules.
+-dontwarn com.android.org.conscrypt.SSLParametersImpl
+-dontwarn org.apache.harmony.xnet.provider.jsse.SSLParametersImpl
