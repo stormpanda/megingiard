@@ -245,7 +245,12 @@ static void write_event(int fd, __u16 type, __u16 code, __s32 value) {
  * Returns a listening fd on success, -1 on failure.
  */
 static int bind_listening_socket(void) {
-    int srv = socket(AF_UNIX, SOCK_STREAM, 0);
+    /* SOCK_CLOEXEC ensures the fd is automatically closed in forked children
+     * (e.g. the mirror app_process child launched via start_direct_mirror_child).
+     * Without it, the child inherits the fd and keeps the abstract socket bound
+     * even after the parent daemon is killed, causing the next spawn attempt to
+     * fail with EADDRINUSE. */
+    int srv = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (srv < 0) return -1;
 
     struct sockaddr_un addr;
