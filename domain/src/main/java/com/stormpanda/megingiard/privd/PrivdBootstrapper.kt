@@ -359,8 +359,15 @@ object PrivdBootstrapper {
         // the new binary exits immediately with EADDRINUSE and the old one continues
         // to serve connections without the expected HMAC challenge — which is exactly
         // the failure mode we saw after the HMAC feature was added in commit 6de02b3.
-        // The `|| true` / `2>/dev/null` patterns make the kill a no-op if no process exists.
-        val killCmd = "kill \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null"
+        //
+        // SIGTERM (default kill) is insufficient: the daemon calls signal() which sets
+        // SA_RESTART on Android/Linux.  While the daemon is blocked in accept() waiting
+        // for a client, SIGTERM fires the handler (sets g_should_exit=1) but accept()
+        // is automatically restarted — the while(!g_should_exit) guard is never
+        // re-evaluated, so the process stays alive indefinitely.
+        // SIGKILL cannot be caught, blocked, or ignored — it unconditionally removes
+        // the process and releases the abstract socket immediately.
+        val killCmd = "kill -9 \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null"
         val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
