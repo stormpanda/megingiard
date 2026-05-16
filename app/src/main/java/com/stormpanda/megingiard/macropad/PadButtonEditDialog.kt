@@ -195,76 +195,77 @@ internal fun ButtonEditDialog(
     }
 
     // ── Full-screen layout (no AlertDialog — stays in same window for IME) ─────────────
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(colors.surface)
             .blockPointerEvents(),
     ) {
-        val topBarTitle = when {
-            button == null -> stringResource(R.string.macropad_editor_add_button)
-            button.action is PadAction.TrackpointMove -> stringResource(R.string.macropad_action_trackpoint)
-            else -> button.label
-        }
-        FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
-            TextButton(
-                onClick = {
-                    if (isConfirmEnabled) {
-                        val result = button?.copy(
-                            label                 = label,
-                            iconName              = iconName,
-                            iconFilled            = iconFilled,
-                            buttonShape           = buttonShape,
-                            buttonSize            = buttonSize,
-                            action                = action,
-                            hapticStrength        = hapticStrength,
-                            hapticCustomDurationMs = hapticCustomDurationMs,
-                            hapticCustomAmplitude  = hapticCustomAmplitude,
-                        ) ?: PadButton(
-                            id                    = UUID.randomUUID().toString(),
-                            label                 = label,
-                            iconName              = iconName,
-                            iconFilled            = iconFilled,
-                            posX                  = 0.5f,
-                            posY                  = 0.5f,
-                            buttonShape           = buttonShape,
-                            buttonSize            = buttonSize,
-                            action                = action,
-                            hapticStrength        = hapticStrength,
-                            hapticCustomDurationMs = hapticCustomDurationMs,
-                            hapticCustomAmplitude  = hapticCustomAmplitude,
-                        )
-                        onConfirm(result)
-                    }
-                },
-                enabled = isConfirmEnabled,
-            ) {
-                Text(
-                    stringResource(R.string.macropad_editor_done),
-                    color      = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
-                    fontWeight = FontWeight.SemiBold,
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            val topBarTitle = when {
+                button == null -> stringResource(R.string.macropad_editor_add_button)
+                button.action is PadAction.TrackpointMove -> stringResource(R.string.macropad_action_trackpoint)
+                else -> button.label
             }
-        }
+            FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
+                TextButton(
+                    onClick = {
+                        if (isConfirmEnabled) {
+                            val result = button?.copy(
+                                label                 = label,
+                                iconName              = iconName,
+                                iconFilled            = iconFilled,
+                                buttonShape           = buttonShape,
+                                buttonSize            = buttonSize,
+                                action                = action,
+                                hapticStrength        = hapticStrength,
+                                hapticCustomDurationMs = hapticCustomDurationMs,
+                                hapticCustomAmplitude  = hapticCustomAmplitude,
+                            ) ?: PadButton(
+                                id                    = UUID.randomUUID().toString(),
+                                label                 = label,
+                                iconName              = iconName,
+                                iconFilled            = iconFilled,
+                                posX                  = 0.5f,
+                                posY                  = 0.5f,
+                                buttonShape           = buttonShape,
+                                buttonSize            = buttonSize,
+                                action                = action,
+                                hapticStrength        = hapticStrength,
+                                hapticCustomDurationMs = hapticCustomDurationMs,
+                                hapticCustomAmplitude  = hapticCustomAmplitude,
+                            )
+                            onConfirm(result)
+                        }
+                    },
+                    enabled = isConfirmEnabled,
+                ) {
+                    Text(
+                        stringResource(R.string.macropad_editor_done),
+                        color      = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
 
-        // ── Scrollable form body ──────────────────────────────────────────────────────────
-        // ── Section header ───────────────────────────────────────────────────────────────
-        Text(
-            text     = stringResource(R.string.macropad_editor_section_button_settings).uppercase(Locale.ROOT),
-            color    = accentColor,
-            style    = MaterialTheme.typography.labelSmall,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.surfaceVariant)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+            // ── Scrollable form body ──────────────────────────────────────────────────────────
+            // ── Section header ───────────────────────────────────────────────────────────────
+            Text(
+                text     = stringResource(R.string.macropad_editor_section_button_settings).uppercase(Locale.ROOT),
+                color    = accentColor,
+                style    = MaterialTheme.typography.labelSmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.surfaceVariant)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 val iconsFilled = iconFilled
 
                 // Label input and shape — hidden for ScrollWheel and TrackpointMove
@@ -537,6 +538,7 @@ internal fun ButtonEditDialog(
                     onChange       = ::onActionChanged,
                 )
             }
+        }
 
         // ── Icon picker overlay ──────────────────────────────────────────────
         if (showIconPicker) {
