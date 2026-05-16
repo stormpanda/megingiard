@@ -361,8 +361,16 @@ class MainActivity : ComponentActivity() {
                         }
                         when (decideMirrorRuntimeAction(policy)) {
                             MirrorRuntimeAction.START -> {
-                                AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
-                                startMirrorByPolicy()
+                                // Re-read promptInFlight from the live StateFlow before
+                                // acting. The combine() snapshot may have captured a stale
+                                // promptInFlight=false if the manual-start handler set it to
+                                // true in the same scheduler turn — causing a double launch.
+                                if (AppStateManager.promptInFlight.value) {
+                                    AppLog.d(TAG, "mirror policy: layout=${policy.layoutId} wants ON but prompt already in flight — skipping")
+                                } else {
+                                    AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
+                                    startMirrorByPolicy()
+                                }
                             }
                             MirrorRuntimeAction.STOP -> {
                                 AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
