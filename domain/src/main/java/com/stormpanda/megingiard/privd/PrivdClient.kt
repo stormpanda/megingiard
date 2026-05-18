@@ -16,6 +16,7 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.security.SecureRandom
 import java.util.concurrent.LinkedBlockingQueue
 import com.stormpanda.megingiard.security.HmacUtil
 
@@ -330,16 +331,21 @@ object PrivdClient {
     // -------------------------------------------------------------------------
 
     /**
-     * Synchronous challenge-response handshake.
+     * Synchronous mutual challenge-response handshake.
      *
-     * Protocol (server-first):
-     *   S→C  `CHAL <32-hex-nonce>\n`   (16 random bytes, hex-encoded)
-     *   C→S  `AUTH <64-hex-hmac>\n`    (HMAC-SHA256(key, nonce_bytes))
-     *   S→C  `OK\n`                    (authentication accepted)
+     * Protocol:
+     *   S→C  `CHAL <32-hex-nonce>\n`    (daemon challenges app)
+     *   C→S  `AUTH <64-hex-hmac>\n`     (app proves it knows the key)
+     *   S→C  `OK\n`                     (daemon accepts app)
+     *   C→S  `VERIFY <32-hex-nonce2>\n` (app challenges daemon back)
+     *   S→C  `PROOF <64-hex-hmac>\n`    (daemon proves it knows the key)
      *
-     * The socket read timeout ([HANDSHAKE_TIMEOUT_MS]) is set before reading
-     * the CHAL and reset to 0 (blocking) on success.  Returns `false` on any
-     * failure so [connect] can close the socket and back off.
+     * Both halves use HMAC-SHA256 with the same pre-shared key. Either side
+     * aborting or providing a wrong MAC causes this function to return `false`,
+     * triggering a reconnect back-off in [connect].
+     *
+     * The socket read timeout ([HANDSHAKE_TIMEOUT_MS]) is active for both the
+     * CHAL and PROOF reads and reset to 0 (blocking) only after mutual success.
      */
     private fun performHmacHandshake(
         s: LocalSocket,
@@ -349,6 +355,7 @@ object PrivdClient {
         return try {
             s.soTimeout = HANDSHAKE_TIMEOUT_MS
 
+            // --- Daemon challenges App ---
             val chalLine = reader.readLine() ?: return false
             if (!chalLine.startsWith("CHAL ")) {
                 AppLog.w(TAG, "handshake: expected CHAL, got: $chalLine")
@@ -371,8 +378,35 @@ object PrivdClient {
                 return false
             }
 
-            s.soTimeout = 0 // reset to blocking
-            AppLog.d(TAG, "handshake: authenticated successfully")
+            // --- App challenges Daemon (mutual authentication) ---
+            val verifyNonce = ByteArray(NONCE_HEX_LEN / 2)
+            SecureRandom().nextBytes(verifyNonce)
+            val verifyHex = verifyNonce.joinToString("") { b -> "%02X".format(b) }
+
+            writer.write("VERIFY $verifyHex\n")
+            writer.flush()
+
+            val proofLine = reader.readLine() ?: run {
+                AppLog.w(TAG, "handshake: no PROOF received")
+                return false
+            }
+            if (!proofLine.startsWith("PROOF ")) {
+                AppLog.w(TAG, "handshake: expected PROOF, got: $proofLine")
+                return false
+            }
+            val receivedProofHex = proofLine.substring(6)
+            if (receivedProofHex.length != HMAC_HEX_LEN) {
+                AppLog.w(TAG, "handshake: proof length ${receivedProofHex.length} != $HMAC_HEX_LEN")
+                return false
+            }
+            val expectedProofHex = HmacUtil.computeHmacHex(hmacKeyBytes, verifyNonce)
+            if (receivedProofHex != expectedProofHex) {
+                AppLog.w(TAG, "handshake: PROOF mismatch — daemon is not the legitimate binary")
+                return false
+            }
+
+            s.soTimeout = 0 // reset to blocking — full mutual handshake complete
+            AppLog.d(TAG, "handshake: mutual authentication successful")
             true
         } catch (e: Exception) {
             AppLog.w(TAG, "handshake: exception — $e")

@@ -567,10 +567,12 @@ static void hmac_sha256(const uint8_t *key, size_t key_len,
 #define PRIVD_HMAC_KEY_HEX "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
 #endif
 
-#define NONCE_BYTES   16
-#define NONCE_HEX_LEN 32   /* NONCE_BYTES * 2 */
-#define HMAC_HEX_LEN  64   /* SHA256_DIGEST_LEN * 2 */
-#define AUTH_LINE_MAX 80   /* "AUTH " + 64 hex + '\0' */
+#define NONCE_BYTES      16
+#define NONCE_HEX_LEN    32   /* NONCE_BYTES * 2 */
+#define HMAC_HEX_LEN     64   /* SHA256_DIGEST_LEN * 2 */
+#define AUTH_LINE_MAX    80   /* "AUTH " + 64 hex + '\0' */
+#define VERIFY_LINE_MAX  40   /* "VERIFY " + 32 hex + '\0' */
+#define PROOF_MSG_LEN    72   /* "PROOF " + 64 hex + '\n' + '\0' */
 
 /*
  * Reads up to (max_len-1) chars from fd until '\n' (or EOF/error).
@@ -592,13 +594,16 @@ static int read_line_n(int fd, char *out, int max_len) {
 }
 
 /*
- * HMAC-SHA256 challenge-response.
+ * Mutual HMAC-SHA256 challenge-response.
  *
- * Server sends:  CHAL <32-hex-nonce>\n   (16 random bytes, hex-encoded)
- * Client replies: AUTH <64-hex-hmac>\n   (HMAC-SHA256(key, nonce_bytes))
- * Server replies: OK\n                   (only on success)
+ * Server (daemon) → Client: CHAL <32-hex-nonce>\n   (daemon challenges app)
+ * Client → Server (daemon): AUTH <64-hex-hmac>\n    (app proves it knows the key)
+ * Server (daemon) → Client: OK\n                    (daemon accepts app)
+ * Client → Server (daemon): VERIFY <32-hex-nonce2>\n (app challenges daemon back)
+ * Server (daemon) → Client: PROOF <64-hex-hmac>\n   (daemon proves it knows the key)
  *
- * Returns 1 on successful authentication, 0 on any failure.
+ * Both halves use HMAC-SHA256(pre_shared_key, nonce_bytes).
+ * Returns 1 on successful mutual authentication, 0 on any failure.
  * The caller must close client_fd on failure.
  */
 static int authenticate_client(int client_fd) {
@@ -668,6 +673,47 @@ static int authenticate_client(int client_fd) {
 
     /* Send OK. */
     if (write(client_fd, "OK\n", 3) != 3) return 0;
+
+    /* --- Mutual authentication: client now challenges the server --- */
+    /* Set 5-second read timeout for VERIFY. */
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Read VERIFY nonce from client. */
+    char verify_line[VERIFY_LINE_MAX];
+    int vn = read_line_n(client_fd, verify_line, VERIFY_LINE_MAX);
+
+    /* Reset to blocking. */
+    tv.tv_sec = 0;
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Validate: "VERIFY " prefix + exactly 32 hex chars. */
+    if (vn != (int)(7 + NONCE_HEX_LEN)) return 0;
+    if (strncmp(verify_line, "VERIFY ", 7) != 0) return 0;
+    const char *verify_hex = verify_line + 7;
+
+    /* Decode VERIFY nonce hex → 16 bytes. */
+    uint8_t verify_nonce[NONCE_BYTES];
+    for (int i = 0; i < NONCE_BYTES; i++) {
+        char b[3] = { verify_hex[i*2], verify_hex[i*2+1], '\0' };
+        verify_nonce[i] = (uint8_t)strtol(b, NULL, 16);
+    }
+
+    /* Compute HMAC-SHA256(key, verify_nonce). */
+    uint8_t proof[SHA256_DIGEST_LEN];
+    hmac_sha256(key, SHA256_DIGEST_LEN, verify_nonce, NONCE_BYTES, proof);
+
+    /* Hex-encode proof → 64 chars. */
+    char proof_hex[HMAC_HEX_LEN + 1];
+    for (int i = 0; i < SHA256_DIGEST_LEN; i++)
+        snprintf(proof_hex + i * 2, 3, "%02X", (unsigned)proof[i]);
+    proof_hex[HMAC_HEX_LEN] = '\0';
+
+    /* Send PROOF. */
+    char proof_msg[PROOF_MSG_LEN];
+    int proof_len = snprintf(proof_msg, sizeof(proof_msg), "PROOF %s\n", proof_hex);
+    if (write(client_fd, proof_msg, (size_t)proof_len) != (ssize_t)proof_len) return 0;
     return 1;
 }
 
