@@ -19,7 +19,7 @@ to be sent to the developer without requiring USB or ADB access.
 
 ### FR-LR1: Log Report Save
 
-- A **Save log report** row MUST be present in Settings → General, immediately after the Log Level picker.
+- A **Log Level** picker and a **Save log report** row MUST be present together in a dedicated **Settings → Diagnostics** section, located at the bottom of the settings screen (after Privileged Mode).
 - Tapping the row MUST open the SAF "Create Document" picker with a pre-filled filename of the form `megingiard_log_<timestamp>.txt`.
 - The saved file MUST contain a plain-text header (app version, device model, Android version, generation timestamp) followed by up to 3 000 recent logcat lines from the app's own process.
 - On success or failure, an in-tree feedback dialog MUST be shown to the user.

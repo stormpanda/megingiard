@@ -85,7 +85,7 @@ private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 private enum class SettingsSectionFilter {
-    GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE
+    GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE, DIAGNOSTICS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -173,6 +173,7 @@ fun GlobalSettingsScreen(
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
                     onSelectPrivilegedMode = { selectedSectionFilter = SettingsSectionFilter.PRIVILEGED_MODE },
+                    onSelectDiagnostics = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
                     SettingsSection(
@@ -224,19 +225,6 @@ fun GlobalSettingsScreen(
                             accentColor = effectiveAccent,
                             colors = colors,
                             onChanged = { viewModel.setAppLanguage(it) }
-                        )
-                        HorizontalDivider(color = colors.divider)
-                        LogLevelPickerRow(
-                            logLevel = logLevel,
-                            accentColor = effectiveAccent,
-                            colors = colors,
-                            onChanged = { viewModel.setLogLevel(it) }
-                        )
-                        HorizontalDivider(color = colors.divider)
-                        SaveLogReportRow(
-                            accentColor = effectiveAccent,
-                            colors = colors,
-                            onClick = { viewModel.requestSaveLogReport() }
                         )
                         HorizontalDivider(color = colors.divider)
                         RememberSettingRow(
@@ -313,6 +301,27 @@ fun GlobalSettingsScreen(
                             viewModel = viewModel,
                             onShowWizard = { showPrivdWizard = true },
                             onShowDeadzoneDialog = { showDeadzoneDialog = true },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_diagnostics),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        LogLevelPickerRow(
+                            logLevel = logLevel,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { viewModel.setLogLevel(it) }
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        SaveLogReportRow(
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onClick = { viewModel.requestSaveLogReport() }
                         )
                     }
                 }
@@ -479,6 +488,7 @@ private fun SectionJumpRow(
     onSelectData: () -> Unit,
     onSelectConfig: () -> Unit,
     onSelectPrivilegedMode: () -> Unit,
+    onSelectDiagnostics: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -535,6 +545,13 @@ private fun SectionJumpRow(
             accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE,
             onClick = onSelectPrivilegedMode,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_diagnostics),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS,
+            onClick = onSelectDiagnostics,
         )
     }
 }
