@@ -25,6 +25,8 @@ the same device or share it with other Megingiard users ("community configs").
   (up to 20 chars) and description (up to 30 chars) to help users identify files.
   Format: `megingiard_<date>[_<author>][_<description>].mgrd`.
 - The export MUST embed an SHA-256 checksum to detect file corruption or unintended modification.
+  This is a data-integrity check, distinct from the application / daemon hardening layers
+  summarized in [SECURITY_CONCEPT.md](../../../SECURITY_CONCEPT.md).
 
 ### FR-CF2: Configuration Import
 

@@ -25,6 +25,7 @@
 | Document                                   | Purpose                                                                                  |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | `README.md`                                | Project overview, feature list, quick links                                              |
+| `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
 | `PRD.md`                                   | Product requirements (German, authoritative)                                             |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
@@ -58,6 +59,10 @@
 >
 > This applies to **all** changes — including bug fixes, refactors, and dependency updates that
 > affect runtime behaviour. Do not skip this step.
+>
+> Security-affecting changes MUST also update `SECURITY_CONCEPT.md` and whichever detailed
+> document owns the changed mechanism (`docs/ARCHITECTURE.md`, `docs/BUILD_NATIVE.md`, or the
+> relevant feature `FEATURE.md`).
 
 > [!NOTE]
 > **New features — create a `FEATURE.md` first.**
@@ -778,13 +783,13 @@ Existing `accentColor` parameters in older Composables may remain until a future
 > agent **must** immediately run the corresponding build script to rebuild the bundled
 > binary. The scripts are at the workspace root:
 >
-> | Source file                                     | Build script                    |
-> | ----------------------------------------------- | ------------------------------- |
-> | `app/src/main/cpp/megingiard_privd.c`           | `./build_megingiard_privd.sh`   |
-> | `app/src/main/cpp/touchinjector_arm64.c` (etc.) | `./build_mouseinjector.sh` etc. |
-> | `app/src/main/cpp/keyinjector_arm64.c`          | `./build_keyinjector.sh`        |
-> | `app/src/main/cpp/mouseinjector_arm64.c`        | `./build_mouseinjector.sh`      |
-> | `app/src/main/cpp/gamepadinjector_arm64.c`      | `./build_gamepadinjector.sh`    |
+> | Source file                           | Build script                                                             |
+> | ------------------------------------- | ------------------------------------------------------------------------ |
+> | `app/src/main/cpp/megingiard_privd.c` | `./build_megingiard_privd.sh`                                            |
+> | `app/src/main/cpp/touchinjector.c`    | Manual compile in `docs/BUILD_NATIVE.md` until a dedicated script exists |
+> | `app/src/main/cpp/keyinjector.c`      | `./build_keyinjector.sh`                                                 |
+> | `app/src/main/cpp/mouseinjector.c`    | `./build_mouseinjector.sh`                                               |
+> | `app/src/main/cpp/gamepadinjector.c`  | `./build_gamepadinjector.sh`                                             |
 >
 > Run the script **before** proposing the commit message. If the build fails, fix the
 > source error before proceeding. The scripts must be run from the workspace root.
