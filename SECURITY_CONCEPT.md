@@ -36,7 +36,7 @@ Security-sensitive build values are read from `local.properties`:
 | Key                         | Meaning                                                                                                                                                                      | Required for distribution                                                            |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `megingiard.signing.sha256` | SHA-256 fingerprint of the expected APK signing certificate. Injected into `BuildConfig.EXPECTED_SIGNING_SHA256`.                                                            | Yes. Release builds abort if missing unless explicitly overridden for local testing. |
-| `megingiard.privd.hmac.key` | 64-character hex string (32 bytes) shared by the app and `megingiard_privd`. Injected into `BuildConfig.PRIVD_HMAC_KEY` and `PRIVD_HMAC_KEY_HEX` when rebuilding the daemon. | Yes for real isolation. The source default is functional but public and not secret.  |
+| `megingiard.privd.hmac.key` | 64-character hex string (32 bytes) shared by the app and `megingiard_privd`. Injected into `BuildConfig.PRIVD_HMAC_KEY` and `PRIVD_HMAC_KEY_HEX` when rebuilding the daemon. | Yes. Release builds and daemon rebuilds reject the public default unless explicitly overridden for local testing. |
 
 Generate a Privd HMAC key with:
 
@@ -50,12 +50,14 @@ Whenever `megingiard.privd.hmac.key` changes, rebuild the daemon with:
 ./build_megingiard_privd.sh
 ```
 
+For local non-distribution testing only, release builds can be forced with `-Pmegingiard.allowDefaultPrivdHmacKey=true`, and the daemon script can be forced with `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true`. Do not use either override for distributed APKs.
+
 ## Verification and Tests
 
 The current automated coverage focuses on pure cryptographic primitives:
 
 - `BinaryIntegrityTest` covers SHA-256 known-answer vectors and sensitivity to byte changes.
-- `HmacUtilTest` covers HMAC-SHA256 RFC 4231 vectors.
+- `HmacUtilTest` covers HMAC-SHA256 RFC 4231 vectors and the constant-time hex MAC comparison used for daemon `PROOF` verification.
 - Agents must run `./gradlew :core:test :domain:test` after implementation changes that affect pure `:core` or `:domain` logic.
 - Native C source changes must be followed by the matching build script; see [Build Native](docs/BUILD_NATIVE.md#native-rebuild-policy).
 
@@ -63,9 +65,8 @@ Runtime Android branches such as `SignatureGuard.verify()` and the full `LocalSo
 
 ## Residual Risks and Future Hardening
 
-- The default Privd HMAC key is public. It must be replaced for production-like builds.
+- The default Privd HMAC key is public. Release builds and daemon rebuilds now reject it by default, but explicit local override switches still exist for non-distribution testing.
 - HMAC key rotation and signing-certificate rotation are manual rebuild / redeploy operations today.
-- The C daemon compares the app's `AUTH` proof in constant time. The Kotlin-side daemon `PROOF` comparison currently uses normal string equality and can be hardened further.
 - A fully compromised / rooted device can patch code, binaries, memory, or filesystem contents outside the assumptions of this model.
 - Socket parser fuzzing and end-to-end tamper tests are not yet part of automated CI.
 

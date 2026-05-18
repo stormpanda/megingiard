@@ -209,7 +209,7 @@ Every new LocalSocket connection begins with mutual challenge-response. Both sid
 - App side: `BuildConfig.PRIVD_HMAC_KEY`, configured from `megingiard.privd.hmac.key` in `local.properties`.
 - Daemon side: `PRIVD_HMAC_KEY_HEX`, injected by `build_megingiard_privd.sh` when compiling `megingiard_privd_arm64`.
 
-If no key is configured, both sides fall back to the public source default. That default is useful for development, but it is not secret and must not be treated as production isolation.
+If no key is configured, debug builds can still fall back to the public source default. Release builds reject that default unless `-Pmegingiard.allowDefaultPrivdHmacKey=true` is supplied, and `build_megingiard_privd.sh` rejects it unless `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true` is set. Those overrides are for local non-distribution testing only; the default key is not secret and must not be treated as production isolation.
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -226,7 +226,7 @@ The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon a
 
 Malformed messages, missing messages, wrong HMAC values, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds and is reset to normal blocking I/O only after the full mutual exchange succeeds.
 
-The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator. The Kotlin app currently compares the daemon `PROOF` with normal string equality; this is acceptable for the local threat model but remains a future hardening item documented in [SECURITY_CONCEPT.md](../../../SECURITY_CONCEPT.md#residual-risks-and-future-hardening).
+The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator. The Kotlin app compares the daemon `PROOF` through `HmacUtil.constantTimeEqualsHex()` so both authentication legs avoid early-exit string equality for same-length MAC values.
 
 #### Native Asset Verification During Bootstrap
 

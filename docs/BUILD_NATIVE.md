@@ -57,7 +57,7 @@ Privileged Mode bootstrap verifies `megingiard_privd_arm64` and `megingiard_mirr
 
 `megingiard_privd` and the app must be built with the same 32-byte HMAC key. The app reads `megingiard.privd.hmac.key` from `local.properties` into `BuildConfig.PRIVD_HMAC_KEY`; `build_megingiard_privd.sh` reads the same key and passes it to the C compiler as `PRIVD_HMAC_KEY_HEX`.
 
-If the key is absent or malformed, both sides use the public default key. That is useful for development, but it is not a production secret. Generate a real key with:
+If the key is absent, malformed, or equal to the public source default, `build_megingiard_privd.sh` refuses to build unless `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true` is set. That override is useful for local non-distribution testing, but it must not be used for distributed APKs. Generate a real key with:
 
 ```bash
 openssl rand -hex 32 | tr '[:lower:]' '[:upper:]'
@@ -74,6 +74,8 @@ megingiard.privd.hmac.key=<64 uppercase hex chars>
 ```
 
 The next Gradle build regenerates the native asset hash pins from the rebuilt daemon asset.
+
+Release APK builds also reject the public default key unless the local-only Gradle override `-Pmegingiard.allowDefaultPrivdHmacKey=true` is supplied.
 
 ---
 
