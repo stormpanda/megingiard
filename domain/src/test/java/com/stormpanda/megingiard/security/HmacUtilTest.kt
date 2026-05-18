@@ -109,7 +109,7 @@ class HmacUtilTest {
      */
     @Test
     fun computeHmacHex_rfc4231TestCase1() {
-        val key   = ByteArray(20) { 0x0b }
+        val key   = ByteArray(20) { 0x0b.toByte() }
         val data  = "Hi There".toByteArray(Charsets.US_ASCII)
         val result = HmacUtil.computeHmacHex(key, data)
         assertEquals(
@@ -190,9 +190,9 @@ class HmacUtilTest {
      */
     @Test
     fun computeHmacHex_differentKeys_produceDifferentOutputs() {
-        val nonce = ByteArray(16) { 0x42 }
-        val key1  = ByteArray(32) { 0x00 }
-        val key2  = ByteArray(32) { 0x01 }
+        val nonce = ByteArray(16) { 0x42.toByte() }
+        val key1  = ByteArray(32) { 0x00.toByte() }
+        val key2  = ByteArray(32) { 0x01.toByte() }
         assertTrue(
             "Different keys must produce different HMACs",
             HmacUtil.computeHmacHex(key1, nonce) != HmacUtil.computeHmacHex(key2, nonce),
