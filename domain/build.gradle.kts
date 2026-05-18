@@ -37,7 +37,7 @@ val generateNativeBinaryHashes = tasks.register("generateNativeBinaryHashes") {
             require(f.exists()) { "Missing native binary asset: ${f.absolutePath}" }
             md.reset()
             val hex = md.digest(f.readBytes())
-                .joinToString("") { b -> "%02X".format(b) }
+                .joinToString("") { b -> "%02X".format(b.toInt() and 0xFF) }
             "    \"$name\" to \"$hex\""
         }
         val targetDir = outDir.get().asFile

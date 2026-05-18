@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.privd
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.security.HmacUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,7 +19,6 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.security.SecureRandom
 import java.util.concurrent.LinkedBlockingQueue
-import com.stormpanda.megingiard.security.HmacUtil
 
 private const val TAG = "PrivdClient"
 private const val ABSTRACT_NAME = "megingiard.privd"
@@ -382,7 +382,7 @@ object PrivdClient {
             // --- App challenges Daemon (mutual authentication) ---
             val verifyNonce = ByteArray(NONCE_HEX_LEN / 2)
             SecureRandom().nextBytes(verifyNonce)
-            val verifyHex = verifyNonce.joinToString("") { b -> "%02X".format(b) }
+            val verifyHex = HmacUtil.bytesToHex(verifyNonce)
 
             writer.write("VERIFY $verifyHex\n")
             writer.flush()

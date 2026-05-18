@@ -14,6 +14,9 @@ internal object HmacUtil {
 
     private val HEX_PATTERN = Regex("[0-9A-Fa-f]+")
 
+    fun bytesToHex(bytes: ByteArray): String =
+        bytes.joinToString("") { b -> "%02X".format(b.toInt() and 0xFF) }
+
     /**
      * Decodes a hex string (case-insensitive, even number of chars) to a [ByteArray].
      * Each pair of characters maps to one byte; no `0x` prefix expected.
@@ -38,7 +41,7 @@ internal object HmacUtil {
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(keyBytes, "HmacSHA256"))
         val hmac = mac.doFinal(nonceBytes)
-        return hmac.joinToString("") { b -> "%02X".format(b) }
+        return bytesToHex(hmac)
     }
 
     /**

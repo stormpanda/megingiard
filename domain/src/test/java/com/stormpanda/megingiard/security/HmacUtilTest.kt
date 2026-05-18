@@ -60,8 +60,15 @@ class HmacUtilTest {
     @Test
     fun hexToBytes_roundTrip_isLossless() {
         val original = ByteArray(32) { (it * 7 + 13).toByte() }
-        val hex = original.joinToString("") { b -> "%02X".format(b.toInt() and 0xFF) }
+        val hex = HmacUtil.bytesToHex(original)
         assertArrayEquals(original, HmacUtil.hexToBytes(hex))
+    }
+
+    @Test
+    fun bytesToHex_highBitBytes_emitTwoCharsPerByte() {
+        val bytes = byteArrayOf(0x00, 0x7F, 0x80.toByte(), 0xFF.toByte())
+
+        assertEquals("007F80FF", HmacUtil.bytesToHex(bytes))
     }
 
     @Test

@@ -110,8 +110,11 @@ object SettingsManager {
                 } else {
                     AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
                 }
-            } catch (_: Exception) {
-                // DataStore not yet written (first launch) — keep default WARN.
+            } catch (e: Exception) {
+                AppLog.w(
+                    TAG,
+                    "DataStore bootstrap failed (${e.javaClass.simpleName}): ${e.message ?: "no message"} - retaining default log level",
+                )
             }
         }
 
