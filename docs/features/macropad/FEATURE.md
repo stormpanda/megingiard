@@ -164,10 +164,12 @@ Each button supports one of the following actions:
     Like dim, the vignette is hidden when Peek is active.
 - A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, dim and vignette are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
-- **Button theme style** (`macropad_ambient_apply_theme`, default: off): A checkbox visible only when Ambient Display is enabled controls whether MacroPad buttons in the Ambient overlay use the active app theme or a neutral, theme-independent style.
-  - **Default (off / neutral style):** All buttons are rendered with a soft grey outline (`#AAAAAA`), a colourless white background at the standard press-animation alpha (0.25 / 0.80), and near-white text/icons (`#DDDDDD` at 90% opacity). This style is identical across all themes (DARK, LIGHT, CYBERPUNK).
-  - **Checked (apply theme):** Buttons use the normal themed accent colour and `onSurface` token exactly as in regular MacroPad mode.
-  - The neutral style is implemented via a `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. It is only set to `true` inside `AmbientMacroPadOverlay`; regular `MacroPadScreen` always uses `neutralStyle = false`.
+- **Per-layout button color style** (`PadLayout.buttonColorNoMirror` / `PadLayout.buttonColorMirror`): Each layout can independently configure the button color style for two states: when mirroring is inactive and when it is active (ambient overlay).
+  - `buttonColorNoMirror` — defaults to `ButtonColorStyle.ACCENTED`. Buttons use the active accent colour and `macroPadOnSurface` text token.
+  - `buttonColorMirror` — defaults to `ButtonColorStyle.NEUTRAL`. Buttons use a neutral white/grey palette (soft grey outline `#AAAAAA`, near-white text `#DDDDDD` at 90 % opacity) that is theme-independent.
+  - Both settings are exposed in the **Layout Settings** section of the layout editor (below the toolbar, above the button list) as a pair of two-chip selectors ("Accented" / "Neutral").
+  - The neutral style is implemented via the `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. `MacroPadScreen` passes `neutralStyle = layout.buttonColorNoMirror == ButtonColorStyle.NEUTRAL`; `AmbientMacroPadOverlay` passes `neutralStyle = layout.buttonColorMirror == ButtonColorStyle.NEUTRAL`.
+  - These settings are persisted as part of `PadLayout` and are included in config exports automatically.
 
 ### FR-P10: Optional Button Icons
 

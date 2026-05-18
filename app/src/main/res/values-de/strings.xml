@@ -359,7 +359,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_section_layout">Layout</string>
     <string name="macropad_editor_section_buttons">Tasten</string>
     <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
+    <string name="macropad_editor_section_layout_settings">Layout-Einstellungen</string>
     <string name="macropad_macro_section_list">Liste</string>
+
+    <!-- MacroPad-Editor Layout-Einstellungen — Tastenfarbe -->
+    <string name="macropad_editor_button_color_no_mirror">Tastenfarbe (ohne Spiegelung)</string>
+    <string name="macropad_editor_button_color_mirror">Tastenfarbe (mit Spiegelung)</string>
+    <string name="macropad_editor_button_color_accented">Akzentfarbe</string>
+    <string name="macropad_editor_button_color_neutral">Neutral</string>
 
     <!-- Makro-Listenverwaltung -->
     <string name="macropad_macro_list_title">Makros</string>

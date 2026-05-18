@@ -429,7 +429,14 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_section_layout">Layout</string>
     <string name="macropad_editor_section_buttons">Buttons</string>
     <string name="macropad_editor_section_button_settings">Button Settings</string>
+    <string name="macropad_editor_section_layout_settings">Layout Settings</string>
     <string name="macropad_macro_section_list">List</string>
+
+    <!-- MacroPad editor layout settings — button color style -->
+    <string name="macropad_editor_button_color_no_mirror">Button color (no mirroring)</string>
+    <string name="macropad_editor_button_color_mirror">Button color (while mirroring)</string>
+    <string name="macropad_editor_button_color_accented">Accented</string>
+    <string name="macropad_editor_button_color_neutral">Neutral</string>
 
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>

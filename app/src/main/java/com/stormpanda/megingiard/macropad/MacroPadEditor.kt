@@ -78,6 +78,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
+import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
@@ -497,9 +498,10 @@ private fun EditorBody(
     val layoutRef  by rememberUpdatedState(layout)
 
     val lazyListState = rememberLazyListState()
-    // Items before buttons: section_layout(0), layouts(1), canvas(2), toolbar(3), section_buttons(4) → offset = 5
+    // Items before buttons: section_layout(0), layouts(1), canvas(2), toolbar(3),
+    // section_layout_settings(4), layout_settings(5), section_buttons(6) → offset = 7
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val offset     = 5
+        val offset     = 7
         val curLayout  = layoutRef
         if (curLayout != null) {
             val newButtons = curLayout.buttons.toMutableList()
@@ -590,7 +592,25 @@ private fun EditorBody(
             )
         }
 
-        // 5. Buttons section header
+        // 5. Layout settings section header
+        item(key = "section_layout_settings") {
+            EditorSectionHeader(R.string.macropad_editor_section_layout_settings)
+        }
+
+        // 6. Layout settings content
+        item(key = "layout_settings") {
+            if (layout != null) {
+                LayoutSettingsContent(
+                    layout   = layout,
+                    modifier = Modifier
+                        .background(colors.surface)
+                        .padding(horizontal = ED_PADDING)
+                        .padding(vertical = ED_PADDING),
+                )
+            }
+        }
+
+        // 7. Buttons section header
         item(key = "section_buttons") {
             EditorSectionHeader(R.string.macropad_editor_section_buttons)
         }
@@ -793,6 +813,71 @@ private fun EditorToolbar(
             onClick     = onManageMacros,
             modifier    = Modifier.weight(1f),
         )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Layout settings content — button color style pickers
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun LayoutSettingsContent(
+    layout:   PadLayout,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier          = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(ED_ITEM_PADDING),
+    ) {
+        ButtonColorStyleRow(
+            label    = stringResource(R.string.macropad_editor_button_color_no_mirror),
+            selected = layout.buttonColorNoMirror,
+            onSelect = { style ->
+                MacroPadState.updateLayout(layout.copy(buttonColorNoMirror = style))
+            },
+        )
+        ButtonColorStyleRow(
+            label    = stringResource(R.string.macropad_editor_button_color_mirror),
+            selected = layout.buttonColorMirror,
+            onSelect = { style ->
+                MacroPadState.updateLayout(layout.copy(buttonColorMirror = style))
+            },
+        )
+    }
+}
+
+@Composable
+private fun ButtonColorStyleRow(
+    label:    String,
+    selected: ButtonColorStyle,
+    onSelect: (ButtonColorStyle) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    Row(
+        modifier             = modifier.fillMaxWidth(),
+        verticalAlignment    = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text     = label,
+            color    = colors.onSurface,
+            style    = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(ED_ITEM_PADDING))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AppSelectableChip(
+                text     = stringResource(R.string.macropad_editor_button_color_accented),
+                selected = selected == ButtonColorStyle.ACCENTED,
+                onClick  = { onSelect(ButtonColorStyle.ACCENTED) },
+            )
+            AppSelectableChip(
+                text     = stringResource(R.string.macropad_editor_button_color_neutral),
+                selected = selected == ButtonColorStyle.NEUTRAL,
+                onClick  = { onSelect(ButtonColorStyle.NEUTRAL) },
+            )
+        }
     }
 }
 

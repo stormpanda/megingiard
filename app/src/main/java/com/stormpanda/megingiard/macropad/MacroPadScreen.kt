@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -115,6 +116,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 profile     = p,
                 layout      = l,
                 accentColor = colors.accent,
+                neutralStyle = l.buttonColorNoMirror == ButtonColorStyle.NEUTRAL,
                 onDisabledActionFeedback = { reason ->
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface

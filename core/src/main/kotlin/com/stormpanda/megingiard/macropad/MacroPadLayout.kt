@@ -46,6 +46,20 @@ enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Button color style — per-layout override for neutral vs accented appearance
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Controls whether buttons on a [PadLayout] are rendered with the accent color
+ * or in a neutral (white/grey) palette.
+ *
+ * - [ACCENTED] — buttons use the active accent color (default for no-mirroring state).
+ * - [NEUTRAL]  — buttons use a neutral white/grey palette (default for mirroring state).
+ */
+@Serializable
+enum class ButtonColorStyle { ACCENTED, NEUTRAL }
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Haptic feedback strength — used by PadButton
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -291,6 +305,10 @@ data class PadButton(
  *                                    this layout, and to `false` when the user explicitly
  *                                    stops mirroring or cancels the consent prompt. Runtime
  *                                    service teardown does not mutate this flag.
+ * @param buttonColorNoMirror         Button color style used when screen mirroring is inactive.
+ *                                    Defaults to [ButtonColorStyle.ACCENTED].
+ * @param buttonColorMirror           Button color style used when screen mirroring is active
+ *                                    (ambient overlay). Defaults to [ButtonColorStyle.NEUTRAL].
  */
 @Serializable
 data class PadLayout(
@@ -309,6 +327,8 @@ data class PadLayout(
     val mirrorSavedOffsetX: Float = 0f,
     val mirrorSavedOffsetY: Float = 0f,
     val mirrorAutoStart: Boolean = false,
+    val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
+    val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
