@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.security
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,8 +60,30 @@ class HmacUtilTest {
     @Test
     fun hexToBytes_roundTrip_isLossless() {
         val original = ByteArray(32) { (it * 7 + 13).toByte() }
-        val hex = original.joinToString("") { b -> "%02X".format(b) }
+        val hex = original.joinToString("") { b -> "%02X".format(b.toInt() and 0xFF) }
         assertArrayEquals(original, HmacUtil.hexToBytes(hex))
+    }
+
+    @Test
+    fun hexToBytes_lowercase_decodesCorrectly() {
+        assertArrayEquals(
+            byteArrayOf(0x0A, 0x0B, 0x0C),
+            HmacUtil.hexToBytes("0a0b0c"),
+        )
+    }
+
+    @Test
+    fun hexToBytes_oddLength_throwsClearException() {
+        assertThrows(IllegalArgumentException::class.java) {
+            HmacUtil.hexToBytes("ABC")
+        }
+    }
+
+    @Test
+    fun hexToBytes_nonHexCharacter_throwsClearException() {
+        assertThrows(IllegalArgumentException::class.java) {
+            HmacUtil.hexToBytes("GG")
+        }
     }
 
     // -------------------------------------------------------------------------

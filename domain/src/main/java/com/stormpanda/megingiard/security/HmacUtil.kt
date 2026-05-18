@@ -12,14 +12,19 @@ import javax.crypto.spec.SecretKeySpec
  */
 internal object HmacUtil {
 
+    private val HEX_PATTERN = Regex("[0-9A-Fa-f]+")
+
     /**
      * Decodes a hex string (case-insensitive, even number of chars) to a [ByteArray].
      * Each pair of characters maps to one byte; no `0x` prefix expected.
      */
-    fun hexToBytes(hex: String): ByteArray =
-        ByteArray(hex.length / 2) { i ->
+    fun hexToBytes(hex: String): ByteArray {
+        require(hex.length % 2 == 0) { "Hex string must contain an even number of characters" }
+        require(hex.isEmpty() || hex.matches(HEX_PATTERN)) { "Hex string contains non-hex characters" }
+        return ByteArray(hex.length / 2) { i ->
             hex.substring(i * 2, i * 2 + 2).toInt(16).toByte()
         }
+    }
 
     /**
      * Computes HMAC-SHA256([keyBytes], [nonceBytes]) and returns the result as a

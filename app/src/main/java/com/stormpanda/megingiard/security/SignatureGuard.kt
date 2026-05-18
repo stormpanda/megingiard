@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.Signature
 import android.content.pm.SigningInfo
-import android.os.Build
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.BuildConfig
 import java.security.MessageDigest
@@ -61,7 +60,7 @@ object SignatureGuard {
 
         val actualHashes = signatures.map { sha256Hex(it.toByteArray()) }
         return if (actualHashes.any { it.equals(expected, ignoreCase = true) }) {
-            AppLog.w(TAG, "Signature pinning OK")
+            AppLog.d(TAG, "Signature pinning OK")
             Result.Ok
         } else {
             AppLog.e(
@@ -75,19 +74,16 @@ object SignatureGuard {
     private fun collectSignatures(context: Context): Array<Signature> {
         val pm = context.packageManager
         val pkg = context.packageName
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val info = pm.getPackageInfo(pkg, PackageManager.GET_SIGNING_CERTIFICATES)
-            val signing: SigningInfo = info.signingInfo
-                ?: error("PackageInfo.signingInfo is null")
-            if (signing.hasMultipleSigners()) {
-                signing.apkContentsSigners
-            } else {
-                signing.signingCertificateHistory
-            }
+        val info = pm.getPackageInfo(
+            pkg,
+            PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()),
+        )
+        val signing: SigningInfo = info.signingInfo
+            ?: error("PackageInfo.signingInfo is null")
+        return if (signing.hasMultipleSigners()) {
+            signing.apkContentsSigners
         } else {
-            @Suppress("DEPRECATION")
-            pm.getPackageInfo(pkg, PackageManager.GET_SIGNATURES).signatures
-                ?: emptyArray()
+            signing.signingCertificateHistory
         }
     }
 

@@ -22,7 +22,7 @@ The continuous loop required by the `MediaProjection` API must be implemented in
 
 Megingiard MUST maintain the layered security model described in [SECURITY_CONCEPT.md](../SECURITY_CONCEPT.md):
 
-- Release builds MUST pin the expected APK signing-certificate SHA-256 via `megingiard.signing.sha256` and fail closed when no pin is configured, unless a developer explicitly opts out for local testing.
+- Release builds MUST pin the expected APK signing-certificate SHA-256 via `megingiard.signing.sha256` and fail closed when the pin is missing or malformed, unless a developer explicitly opts out for local testing.
 - Release builds MUST keep R8 minification and resource shrinking enabled to raise the reverse-engineering cost while preserving Android components and serialization paths through explicit keep rules.
 - Native helper binaries and privileged mirror DEX assets MUST have generated SHA-256 pins and MUST be verified before they are executed, pushed over ADB, or loaded by the privileged path.
 - Runtime native binary deployment MUST verify bytes before writing to app-private storage and MUST re-read and re-verify the written file before setting the executable bit.

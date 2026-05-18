@@ -48,7 +48,7 @@ Megingiard uses layered local hardening rather than a single trust check. The co
 
 ### APK Identity
 
-`MainActivity` runs `SignatureGuard.verify()` during cold start. The guard reads every signing certificate attached to the installed APK, computes SHA-256 fingerprints, and compares them to `BuildConfig.EXPECTED_SIGNING_SHA256`. Release packaging fails closed when `megingiard.signing.sha256` is absent from `local.properties`, because an unpinned release would not detect a repackaged APK.
+`MainActivity` runs `SignatureGuard.verify()` during cold start. The guard reads every signing certificate attached to the installed APK, computes SHA-256 fingerprints, and compares them to `BuildConfig.EXPECTED_SIGNING_SHA256`. Release packaging fails closed when `megingiard.signing.sha256` is absent or malformed in `local.properties`, because an unpinned release would not detect a repackaged APK.
 
 ### Native Asset Integrity
 

@@ -30,6 +30,7 @@ private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
 private const val NONCE_HEX_LEN = 32   // 16 nonce bytes → 32 hex chars
 private const val HMAC_HEX_LEN = 64    // SHA-256 digest → 64 hex chars
+private val HMAC_KEY_HEX_PATTERN = Regex("[0-9A-F]{64}")
 // Default key matching the C daemon default in megingiard_privd.c.
 // Users who want genuine secrecy must set megingiard.privd.hmac.key in
 // local.properties and rebuild the daemon via build_megingiard_privd.sh.
@@ -85,8 +86,8 @@ object PrivdClient {
      */
     fun setHmacKey(hexKey: String) {
         val clean = hexKey.uppercase().replace(":", "").replace(" ", "")
-        if (clean.length != 64) {
-            AppLog.w(TAG, "setHmacKey: invalid key length ${clean.length} — retaining default")
+        if (!clean.matches(HMAC_KEY_HEX_PATTERN)) {
+            AppLog.w(TAG, "setHmacKey: invalid key format — retaining default")
             return
         }
         hmacKeyBytes = HmacUtil.hexToBytes(clean)

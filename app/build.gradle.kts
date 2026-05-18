@@ -21,11 +21,16 @@ val localProperties = Properties().also { props ->
     if (f.exists()) f.inputStream().use { stream -> props.load(stream) }
 }
 
-val expectedSigningSha256: String =
+private val SIGNING_SHA256_PATTERN = Regex("[0-9A-F]{64}")
+val expectedSigningSha256Raw: String =
     (localProperties.getProperty("megingiard.signing.sha256") ?: "")
         .replace(":", "")
         .replace(" ", "")
         .uppercase()
+val expectedSigningSha256: String =
+    if (expectedSigningSha256Raw.matches(SIGNING_SHA256_PATTERN)) expectedSigningSha256Raw else ""
+val expectedSigningSha256IsMalformed: Boolean =
+    expectedSigningSha256Raw.isNotBlank() && expectedSigningSha256.isBlank()
 
 // ---------------------------------------------------------------------------
 // Privileged-daemon socket HMAC key: baked into both the app and the daemon
@@ -40,11 +45,13 @@ private val DEFAULT_PRIVD_HMAC_KEY =
     "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
 private val PRIVD_HMAC_KEY_PATTERN = Regex("[0-9A-F]{64}")
 
-val privdHmacKey: String =
+val privdHmacKeyRaw: String =
     (localProperties.getProperty("megingiard.privd.hmac.key") ?: DEFAULT_PRIVD_HMAC_KEY)
         .replace(":", "")
         .replace(" ", "")
         .uppercase()
+val privdHmacKey: String =
+    if (privdHmacKeyRaw.matches(PRIVD_HMAC_KEY_PATTERN)) privdHmacKeyRaw else DEFAULT_PRIVD_HMAC_KEY
 val privdHmacKeyIsProductionReady: Boolean =
     privdHmacKey.matches(PRIVD_HMAC_KEY_PATTERN) && privdHmacKey != DEFAULT_PRIVD_HMAC_KEY
 
@@ -137,11 +144,11 @@ afterEvaluate {
     releaseGuardTasks.forEach { taskName ->
         tasks.matching { it.name == taskName }.configureEach {
             doFirst {
-                if (expectedSigningSha256.isBlank() && !allowUnpinned) {
+                if ((expectedSigningSha256.isBlank() || expectedSigningSha256IsMalformed) && !allowUnpinned) {
                     throw GradleException(
-                        "Release build aborted: 'megingiard.signing.sha256' is not set in " +
-                            "local.properties. Without it, SignatureGuard runs in skipped " +
-                            "mode and the APK has no tamper protection.\n" +
+                        "Release build aborted: 'megingiard.signing.sha256' must be set " +
+                            "to a 64-character hex SHA-256 fingerprint in local.properties. " +
+                            "Without it, SignatureGuard cannot pin the release APK identity.\n" +
                             "  1. Read your release cert SHA-256:\n" +
                             "       keytool -list -v -keystore megingiard.jks -alias release\n" +
                             "  2. Add to local.properties:\n" +
