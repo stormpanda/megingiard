@@ -46,7 +46,10 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdint.h>
 #include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/random.h>
 #include <stddef.h>
 #include <sys/un.h>
 #include <sys/stat.h>
@@ -242,7 +245,12 @@ static void write_event(int fd, __u16 type, __u16 code, __s32 value) {
  * Returns a listening fd on success, -1 on failure.
  */
 static int bind_listening_socket(void) {
-    int srv = socket(AF_UNIX, SOCK_STREAM, 0);
+    /* SOCK_CLOEXEC ensures the fd is automatically closed in forked children
+     * (e.g. the mirror app_process child launched via start_direct_mirror_child).
+     * Without it, the child inherits the fd and keeps the abstract socket bound
+     * even after the parent daemon is killed, causing the next spawn attempt to
+     * fail with EADDRINUSE. */
+    int srv = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (srv < 0) return -1;
 
     struct sockaddr_un addr;
@@ -399,6 +407,314 @@ static void stop_mirror_child(void) {
     waitpid(g_mirror_pid, &status, 0);
     g_mirror_pid = -1;
     g_mirror_socket[0] = '\0';
+}
+
+/* =========================================================================
+ * SHA-256 — public domain (Brad Conte, brad@bradconte.com).
+ * Slightly reformatted; semantics unchanged.
+ * HMAC-SHA256 and authenticate_client() added for megingiard_privd.
+ * ========================================================================= */
+
+#define SHA256_DIGEST_LEN 32
+#define SHA256_BLOCK_LEN  64
+
+typedef struct {
+    uint8_t  data[64];
+    uint32_t datalen;
+    uint64_t bitlen;
+    uint32_t state[8];
+} SHA256_CTX;
+
+#define ROTRIGHT32(a,b) (((a) >> (b)) | ((a) << (32-(b))))
+#define SHA256_CH(x,y,z)  (((x) & (y)) ^ (~(x) & (z)))
+#define SHA256_MAJ(x,y,z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+#define SHA256_EP0(x) (ROTRIGHT32(x, 2) ^ ROTRIGHT32(x,13) ^ ROTRIGHT32(x,22))
+#define SHA256_EP1(x) (ROTRIGHT32(x, 6) ^ ROTRIGHT32(x,11) ^ ROTRIGHT32(x,25))
+#define SHA256_SIG0(x) (ROTRIGHT32(x, 7) ^ ROTRIGHT32(x,18) ^ ((x) >> 3))
+#define SHA256_SIG1(x) (ROTRIGHT32(x,17) ^ ROTRIGHT32(x,19) ^ ((x) >> 10))
+
+static const uint32_t sha256_k[64] = {
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,
+    0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,
+    0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,
+    0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,
+    0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,
+    0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,
+    0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,
+    0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,
+    0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+};
+
+static void sha256_transform(SHA256_CTX *ctx, const uint8_t data[]) {
+    uint32_t a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
+    for (i = 0, j = 0; i < 16; ++i, j += 4)
+        m[i] = ((uint32_t)data[j] << 24) | ((uint32_t)data[j+1] << 16) |
+               ((uint32_t)data[j+2] << 8) | ((uint32_t)data[j+3]);
+    for (; i < 64; ++i)
+        m[i] = SHA256_SIG1(m[i-2]) + m[i-7] + SHA256_SIG0(m[i-15]) + m[i-16];
+    a = ctx->state[0]; b = ctx->state[1]; c = ctx->state[2]; d = ctx->state[3];
+    e = ctx->state[4]; f = ctx->state[5]; g = ctx->state[6]; h = ctx->state[7];
+    for (i = 0; i < 64; ++i) {
+        t1 = h + SHA256_EP1(e) + SHA256_CH(e,f,g) + sha256_k[i] + m[i];
+        t2 = SHA256_EP0(a) + SHA256_MAJ(a,b,c);
+        h = g; g = f; f = e; e = d + t1;
+        d = c; c = b; b = a; a = t1 + t2;
+    }
+    ctx->state[0] += a; ctx->state[1] += b; ctx->state[2] += c; ctx->state[3] += d;
+    ctx->state[4] += e; ctx->state[5] += f; ctx->state[6] += g; ctx->state[7] += h;
+}
+
+static void sha256_init(SHA256_CTX *ctx) {
+    ctx->datalen = 0; ctx->bitlen = 0;
+    ctx->state[0] = 0x6a09e667; ctx->state[1] = 0xbb67ae85;
+    ctx->state[2] = 0x3c6ef372; ctx->state[3] = 0xa54ff53a;
+    ctx->state[4] = 0x510e527f; ctx->state[5] = 0x9b05688c;
+    ctx->state[6] = 0x1f83d9ab; ctx->state[7] = 0x5be0cd19;
+}
+
+static void sha256_update(SHA256_CTX *ctx, const uint8_t *data, size_t len) {
+    size_t i;
+    for (i = 0; i < len; ++i) {
+        ctx->data[ctx->datalen] = data[i];
+        if (++ctx->datalen == 64) {
+            sha256_transform(ctx, ctx->data);
+            ctx->bitlen += 512;
+            ctx->datalen = 0;
+        }
+    }
+}
+
+static void sha256_final(SHA256_CTX *ctx, uint8_t hash[SHA256_DIGEST_LEN]) {
+    uint32_t i = ctx->datalen;
+    if (ctx->datalen < 56) {
+        ctx->data[i++] = 0x80;
+        while (i < 56) ctx->data[i++] = 0x00;
+    } else {
+        ctx->data[i++] = 0x80;
+        while (i < 64) ctx->data[i++] = 0x00;
+        sha256_transform(ctx, ctx->data);
+        memset(ctx->data, 0, 56);
+    }
+    ctx->bitlen += (uint64_t)ctx->datalen * 8;
+    ctx->data[63] = (uint8_t)(ctx->bitlen);
+    ctx->data[62] = (uint8_t)(ctx->bitlen >> 8);
+    ctx->data[61] = (uint8_t)(ctx->bitlen >> 16);
+    ctx->data[60] = (uint8_t)(ctx->bitlen >> 24);
+    ctx->data[59] = (uint8_t)(ctx->bitlen >> 32);
+    ctx->data[58] = (uint8_t)(ctx->bitlen >> 40);
+    ctx->data[57] = (uint8_t)(ctx->bitlen >> 48);
+    ctx->data[56] = (uint8_t)(ctx->bitlen >> 56);
+    sha256_transform(ctx, ctx->data);
+    for (i = 0; i < 4; ++i) {
+        hash[i]    = (uint8_t)(ctx->state[0] >> (24 - i * 8));
+        hash[i+4]  = (uint8_t)(ctx->state[1] >> (24 - i * 8));
+        hash[i+8]  = (uint8_t)(ctx->state[2] >> (24 - i * 8));
+        hash[i+12] = (uint8_t)(ctx->state[3] >> (24 - i * 8));
+        hash[i+16] = (uint8_t)(ctx->state[4] >> (24 - i * 8));
+        hash[i+20] = (uint8_t)(ctx->state[5] >> (24 - i * 8));
+        hash[i+24] = (uint8_t)(ctx->state[6] >> (24 - i * 8));
+        hash[i+28] = (uint8_t)(ctx->state[7] >> (24 - i * 8));
+    }
+}
+
+/*
+ * HMAC-SHA256(key[key_len], data[data_len]) → out[32].
+ * Keys longer than 64 bytes are pre-hashed per RFC 2104.
+ */
+static void hmac_sha256(const uint8_t *key, size_t key_len,
+                        const uint8_t *data, size_t data_len,
+                        uint8_t out[SHA256_DIGEST_LEN]) {
+    uint8_t k_ipad[SHA256_BLOCK_LEN], k_opad[SHA256_BLOCK_LEN];
+    uint8_t tk[SHA256_DIGEST_LEN];
+    if (key_len > SHA256_BLOCK_LEN) {
+        SHA256_CTX tc;
+        sha256_init(&tc);
+        sha256_update(&tc, key, key_len);
+        sha256_final(&tc, tk);
+        key = tk; key_len = SHA256_DIGEST_LEN;
+    }
+    memset(k_ipad, 0x36, SHA256_BLOCK_LEN);
+    memset(k_opad, 0x5c, SHA256_BLOCK_LEN);
+    for (size_t i = 0; i < key_len; i++) {
+        k_ipad[i] ^= key[i];
+        k_opad[i] ^= key[i];
+    }
+    SHA256_CTX ctx;
+    uint8_t inner[SHA256_DIGEST_LEN];
+    sha256_init(&ctx);
+    sha256_update(&ctx, k_ipad, SHA256_BLOCK_LEN);
+    sha256_update(&ctx, data, data_len);
+    sha256_final(&ctx, inner);
+    sha256_init(&ctx);
+    sha256_update(&ctx, k_opad, SHA256_BLOCK_LEN);
+    sha256_update(&ctx, inner, SHA256_DIGEST_LEN);
+    sha256_final(&ctx, out);
+}
+
+/*
+ * Default pre-shared key — used when PRIVD_HMAC_KEY_HEX is not supplied at
+ * compile time (i.e. megingiard.privd.hmac.key not set in local.properties).
+ * Functional but not secret; set a custom key for real isolation.
+ */
+#ifndef PRIVD_HMAC_KEY_HEX
+#define PRIVD_HMAC_KEY_HEX "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
+#endif
+
+#define NONCE_BYTES      16
+#define NONCE_HEX_LEN    32   /* NONCE_BYTES * 2 */
+#define HMAC_HEX_LEN     64   /* SHA256_DIGEST_LEN * 2 */
+#define AUTH_LINE_MAX    80   /* "AUTH " + 64 hex + '\0' */
+#define VERIFY_LINE_MAX  40   /* "VERIFY " + 32 hex + '\0' */
+#define PROOF_MSG_LEN    72   /* "PROOF " + 64 hex + '\n' + '\0' */
+
+/*
+ * Reads up to (max_len-1) chars from fd until '\n' (or EOF/error).
+ * Returns char count (excluding '\n'), 0 on EOF, -1 on error.
+ */
+static int read_line_n(int fd, char *out, int max_len) {
+    int n = 0;
+    char ch;
+    while (n < max_len - 1) {
+        ssize_t r = read(fd, &ch, 1);
+        if (r == 0) return 0;
+        if (r < 0) { if (errno == EINTR) continue; return -1; }
+        if (ch == '\n') { out[n] = '\0'; return n; }
+        out[n++] = ch;
+    }
+    while (1) { ssize_t r = read(fd, &ch, 1); if (r <= 0 || ch == '\n') break; }
+    out[n] = '\0';
+    return n;
+}
+
+/*
+ * Mutual HMAC-SHA256 challenge-response.
+ *
+ * Server (daemon) → Client: CHAL <32-hex-nonce>\n   (daemon challenges app)
+ * Client → Server (daemon): AUTH <64-hex-hmac>\n    (app proves it knows the key)
+ * Server (daemon) → Client: OK\n                    (daemon accepts app)
+ * Client → Server (daemon): VERIFY <32-hex-nonce2>\n (app challenges daemon back)
+ * Server (daemon) → Client: PROOF <64-hex-hmac>\n   (daemon proves it knows the key)
+ *
+ * Both halves use HMAC-SHA256(pre_shared_key, nonce_bytes).
+ * Returns 1 on successful mutual authentication, 0 on any failure.
+ * The caller must close client_fd on failure.
+ */
+static int authenticate_client(int client_fd) {
+    /* Generate 16-byte random nonce. */
+    uint8_t nonce[NONCE_BYTES];
+    if (getrandom(nonce, NONCE_BYTES, 0) != (ssize_t)NONCE_BYTES) {
+        /* Fallback: /dev/urandom (available on all Android versions). */
+        int urnd = open("/dev/urandom", O_RDONLY);
+        if (urnd < 0) return 0;
+        ssize_t r = read(urnd, nonce, NONCE_BYTES);
+        close(urnd);
+        if (r != (ssize_t)NONCE_BYTES) return 0;
+    }
+
+    /* Hex-encode nonce → 32 chars. */
+    char nonce_hex[NONCE_HEX_LEN + 1];
+    for (int i = 0; i < NONCE_BYTES; i++)
+        snprintf(nonce_hex + i * 2, 3, "%02X", (unsigned)nonce[i]);
+    nonce_hex[NONCE_HEX_LEN] = '\0';
+
+    /* Send: "CHAL <nonce_hex>\n" */
+    char chal_msg[48];
+    int chal_len = snprintf(chal_msg, sizeof(chal_msg), "CHAL %s\n", nonce_hex);
+    if (write(client_fd, chal_msg, (size_t)chal_len) != (ssize_t)chal_len) return 0;
+
+    /* 5-second read timeout for the AUTH response. */
+    struct timeval tv = { .tv_sec = 5, .tv_usec = 0 };
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Read AUTH response. */
+    char auth_line[AUTH_LINE_MAX];
+    int n = read_line_n(client_fd, auth_line, AUTH_LINE_MAX);
+
+    /* Reset to blocking. */
+    tv.tv_sec = 0;
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Validate: "AUTH " prefix + exactly 64 hex chars. */
+    if (n != (int)(5 + HMAC_HEX_LEN)) return 0;
+    if (strncmp(auth_line, "AUTH ", 5) != 0) return 0;
+    const char *received_hex = auth_line + 5;
+
+    /* Decode PRIVD_HMAC_KEY_HEX (64 hex chars) → 32 key bytes. */
+    const char *key_hex = PRIVD_HMAC_KEY_HEX;
+    if (strlen(key_hex) != 64) return 0;
+    uint8_t key[SHA256_DIGEST_LEN];
+    for (int i = 0; i < SHA256_DIGEST_LEN; i++) {
+        char b[3] = { key_hex[i*2], key_hex[i*2+1], '\0' };
+        key[i] = (uint8_t)strtol(b, NULL, 16);
+    }
+
+    /* Compute expected HMAC-SHA256(key, nonce). */
+    uint8_t expected[SHA256_DIGEST_LEN];
+    hmac_sha256(key, SHA256_DIGEST_LEN, nonce, NONCE_BYTES, expected);
+
+    /* Hex-encode expected → 64 chars. */
+    char expected_hex[HMAC_HEX_LEN + 1];
+    for (int i = 0; i < SHA256_DIGEST_LEN; i++)
+        snprintf(expected_hex + i * 2, 3, "%02X", (unsigned)expected[i]);
+    expected_hex[HMAC_HEX_LEN] = '\0';
+
+    /* Constant-time comparison — prevents timing side-channels. */
+    int diff = 0;
+    for (int i = 0; i < HMAC_HEX_LEN; i++)
+        diff |= ((unsigned char)received_hex[i] ^ (unsigned char)expected_hex[i]);
+    if (diff != 0) return 0;
+
+    /* Send OK. */
+    if (write(client_fd, "OK\n", 3) != 3) return 0;
+
+    /* --- Mutual authentication: client now challenges the server --- */
+    /* Set 5-second read timeout for VERIFY. */
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Read VERIFY nonce from client. */
+    char verify_line[VERIFY_LINE_MAX];
+    int vn = read_line_n(client_fd, verify_line, VERIFY_LINE_MAX);
+
+    /* Reset to blocking. */
+    tv.tv_sec = 0;
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* Validate: "VERIFY " prefix + exactly 32 hex chars. */
+    if (vn != (int)(7 + NONCE_HEX_LEN)) return 0;
+    if (strncmp(verify_line, "VERIFY ", 7) != 0) return 0;
+    const char *verify_hex = verify_line + 7;
+
+    /* Decode VERIFY nonce hex → 16 bytes. */
+    uint8_t verify_nonce[NONCE_BYTES];
+    for (int i = 0; i < NONCE_BYTES; i++) {
+        char b[3] = { verify_hex[i*2], verify_hex[i*2+1], '\0' };
+        verify_nonce[i] = (uint8_t)strtol(b, NULL, 16);
+    }
+
+    /* Compute HMAC-SHA256(key, verify_nonce). */
+    uint8_t proof[SHA256_DIGEST_LEN];
+    hmac_sha256(key, SHA256_DIGEST_LEN, verify_nonce, NONCE_BYTES, proof);
+
+    /* Hex-encode proof → 64 chars. */
+    char proof_hex[HMAC_HEX_LEN + 1];
+    for (int i = 0; i < SHA256_DIGEST_LEN; i++)
+        snprintf(proof_hex + i * 2, 3, "%02X", (unsigned)proof[i]);
+    proof_hex[HMAC_HEX_LEN] = '\0';
+
+    /* Send PROOF. */
+    char proof_msg[PROOF_MSG_LEN];
+    int proof_len = snprintf(proof_msg, sizeof(proof_msg), "PROOF %s\n", proof_hex);
+    if (write(client_fd, proof_msg, (size_t)proof_len) != (ssize_t)proof_len) return 0;
+    return 1;
 }
 
 /*
@@ -578,6 +894,14 @@ int main(void) {
         if (client < 0) {
             if (errno == EINTR) continue;
             break;
+        }
+        /* HMAC challenge-response: reject clients that cannot prove they hold
+         * the pre-shared key.  authenticate_client() sends CHAL, reads AUTH,
+         * verifies HMAC-SHA256, and sends OK on success.  On failure the fd
+         * is left open; we close it here and loop back to accept(). */
+        if (!authenticate_client(client)) {
+            close(client);
+            continue;
         }
         int quit = serve_client(client);
         close(client);

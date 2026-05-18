@@ -12,6 +12,73 @@ installation**. Rebuild only if you change `touchinjector.c`.
 
 ---
 
+## Native Rebuild Policy
+
+The checked-in asset binaries are part of the trusted runtime surface. Whenever a native C source file changes, rebuild the matching asset immediately from the workspace root:
+
+| Source file                           | Output asset                                 | Build script                                                                                                                                          |
+| ------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/src/main/cpp/touchinjector.c`    | `app/src/main/assets/touchinjector_arm64`    | `./build_mouseinjector.sh` currently rebuilds the mouse injector only; rebuild touch manually with the command below until a dedicated script exists. |
+| `app/src/main/cpp/keyinjector.c`      | `app/src/main/assets/keyinjector_arm64`      | `./build_keyinjector.sh`                                                                                                                              |
+| `app/src/main/cpp/mouseinjector.c`    | `app/src/main/assets/mouseinjector_arm64`    | `./build_mouseinjector.sh`                                                                                                                            |
+| `app/src/main/cpp/gamepadinjector.c`  | `app/src/main/assets/gamepadinjector_arm64`  | `./build_gamepadinjector.sh`                                                                                                                          |
+| `app/src/main/cpp/megingiard_privd.c` | `app/src/main/assets/megingiard_privd_arm64` | `./build_megingiard_privd.sh`                                                                                                                         |
+
+The agent workflow in [AGENTS.md](../AGENTS.md#15-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding. If a source file has no dedicated script yet, use the manual compile command documented in that binary's section and record the gap as follow-up work.
+
+---
+
+## Native Asset Integrity
+
+Megingiard treats native helpers and the privileged mirror DEX as pinned assets. A normal Gradle build generates `NativeBinaryHashes.kt` from the bytes in `app/src/main/assets/` through the `:domain:generateNativeBinaryHashes` task. The generated map contains SHA-256 values for:
+
+- `touchinjector_arm64`
+- `mouseinjector_arm64`
+- `keyinjector_arm64`
+- `gamepadinjector_arm64`
+- `megingiard_privd_arm64`
+- `megingiard_mirror.dex`
+
+At runtime, `BinaryIntegrity.verify()` fails closed if an asset is missing from the generated map or if its SHA-256 does not match. This protects both local `filesDir` deployment and ADB-Wireless bootstrap from accidentally or maliciously swapped asset bytes.
+
+### Runtime Verification
+
+Native helpers follow a pre-exec verification sequence:
+
+1. Read the asset fully into memory.
+2. Verify the in-memory bytes against `NativeBinaryHashes.EXPECTED`.
+3. Write the asset to app-private storage.
+4. Re-read the written file and verify SHA-256 again.
+5. Only then set the executable bit and mark the file non-writable.
+
+Privileged Mode bootstrap verifies `megingiard_privd_arm64` and `megingiard_mirror.dex` before pushing either file over ADB `sync:`. A daemon verification failure aborts bootstrap; a mirror DEX verification failure leaves the normal MediaProjection fallback path available.
+
+### Privd HMAC Key Injection
+
+`megingiard_privd` and the app must be built with the same 32-byte HMAC key. The app reads `megingiard.privd.hmac.key` from `local.properties` into `BuildConfig.PRIVD_HMAC_KEY`; `build_megingiard_privd.sh` reads the same key and passes it to the C compiler as `PRIVD_HMAC_KEY_HEX`.
+
+If the key is absent, malformed, or equal to the public source default, `build_megingiard_privd.sh` refuses to build unless `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true` is set. That override is useful for local non-distribution testing, but it must not be used for distributed APKs. Generate a real key with:
+
+```bash
+openssl rand -hex 32 | tr '[:lower:]' '[:upper:]'
+```
+
+Then add it to `local.properties` and rebuild the daemon:
+
+```properties
+megingiard.privd.hmac.key=<64 uppercase hex chars>
+```
+
+```bash
+./build_megingiard_privd.sh
+```
+
+The next Gradle build regenerates the native asset hash pins from the rebuilt daemon asset.
+
+Release APK builds also reject the public default key unless the local-only Gradle override `-Pmegingiard.allowDefaultPrivdHmacKey=true` is supplied.
+
+---
+
 ## Source
 
 `app/src/main/cpp/touchinjector.c`

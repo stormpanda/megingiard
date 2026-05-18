@@ -25,6 +25,7 @@
 | Document                                   | Purpose                                                                                  |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | `README.md`                                | Project overview, feature list, quick links                                              |
+| `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
 | `PRD.md`                                   | Product requirements (German, authoritative)                                             |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
@@ -58,6 +59,10 @@
 >
 > This applies to **all** changes — including bug fixes, refactors, and dependency updates that
 > affect runtime behaviour. Do not skip this step.
+>
+> Security-affecting changes MUST also update `SECURITY_CONCEPT.md` and whichever detailed
+> document owns the changed mechanism (`docs/ARCHITECTURE.md`, `docs/BUILD_NATIVE.md`, or the
+> relevant feature `FEATURE.md`).
 
 > [!NOTE]
 > **New features — create a `FEATURE.md` first.**
@@ -610,8 +615,10 @@ setOnDismissListener {
 
 - All dependency versions live in `gradle/libs.versions.toml`.
   Never hardcode version strings in `build.gradle.kts`.
-- `isMinifyEnabled = false` for now (release builds).
-  When enabling R8, add keep rules for `ScreenCaptureService` (referenced by the system via manifest).
+- `isMinifyEnabled = true` for release builds (R8 + resource shrinking).
+  Keep rules live in `app/proguard-rules.pro`. When adding new components
+  referenced by name from `AndroidManifest.xml`, by reflection, or by
+  kotlinx.serialization, add explicit keep rules.
 
 ---
 
@@ -772,6 +779,21 @@ Existing `accentColor` parameters in older Composables may remain until a future
 > symbol references, type compatibility, and API usage by reading the relevant source
 > files. Flag any suspected compile error as a comment to the operator.
 
+> **Native binary rebuild policy:** Whenever a native C source file is modified, the
+> agent **must** immediately run the corresponding build script to rebuild the bundled
+> binary. The scripts are at the workspace root:
+>
+> | Source file                           | Build script                                                             |
+> | ------------------------------------- | ------------------------------------------------------------------------ |
+> | `app/src/main/cpp/megingiard_privd.c` | `./build_megingiard_privd.sh`                                            |
+> | `app/src/main/cpp/touchinjector.c`    | Manual compile in `docs/BUILD_NATIVE.md` until a dedicated script exists |
+> | `app/src/main/cpp/keyinjector.c`      | `./build_keyinjector.sh`                                                 |
+> | `app/src/main/cpp/mouseinjector.c`    | `./build_mouseinjector.sh`                                               |
+> | `app/src/main/cpp/gamepadinjector.c`  | `./build_gamepadinjector.sh`                                             |
+>
+> Run the script **before** proposing the commit message. If the build fails, fix the
+> source error before proceeding. The scripts must be run from the workspace root.
+
 > **Unit test policy:** After every implementation — feature, bug fix, or refactor —
 > the agent **must**:
 >
@@ -816,3 +838,4 @@ Before marking a task as done, verify:
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
 - [ ] `./gradlew :core:test :domain:test` executed and all tests pass (only permitted Gradle command)
+- [ ] If any native C source was modified, the corresponding build script was run and produced a new binary

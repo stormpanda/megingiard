@@ -6,6 +6,7 @@ This document provides a high-level overview of the system architecture and key 
 - **[Virtual Touchpad](features/touchpad/FEATURE.md#technical-implementation)** — native binary, event injection, coordinate transformation
 - **[Virtual Keyboard](features/keyboard/FEATURE.md#technical-implementation)** — native binary, modifier state machine, key injection, layout system
 - **[App Theming](features/theming/FEATURE.md#technical-implementation)** — token-based `AppColors`, dark/light palettes, `LocalAppColors` CompositionLocal
+- **[Security Concept](../SECURITY_CONCEPT.md)** — threat model, hardening layers, native asset integrity, and Privileged Mode authentication
 
 ---
 
@@ -38,6 +39,32 @@ When `MainActivity` detects that it is running on the **primary display** (`disp
 - Consumes all pointer events, preventing interaction with any underlying controls.
 
 Display detection is performed synchronously in `MainActivity`'s Compose tree via `LocalContext.current.display?.displayId` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (`autoStartCapture` on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
+
+---
+
+## Security Architecture
+
+Megingiard uses layered local hardening rather than a single trust check. The concise map and threat model live in [SECURITY_CONCEPT.md](../SECURITY_CONCEPT.md); this section records how the layers fit into the runtime architecture.
+
+### APK Identity
+
+`MainActivity` runs `SignatureGuard.verify()` during cold start. The guard reads every signing certificate attached to the installed APK, computes SHA-256 fingerprints, and compares them to `BuildConfig.EXPECTED_SIGNING_SHA256`. Release packaging fails closed when `megingiard.signing.sha256` is absent or malformed in `local.properties`, because an unpinned release would not detect a repackaged APK.
+
+### Native Asset Integrity
+
+The app ships native helpers (`touchinjector_arm64`, `keyinjector_arm64`, `mouseinjector_arm64`, `gamepadinjector_arm64`, `megingiard_privd_arm64`) and `megingiard_mirror.dex` as APK assets. The `:domain:generateNativeBinaryHashes` task hashes the bytes that will ship and generates `NativeBinaryHashes.EXPECTED`. Runtime code calls `BinaryIntegrity.verify()` before any asset is executed, pushed to `/data/local/tmp`, or used by Privileged Mode.
+
+`NativeBinaryInjector` performs a second check after writing a helper to app-private storage: it re-reads the on-disk file, verifies SHA-256 again, then sets the executable bit and marks the file non-writable. This narrows the time-of-check/time-of-use window between verified asset bytes and executed filesystem bytes.
+
+### Privileged Mode Trust Boundary
+
+The normal app process remains in Android's untrusted app sandbox. Privileged Mode creates a narrow shell-UID bridge by starting `megingiard_privd` through ADB Wireless Debugging. The daemon listens on the abstract socket `@megingiard.privd` and performs only the privileged kernel I/O requested by feature-specific ASCII commands.
+
+Every socket connection must complete mutual HMAC-SHA256 authentication before normal commands are processed. The daemon first challenges the app (`CHAL/AUTH/OK`), then the app challenges the daemon (`VERIFY/PROOF`). The shared 32-byte key is injected into the app via `BuildConfig.PRIVD_HMAC_KEY` and into the daemon via `PRIVD_HMAC_KEY_HEX` when `build_megingiard_privd.sh` rebuilds the native binary. Detailed protocol behavior is documented in [Privileged Mode](features/privileged-mode/FEATURE.md#security-model).
+
+### Release Obfuscation
+
+Release builds enable R8 minification and resource shrinking. This is not the primary trust boundary, but it raises the effort required to patch out signature, binary-integrity, or socket-authentication checks. [app/proguard-rules.pro](../app/proguard-rules.pro) preserves manifest components, serialization metadata, and line-number information needed for diagnosis.
 
 ---
 

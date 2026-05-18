@@ -1,9 +1,59 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// ---------------------------------------------------------------------------
+// Signature pinning: read the expected release signing-certificate SHA-256
+// from local.properties (key: `megingiard.signing.sha256`). When empty,
+// runtime pinning becomes a no-op — appropriate for debug builds signed with
+// the Android default debug keystore. To populate, run:
+//   keytool -list -v -keystore <release.jks> -alias <alias> | grep SHA-256
+// and paste the uppercase hex value (with or without colons) into
+// local.properties.
+// ---------------------------------------------------------------------------
+val localProperties = Properties().also { props ->
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { stream -> props.load(stream) }
+}
+
+private val SIGNING_SHA256_PATTERN = Regex("[0-9A-F]{64}")
+val expectedSigningSha256Raw: String =
+    (localProperties.getProperty("megingiard.signing.sha256") ?: "")
+        .replace(":", "")
+        .replace(" ", "")
+        .uppercase()
+val expectedSigningSha256: String =
+    if (expectedSigningSha256Raw.matches(SIGNING_SHA256_PATTERN)) expectedSigningSha256Raw else ""
+val expectedSigningSha256IsMalformed: Boolean =
+    expectedSigningSha256Raw.isNotBlank() && expectedSigningSha256.isBlank()
+
+// ---------------------------------------------------------------------------
+// Privileged-daemon socket HMAC key: baked into both the app and the daemon
+// binary at build time. The daemon must be rebuilt via build_megingiard_privd.sh
+// whenever this value changes. If not set in local.properties, a well-known
+// default is used — functional but not secret; set a custom 64-char hex key
+// for real security:
+//   openssl rand -hex 32 | tr '[:lower:]' '[:upper:]'
+// then add: megingiard.privd.hmac.key=<result> to local.properties.
+// ---------------------------------------------------------------------------
+private val DEFAULT_PRIVD_HMAC_KEY =
+    "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
+private val PRIVD_HMAC_KEY_PATTERN = Regex("[0-9A-F]{64}")
+
+val privdHmacKeyRaw: String =
+    (localProperties.getProperty("megingiard.privd.hmac.key") ?: DEFAULT_PRIVD_HMAC_KEY)
+        .replace(":", "")
+        .replace(" ", "")
+        .uppercase()
+val privdHmacKey: String =
+    if (privdHmacKeyRaw.matches(PRIVD_HMAC_KEY_PATTERN)) privdHmacKeyRaw else DEFAULT_PRIVD_HMAC_KEY
+val privdHmacKeyIsProductionReady: Boolean =
+    privdHmacKey.matches(PRIVD_HMAC_KEY_PATTERN) && privdHmacKey != DEFAULT_PRIVD_HMAC_KEY
 
 android {
     namespace = "com.stormpanda.megingiard"
@@ -20,11 +70,23 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        buildConfigField(
+            "String",
+            "EXPECTED_SIGNING_SHA256",
+            "\"$expectedSigningSha256\""
+        )
+        buildConfigField(
+            "String",
+            "PRIVD_HMAC_KEY",
+            "\"$privdHmacKey\""
+        )
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -47,6 +109,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -61,6 +124,57 @@ afterEvaluate {
     }
     tasks.matching { it.name.startsWith("package") || it.name.startsWith("generate") && it.name.contains("Assets") }.configureEach {
         dependsOn(":mirrorserver:dex")
+    }
+
+    // Fail release builds when no signing-certificate SHA-256 has been
+    // configured. Without it, SignatureGuard runs in "Skipped" mode and the
+    // shipped APK has no tamper protection — almost certainly a mistake.
+    // Devs who knowingly want an unpinned local release build can opt out via
+    //   ./gradlew assembleRelease -Pmegingiard.allowUnpinnedRelease=true
+    val allowUnpinned = (project.findProperty("megingiard.allowUnpinnedRelease") as? String)
+        ?.equals("true", ignoreCase = true) == true
+    val allowDefaultPrivdHmacKey =
+        (project.findProperty("megingiard.allowDefaultPrivdHmacKey") as? String)
+            ?.equals("true", ignoreCase = true) == true
+    val releaseGuardTasks = listOf(
+        "assembleRelease",
+        "bundleRelease",
+        "packageRelease",
+    )
+    releaseGuardTasks.forEach { taskName ->
+        tasks.matching { it.name == taskName }.configureEach {
+            doFirst {
+                if ((expectedSigningSha256.isBlank() || expectedSigningSha256IsMalformed) && !allowUnpinned) {
+                    throw GradleException(
+                        "Release build aborted: 'megingiard.signing.sha256' must be set " +
+                            "to a 64-character hex SHA-256 fingerprint in local.properties. " +
+                            "Without it, SignatureGuard cannot pin the release APK identity.\n" +
+                            "  1. Read your release cert SHA-256:\n" +
+                            "       keytool -list -v -keystore megingiard.jks -alias release\n" +
+                            "  2. Add to local.properties:\n" +
+                            "       megingiard.signing.sha256=AB:CD:…\n" +
+                            "Override (NOT for distribution) with " +
+                            "-Pmegingiard.allowUnpinnedRelease=true"
+                    )
+                }
+                if (!privdHmacKeyIsProductionReady && !allowDefaultPrivdHmacKey) {
+                    throw GradleException(
+                        "Release build aborted: 'megingiard.privd.hmac.key' must be set " +
+                            "to a custom 64-character hex value in local.properties. " +
+                            "The source default is public and must not ship in " +
+                            "production-like builds.\n" +
+                            "  1. Generate a key:\n" +
+                            "       openssl rand -hex 32 | tr '[:lower:]' '[:upper:]'\n" +
+                            "  2. Add to local.properties:\n" +
+                            "       megingiard.privd.hmac.key=<64 uppercase hex chars>\n" +
+                            "  3. Rebuild the daemon:\n" +
+                            "       ./build_megingiard_privd.sh\n" +
+                            "Override (NOT for distribution) with " +
+                            "-Pmegingiard.allowDefaultPrivdHmacKey=true"
+                    )
+                }
+            }
+        }
     }
 }
 

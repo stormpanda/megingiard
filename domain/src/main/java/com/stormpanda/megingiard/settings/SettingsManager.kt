@@ -13,9 +13,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -36,6 +38,10 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 
 private const val TAG = "SettingsManager"
+// Max wait for DataStore on the main thread during the synchronous bootstrap in init().
+// If DataStore does not respond within this window, the default log level (WARN) is kept
+// and startup continues normally — preventing an ANR on slow/unavailable storage.
+private const val DATASTORE_BOOTSTRAP_TIMEOUT_MS = 500L
 
 object SettingsManager {
     // Preference keys + section maps live in SettingsKeys.kt (same package, internal).
@@ -85,6 +91,32 @@ object SettingsManager {
         if (initialized) return
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
+
+        // Apply the persisted log level synchronously before returning so that
+        // code running immediately after init() (e.g. SignatureGuard) already
+        // logs at the user-configured level.  A bounded timeout prevents ANR on
+        // pathological I/O — if DataStore does not respond within the window, the
+        // default WARN level is retained and startup proceeds normally.
+        runBlocking(Dispatchers.IO) {
+            try {
+                val prefs = withTimeoutOrNull(DATASTORE_BOOTSTRAP_TIMEOUT_MS) {
+                    dataStore.data.first()
+                }
+                if (prefs != null) {
+                    val level = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
+                        ?: AppLog.Level.WARN
+                    _logLevel.value = level
+                    AppLog.level = level
+                } else {
+                    AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
+                }
+            } catch (e: Exception) {
+                AppLog.w(
+                    TAG,
+                    "DataStore bootstrap failed (${e.javaClass.simpleName}): ${e.message ?: "no message"} - retaining default log level",
+                )
+            }
+        }
 
         // Hand the shared DataStore + scope to feature-scoped sub-managers so they
         // can persist their own settings without each one opening its own DataStore.

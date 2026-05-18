@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.privd
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.security.BinaryIntegrity
 import io.github.muntashirakon.adb.AdbStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,8 @@ import java.util.concurrent.TimeUnit
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
 private const val DAEMON_REMOTE_PATH = "/data/local/tmp/megingiard_privd"
+// Process name as seen by pidof/kill — equals the basename of DAEMON_REMOTE_PATH.
+private const val DAEMON_PROCESS_NAME = "megingiard_privd"
 private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_PATH = "/data/local/tmp/megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
@@ -229,6 +232,10 @@ object PrivdBootstrapper {
 
     private fun pushDaemon(context: Context, mgr: PrivdAdbConnectionManager): Boolean {
         val binaryBytes = context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(DAEMON_ASSET_NAME, binaryBytes)) {
+            AppLog.e(TAG, "Refusing to push $DAEMON_ASSET_NAME — integrity check failed")
+            return false
+        }
         AppLog.d(TAG, "push: ${binaryBytes.size} bytes -> $DAEMON_REMOTE_PATH")
         val daemonOk = mgr.openStream(SYNC_SERVICE)?.use { s ->
             syncSendFile(s, binaryBytes, DAEMON_REMOTE_PATH, REMOTE_FILE_MODE) &&
@@ -240,6 +247,11 @@ object PrivdBootstrapper {
         // The DEX is harmless if Privileged Mirror is never enabled, so we always
         // push it as part of the bootstrap to avoid a separate setup flow.
         val dexBytes = context.assets.open(MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(MIRROR_DEX_ASSET_NAME, dexBytes)) {
+            AppLog.e(TAG, "Refusing to push $MIRROR_DEX_ASSET_NAME — integrity check failed")
+            // Daemon push already succeeded; treat as DEX failure (non-fatal below).
+            return true
+        }
         AppLog.d(TAG, "push: ${dexBytes.size} bytes -> $MIRROR_DEX_REMOTE_PATH")
         val dexOk = mgr.openStream(SYNC_SERVICE)?.use { s ->
             syncSendFile(s, dexBytes, MIRROR_DEX_REMOTE_PATH, MIRROR_DEX_REMOTE_MODE_RAW) &&
@@ -341,7 +353,27 @@ object PrivdBootstrapper {
     private fun currentEpochSeconds(): Int = ((System.currentTimeMillis() / MS_PER_SECOND) and UINT_MASK).toInt()
 
     private fun spawnDaemon(mgr: PrivdAdbConnectionManager): Boolean {
-        val cmd = "shell:$DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"
+        // Kill any previous daemon instance before spawning a fresh one.
+        // An old daemon (e.g. built without HMAC support) holds the abstract Unix
+        // socket and prevents the new binary from binding it.  Without this kill step
+        // the new binary exits immediately with EADDRINUSE and the old one continues
+        // to serve connections without the expected HMAC challenge — which is exactly
+        // the failure mode we saw after the HMAC feature was added in commit 6de02b3.
+        //
+        // SIGTERM (default kill) is insufficient: the daemon calls signal() which sets
+        // SA_RESTART on Android/Linux.  While the daemon is blocked in accept() waiting
+        // for a client, SIGTERM fires the handler (sets g_should_exit=1) but accept()
+        // is automatically restarted — the while(!g_should_exit) guard is never
+        // re-evaluated, so the process stays alive indefinitely.
+        // SIGKILL cannot be caught, blocked, or ignored — it unconditionally removes
+        // the process and releases the abstract socket immediately.
+        // The `sleep 1` after kill gives the kernel time to fully release the abstract
+        // socket before the new binary tries to bind it.  Without this delay there is
+        // a race: kill(2) returns as soon as the signal is queued, but the process may
+        // not have been fully reaped yet when the shell continues to the next command,
+        // causing the new binary to fail with EADDRINUSE and exit immediately.
+        val killCmd = "kill -9 \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null; sleep 1"
+        val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->

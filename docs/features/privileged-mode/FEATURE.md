@@ -198,6 +198,48 @@ manually killed daemon after an update: `RUNNING → FAILED` triggers one fresh
 connect attempt, so the newly deployed daemon binary can be picked up without a
 full app restart.
 
+### Security Model
+
+Privileged Mode crosses the app sandbox boundary by delegating selected kernel I/O to `megingiard_privd`, a shell-UID helper started through ADB Wireless Debugging. The socket is therefore treated as a privileged command channel: every connection must authenticate before feature commands are accepted.
+
+#### Mutual HMAC-SHA256 Handshake
+
+Every new LocalSocket connection begins with mutual challenge-response. Both sides must know the same 32-byte pre-shared key:
+
+- App side: `BuildConfig.PRIVD_HMAC_KEY`, configured from `megingiard.privd.hmac.key` in `local.properties`.
+- Daemon side: `PRIVD_HMAC_KEY_HEX`, injected by `build_megingiard_privd.sh` when compiling `megingiard_privd_arm64`.
+
+If no key is configured, debug builds can still fall back to the public source default. Release builds reject that default unless `-Pmegingiard.allowDefaultPrivdHmacKey=true` is supplied, and `build_megingiard_privd.sh` rejects it unless `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true` is set. Those overrides are for local non-distribution testing only; the default key is not secret and must not be treated as production isolation.
+
+```
+Daemon -> App     CHAL <32-hex-nonce1>\n
+App    -> Daemon  AUTH <64-hex-hmac1>\n    HMAC-SHA256(key, nonce1)
+Daemon -> App     OK\n
+App    -> Daemon  VERIFY <32-hex-nonce2>\n
+Daemon -> App     PROOF <64-hex-hmac2>\n   HMAC-SHA256(key, nonce2)
+```
+
+The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. This blocks two important local attacks:
+
+- A rogue app cannot connect to the real daemon and issue commands unless it can produce a valid `AUTH` response.
+- A rogue process that binds `@megingiard.privd` before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response.
+
+Malformed messages, missing messages, wrong HMAC values, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds and is reset to normal blocking I/O only after the full mutual exchange succeeds.
+
+The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator. The Kotlin app compares the daemon `PROOF` through `HmacUtil.constantTimeEqualsHex()` so both authentication legs avoid early-exit string equality for same-length MAC values.
+
+#### Native Asset Verification During Bootstrap
+
+`PrivdBootstrapper` verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A daemon verification failure aborts bootstrap; a mirror DEX verification failure is logged and leaves the normal MediaProjection fallback path available.
+
+Detailed native rebuild, HMAC key injection, and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
+
+#### Operational Notes
+
+- Changing `megingiard.privd.hmac.key` requires rebuilding `megingiard_privd_arm64` with `./build_megingiard_privd.sh` so the app and daemon stay in sync.
+- Rebuilding the daemon changes the asset bytes; the next Gradle build regenerates the expected SHA-256 pin through `:domain:generateNativeBinaryHashes`.
+- Key rotation and signing-certificate rotation are manual rebuild / redeploy operations today.
+
 ### Wire Protocol
 
 ASCII, newline-terminated, both directions. Each feature uses a two-letter

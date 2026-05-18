@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.input
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.security.BinaryIntegrity
 import java.io.BufferedWriter
 import java.io.File
 import java.io.OutputStreamWriter
@@ -171,10 +172,32 @@ abstract class NativeBinaryInjector<T>(
     private fun deployBinary(context: Context): File? {
         val dest = File(context.filesDir, assetName)
         return try {
-            context.assets.open(assetName).use { input ->
-                dest.outputStream().use { output -> input.copyTo(output) }
+            // Read fully into memory and verify SHA-256 before any bytes touch
+            // the filesystem. Injector binaries are < 500 KiB; heap cost is fine.
+            val bytes = context.assets.open(assetName).use { it.readBytes() }
+            if (!BinaryIntegrity.verify(assetName, bytes)) {
+                AppLog.e(tag, "Refusing to deploy $assetName — integrity check failed")
+                return null
+            }
+            // Ensure the destination is writable (it may be read-only from a
+            // previous deploy — see setWritable call at the end of this method).
+            if (dest.exists()) dest.setWritable(true, false)
+            dest.outputStream().use { output -> output.write(bytes) }
+            // TOCTOU mitigation: re-read from disk and re-verify SHA-256 before
+            // granting the execute bit. This closes the window in which an
+            // attacker with filesystem access could swap the file between write
+            // and exec. Without this second check the verified in-memory bytes
+            // and the bytes that actually get executed could differ.
+            val writtenBytes = dest.readBytes()
+            if (!BinaryIntegrity.verify(assetName, writtenBytes)) {
+                AppLog.e(tag, "Post-write integrity check failed for $assetName — possible filesystem tampering")
+                dest.delete()
+                return null
             }
             dest.setExecutable(true, false)
+            // Lock the file against writes so neither the app nor a future code
+            // path with a path-traversal bug can silently overwrite it.
+            dest.setWritable(false, false)
             dest
         } catch (e: Exception) {
             AppLog.e(tag, "Failed to deploy binary: $e")

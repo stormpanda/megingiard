@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.LocaleList
+import android.os.Process
 import android.view.Display
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -42,8 +43,10 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
+import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.security.SignatureGuard
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -128,7 +131,52 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Init settings first so the persisted log level is active before anything
+        // else runs (including SignatureGuard below). SettingsManager.init() reads
+        // just the log level synchronously from DataStore then continues async.
+        SettingsManager.init(this)
+
+        // Configure the Privd socket HMAC key before any connect() attempt.
+        // The key is baked into BuildConfig at compile time from local.properties
+        // and must match the key baked into the daemon binary.
+        PrivdClient.setHmacKey(BuildConfig.PRIVD_HMAC_KEY)
+
         AppLog.i(TAG, "onCreate")
+
+        // APK signature pinning — abort on tampered/re-signed release builds,
+        // and refuse to run a release build that ships without a pinned hash
+        // (fail-closed; this is the second line of defence behind the Gradle
+        // guard in app/build.gradle.kts).
+        when (val res = SignatureGuard.verify(this)) {
+            is SignatureGuard.Result.Tampered -> {
+                if (!BuildConfig.DEBUG) {
+                    AppLog.e(TAG, "Aborting: APK signature does not match pinned hash")
+                    finishAffinity()
+                    Process.killProcess(Process.myPid())
+                    return
+                } else {
+                    AppLog.w(TAG, "Debug build: signature mismatch ignored ($res)")
+                }
+            }
+            is SignatureGuard.Result.Error -> {
+                if (!BuildConfig.DEBUG) {
+                    AppLog.e(TAG, "Aborting: signature verification failed (${res.message})")
+                    finishAffinity()
+                    Process.killProcess(Process.myPid())
+                    return
+                }
+            }
+            SignatureGuard.Result.Skipped -> {
+                if (!BuildConfig.DEBUG) {
+                    AppLog.e(TAG, "Aborting: release build ships without a pinned signing hash")
+                    finishAffinity()
+                    Process.killProcess(Process.myPid())
+                    return
+                }
+            }
+            SignatureGuard.Result.Ok -> Unit
+        }
 
         // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
         // steps can start TouchInjector without needing the caller to supply a Context.
@@ -192,7 +240,6 @@ class MainActivity : ComponentActivity() {
                 .distinctUntilChanged()
                 .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
         }
-        SettingsManager.init(this)
         // Auto-connect Privileged Mode if the user previously bootstrapped the daemon.
         // The daemon survives app restarts (it's a separate shell-UID process); we just
         // re-open the abstract socket. Failure is silent: the user can re-bootstrap from
@@ -314,8 +361,16 @@ class MainActivity : ComponentActivity() {
                         }
                         when (decideMirrorRuntimeAction(policy)) {
                             MirrorRuntimeAction.START -> {
-                                AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
-                                startMirrorByPolicy()
+                                // Re-read promptInFlight from the live StateFlow before
+                                // acting. The combine() snapshot may have captured a stale
+                                // promptInFlight=false if the manual-start handler set it to
+                                // true in the same scheduler turn — causing a double launch.
+                                if (AppStateManager.promptInFlight.value) {
+                                    AppLog.d(TAG, "mirror policy: layout=${policy.layoutId} wants ON but prompt already in flight — skipping")
+                                } else {
+                                    AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
+                                    startMirrorByPolicy()
+                                }
                             }
                             MirrorRuntimeAction.STOP -> {
                                 AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
