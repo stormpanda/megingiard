@@ -566,7 +566,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Log-Bericht exportieren -->
     <string name="settings_save_log_report">Log-Bericht speichern</string>
     <string name="settings_save_log_report_desc">Aktuelle Logcat-Ausgabe als .txt-Datei für Fehlerberichte speichern</string>
-    <string name="log_report_filename">megingiard_log_%s.txt</string>
     <string name="log_report_save_success">Log-Bericht gespeichert.</string>
     <string name="log_report_save_error">Log-Bericht konnte nicht gespeichert werden.</string>
 </resources>

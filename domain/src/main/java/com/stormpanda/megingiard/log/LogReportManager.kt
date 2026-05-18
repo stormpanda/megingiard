@@ -109,28 +109,25 @@ object LogReportManager {
      * **Must be called from a background thread** — [ProcessBuilder.start] is
      * a blocking I/O operation.
      *
-     * Returns an error message string (never throws) so the caller can write
-     * the error into the file for diagnostics.
+     * @throws Exception if logcat cannot be started or exits with a non-zero exit code.
+     * The caller is responsible for handling the exception and surfacing a [SaveResult.Failure].
      */
     fun readLogcatLines(pid: Int): String {
-        return try {
-            val process = ProcessBuilder(
-                "logcat",
-                "-d",
-                "--pid=$pid",
-                "-v", LOG_REPORT_FORMAT,
-                "-t", LOG_REPORT_MAX_LINES.toString(),
-            )
-                .redirectErrorStream(true)
-                .start()
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor()
-            AppLog.d(TAG, "readLogcatLines: read ${output.lines().size} lines for pid=$pid")
-            output
-        } catch (e: Exception) {
-            val msg = "Failed to read logcat: ${e.javaClass.simpleName}: ${e.message}"
-            AppLog.e(TAG, msg)
-            msg
+        val process = ProcessBuilder(
+            "logcat",
+            "-d",
+            "--pid=$pid",
+            "-v", LOG_REPORT_FORMAT,
+            "-t", LOG_REPORT_MAX_LINES.toString(),
+        )
+            .redirectErrorStream(true)
+            .start()
+        val output = process.inputStream.bufferedReader().use { it.readText() }
+        val exitCode = process.waitFor()
+        if (exitCode != 0) {
+            throw RuntimeException("logcat exited with code $exitCode")
         }
+        AppLog.d(TAG, "readLogcatLines: read ${output.lines().size} lines for pid=$pid")
+        return output
     }
 }

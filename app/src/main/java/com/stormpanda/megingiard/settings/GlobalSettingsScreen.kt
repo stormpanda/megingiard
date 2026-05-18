@@ -233,7 +233,7 @@ fun GlobalSettingsScreen(
                             onChanged = { viewModel.setLogLevel(it) }
                         )
                         HorizontalDivider(color = colors.divider)
-                        SendLogReportRow(
+                        SaveLogReportRow(
                             accentColor = effectiveAccent,
                             colors = colors,
                             onClick = { viewModel.requestSaveLogReport() }

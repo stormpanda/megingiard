@@ -320,7 +320,7 @@ internal fun LanguagePickerRow(
  * location via the SAF "Create Document" picker.
  */
 @Composable
-internal fun SendLogReportRow(
+internal fun SaveLogReportRow(
     accentColor: Color,
     colors: AppColors,
     onClick: () -> Unit,

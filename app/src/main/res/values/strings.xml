@@ -558,7 +558,6 @@ Open Settings to create a layout.</string>
     <!-- Log report export -->
     <string name="settings_save_log_report">Save log report</string>
     <string name="settings_save_log_report_desc">Save recent logcat output to a .txt file for bug reports</string>
-    <string name="log_report_filename">megingiard_log_%s.txt</string>
     <string name="log_report_save_success">Log report saved.</string>
     <string name="log_report_save_error">Failed to save log report.</string>
 </resources>
