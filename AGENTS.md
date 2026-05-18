@@ -35,6 +35,7 @@
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
 | `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
 | `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
+| `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
 
 > [!IMPORTANT]
 > **Documentation language: English only.**

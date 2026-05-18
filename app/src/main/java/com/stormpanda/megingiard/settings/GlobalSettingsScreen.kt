@@ -57,6 +57,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.privd.DeadzoneDialog
 import com.stormpanda.megingiard.privd.PrivdSettingsCard
@@ -84,7 +85,7 @@ private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 private enum class SettingsSectionFilter {
-    GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE
+    GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE, DIAGNOSTICS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,6 +111,7 @@ fun GlobalSettingsScreen(
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     // Export-result feedback (set by ConfigManager after MainActivity writes the file)
     val exportResult by ConfigManager.exportResult.collectAsState()
+    val logReportSaveResult by LogReportManager.saveResult.collectAsState()
     // All dialog states are hoisted here so they can be rendered at the top-level Box
     // (in-tree, covering the Scaffold). AlertDialog creates a new Android sub-window
     // whose token is null inside MirrorPresentation → BadTokenException crash.
@@ -171,6 +173,7 @@ fun GlobalSettingsScreen(
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
                     onSelectPrivilegedMode = { selectedSectionFilter = SettingsSectionFilter.PRIVILEGED_MODE },
+                    onSelectDiagnostics = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
                     SettingsSection(
@@ -222,13 +225,6 @@ fun GlobalSettingsScreen(
                             accentColor = effectiveAccent,
                             colors = colors,
                             onChanged = { viewModel.setAppLanguage(it) }
-                        )
-                        HorizontalDivider(color = colors.divider)
-                        LogLevelPickerRow(
-                            logLevel = logLevel,
-                            accentColor = effectiveAccent,
-                            colors = colors,
-                            onChanged = { viewModel.setLogLevel(it) }
                         )
                         HorizontalDivider(color = colors.divider)
                         RememberSettingRow(
@@ -305,6 +301,27 @@ fun GlobalSettingsScreen(
                             viewModel = viewModel,
                             onShowWizard = { showPrivdWizard = true },
                             onShowDeadzoneDialog = { showDeadzoneDialog = true },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_diagnostics),
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                    ) {
+                        LogLevelPickerRow(
+                            logLevel = logLevel,
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onChanged = { viewModel.setLogLevel(it) }
+                        )
+                        HorizontalDivider(color = colors.divider)
+                        SaveLogReportRow(
+                            accentColor = effectiveAccent,
+                            colors = colors,
+                            onClick = { viewModel.requestSaveLogReport() }
                         )
                     }
                 }
@@ -434,6 +451,29 @@ fun GlobalSettingsScreen(
             }
             null -> {}
         }
+        when (val logResult = logReportSaveResult) {
+            is LogReportManager.SaveResult.Success -> {
+                InTreeMessageDialog(
+                    title = stringResource(R.string.config_success_title),
+                    text = stringResource(R.string.log_report_save_success),
+                    buttonText = stringResource(R.string.config_ok),
+                    colors = colors,
+                    accentColor = effectiveAccent,
+                    onDismiss = { LogReportManager.clearSaveResult() },
+                )
+            }
+            is LogReportManager.SaveResult.Failure -> {
+                InTreeMessageDialog(
+                    title = stringResource(R.string.config_error_title),
+                    text = logResult.message?.takeIf { it.isNotBlank() } ?: stringResource(R.string.log_report_save_error),
+                    buttonText = stringResource(R.string.config_ok),
+                    colors = colors,
+                    accentColor = effectiveAccent,
+                    onDismiss = { LogReportManager.clearSaveResult() },
+                )
+            }
+            null -> {}
+        }
     }
 }
 
@@ -448,6 +488,7 @@ private fun SectionJumpRow(
     onSelectData: () -> Unit,
     onSelectConfig: () -> Unit,
     onSelectPrivilegedMode: () -> Unit,
+    onSelectDiagnostics: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -504,6 +545,13 @@ private fun SectionJumpRow(
             accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE,
             onClick = onSelectPrivilegedMode,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_diagnostics),
+            colors = colors,
+            accentColor = accentColor,
+            selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS,
+            onClick = onSelectDiagnostics,
         )
     }
 }

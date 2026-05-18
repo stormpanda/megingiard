@@ -9,6 +9,7 @@ import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -59,6 +60,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setOverlayAtBottom(value: Boolean) = SettingsManager.setOverlayAtBottom(value)
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
+    fun requestSaveLogReport() = LogReportManager.requestSaveReport()
     fun setShowNavigationCoachMarks(value: Boolean) = SettingsManager.setShowNavigationCoachMarks(value)
     fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
