@@ -400,7 +400,7 @@ object PrivdClient {
                 return false
             }
             val expectedProofHex = HmacUtil.computeHmacHex(hmacKeyBytes, verifyNonce)
-            if (receivedProofHex != expectedProofHex) {
+            if (!HmacUtil.constantTimeEqualsHex(receivedProofHex, expectedProofHex)) {
                 AppLog.w(TAG, "handshake: PROOF mismatch — daemon is not the legitimate binary")
                 return false
             }

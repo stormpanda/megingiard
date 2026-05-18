@@ -179,4 +179,28 @@ class HmacUtilTest {
             HmacUtil.computeHmacHex(key, nonce),
         )
     }
+
+    @Test
+    fun constantTimeEqualsHex_sameStrings_returnsTrue() {
+        val mac = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+        assertTrue(HmacUtil.constantTimeEqualsHex(mac, mac))
+    }
+
+    @Test
+    fun constantTimeEqualsHex_differentStringsSameLength_returnsFalse() {
+        val expected = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+        val actual = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDE0"
+        assertTrue(
+            "Different MACs must not compare equal",
+            !HmacUtil.constantTimeEqualsHex(actual, expected),
+        )
+    }
+
+    @Test
+    fun constantTimeEqualsHex_differentLengths_returnsFalse() {
+        assertTrue(
+            "Different lengths must not compare equal",
+            !HmacUtil.constantTimeEqualsHex("ABCD", "ABCDEF"),
+        )
+    }
 }

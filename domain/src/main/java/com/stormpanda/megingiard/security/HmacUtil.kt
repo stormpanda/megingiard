@@ -35,4 +35,20 @@ internal object HmacUtil {
         val hmac = mac.doFinal(nonceBytes)
         return hmac.joinToString("") { b -> "%02X".format(b) }
     }
+
+    /**
+     * Constant-time equality for fixed-length hex MAC strings.
+     *
+     * The comparison always scans both complete strings when their lengths match.
+     * A length mismatch fails immediately because protocol parsers already enforce
+     * exact message lengths before calling this helper.
+     */
+    fun constantTimeEqualsHex(actual: String, expected: String): Boolean {
+        if (actual.length != expected.length) return false
+        var diff = 0
+        for (i in actual.indices) {
+            diff = diff or (actual[i].code xor expected[i].code)
+        }
+        return diff == 0
+    }
 }
