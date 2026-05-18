@@ -5,6 +5,7 @@ import android.app.LocaleManager
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.os.Build
 import android.os.LocaleList
 import android.os.Process
 import android.view.Display
@@ -31,7 +32,10 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
+import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
@@ -105,6 +109,40 @@ class MainActivity : ComponentActivity() {
             return@registerForActivityResult
         }
         ConfigManager.setPendingInAppUri(uri)
+    }
+
+    private val createLogDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        AppStateManager.setFilePickerOpen(false)
+        if (uri == null) return@registerForActivityResult
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                val pid = Process.myPid()
+                val header = LogReportManager.buildReportHeader(
+                    appVersion = BuildConfig.VERSION_NAME,
+                    deviceModel = Build.MODEL,
+                    androidVersion = Build.VERSION.RELEASE,
+                    timestamp = LocalDateTime.now()
+                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                )
+                val body = LogReportManager.readLogcatLines(pid)
+                contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.bufferedWriter().use { writer ->
+                        writer.write(header)
+                        writer.write(body)
+                    }
+                } ?: error("Could not open output stream for $uri")
+            }
+                .onSuccess {
+                    AppLog.i(TAG, "Log report written to $uri")
+                    LogReportManager.setSaveResult(LogReportManager.SaveResult.Success)
+                }
+                .onFailure { e ->
+                    AppLog.e(TAG, "Log report save failed", e)
+                    LogReportManager.setSaveResult(LogReportManager.SaveResult.Failure(e.message))
+                }
+        }
     }
 
     // The manifest declares configChanges that prevent activity recreation when the app
@@ -205,6 +243,17 @@ class MainActivity : ComponentActivity() {
                     // show an empty list. With "*/*" all files are visible and the user
                     // can navigate to their .mgrd file.
                     openDocumentLauncher.launch(arrayOf("*/*"))
+                }
+            }
+        }
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                LogReportManager.saveRequest.collect {
+                    val timestamp = LocalDateTime.now()
+                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
+                    val filename = LogReportManager.buildReportFilename(timestamp)
+                    AppStateManager.setFilePickerOpen(true)
+                    createLogDocumentLauncher.launch(filename)
                 }
             }
         }

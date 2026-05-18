@@ -312,6 +312,42 @@ internal fun LanguagePickerRow(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Log report row
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Settings row that triggers saving a plain-text log report to a user-chosen
+ * location via the SAF "Create Document" picker.
+ */
+@Composable
+internal fun SendLogReportRow(
+    accentColor: Color,
+    colors: AppColors,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_save_log_report),
+            subtitle = stringResource(R.string.settings_save_log_report_desc),
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+            contentDescription = null,
+            tint = accentColor,
+            modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Config export/import row
 // ─────────────────────────────────────────────────────────────────────────────
 
