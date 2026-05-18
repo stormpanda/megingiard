@@ -38,12 +38,15 @@ val expectedSigningSha256: String =
 // ---------------------------------------------------------------------------
 private val DEFAULT_PRIVD_HMAC_KEY =
     "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
+private val PRIVD_HMAC_KEY_PATTERN = Regex("[0-9A-F]{64}")
 
 val privdHmacKey: String =
     (localProperties.getProperty("megingiard.privd.hmac.key") ?: DEFAULT_PRIVD_HMAC_KEY)
         .replace(":", "")
         .replace(" ", "")
         .uppercase()
+val privdHmacKeyIsProductionReady: Boolean =
+    privdHmacKey.matches(PRIVD_HMAC_KEY_PATTERN) && privdHmacKey != DEFAULT_PRIVD_HMAC_KEY
 
 android {
     namespace = "com.stormpanda.megingiard"
@@ -123,6 +126,9 @@ afterEvaluate {
     //   ./gradlew assembleRelease -Pmegingiard.allowUnpinnedRelease=true
     val allowUnpinned = (project.findProperty("megingiard.allowUnpinnedRelease") as? String)
         ?.equals("true", ignoreCase = true) == true
+    val allowDefaultPrivdHmacKey =
+        (project.findProperty("megingiard.allowDefaultPrivdHmacKey") as? String)
+            ?.equals("true", ignoreCase = true) == true
     val releaseGuardTasks = listOf(
         "assembleRelease",
         "bundleRelease",
@@ -142,6 +148,22 @@ afterEvaluate {
                             "       megingiard.signing.sha256=AB:CD:…\n" +
                             "Override (NOT for distribution) with " +
                             "-Pmegingiard.allowUnpinnedRelease=true"
+                    )
+                }
+                if (!privdHmacKeyIsProductionReady && !allowDefaultPrivdHmacKey) {
+                    throw GradleException(
+                        "Release build aborted: 'megingiard.privd.hmac.key' must be set " +
+                            "to a custom 64-character hex value in local.properties. " +
+                            "The source default is public and must not ship in " +
+                            "production-like builds.\n" +
+                            "  1. Generate a key:\n" +
+                            "       openssl rand -hex 32 | tr '[:lower:]' '[:upper:]'\n" +
+                            "  2. Add to local.properties:\n" +
+                            "       megingiard.privd.hmac.key=<64 uppercase hex chars>\n" +
+                            "  3. Rebuild the daemon:\n" +
+                            "       ./build_megingiard_privd.sh\n" +
+                            "Override (NOT for distribution) with " +
+                            "-Pmegingiard.allowDefaultPrivdHmacKey=true"
                     )
                 }
             }
