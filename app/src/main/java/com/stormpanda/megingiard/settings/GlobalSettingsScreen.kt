@@ -573,7 +573,7 @@ private fun SettingsSection(
             .background(colors.surfaceVariant)
             .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
     )
-    Column { content() }
+    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) { content() }
     AppSettingsSeparator()
 }
 

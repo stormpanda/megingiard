@@ -68,3 +68,17 @@ fun AppSettingsSeparator(
 ) {
     HorizontalDivider(color = color, modifier = modifier)
 }
+
+/**
+ * Thin horizontal separator for content lists, timelines, and editorial contexts.
+ *
+ * Uses [AppColors.divider] by default — distinct from [AppSettingsSeparator] which uses
+ * the [AppColors.settingsSeparator] token tuned for settings screen/dialog backgrounds.
+ */
+@Composable
+fun AppContentDivider(
+    modifier: Modifier = Modifier,
+    color: Color = LocalAppColors.current.divider,
+) {
+    HorizontalDivider(color = color, modifier = modifier)
+}

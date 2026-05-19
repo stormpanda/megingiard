@@ -232,7 +232,7 @@ private val cyberpunkPalette = AppColors(
     macroPadOnSurface      = CP_TEXT,
     macroPadAccentBorder   = CP_ACCENT.copy(alpha = 0.35f),
     sectionHeaderColor     = CP_SECTION_HEADER,
-    settingsSeparator      = CP_TEXT.copy(alpha = 0.18f),
+    settingsSeparator      = CP_SECTION_HEADER.copy(alpha = 0.12f),
 )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────

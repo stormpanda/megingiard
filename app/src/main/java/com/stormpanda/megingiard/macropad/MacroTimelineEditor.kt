@@ -35,7 +35,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
+import com.stormpanda.megingiard.ui.AppContentDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -402,7 +402,7 @@ internal fun MacroTimelineEditor(
                 }
             }
 
-            HorizontalDivider(color = colors.divider)
+            AppContentDivider()
 
             Row(
                 modifier = Modifier
@@ -515,7 +515,7 @@ internal fun MacroTimelineEditor(
                 }
             }
 
-            HorizontalDivider(color = colors.divider)
+            AppContentDivider()
 
             if (viewMode == MacroEditorViewMode.LIST) {
                 Column(
@@ -536,7 +536,7 @@ internal fun MacroTimelineEditor(
                                 style = MaterialTheme.typography.labelMedium,
                             )
                         }
-                        HorizontalDivider(color = colors.divider)
+                        AppContentDivider()
                     }
 
                     steps.forEachIndexed { idx, step ->
@@ -547,7 +547,7 @@ internal fun MacroTimelineEditor(
                             onEdit = { editingStepIndex = idx },
                             onDelete = { deleteStepIndex = idx },
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppContentDivider()
                     }
 
                     StepActionRow(
@@ -569,7 +569,7 @@ internal fun MacroTimelineEditor(
                             )
                         },
                     )
-                    HorizontalDivider(color = colors.divider)
+                    AppContentDivider()
                     MtLoopSection(
                         loopEnabled = loopEnabled,
                         loopPauseMs = loopPauseMs,
@@ -608,7 +608,7 @@ internal fun MacroTimelineEditor(
                         )
                     }
 
-                    HorizontalDivider(color = colors.divider)
+                    AppContentDivider()
 
                     StepActionRow(
                         steps = steps,
@@ -629,7 +629,7 @@ internal fun MacroTimelineEditor(
                             )
                         },
                     )
-                    HorizontalDivider(color = colors.divider)
+                    AppContentDivider()
                     MtLoopSection(
                         loopEnabled = loopEnabled,
                         loopPauseMs = loopPauseMs,

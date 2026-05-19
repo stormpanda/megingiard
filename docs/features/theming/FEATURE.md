@@ -26,7 +26,7 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 ### FR-TH2: Token-Based Colour Architecture
 
-- All screen and component colours MUST be expressed through the 30 semantic tokens defined in `AppColors`.
+- All screen and component colours MUST be expressed through the 35 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
   - HSV colour-wheel rendering math in `ColorWheelPicker.kt` (saturation gradient, brightness overlay, selector dot ring).
   - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour (e.g. white in Dark/Light, dark red in Cyberpunk).
@@ -45,7 +45,7 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 ### Token Definitions — `ui/AppTheme.kt`
 
-Thirty semantic `AppColors` tokens cover all theming needs:
+Thirty-five semantic `AppColors` tokens cover all theming needs:
 
 | Token                    | Semantic purpose                                                                                                                   |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -169,7 +169,15 @@ All settings rows across the app (Global Settings, Keyboard/Touchpad tool settin
 **`AppSettingsSeparator`** renders a thin `HorizontalDivider` using `AppColors.settingsSeparator` as its default colour.
 
 - `settingsSeparator` is a dedicated token distinct from `divider`; it is tuned per theme for the standard settings background, while `divider` continues to serve timelines, lists, and other non-settings contexts unchanged.
-- Values: Dark `White(α=0.10)`, Light `#1C1C1E(α=0.10)`, Cyberpunk `CP_TEXT(α=0.18)`.
+- Values: Dark `White(α=0.10)`, Light `#1C1C1E(α=0.10)`, Cyberpunk `CP_SECTION_HEADER(α=0.12)`.
+
+**`AppContentDivider`** renders a thin `HorizontalDivider` using `AppColors.divider` as its default colour.
+
+- Used in list, timeline, and editorial contexts (e.g., `MacroTimelineEditor`, `MacroListEditor`, `MacroPadEditor` button list, `PrivdSettingsCard`).
+- Distinct from `AppSettingsSeparator` — the two composables use separate tokens intentionally so settings-screen backgrounds and list/timeline backgrounds can tune their divider opacity independently.
+- Accepts an optional `modifier` for layout-specific adjustments (e.g. horizontal padding in the MacroPad editor button list).
+
+**Background ownership rule:** Settings rows are transparent. The parent `Column` that groups a set of settings rows is responsible for setting `Modifier.background(colors.surface)`. This is why `GlobalSettingsScreen.SettingsSection` and `AmbientSettingsOverlay` wrap their row groups in `Column(modifier = Modifier.fillMaxWidth().background(colors.surface))` rather than per-row backgrounds.
 
 ### Persistence — `SettingsManager.kt`
 

@@ -17,7 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
+import com.stormpanda.megingiard.ui.AppContentDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -103,7 +103,7 @@ internal fun PhysicalGamepadRecordingSheet(
                 style = MaterialTheme.typography.bodyMedium,
             )
 
-            HorizontalDivider(color = colors.divider)
+            AppContentDivider()
 
             /* ── Live controller state ───────────────────────────────────── */
             if (recording != null) {
@@ -160,7 +160,7 @@ internal fun PhysicalGamepadRecordingSheet(
                     }
                 }
 
-                HorizontalDivider(color = colors.divider)
+                AppContentDivider()
             }
 
             /* ── Actions ─────────────────────────────────────────────────── */

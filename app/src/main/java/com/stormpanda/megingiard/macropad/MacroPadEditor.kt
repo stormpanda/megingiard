@@ -41,7 +41,7 @@ import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
+import com.stormpanda.megingiard.ui.AppContentDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -422,7 +422,7 @@ private fun EditorTopBar(
             textStyle    = MaterialTheme.typography.titleMedium,
             fillMaxWidth = true,
             footerContent = { dismiss ->
-                HorizontalDivider(color = colors.divider)
+                AppContentDivider()
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { dismiss(); onNewProfileRequested() },
@@ -615,10 +615,7 @@ private fun EditorBody(
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )
-                    HorizontalDivider(
-                        color    = colors.divider,
-                        modifier = Modifier.padding(horizontal = ED_PADDING),
-                    )
+                    AppContentDivider(modifier = Modifier.padding(horizontal = ED_PADDING))
                 }
             }
         }
