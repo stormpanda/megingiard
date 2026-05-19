@@ -148,7 +148,7 @@ MaterialTheme(
 - The Accent Color row is only shown when `themeMode.supportsCustomAccent` is `true`.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
-### Shared Dropdowns — `ui/AppSelectableChip.kt`
+### Shared Dropdowns — `ui/AppDropdown.kt`
 
 - Selection dropdowns use the shared `AppDropdown` composable, styled after the Ambient Settings vignette-shape picker: a compact rounded trigger with subtle surface tint, trailing drop-down icon, themed surface menu, and accent-coloured selected item.
 - `AppDropdown` supports compact trailing controls, full-width form fields, disabled empty states, and optional footer actions for selectors such as the MacroPad profile picker.
