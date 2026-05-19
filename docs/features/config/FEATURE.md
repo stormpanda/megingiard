@@ -45,8 +45,7 @@ the same device or share individual profiles with other Megingiard users.
 
 - Imported MacroPad profiles (with embedded macros) MUST be added alongside existing items
   with new UUIDs — never merging or overwriting existing data.
-- Imported profiles and their macros MUST receive an `" (Imported)"` suffix appended to their names
-  to help users identify them.
+- Imported profiles and macros retain their original names.
 - For **backup restore** imports: tool settings (Global, Mirror, Touchpad, Keyboard) present in
   the file ARE applied directly, overwriting current values.
 - For **profile-share** imports: settings in the file are always ignored.

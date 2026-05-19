@@ -373,7 +373,7 @@ object ConfigManager {
             val remappedMacros = profile.macros.map { macro ->
                 val newId = UUID.randomUUID().toString()
                 macroIdMap[macro.id] = newId
-                macro.copy(id = newId, name = importedName(macro.name))
+                macro.copy(id = newId)
             }
 
             // Remap macro references in button actions
@@ -397,7 +397,7 @@ object ConfigManager {
 
             val importedProfile = profile.copy(
                 id = newProfileId,
-                name = importedName(profile.name),
+                name = profile.name,
                 layouts = remappedLayouts,
                 macros = remappedMacros,
                 activeLayoutId = preservedActiveLayoutId,
@@ -412,8 +412,6 @@ object ConfigManager {
         val newMacroId = macroIdMap[action.macroId] ?: action.macroId
         return PadAction.Macro(macroId = newMacroId)
     }
-
-    private fun importedName(original: String) = "$original (Imported)"
 
     // ── Checksum ─────────────────────────────────────────────────────────────
 
