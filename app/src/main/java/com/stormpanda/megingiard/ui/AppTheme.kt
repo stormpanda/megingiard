@@ -99,6 +99,8 @@ data class AppColors(
      * accent; fixed per-palette for themes like Cyberpunk that use a distinct header tint.
      */
     val sectionHeaderColor: Color,
+    /** Thin divider between transparent settings rows drawn on the default screen/dialog background. */
+    val settingsSeparator: Color,
 )
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
@@ -141,6 +143,7 @@ private val darkPalette = AppColors(
     macroPadOnSurface      = Color.White,
     macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
     sectionHeaderColor     = DEFAULT_DARK_LIGHT_ACCENT,
+    settingsSeparator      = Color.White.copy(alpha = 0.10f),
 )
 
 private val lightPalette = AppColors(
@@ -178,6 +181,7 @@ private val lightPalette = AppColors(
     macroPadOnSurface      = Color.White,
     macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
     sectionHeaderColor     = DEFAULT_DARK_LIGHT_ACCENT,
+    settingsSeparator      = Color(0xFF1C1C1E).copy(alpha = 0.10f),
 )
 
 // ─── Cyberpunk palette ────────────────────────────────────────────────────────
@@ -228,6 +232,7 @@ private val cyberpunkPalette = AppColors(
     macroPadOnSurface      = CP_TEXT,
     macroPadAccentBorder   = CP_ACCENT.copy(alpha = 0.35f),
     sectionHeaderColor     = CP_SECTION_HEADER,
+    settingsSeparator      = CP_TEXT.copy(alpha = 0.18f),
 )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────

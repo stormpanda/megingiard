@@ -79,6 +79,8 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
+import com.stormpanda.megingiard.ui.AppSettingsRow
+import com.stormpanda.megingiard.ui.AppSettingsSeparator
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
@@ -787,7 +789,6 @@ private fun LayoutSettingsContent(
     layout:   PadLayout,
     modifier: Modifier = Modifier,
 ) {
-    val colors = LocalAppColors.current
     Column(modifier = modifier.fillMaxWidth()) {
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_no_mirror),
@@ -796,7 +797,7 @@ private fun LayoutSettingsContent(
                 MacroPadState.updateLayout(layout.copy(buttonColorNoMirror = style))
             },
         )
-        HorizontalDivider(color = colors.divider)
+        AppSettingsSeparator()
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_mirror),
             selected = layout.buttonColorMirror,
@@ -815,13 +816,7 @@ private fun ButtonColorStyleRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    Row(
-        modifier          = modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = ED_PADDING, vertical = ED_ITEM_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    AppSettingsRow(modifier = modifier) {
         Text(
             text     = label,
             color    = colors.onSurface,

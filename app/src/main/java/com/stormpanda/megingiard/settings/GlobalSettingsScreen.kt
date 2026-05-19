@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.text.KeyboardActions
@@ -64,6 +63,7 @@ import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.AppSettingsSeparator
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import java.time.LocalDate
@@ -183,55 +183,47 @@ fun GlobalSettingsScreen(
                     ) {
                         OverlayPositionRow(
                             overlayAtBottom = overlayAtBottom,
-                            accentColor = effectiveAccent,
-                            colors = colors,
                             onChanged = { viewModel.setOverlayAtBottom(it) }
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppSettingsSeparator()
                         RememberSettingRow(
                             label = stringResource(R.string.settings_show_navigation_coach_marks),
                             description = stringResource(R.string.settings_show_navigation_coach_marks_desc),
                             checked = showNavigationCoachMarks,
-                            accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setShowNavigationCoachMarks(it) },
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppSettingsSeparator()
                         RememberSettingRow(
                             label = stringResource(R.string.settings_show_mirror_control_labels),
                             description = stringResource(R.string.settings_show_mirror_control_labels_desc),
                             checked = showMirrorControlLabels,
-                            accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setShowMirrorControlLabels(it) },
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppSettingsSeparator()
                         RememberSettingRow(
                             label = stringResource(R.string.settings_show_fullscreen_exit_hints),
                             description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
                             checked = showFullscreenExitHints,
-                            accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setShowFullscreenExitHints(it) },
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppSettingsSeparator()
                         RememberSettingRow(
                             label = stringResource(R.string.settings_mirror_auto_start),
                             description = stringResource(R.string.settings_mirror_auto_start_desc),
                             checked = mirrorAutoStart,
-                            accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setMirrorAutoStart(it) },
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppSettingsSeparator()
                         LanguagePickerRow(
                             language = appLanguage,
                             accentColor = effectiveAccent,
-                            colors = colors,
                             onChanged = { viewModel.setAppLanguage(it) }
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppSettingsSeparator()
                         RememberSettingRow(
                             label = stringResource(R.string.settings_gamepad_swap_face_buttons),
                             description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
                             checked = gamepadSwapFaceButtons,
-                            accentColor = effectiveAccent,
                             onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
                         )
                     }
@@ -246,14 +238,12 @@ fun GlobalSettingsScreen(
                         ThemePickerRow(
                             themeMode = themeMode,
                             accentColor = effectiveAccent,
-                            colors = colors,
                             onChanged = { viewModel.setThemeMode(it) }
                         )
                         if (themeMode.supportsCustomAccent) {
-                            HorizontalDivider(color = colors.divider)
+                            AppSettingsSeparator()
                             AccentColorRow(
                                 accentColor = accentColor,
-                                colors = colors,
                                 onClick = { showColorPicker = true }
                             )
                         }
@@ -270,7 +260,6 @@ fun GlobalSettingsScreen(
                             label = stringResource(R.string.settings_restore_defaults),
                             description = stringResource(R.string.settings_restore_defaults_desc),
                             accentColor = effectiveAccent,
-                            colors = colors,
                             onClick = { showRestoreDefaultsConfirm = true },
                         )
                     }
@@ -283,8 +272,6 @@ fun GlobalSettingsScreen(
                         colors = colors,
                     ) {
                         ConfigSection(
-                            colors = colors,
-                            accentColor = effectiveAccent,
                             onShowExportDialog = { showExportMetadataDialog = true },
                             onImportPreviewReady = { showImportPreviewDialog = it },
                         )
@@ -314,13 +301,11 @@ fun GlobalSettingsScreen(
                         LogLevelPickerRow(
                             logLevel = logLevel,
                             accentColor = effectiveAccent,
-                            colors = colors,
                             onChanged = { viewModel.setLogLevel(it) }
                         )
-                        HorizontalDivider(color = colors.divider)
+                        AppSettingsSeparator()
                         SaveLogReportRow(
                             accentColor = effectiveAccent,
-                            colors = colors,
                             onClick = { viewModel.requestSaveLogReport() }
                         )
                     }
@@ -589,7 +574,7 @@ private fun SettingsSection(
             .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
     )
     Column { content() }
-    HorizontalDivider(color = colors.divider)
+    AppSettingsSeparator()
 }
 
 /**
@@ -605,8 +590,6 @@ private fun SettingsSection(
  */
 @Composable
 private fun ConfigSection(
-    colors: AppColors,
-    accentColor: Color,
     onShowExportDialog: () -> Unit,
     onImportPreviewReady: (MegingiardExport) -> Unit,
 ) {
@@ -618,19 +601,18 @@ private fun ConfigSection(
         if (pendingImport != null) onImportPreviewReady(pendingImport!!)
     }
 
+    val effectiveAccent = LocalAppColors.current.accent
     ConfigActionRow(
         label = stringResource(R.string.settings_config_export),
         description = stringResource(R.string.settings_config_export_desc),
-        accentColor = accentColor,
-        colors = colors,
+        accentColor = effectiveAccent,
         onClick = onShowExportDialog,
     )
-    HorizontalDivider(color = colors.divider)
+    AppSettingsSeparator()
     ConfigActionRow(
         label = stringResource(R.string.settings_config_import),
         description = stringResource(R.string.settings_config_import_desc),
-        accentColor = accentColor,
-        colors = colors,
+        accentColor = effectiveAccent,
         onClick = { ConfigManager.requestImport() },
     )
 }
