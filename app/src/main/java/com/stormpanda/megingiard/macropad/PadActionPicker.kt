@@ -1,10 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -17,10 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +37,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.macropad.displayShortLabel
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 private const val TAG = "PadActionPicker"
@@ -390,16 +386,12 @@ internal fun ActionPicker(
     onEditMacro:    ((Macro) -> Unit)? = null,
     onChange:       (PadAction) -> Unit,
 ) {
-    var groupExpanded by remember { mutableStateOf(false) }
-    var actionExpanded by remember { mutableStateOf(false) }
     val colors = LocalAppColors.current
     val profile by MacroPadState.activeProfile.collectAsState()
 
     val hasMacros = profile?.macros?.isNotEmpty() == true
     val currentCategory = current.toCategory()
     val currentGroup = currentCategory.group()
-    val currentActionLabel = stringResource(current.categoryResId())
-    val currentGroupLabel = stringResource(currentGroup.labelResId())
     val availableGroups = ActionGroup.entries.filter { group ->
         group.actions().any { category ->
             category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
@@ -416,55 +408,21 @@ internal fun ActionPicker(
             style = MaterialTheme.typography.labelSmall,
         )
 
-        // Group dropdown
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
-                    .clickable(enabled = availableGroups.isNotEmpty()) { groupExpanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    currentGroupLabel,
-                    color = if (availableGroups.isEmpty()) colors.onSurfaceSecondary else colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                if (availableGroups.isNotEmpty()) {
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
+        AppDropdown(
+            selected     = currentGroup,
+            options      = availableGroups,
+            optionText   = { group -> stringResource(group.labelResId()) },
+            onSelected   = { group ->
+                val defaultCategory = group.actions().firstOrNull { category ->
+                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
                 }
-            }
-
-            DropdownMenu(
-                expanded         = groupExpanded,
-                onDismissRequest = { groupExpanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                availableGroups.forEach { group ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(group.labelResId()),
-                                color = if (group == currentGroup) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        onClick = {
-                            groupExpanded = false
-                            val defaultCategory = group.actions().firstOrNull { category ->
-                                category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
-                            }
-                            if (defaultCategory != null) {
-                                onChange(defaultCategory.defaultAction())
-                            }
-                        },
-                    )
+                if (defaultCategory != null) {
+                    onChange(defaultCategory.defaultAction())
                 }
-            }
-        }
+            },
+            modifier     = Modifier.fillMaxWidth(),
+            fillMaxWidth = true,
+        )
 
         Text(
             text = stringResource(R.string.macropad_editor_action),
@@ -472,55 +430,19 @@ internal fun ActionPicker(
             style = MaterialTheme.typography.labelSmall,
         )
 
-        // Action dropdown (within selected group)
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
-                    .clickable(enabled = groupActions.isNotEmpty()) { actionExpanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    currentActionLabel,
-                    color = if (groupActions.isEmpty()) colors.onSurfaceSecondary else colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                if (groupActions.isNotEmpty()) {
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
-                }
-            }
-
-            DropdownMenu(
-                expanded         = actionExpanded,
-                onDismissRequest = { actionExpanded = false },
-                modifier         = Modifier.background(colors.surface),
-            ) {
-                groupActions.forEach { category ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(category.labelResId()),
-                                color = if (category == currentCategory) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        onClick = {
-                            actionExpanded = false
-                            onChange(category.defaultAction())
-                        },
-                    )
-                }
-            }
-        }
+        AppDropdown(
+            selected     = currentCategory,
+            options      = groupActions,
+            optionText   = { category -> stringResource(category.labelResId()) },
+            onSelected   = { category -> onChange(category.defaultAction()) },
+            modifier     = Modifier.fillMaxWidth(),
+            fillMaxWidth = true,
+        )
 
         when (current) {
-            is PadAction.KeyboardKey    -> KeyboardKeyPicker(current, accentColor, onChange)
-            is PadAction.GamepadButton  -> GamepadButtonPicker(current, accentColor, onChange)
-            is PadAction.MouseButton    -> MouseButtonPicker(current, accentColor, onChange)
+            is PadAction.KeyboardKey    -> KeyboardKeyPicker(current, onChange)
+            is PadAction.GamepadButton  -> GamepadButtonPicker(current, onChange)
+            is PadAction.MouseButton    -> MouseButtonPicker(current, onChange)
             is PadAction.Macro          -> MacroPicker(current, accentColor, onEditMacro, onChange)
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
@@ -541,16 +463,16 @@ internal fun ActionPicker(
 @Composable
 internal fun KeyboardKeyPicker(
     current: PadAction.KeyboardKey,
-    accentColor: Color,
     onChange: (PadAction) -> Unit,
 ) {
-    var baseExpanded by remember { mutableStateOf(false) }
-    var mod1Expanded by remember { mutableStateOf(false) }
-    var mod2Expanded by remember { mutableStateOf(false) }
     var mod1         by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(0)) }
     var mod2         by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(1)) }
     val colors       = LocalAppColors.current
     val noneLabel    = stringResource(R.string.macropad_modifier_none)
+
+    fun modifierLabel(code: Int?): String = code?.let { selectedCode ->
+        MODIFIER_PRESETS.firstOrNull { it.first == selectedCode }?.second
+    } ?: noneLabel
 
     fun emitChange(keycode: Int, label: String, newMod1: Int?, newMod2: Int?) {
         onChange(PadAction.KeyboardKey(keycode, label, listOfNotNull(newMod1, newMod2)))
@@ -563,108 +485,52 @@ internal fun KeyboardKeyPicker(
         // ── Base key ──────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.macropad_picker_label_key), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
-            Box {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { baseExpanded = true }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(current.label, color = accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-                }
-                DropdownMenu(
-                    expanded         = baseExpanded,
-                    onDismissRequest = { baseExpanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    KEYBOARD_KEY_PRESETS.forEach { (code, label) ->
-                        DropdownMenuItem(
-                            text    = { Text(label, color = if (code == current.keycode) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                            onClick = { emitChange(code, label, mod1, mod2); baseExpanded = false },
-                        )
-                    }
-                }
-            }
+            AppDropdown(
+                selected          = current.keycode,
+                options           = KEYBOARD_KEY_PRESETS.map { it.first },
+                optionText        = { code -> KEYBOARD_KEY_PRESETS.firstOrNull { it.first == code }?.second ?: current.label },
+                onSelected        = { code ->
+                    val label = KEYBOARD_KEY_PRESETS.firstOrNull { it.first == code }?.second ?: current.label
+                    emitChange(code, label, mod1, mod2)
+                },
+                modifier          = Modifier.fillMaxWidth(),
+                textStyle         = MaterialTheme.typography.bodySmall,
+                horizontalPadding = 8.dp,
+                verticalPadding   = 10.dp,
+                fillMaxWidth      = true,
+            )
         }
 
         // ── Modifier 1 ──────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.macropad_picker_label_mod_1), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
-            Box {
-                val mod1Label = mod1?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, if (mod1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { mod1Expanded = true }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(mod1Label, color = if (mod1 == null) colors.onSurfaceSecondary else accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod1 == null) colors.onSurfaceSecondary else accentColor)
-                }
-                DropdownMenu(
-                    expanded         = mod1Expanded,
-                    onDismissRequest = { mod1Expanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    DropdownMenuItem(
-                        text    = { Text(noneLabel, color = if (mod1 == null) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                        onClick = { mod1 = null; emitChange(current.keycode, current.label, null, mod2); mod1Expanded = false },
-                    )
-                    MODIFIER_PRESETS.forEach { (code, label) ->
-                        if (code != mod2) {
-                            DropdownMenuItem(
-                                text    = { Text(label, color = if (mod1 == code) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                                onClick = { mod1 = code; emitChange(current.keycode, current.label, code, mod2); mod1Expanded = false },
-                            )
-                        }
-                    }
-                }
-            }
+            AppDropdown(
+                selected          = mod1,
+                options           = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 },
+                optionText        = { code -> modifierLabel(code) },
+                onSelected        = { code -> mod1 = code; emitChange(current.keycode, current.label, code, mod2) },
+                modifier          = Modifier.fillMaxWidth(),
+                textStyle         = MaterialTheme.typography.bodySmall,
+                horizontalPadding = 8.dp,
+                verticalPadding   = 10.dp,
+                fillMaxWidth      = true,
+            )
         }
 
         // ── Modifier 2 ──────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.macropad_picker_label_mod_2), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
-            Box {
-                val mod2Label = mod2?.let { code -> MODIFIER_PRESETS.firstOrNull { it.first == code }?.second } ?: noneLabel
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, if (mod2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { mod2Expanded = true }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(mod2Label, color = if (mod2 == null) colors.onSurfaceSecondary else accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (mod2 == null) colors.onSurfaceSecondary else accentColor)
-                }
-                DropdownMenu(
-                    expanded         = mod2Expanded,
-                    onDismissRequest = { mod2Expanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    DropdownMenuItem(
-                        text    = { Text(noneLabel, color = if (mod2 == null) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                        onClick = { mod2 = null; emitChange(current.keycode, current.label, mod1, null); mod2Expanded = false },
-                    )
-                    MODIFIER_PRESETS.forEach { (code, label) ->
-                        if (code != mod1) {
-                            DropdownMenuItem(
-                                text    = { Text(label, color = if (mod2 == code) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                                onClick = { mod2 = code; emitChange(current.keycode, current.label, mod1, code); mod2Expanded = false },
-                            )
-                        }
-                    }
-                }
-            }
+            AppDropdown(
+                selected          = mod2,
+                options           = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod1 },
+                optionText        = { code -> modifierLabel(code) },
+                onSelected        = { code -> mod2 = code; emitChange(current.keycode, current.label, mod1, code) },
+                modifier          = Modifier.fillMaxWidth(),
+                textStyle         = MaterialTheme.typography.bodySmall,
+                horizontalPadding = 8.dp,
+                verticalPadding   = 10.dp,
+                fillMaxWidth      = true,
+            )
         }
     }
 }
@@ -672,51 +538,23 @@ internal fun KeyboardKeyPicker(
 @Composable
 internal fun MouseButtonPicker(
     current: PadAction.MouseButton,
-    accentColor: Color,
     onChange: (PadAction) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val colors   = LocalAppColors.current
-
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(current.button.displayLabel(), color = accentColor, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-        }
-
-        DropdownMenu(
-            expanded         = expanded,
-            onDismissRequest = { expanded = false },
-            modifier         = Modifier.background(colors.surface),
-        ) {
-            MouseButton.entries.forEach { btn ->
-                DropdownMenuItem(
-                    text    = { Text(btn.displayLabel(), color = if (btn == current.button) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { onChange(PadAction.MouseButton(btn)); expanded = false },
-                )
-            }
-        }
-    }
+    AppDropdown(
+        selected     = current.button,
+        options      = MouseButton.entries,
+        optionText   = { btn -> btn.displayLabel() },
+        onSelected   = { btn -> onChange(PadAction.MouseButton(btn)) },
+        modifier     = Modifier.fillMaxWidth(),
+        fillMaxWidth = true,
+    )
 }
 
 @Composable
 internal fun GamepadButtonPicker(
     current: PadAction.GamepadButton,
-    accentColor: Color,
     onChange: (PadAction) -> Unit,
 ) {
-    var primaryExpanded by remember { mutableStateOf(false) }
-    var extra1Expanded  by remember { mutableStateOf(false) }
-    var extra2Expanded  by remember { mutableStateOf(false) }
-    var extra3Expanded  by remember { mutableStateOf(false) }
     var extra1          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(0)) }
     var extra2          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(1)) }
     var extra3          by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(2)) }
@@ -731,6 +569,11 @@ internal fun GamepadButtonPicker(
         GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.displayShortLabel(swapFaceButtons)
     }
 
+    @Composable
+    fun presetMenuLabel(code: Int?): String = code?.let { c ->
+        GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.localizedDisplayLabel(swapFaceButtons)
+    } ?: noneLabel
+
     fun emitChange(primary: GamepadKeycodes.GamepadButtonPreset, e1: Int?, e2: Int?, e3: Int?) {
         onChange(PadAction.GamepadButton(primary.code, primary.displayShortLabel(swapFaceButtons), listOfNotNull(e1, e2, e3)))
     }
@@ -742,146 +585,65 @@ internal fun GamepadButtonPicker(
         // ── Primary button ────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.macropad_picker_label_button), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
-            Box {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { primaryExpanded = true }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(currentPreset.displayShortLabel(swapFaceButtons), color = accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-                }
-                DropdownMenu(
-                    expanded         = primaryExpanded,
-                    onDismissRequest = { primaryExpanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    GamepadKeycodes.PRESETS.forEach { preset ->
-                        DropdownMenuItem(
-                            text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == current.btnCode) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                            onClick = { emitChange(preset, extra1, extra2, extra3); primaryExpanded = false },
-                        )
-                    }
-                }
-            }
+            AppDropdown(
+                selected          = currentPreset,
+                options           = GamepadKeycodes.PRESETS,
+                optionText        = { preset -> preset.localizedDisplayLabel(swapFaceButtons) },
+                onSelected        = { preset -> emitChange(preset, extra1, extra2, extra3) },
+                modifier          = Modifier.fillMaxWidth(),
+                textStyle         = MaterialTheme.typography.bodySmall,
+                horizontalPadding = 8.dp,
+                verticalPadding   = 10.dp,
+                fillMaxWidth      = true,
+            )
         }
 
         // ── Extra button 1 ────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.macropad_picker_label_extra_1), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
-            Box {
-                val selectedLabel = presetShortLabel(extra1) ?: noneLabel
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, if (extra1 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { extra1Expanded = true }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(selectedLabel, color = if (extra1 == null) colors.onSurfaceSecondary else accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra1 == null) colors.onSurfaceSecondary else accentColor)
-                }
-                DropdownMenu(
-                    expanded         = extra1Expanded,
-                    onDismissRequest = { extra1Expanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    DropdownMenuItem(
-                        text    = { Text(noneLabel, color = if (extra1 == null) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                        onClick = { extra1 = null; emitChange(currentPreset, null, extra2, extra3); extra1Expanded = false },
-                    )
-                    GamepadKeycodes.PRESETS.forEach { preset ->
-                        if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra2, extra3)) {
-                            DropdownMenuItem(
-                                text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == extra1) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                                onClick = { extra1 = preset.code; emitChange(currentPreset, preset.code, extra2, extra3); extra1Expanded = false },
-                            )
-                        }
-                    }
-                }
-            }
+            AppDropdown(
+                selected          = extra1,
+                options           = listOf<Int?>(null) + GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra2, extra3) },
+                optionText        = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
+                onSelected        = { code -> extra1 = code; emitChange(currentPreset, code, extra2, extra3) },
+                modifier          = Modifier.fillMaxWidth(),
+                textStyle         = MaterialTheme.typography.bodySmall,
+                horizontalPadding = 8.dp,
+                verticalPadding   = 10.dp,
+                fillMaxWidth      = true,
+            )
         }
 
         // ── Extra button 2 ────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.macropad_picker_label_extra_2), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
-            Box {
-                val selectedLabel = presetShortLabel(extra2) ?: noneLabel
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, if (extra2 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { extra2Expanded = true }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(selectedLabel, color = if (extra2 == null) colors.onSurfaceSecondary else accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra2 == null) colors.onSurfaceSecondary else accentColor)
-                }
-                DropdownMenu(
-                    expanded         = extra2Expanded,
-                    onDismissRequest = { extra2Expanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    DropdownMenuItem(
-                        text    = { Text(noneLabel, color = if (extra2 == null) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                        onClick = { extra2 = null; emitChange(currentPreset, extra1, null, extra3); extra2Expanded = false },
-                    )
-                    GamepadKeycodes.PRESETS.forEach { preset ->
-                        if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra3)) {
-                            DropdownMenuItem(
-                                text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == extra2) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                                onClick = { extra2 = preset.code; emitChange(currentPreset, extra1, preset.code, extra3); extra2Expanded = false },
-                            )
-                        }
-                    }
-                }
-            }
+            AppDropdown(
+                selected          = extra2,
+                options           = listOf<Int?>(null) + GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra3) },
+                optionText        = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
+                onSelected        = { code -> extra2 = code; emitChange(currentPreset, extra1, code, extra3) },
+                modifier          = Modifier.fillMaxWidth(),
+                textStyle         = MaterialTheme.typography.bodySmall,
+                horizontalPadding = 8.dp,
+                verticalPadding   = 10.dp,
+                fillMaxWidth      = true,
+            )
         }
 
         // ── Extra button 3 ────────────────────────────────────────────
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(stringResource(R.string.macropad_picker_label_extra_3), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelSmall)
-            Box {
-                val selectedLabel = presetShortLabel(extra3) ?: noneLabel
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, if (extra3 == null) colors.accentBorder else accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable { extra3Expanded = true }
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(selectedLabel, color = if (extra3 == null) colors.onSurfaceSecondary else accentColor, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                    Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = if (extra3 == null) colors.onSurfaceSecondary else accentColor)
-                }
-                DropdownMenu(
-                    expanded         = extra3Expanded,
-                    onDismissRequest = { extra3Expanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    DropdownMenuItem(
-                        text    = { Text(noneLabel, color = if (extra3 == null) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                        onClick = { extra3 = null; emitChange(currentPreset, extra1, extra2, null); extra3Expanded = false },
-                    )
-                    GamepadKeycodes.PRESETS.forEach { preset ->
-                        if (preset.code != current.btnCode && preset.code !in setOfNotNull(extra1, extra2)) {
-                            DropdownMenuItem(
-                                text    = { Text(preset.localizedDisplayLabel(swapFaceButtons), color = if (preset.code == extra3) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                                onClick = { extra3 = preset.code; emitChange(currentPreset, extra1, extra2, preset.code); extra3Expanded = false },
-                            )
-                        }
-                    }
-                }
-            }
+            AppDropdown(
+                selected          = extra3,
+                options           = listOf<Int?>(null) + GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra2) },
+                optionText        = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
+                onSelected        = { code -> extra3 = code; emitChange(currentPreset, extra1, extra2, code) },
+                modifier          = Modifier.fillMaxWidth(),
+                textStyle         = MaterialTheme.typography.bodySmall,
+                horizontalPadding = 8.dp,
+                verticalPadding   = 10.dp,
+                fillMaxWidth      = true,
+            )
         }
     }
 }
@@ -904,13 +666,10 @@ internal fun MacroPicker(
 ) {
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros  = profile?.macros ?: emptyList()
-    val colors  = LocalAppColors.current
     val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
 
-    var macroExpanded by remember { mutableStateOf(false) }
     val selectedMacro = macros.firstOrNull { it.id == current.macroId }
         ?: macros.firstOrNull()
-    val selectedMacroName = selectedMacro?.name ?: ""
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -920,39 +679,15 @@ internal fun MacroPicker(
             verticalAlignment    = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        .clickable(enabled = macros.isNotEmpty()) { macroExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        selectedMacroName.ifEmpty { folderEmptyLabel },
-                        color    = if (macros.isEmpty()) colors.onSurfaceSecondary else accentColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (macros.isNotEmpty()) {
-                        Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-                    }
-                }
-                DropdownMenu(
-                    expanded         = macroExpanded,
-                    onDismissRequest = { macroExpanded = false },
-                    modifier         = Modifier.background(colors.surface),
-                ) {
-                    macros.forEach { macro ->
-                        DropdownMenuItem(
-                            text    = { Text(macro.name, color = if (macro.id == current.macroId) accentColor else colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                            onClick = { onChange(PadAction.Macro(macro.id)); macroExpanded = false },
-                        )
-                    }
-                }
-            }
+            AppDropdown(
+                selected     = selectedMacro,
+                options      = macros,
+                optionText   = { macro -> macro?.name ?: folderEmptyLabel },
+                onSelected   = { macro -> if (macro != null) onChange(PadAction.Macro(macro.id)) },
+                modifier     = Modifier.weight(1f),
+                enabled      = macros.isNotEmpty(),
+                fillMaxWidth = true,
+            )
             if (onEditMacro != null && selectedMacro != null) {
                 Row(
                     modifier = Modifier

@@ -20,9 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -45,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -86,7 +84,7 @@ private fun PadAction.defaultLabelRes(): Int? = when (this) {
 }
 
 /** Default Material Symbols icon name for actions that behave like regular buttons in the editor. */
-private fun PadAction.defaultIconName(): String? = when (this) {
+private fun PadAction.editorDefaultIconName(): String? = when (this) {
     is PadAction.LayoutNext            -> PBD_ICON_LAYOUT_NEXT
     is PadAction.LayoutPrevious        -> PBD_ICON_LAYOUT_PREVIOUS
     is PadAction.ProfileSwitcher       -> PBD_ICON_PROFILE_SWITCHER
@@ -127,13 +125,12 @@ internal fun ButtonEditDialog(
         null               -> ""
         else               -> ia.defaultLabelRes()?.let { context.getString(it) } ?: ""
     }
-    val initIconName = button?.iconName ?: initialAction?.defaultIconName()
+    val initIconName = button?.iconName ?: initialAction?.editorDefaultIconName()
     var label            by remember { mutableStateOf(initLabel) }
     var iconName          by remember { mutableStateOf(initIconName) }
     var showIconPicker    by remember { mutableStateOf(false) }
     var buttonShape       by remember { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
     var buttonSize        by remember { mutableStateOf(button?.buttonSize ?: ButtonSize.SIZE_1X1) }
-    var showSizeMenu      by remember { mutableStateOf(false) }
     var action            by remember { mutableStateOf(initAction) }
     var iconFilled        by remember { mutableStateOf(button?.iconFilled ?: true) }
     var hapticStrength         by remember { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
@@ -181,7 +178,7 @@ internal fun ButtonEditDialog(
         // action-type defaults so the user has a sensible starting point.
         if (button == null || label.isBlank()) {
             val defaultLbl = newAction.defaultLabelRes()?.let { context.getString(it) } ?: ""
-            val defaultIcon = newAction.defaultIconName()
+            val defaultIcon = newAction.editorDefaultIconName()
             if (defaultLbl.isNotEmpty()) label = defaultLbl
             if (defaultIcon != null) iconName = defaultIcon
         }
@@ -340,37 +337,14 @@ internal fun ButtonEditDialog(
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
-                            Box {
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(colors.surface)
-                                        .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
-                                        .clickable { showSizeMenu = true }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(buttonSize.displayLabel(), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
-                                    Icon(
-                                        imageVector = Icons.Rounded.ArrowDropDown,
-                                        contentDescription = null,
-                                        tint = colors.onSurfaceSecondary,
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded         = showSizeMenu,
-                                    onDismissRequest = { showSizeMenu = false },
-                                    modifier         = Modifier.background(colors.surface),
-                                ) {
-                                    ButtonSize.entries.forEach { size ->
-                                        DropdownMenuItem(
-                                            text    = { Text(size.displayLabel(), color = colors.onSurface) },
-                                            onClick = { buttonSize = size; showSizeMenu = false },
-                                        )
-                                    }
-                                }
-                            }
+                            AppDropdown(
+                                selected          = buttonSize,
+                                options           = ButtonSize.entries,
+                                optionText        = { size -> size.displayLabel() },
+                                onSelected        = { size -> buttonSize = size },
+                                horizontalPadding = 16.dp,
+                                verticalPadding   = 10.dp,
+                            )
                         }
                     }
                 } else if (action is PadAction.TrackpointMove) {

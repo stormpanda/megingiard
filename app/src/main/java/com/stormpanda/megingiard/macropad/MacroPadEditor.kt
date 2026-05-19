@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -41,7 +40,6 @@ import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.TripOrigin
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -79,6 +77,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
@@ -393,8 +392,6 @@ private fun EditorTopBar(
     onDeleteProfileRequested: () -> Unit,
     onDone:                   () -> Unit,
 ) {
-    var profileMenuExpanded by remember { mutableStateOf(false) }
-
     val activeProfile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
     val colors        = LocalAppColors.current
 
@@ -414,53 +411,22 @@ private fun EditorTopBar(
             )
         }
 
-        // Profile selector
-        Box(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { profileMenuExpanded = true }
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text     = activeProfile?.name ?: stringResource(R.string.macropad_editor_new_profile_name),
-                    color    = colors.onSurface,
-                    style    = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = colors.onSurfaceSecondary)
-            }
-
-            DropdownMenu(
-                expanded          = profileMenuExpanded,
-                onDismissRequest  = { profileMenuExpanded = false },
-                modifier          = Modifier.background(colors.surface),
-            ) {
-                profiles.forEach { p ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text  = p.name,
-                                color = if (p.id == activeId) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        onClick = {
-                            onSelectProfile(p.id)
-                            profileMenuExpanded = false
-                        },
-                    )
-                }
+        AppDropdown(
+            selected     = activeProfile,
+            options      = profiles,
+            optionText   = { profile -> profile?.name ?: stringResource(R.string.macropad_editor_new_profile_name) },
+            onSelected   = { profile -> if (profile != null) onSelectProfile(profile.id) },
+            modifier     = Modifier.weight(1f),
+            textStyle    = MaterialTheme.typography.titleMedium,
+            fillMaxWidth = true,
+            footerContent = { dismiss ->
                 HorizontalDivider(color = colors.divider)
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { profileMenuExpanded = false; onNewProfileRequested() },
+                    onClick = { dismiss(); onNewProfileRequested() },
                 )
-            }
-        }
+            },
+        )
 
         // Rename & delete buttons (only when a profile exists)
         if (activeProfile != null) {
@@ -866,18 +832,17 @@ private fun ButtonColorStyleRow(
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(ED_ITEM_PADDING))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppSelectableChip(
-                text     = stringResource(R.string.macropad_editor_button_color_accented),
-                selected = selected == ButtonColorStyle.ACCENTED,
-                onClick  = { onSelect(ButtonColorStyle.ACCENTED) },
-            )
-            AppSelectableChip(
-                text     = stringResource(R.string.macropad_editor_button_color_neutral),
-                selected = selected == ButtonColorStyle.NEUTRAL,
-                onClick  = { onSelect(ButtonColorStyle.NEUTRAL) },
-            )
-        }
+        AppDropdown(
+            selected   = selected,
+            options    = ButtonColorStyle.entries,
+            optionText = { style ->
+                when (style) {
+                    ButtonColorStyle.ACCENTED -> stringResource(R.string.macropad_editor_button_color_accented)
+                    ButtonColorStyle.NEUTRAL  -> stringResource(R.string.macropad_editor_button_color_neutral)
+                }
+            },
+            onSelected = onSelect,
+        )
     }
 }
 

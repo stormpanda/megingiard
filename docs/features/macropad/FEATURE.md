@@ -167,7 +167,7 @@ Each button supports one of the following actions:
 - **Per-layout button color style** (`PadLayout.buttonColorNoMirror` / `PadLayout.buttonColorMirror`): Each layout can independently configure the button color style for two states: when mirroring is inactive and when it is active (ambient overlay).
   - `buttonColorNoMirror` — defaults to `ButtonColorStyle.ACCENTED`. Buttons use the active accent colour and `macroPadOnSurface` text token.
   - `buttonColorMirror` — defaults to `ButtonColorStyle.NEUTRAL`. Buttons use a neutral white/grey palette (soft grey outline `#AAAAAA`, near-white text `#DDDDDD` at 90 % opacity) that is theme-independent.
-  - Both settings are exposed in the **Layout Settings** section of the layout editor (below the toolbar, above the button list) as a pair of two-chip selectors ("Accented" / "Neutral").
+  - Both settings are exposed in the **Layout Settings** section of the layout editor (below the toolbar, above the button list) as dropdowns using the shared app dropdown styling.
   - The neutral style is implemented via the `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. `MacroPadScreen` passes `neutralStyle = layout.buttonColorNoMirror == ButtonColorStyle.NEUTRAL`; `AmbientMacroPadOverlay` passes `neutralStyle = layout.buttonColorMirror == ButtonColorStyle.NEUTRAL`.
   - These settings are persisted as part of `PadLayout` and are included in config exports automatically.
 

@@ -19,9 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -47,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -300,44 +298,14 @@ internal fun MacroStepEditDialog(
             // Type-specific content
             when (stepType) {
                 StepType.GAMEPAD -> {
-                    var expanded by remember { mutableStateOf(false) }
-                    Box {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                .clickable { expanded = true }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                selectedPreset.localizedDisplayLabel(swapFaceButtons),
-                                color    = accentColor,
-                                style    = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = accentColor)
-                        }
-                        DropdownMenu(
-                            expanded         = expanded,
-                            onDismissRequest = { expanded = false },
-                            modifier         = Modifier.background(colors.surface),
-                        ) {
-                            GamepadKeycodes.PRESETS.forEach { preset ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            preset.localizedDisplayLabel(swapFaceButtons),
-                                            color    = if (preset.code == selectedPreset.code) accentColor else colors.onSurface,
-                                            style    = MaterialTheme.typography.bodyMedium,
-                                        )
-                                    },
-                                    onClick = { selectedPreset = preset; expanded = false },
-                                )
-                            }
-                        }
-                    }
+                    AppDropdown(
+                        selected     = selectedPreset,
+                        options      = GamepadKeycodes.PRESETS,
+                        optionText   = { preset -> preset.localizedDisplayLabel(swapFaceButtons) },
+                        onSelected   = { preset -> selectedPreset = preset },
+                        modifier     = Modifier.fillMaxWidth(),
+                        fillMaxWidth = true,
+                    )
                 }
 
                 StepType.JOYSTICK -> {
