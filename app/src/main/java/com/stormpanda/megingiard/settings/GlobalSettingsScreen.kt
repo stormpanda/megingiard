@@ -839,11 +839,18 @@ private fun ImportPreviewDialog(
                 )
             }
             Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.config_import_sections_label),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.labelMedium,
-            )
+            val hasSettingsBullets = importMode == ConfigManager.ImportMode.BACKUP_RESTORE &&
+                ("global" in export.settings || "mirror" in export.settings ||
+                    "touchpad" in export.settings || "keyboard" in export.settings ||
+                    "macropad_settings" in export.settings)
+            val hasSectionBullets = hasSettingsBullets || export.profiles.isNotEmpty()
+            if (hasSectionBullets) {
+                Text(
+                    text = stringResource(R.string.config_import_sections_label),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
             if (importMode == ConfigManager.ImportMode.BACKUP_RESTORE) {
                 if ("global" in export.settings) {
                     Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)

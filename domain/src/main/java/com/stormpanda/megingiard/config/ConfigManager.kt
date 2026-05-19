@@ -334,7 +334,7 @@ object ConfigManager {
     /**
      * Applies all settings and macropad data from [export] to the running app state.
      * Settings are awaited so callers know the DataStore write completed before showing success.
-     * MacroPad profiles get new UUIDs and "(Imported)" suffix.
+     * MacroPad profiles get new UUIDs to avoid collisions; names are kept as-is.
      */
     suspend fun applyImport(export: MegingiardExport) {
         AppLog.i(TAG, "applyImport: schema=${export.schemaVersion}")
