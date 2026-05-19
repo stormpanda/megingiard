@@ -55,30 +55,16 @@ fun AppSettingsRow(
 }
 
 /**
- * Thin horizontal separator between transparent settings rows.
+ * Thin horizontal separator. The default colour uses [AppColors.settingsSeparator], which
+ * is tuned per-theme to the standard settings / list / editorial background.
  *
- * Uses [AppColors.settingsSeparator] by default, which is tuned for each theme's
- * standard screen / dialog background — distinct from [AppColors.divider] which is
- * also used in lists, timelines, and other non-settings contexts.
+ * Use this composable everywhere a visible horizontal rule is needed — settings rows,
+ * content lists, timelines, and card dividers alike.
  */
 @Composable
-fun AppSettingsSeparator(
+fun AppDivider(
     modifier: Modifier = Modifier,
     color: Color = LocalAppColors.current.settingsSeparator,
-) {
-    HorizontalDivider(color = color, modifier = modifier)
-}
-
-/**
- * Thin horizontal separator for content lists, timelines, and editorial contexts.
- *
- * Uses [AppColors.divider] by default — distinct from [AppSettingsSeparator] which uses
- * the [AppColors.settingsSeparator] token tuned for settings screen/dialog backgrounds.
- */
-@Composable
-fun AppContentDivider(
-    modifier: Modifier = Modifier,
-    color: Color = LocalAppColors.current.divider,
 ) {
     HorizontalDivider(color = color, modifier = modifier)
 }

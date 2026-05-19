@@ -35,7 +35,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
-import com.stormpanda.megingiard.ui.AppContentDivider
+import com.stormpanda.megingiard.ui.AppDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -83,6 +83,7 @@ import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.LocalAppColors
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -118,6 +119,8 @@ private const val MT_LOOP_PAUSE_SLIDER_STEP_MS = 100
 
 // Uniform height for the StepActionRow buttons
 private val MT_ACTION_BTN_HEIGHT = 44.dp
+
+private val MT_SECTION_HEADER_V_PADDING = 10.dp
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -402,7 +405,7 @@ internal fun MacroTimelineEditor(
                 }
             }
 
-            AppContentDivider()
+            AppDivider()
 
             Row(
                 modifier = Modifier
@@ -515,12 +518,15 @@ internal fun MacroTimelineEditor(
                 }
             }
 
-            AppContentDivider()
+            AppDivider()
+
+            MtSectionHeader(R.string.macropad_macro_section_steps)
 
             if (viewMode == MacroEditorViewMode.LIST) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .background(colors.surface)
                         .verticalScroll(rememberScrollState()),
                 ) {
                     if (steps.isEmpty()) {
@@ -536,7 +542,7 @@ internal fun MacroTimelineEditor(
                                 style = MaterialTheme.typography.labelMedium,
                             )
                         }
-                        AppContentDivider()
+                        AppDivider()
                     }
 
                     steps.forEachIndexed { idx, step ->
@@ -547,7 +553,7 @@ internal fun MacroTimelineEditor(
                             onEdit = { editingStepIndex = idx },
                             onDelete = { deleteStepIndex = idx },
                         )
-                        AppContentDivider()
+                        AppDivider()
                     }
 
                     StepActionRow(
@@ -569,7 +575,8 @@ internal fun MacroTimelineEditor(
                             )
                         },
                     )
-                    AppContentDivider()
+                    AppDivider()
+                    MtSectionHeader(R.string.macropad_macro_section_settings)
                     MtLoopSection(
                         loopEnabled = loopEnabled,
                         loopPauseMs = loopPauseMs,
@@ -581,7 +588,7 @@ internal fun MacroTimelineEditor(
                     )
                 }
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize().background(colors.surface)) {
                     if (steps.isEmpty()) {
                         Box(
                             modifier = Modifier
@@ -608,7 +615,7 @@ internal fun MacroTimelineEditor(
                         )
                     }
 
-                    AppContentDivider()
+                    AppDivider()
 
                     StepActionRow(
                         steps = steps,
@@ -629,7 +636,8 @@ internal fun MacroTimelineEditor(
                             )
                         },
                     )
-                    AppContentDivider()
+                    AppDivider()
+                    MtSectionHeader(R.string.macropad_macro_section_settings)
                     MtLoopSection(
                         loopEnabled = loopEnabled,
                         loopPauseMs = loopPauseMs,
@@ -809,6 +817,20 @@ internal fun MacroTimelineEditor(
 }
 
 @Composable
+private fun MtSectionHeader(textRes: Int) {
+    val colors = LocalAppColors.current
+    Text(
+        text     = stringResource(textRes).uppercase(Locale.ROOT),
+        color    = colors.sectionHeaderColor,
+        style    = MaterialTheme.typography.labelSmall,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surfaceVariant)
+            .padding(horizontal = MT_PADDING.dp, vertical = MT_SECTION_HEADER_V_PADDING),
+    )
+}
+
+@Composable
 private fun MacroVerticalTimeline(
     modifier: Modifier,
     steps: List<MacroStep>,
@@ -851,7 +873,6 @@ private fun MacroVerticalTimeline(
 
     BoxWithConstraints(
         modifier = modifier
-            .background(colors.appBackground)
             .verticalScroll(rememberScrollState()),
     ) {
         val canvasWidthPx = with(density) { maxWidth.toPx() }

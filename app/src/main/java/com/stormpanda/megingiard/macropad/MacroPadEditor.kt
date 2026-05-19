@@ -41,7 +41,6 @@ import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.DropdownMenuItem
-import com.stormpanda.megingiard.ui.AppContentDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -80,7 +79,7 @@ import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppSettingsRow
-import com.stormpanda.megingiard.ui.AppSettingsSeparator
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
@@ -422,7 +421,7 @@ private fun EditorTopBar(
             textStyle    = MaterialTheme.typography.titleMedium,
             fillMaxWidth = true,
             footerContent = { dismiss ->
-                AppContentDivider()
+                AppDivider()
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { dismiss(); onNewProfileRequested() },
@@ -615,7 +614,7 @@ private fun EditorBody(
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )
-                    AppContentDivider(modifier = Modifier.padding(horizontal = ED_PADDING))
+                    AppDivider(modifier = Modifier.padding(horizontal = ED_PADDING))
                 }
             }
         }
@@ -786,7 +785,8 @@ private fun LayoutSettingsContent(
     layout:   PadLayout,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    val colors = LocalAppColors.current
+    Column(modifier = modifier.fillMaxWidth().background(colors.surface)) {
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_no_mirror),
             selected = layout.buttonColorNoMirror,
@@ -794,7 +794,7 @@ private fun LayoutSettingsContent(
                 MacroPadState.updateLayout(layout.copy(buttonColorNoMirror = style))
             },
         )
-        AppSettingsSeparator()
+        AppDivider()
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_mirror),
             selected = layout.buttonColorMirror,

@@ -157,7 +157,7 @@ MaterialTheme(
 
 ### Settings Rows — `ui/AppSettingsRow.kt`
 
-All settings rows across the app (Global Settings, Keyboard/Touchpad tool settings, MacroPad editor layout settings) use the shared container composables `AppSettingsRow` and `AppSettingsSeparator`.
+All settings rows across the app (Global Settings, Keyboard/Touchpad tool settings, MacroPad editor layout settings) use the shared container composables `AppSettingsRow` and `AppDivider`.
 
 **`AppSettingsRow`** is a transparent container:
 
@@ -166,16 +166,14 @@ All settings rows across the app (Global Settings, Keyboard/Touchpad tool settin
 - Adds `Modifier.clickable` only when `onClick` is non-null (rows without an action are not clickable).
 - Has **no background** — the parent section/dialog/screen owns the background.
 
-**`AppSettingsSeparator`** renders a thin `HorizontalDivider` using `AppColors.settingsSeparator` as its default colour.
+**`AppDivider`** renders a thin `HorizontalDivider` using `AppColors.settingsSeparator` as its default colour.
 
-- `settingsSeparator` is a dedicated token distinct from `divider`; it is tuned per theme for the standard settings background, while `divider` continues to serve timelines, lists, and other non-settings contexts unchanged.
+- `settingsSeparator` is a dedicated token distinct from `divider`; it is tuned per theme for the standard settings/content background, while `divider` continues to serve non-row drawing (timeline grid lines, lane tick marks).
 - Values: Dark `White(α=0.10)`, Light `#1C1C1E(α=0.10)`, Cyberpunk `CP_SECTION_HEADER(α=0.12)`.
+- Use `AppDivider` everywhere a visible horizontal rule is needed — settings rows, content lists, dialog dividers, and card separators alike.
+- The `divider` token is reserved for non-row guide lines drawn directly on a Canvas (e.g. `MacroVerticalTimeline`).
 
-**`AppContentDivider`** renders a thin `HorizontalDivider` using `AppColors.divider` as its default colour.
-
-- Used in list, timeline, and editorial contexts (e.g., `MacroTimelineEditor`, `MacroListEditor`, `MacroPadEditor` button list, `PrivdSettingsCard`).
-- Distinct from `AppSettingsSeparator` — the two composables use separate tokens intentionally so settings-screen backgrounds and list/timeline backgrounds can tune their divider opacity independently.
-- Accepts an optional `modifier` for layout-specific adjustments (e.g. horizontal padding in the MacroPad editor button list).
+**`pillIdleColor` — all three themes:** All three palettes now use `Color.White.copy(alpha = 0.4f)` for the always-visible pull-tab pill. This ensures consistent visibility across Dark, Light, and Cyberpunk themes.
 
 **Background ownership rule:** Settings rows are transparent. The parent `Column` that groups a set of settings rows is responsible for setting `Modifier.background(colors.surface)`. This is why `GlobalSettingsScreen.SettingsSection` and `AmbientSettingsOverlay` wrap their row groups in `Column(modifier = Modifier.fillMaxWidth().background(colors.surface))` rather than per-row backgrounds.
 

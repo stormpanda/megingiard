@@ -18,7 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import com.stormpanda.megingiard.ui.AppContentDivider
+import com.stormpanda.megingiard.ui.AppDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -206,7 +206,7 @@ internal fun PrivdSettingsCard(
 
         // ── Auto-connect toggle ─────────────────────────────────────────────
         Spacer(Modifier.height(PR_BUTTON_GAP))
-        AppContentDivider()
+        AppDivider()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -232,7 +232,7 @@ internal fun PrivdSettingsCard(
         }
 
         // ── Per-feature toggle: Gamepad merge ───────────────────────────────
-        AppContentDivider()
+        AppDivider()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -258,7 +258,7 @@ internal fun PrivdSettingsCard(
         }
 
         // ── Per-feature toggle: Gamepad recording ────────────────────────────────
-        AppContentDivider()
+        AppDivider()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -284,7 +284,7 @@ internal fun PrivdSettingsCard(
         }
 
         // ── Per-feature toggle: Privileged Mirror ─────────────────────────────
-        AppContentDivider()
+        AppDivider()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -310,7 +310,7 @@ internal fun PrivdSettingsCard(
         }
 
         // ── Dead-zone configuration row ──────────────────────────────────────
-        AppContentDivider()
+        AppDivider()
         Row(
             modifier = Modifier
                 .fillMaxWidth()

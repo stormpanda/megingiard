@@ -249,7 +249,7 @@ internal fun ButtonEditDialog(
             // ── Section header ───────────────────────────────────────────────────────────────
             Text(
                 text     = stringResource(R.string.macropad_editor_section_button_settings).uppercase(Locale.ROOT),
-                color    = accentColor,
+                color    = colors.sectionHeaderColor,
                 style    = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
                     .fillMaxWidth()

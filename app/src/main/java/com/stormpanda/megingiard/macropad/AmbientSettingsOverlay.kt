@@ -60,7 +60,7 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
-import com.stormpanda.megingiard.ui.AppSettingsSeparator
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
@@ -281,7 +281,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                         }
 
                         if (vignetteEnabled) {
-                            AppSettingsSeparator()
+                            AppDivider()
                             // Shape dropdown
                             AsoShapeRow(
                                 currentShape = vignetteShape,
@@ -292,7 +292,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                     commitLayout { copy(ambientVignetteShape = it) }
                                 },
                             )
-                            AppSettingsSeparator()
+                            AppDivider()
                             // Visible Area slider
                             AsoSliderRow(
                                 label = labelVignetteArea,
@@ -314,7 +314,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                     ))
                                 },
                             )
-                            AppSettingsSeparator()
+                            AppDivider()
                             // Transition slider
                             AsoSliderRow(
                                 label = labelVignetteTransition,
@@ -342,7 +342,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                     ))
                                 },
                             )
-                            AppSettingsSeparator()
+                            AppDivider()
                             // Opacity slider
                             AsoSliderRow(
                                 label = labelVignetteOpacity,
@@ -364,7 +364,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
                                     ))
                                 },
                             )
-                            AppSettingsSeparator()
+                            AppDivider()
                             // Color picker row — opens full-screen overlay (see below)
                             AsoColorRow(
                                 vignetteColorInt = vignetteColorInt,
@@ -404,7 +404,7 @@ private fun AsoSectionHeader(text: String) {
     val colors = LocalAppColors.current
     Text(
         text = text.uppercase(Locale.ROOT),
-        color = colors.accent,
+        color = colors.sectionHeaderColor,
         style = MaterialTheme.typography.labelSmall,
         modifier = Modifier
             .fillMaxWidth()
