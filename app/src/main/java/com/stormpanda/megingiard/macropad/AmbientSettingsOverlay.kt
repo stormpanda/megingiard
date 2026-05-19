@@ -21,12 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +59,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.ColorWheelPicker
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
@@ -71,10 +69,8 @@ private const val TAG = "AmbientSettingsOverlay"
 private const val ASO_DIM_MAX = 0.9f
 private const val ASO_PERCENT_DIVISOR = 100f
 private val ASO_SWATCH_SIZE = 24.dp
-private val ASO_DROPDOWN_BG_ALPHA = 0.08f
 private val ASO_DROPDOWN_H_PADDING = 12.dp
 private val ASO_DROPDOWN_V_PADDING = 6.dp
-private val ASO_DROPDOWN_CORNER = 6.dp
 private val ASO_PREVIEW_ICON_SIZE = 36.dp
 private val ASO_PREVIEW_BAR_CORNER = 16.dp
 private val ASO_PREVIEW_BAR_H_PADDING = 16.dp
@@ -546,7 +542,6 @@ private fun AsoShapeRow(
     accentColor: Color,
     onShapeSelected: (VignetteShape) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     val colors = LocalAppColors.current
 
     Row(
@@ -562,47 +557,14 @@ private fun AsoShapeRow(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
-        Box {
-            Row(
-                modifier = Modifier
-                    .clickable { expanded = true }
-                    .background(
-                        colors.onSurface.copy(alpha = ASO_DROPDOWN_BG_ALPHA),
-                        RoundedCornerShape(ASO_DROPDOWN_CORNER),
-                    )
-                    .padding(horizontal = ASO_DROPDOWN_H_PADDING, vertical = ASO_DROPDOWN_V_PADDING),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(currentShape.labelResId()),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Icon(
-                    imageVector = Icons.Rounded.ArrowDropDown,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary,
-                )
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(colors.surface),
-            ) {
-                VignetteShape.entries.forEach { shape ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(shape.labelResId()),
-                                color = if (shape == currentShape) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        onClick = { onShapeSelected(shape); expanded = false },
-                    )
-                }
-            }
-        }
+        AppDropdown(
+            selected          = currentShape,
+            options           = VignetteShape.entries,
+            optionText        = { shape -> stringResource(shape.labelResId()) },
+            onSelected        = onShapeSelected,
+            horizontalPadding = ASO_DROPDOWN_H_PADDING,
+            verticalPadding   = ASO_DROPDOWN_V_PADDING,
+        )
     }
 }
 

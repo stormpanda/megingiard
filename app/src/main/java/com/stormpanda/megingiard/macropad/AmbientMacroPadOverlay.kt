@@ -36,7 +36,7 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.settings.AmbientSettings
+import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -96,7 +96,6 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
     // When touch projection or freeze is active, hide pad content entirely.
     // Viewport edit is handled separately: vignette stays, buttons go semi-transparent.
     val hideContent = isTouchProjectionActive || isFrozen
-    val applyTheme by AmbientSettings.macropadAmbientApplyTheme.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
@@ -261,7 +260,7 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
                         accentColor = colors.accent,
                         isPeekActive = isPeekActive,
                         transparentBackground = true,
-                        neutralStyle = !applyTheme,
+                        neutralStyle = l.buttonColorMirror == ButtonColorStyle.NEUTRAL,
                     )
                 }
             }

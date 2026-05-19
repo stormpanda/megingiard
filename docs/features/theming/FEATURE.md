@@ -148,6 +148,12 @@ MaterialTheme(
 - The Accent Color row is only shown when `themeMode.supportsCustomAccent` is `true`.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
+### Shared Dropdowns — `ui/AppDropdown.kt`
+
+- Selection dropdowns use the shared `AppDropdown` composable, styled after the Ambient Settings vignette-shape picker: a compact rounded trigger with subtle surface tint, trailing drop-down icon, themed surface menu, and accent-coloured selected item.
+- `AppDropdown` supports compact trailing controls, full-width form fields, disabled empty states, and optional footer actions for selectors such as the MacroPad profile picker.
+- Context/action menus that are not value selectors may continue to use Material `DropdownMenu` directly.
+
 ### Persistence — `SettingsManager.kt`
 
 ```
@@ -283,15 +289,15 @@ Modifier.padding(dimens.paddingLarge)
 
 ## Additional AppColors Tokens (added in design-system refactor)
 
-| Token                | Dark          | Light         | Cyberpunk     | Usage                                 |
-| -------------------- | ------------- | ------------- | ------------- | ------------------------------------- |
-| `error`              | `0xFFCF6679`  | `0xFFB00020`  | `CP_ACCENT`   | Destructive action text, error states |
-| `onError`            | `Color.White` | `Color.White` | `CP_DARK_RED` | Text on error-colored surfaces        |
-| `actionColorGamepad` | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`  | Gamepad button step indicators        |
-| `actionColorSystem`  | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`   | System/mirror action indicators       |
-| `macroPadSurface`    | `0xFF1C1C1E`  | `0xFF1C1C1E`  | `CP_SURFACE`  | MacroPad placement canvas surface     |
-| `macroPadOnSurface`  | `Color.White` | `Color.White` | `CP_TEXT`     | MacroPad placement labels/icons       |
-| `macroPadAccentBorder` | `White@30%` | `White@30%`   | `CP_ACCENT@35%` | MacroPad placement border tint      |
-| `sectionHeaderColor` | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
+| Token                  | Dark          | Light         | Cyberpunk           | Usage                                   |
+| ---------------------- | ------------- | ------------- | ------------------- | --------------------------------------- |
+| `error`                | `0xFFCF6679`  | `0xFFB00020`  | `CP_ACCENT`         | Destructive action text, error states   |
+| `onError`              | `Color.White` | `Color.White` | `CP_DARK_RED`       | Text on error-colored surfaces          |
+| `actionColorGamepad`   | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`        | Gamepad button step indicators          |
+| `actionColorSystem`    | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`         | System/mirror action indicators         |
+| `macroPadSurface`      | `0xFF1C1C1E`  | `0xFF1C1C1E`  | `CP_SURFACE`        | MacroPad placement canvas surface       |
+| `macroPadOnSurface`    | `Color.White` | `Color.White` | `CP_TEXT`           | MacroPad placement labels/icons         |
+| `macroPadAccentBorder` | `White@30%`   | `White@30%`   | `CP_ACCENT@35%`     | MacroPad placement border tint          |
+| `sectionHeaderColor`   | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
 
 Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` in screen code.

@@ -13,18 +13,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.SettingLabelColumn
 import java.util.Locale
 
@@ -42,7 +36,6 @@ private const val TAG = "GlobalSettingsComponents"
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
-private val GS_DROPDOWN_ICON_SIZE = 20.dp
 private val GS_COLOR_PREVIEW_SIZE = 28.dp
 private val GS_COLOR_ICON_SPACER = 8.dp
 private val GS_ACCENT_ARROW_SIZE = 16.dp
@@ -110,13 +103,10 @@ internal fun ThemePickerRow(
     colors: AppColors,
     onChanged: (ThemeMode) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surface)
-            .clickable { expanded = true }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -126,35 +116,12 @@ internal fun ThemePickerRow(
             subtitleColor = accentColor,
             modifier = Modifier.weight(1f),
         )
-        Box {
-            Icon(
-                imageVector = Icons.Rounded.ArrowDropDown,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)
-            )
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(colors.surface)
-            ) {
-                ThemeMode.entries.forEach { option ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(option.displayNameResId()),
-                                color = if (option == themeMode) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            if (option != themeMode) onChanged(option)
-                        }
-                    )
-                }
-            }
-        }
+        AppDropdown(
+            selected   = themeMode,
+            options    = ThemeMode.entries,
+            optionText = { option -> stringResource(option.displayNameResId()) },
+            onSelected = onChanged,
+        )
     }
 }
 
@@ -210,12 +177,10 @@ internal fun LogLevelPickerRow(
     colors: AppColors,
     onChanged: (AppLog.Level) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surface)
-            .clickable { expanded = true }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -225,35 +190,12 @@ internal fun LogLevelPickerRow(
             subtitleColor = accentColor,
             modifier = Modifier.weight(1f),
         )
-        Box {
-            Icon(
-                imageVector = Icons.Rounded.ArrowDropDown,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)
-            )
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(colors.surface)
-            ) {
-                AppLog.Level.entries.forEach { option ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = option.displayName(),
-                                color = if (option == logLevel) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            if (option != logLevel) onChanged(option)
-                        }
-                    )
-                }
-            }
-        }
+        AppDropdown(
+            selected   = logLevel,
+            options    = AppLog.Level.entries,
+            optionText = { option -> option.displayName() },
+            onSelected = onChanged,
+        )
     }
 }
 
@@ -264,12 +206,10 @@ internal fun LanguagePickerRow(
     colors: AppColors,
     onChanged: (AppLanguage) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surface)
-            .clickable { expanded = true }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -279,35 +219,12 @@ internal fun LanguagePickerRow(
             subtitleColor = accentColor,
             modifier = Modifier.weight(1f),
         )
-        Box {
-            Icon(
-                imageVector = Icons.Rounded.ArrowDropDown,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(GS_DROPDOWN_ICON_SIZE)
-            )
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(colors.surface)
-            ) {
-                AppLanguage.entries.forEach { option ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(option.displayNameResId()),
-                                color = if (option == language) accentColor else colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            if (option != language) onChanged(option)
-                        }
-                    )
-                }
-            }
-        }
+        AppDropdown(
+            selected   = language,
+            options    = AppLanguage.entries,
+            optionText = { option -> stringResource(option.displayNameResId()) },
+            onSelected = onChanged,
+        )
     }
 }
 
