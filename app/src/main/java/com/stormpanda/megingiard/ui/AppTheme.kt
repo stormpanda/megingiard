@@ -108,6 +108,8 @@ data class AppColors(
 // Default accent for Dark/Light — overridden at runtime by SettingsManager.accentColor.
 private val DEFAULT_DARK_LIGHT_ACCENT = Color(0xFFCC0000)
 
+private val DARK_PILL_IDLE  = Color.White.copy(alpha = 0.4f)
+
 private val darkPalette = AppColors(
     appBackground          = Color(0xFF121212),
     surface                = Color(0xFF1C1C1E),
@@ -127,7 +129,7 @@ private val darkPalette = AppColors(
     accentBorder           = Color.White.copy(alpha = 0.3f),
     accent                 = DEFAULT_DARK_LIGHT_ACCENT,
     onAccent               = Color.White,
-    pillIdleColor          = Color.White.copy(alpha = 0.4f),
+    pillIdleColor          = DARK_PILL_IDLE,
     controlIndicatorActive = Color.White,
     navPillBody            = DEFAULT_DARK_LIGHT_ACCENT,
     buttonBody             = DEFAULT_DARK_LIGHT_ACCENT,
@@ -145,6 +147,8 @@ private val darkPalette = AppColors(
     sectionHeaderColor     = DEFAULT_DARK_LIGHT_ACCENT,
     settingsSeparator      = Color.White.copy(alpha = 0.10f),
 )
+
+private val LIGHT_PILL_IDLE = Color.White.copy(alpha = 0.4f)
 
 private val lightPalette = AppColors(
     appBackground          = Color(0xFFF2F2F7),
@@ -165,7 +169,7 @@ private val lightPalette = AppColors(
     accentBorder           = Color(0xFF1C1C1E).copy(alpha = 0.2f),
     accent                 = DEFAULT_DARK_LIGHT_ACCENT,
     onAccent               = Color.White,
-    pillIdleColor          = Color.White.copy(alpha = 0.4f),
+    pillIdleColor          = LIGHT_PILL_IDLE,
     controlIndicatorActive = Color(0xFF1C1C1E),
     navPillBody            = DEFAULT_DARK_LIGHT_ACCENT,
     buttonBody             = DEFAULT_DARK_LIGHT_ACCENT,
@@ -195,7 +199,8 @@ private val CP_SURFACE         = Color(0xFF220C0F)   // slightly lighter surface
 private val CP_SURFACE2        = Color(0xFF2E1115)   // elevated / dragged surface
 private val CP_TEXT            = Color(0xFFB41B1D)   // vivid red text
 private val CP_DARK_RED        = Color(0xFFA00000)   // dark red for overlay and button text
-private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section headers and pill idle color
+private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section headers
+private val CP_PILL_IDLE       = Color.White.copy(alpha = 0.4f)
 
 private val cyberpunkPalette = AppColors(
     appBackground          = CP_BG,
@@ -216,7 +221,7 @@ private val cyberpunkPalette = AppColors(
     accentBorder           = CP_ACCENT.copy(alpha = 0.35f),
     accent                 = CP_ACCENT,
     onAccent               = CP_DARK_RED,
-    pillIdleColor          = Color.White.copy(alpha = 0.4f),
+    pillIdleColor          = CP_PILL_IDLE,
     controlIndicatorActive = CP_ACCENT,
     navPillBody            = CP_SURFACE,
     buttonBody             = CP_SURFACE,

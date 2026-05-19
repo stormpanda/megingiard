@@ -91,7 +91,7 @@ Three palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `lightPalette` — white/light-grey surfaces with near-black text.
-- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white pull-tab/section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules.
+- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules. The pull-tab pill uses `CP_PILL_IDLE` (`Color.White.copy(alpha = 0.4f)`), consistent with the per-palette `DARK_PILL_IDLE` and `LIGHT_PILL_IDLE` constants in the other themes.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -173,7 +173,7 @@ All settings rows across the app (Global Settings, Keyboard/Touchpad tool settin
 - Use `AppDivider` everywhere a visible horizontal rule is needed — settings rows, content lists, dialog dividers, and card separators alike.
 - The `divider` token is reserved for non-row guide lines drawn directly on a Canvas (e.g. `MacroVerticalTimeline`).
 
-**`pillIdleColor` — all three themes:** All three palettes now use `Color.White.copy(alpha = 0.4f)` for the always-visible pull-tab pill. This ensures consistent visibility across Dark, Light, and Cyberpunk themes.
+**`pillIdleColor` — per-palette constants:** Each palette defines its own named constant (`DARK_PILL_IDLE`, `LIGHT_PILL_IDLE`, `CP_PILL_IDLE`), all set to `Color.White.copy(alpha = 0.4f)`. This ensures consistent pull-tab visibility across Dark, Light, and Cyberpunk themes while keeping theme-specific constants for future divergence.
 
 **Background ownership rule:** Settings rows are transparent. The parent `Column` that groups a set of settings rows is responsible for setting `Modifier.background(colors.surface)`. This is why `GlobalSettingsScreen.SettingsSection` and `AmbientSettingsOverlay` wrap their row groups in `Column(modifier = Modifier.fillMaxWidth().background(colors.surface))` rather than per-row backgrounds.
 
