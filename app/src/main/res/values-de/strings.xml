@@ -479,10 +479,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Configuration export/import -->
     <string name="settings_section_config">Konfiguration</string>
-    <string name="settings_config_export">Konfiguration exportieren</string>
-    <string name="settings_config_export_desc">Alle Einstellungen, MacroPad-Profile und Makros als .mgrd-Datei speichern</string>
-    <string name="settings_config_import">Konfiguration importieren</string>
-    <string name="settings_config_import_desc">Einstellungen, MacroPad-Profile und Makros aus einer .mgrd-Datei laden</string>
+    <string name="settings_config_export">Backup erstellen</string>
+    <string name="settings_config_export_desc">Alle Einstellungen und MacroPad-Profile als .mgrd-Sicherungsdatei speichern</string>
+    <string name="settings_config_import">Backup wiederherstellen</string>
+    <string name="settings_config_import_desc">Einstellungen und Profile aus einer .mgrd-Sicherungsdatei wiederherstellen</string>
+    <string name="settings_config_export_profile">Profil teilen</string>
+    <string name="settings_config_export_profile_desc">Ein MacroPad-Profil als .mgrd-Datei zum Teilen exportieren</string>
+    <string name="settings_config_import_profile">Geteiltes Profil importieren</string>
+    <string name="settings_config_import_profile_desc">Ein MacroPad-Profil aus einer .mgrd-Datei hinzufügen</string>
     <string name="config_export_default_filename">megingiard_%s.mgrd</string>
 
     <!-- Export metadata dialog -->
@@ -508,6 +512,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_import_section_settings">Einstellungen (global / werkzeugspezifisch)</string>
     <string name="config_import_meta_author">Autor: %1$s</string>
     <string name="config_import_warning">Neue Profile und Makros werden zu den vorhandenen hinzugefügt.</string>
+    <string name="config_import_warning_backup">Neue Profile werden neben den bestehenden hinzugefügt. App-Einstellungen werden überschrieben.</string>
+    <string name="config_import_warning_profile">Profile werden neben den bestehenden hinzugefügt. App-Einstellungen in dieser Datei werden ignoriert.</string>
+    <string name="config_profile_export_dialog_title">Profil teilen</string>
+    <string name="config_profile_export_select">Zu teilendes Profil</string>
+    <string name="config_profile_import_success">Profil erfolgreich importiert.</string>
     <string name="config_import_confirm">Importieren</string>
     <string name="config_import_cancel">Abbrechen</string>
 

@@ -167,10 +167,14 @@ Open Settings to create a layout.</string>
     <string name="settings_restore_defaults_confirm">This will delete all existing profiles and macros and create a single blank profile. This action cannot be undone.</string>
     <string name="settings_restore_defaults_confirm_button">Restore</string>
     <string name="settings_cancel">Cancel</string>
-    <string name="settings_config_export">Export configuration</string>
-    <string name="settings_config_export_desc">Save all settings, MacroPad profiles, and macros as a .mgrd file</string>
-    <string name="settings_config_import">Import configuration</string>
-    <string name="settings_config_import_desc">Load settings, MacroPad profiles, and macros from a .mgrd file</string>
+    <string name="settings_config_export">Create backup</string>
+    <string name="settings_config_export_desc">Save all settings and MacroPad profiles as a .mgrd backup file</string>
+    <string name="settings_config_import">Restore backup</string>
+    <string name="settings_config_import_desc">Apply settings and add profiles from a .mgrd backup file</string>
+    <string name="settings_config_export_profile">Share profile</string>
+    <string name="settings_config_export_profile_desc">Export a MacroPad profile as a .mgrd file for sharing</string>
+    <string name="settings_config_import_profile">Import shared profile</string>
+    <string name="settings_config_import_profile_desc">Add a MacroPad profile from a .mgrd file</string>
     <string name="config_export_default_filename">megingiard_%s.mgrd</string>
 
     <!-- Export metadata dialog -->
@@ -196,6 +200,11 @@ Open Settings to create a layout.</string>
     <string name="config_import_section_settings">Settings (global / tool settings)</string>
     <string name="config_import_meta_author">Author: %1$s</string>
     <string name="config_import_warning">New profiles and macros will be added alongside existing ones.</string>
+    <string name="config_import_warning_backup">New profiles will be added alongside existing ones. App settings will be overwritten.</string>
+    <string name="config_import_warning_profile">Profiles will be added alongside existing ones. App settings in this file will be ignored.</string>
+    <string name="config_profile_export_dialog_title">Share profile</string>
+    <string name="config_profile_export_select">Profile to share</string>
+    <string name="config_profile_import_success">Profile imported successfully.</string>
     <string name="config_import_confirm">Import</string>
     <string name="config_import_cancel">Cancel</string>
 
