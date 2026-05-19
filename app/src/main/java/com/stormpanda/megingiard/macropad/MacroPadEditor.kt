@@ -567,11 +567,7 @@ private fun EditorBody(
         item(key = "layout_settings") {
             if (layout != null) {
                 LayoutSettingsContent(
-                    layout   = layout,
-                    modifier = Modifier
-                        .background(colors.surface)
-                        .padding(horizontal = ED_PADDING)
-                        .padding(vertical = ED_PADDING),
+                    layout = layout,
                 )
             }
         }
@@ -791,10 +787,8 @@ private fun LayoutSettingsContent(
     layout:   PadLayout,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier          = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(ED_ITEM_PADDING),
-    ) {
+    val colors = LocalAppColors.current
+    Column(modifier = modifier.fillMaxWidth()) {
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_no_mirror),
             selected = layout.buttonColorNoMirror,
@@ -802,6 +796,7 @@ private fun LayoutSettingsContent(
                 MacroPadState.updateLayout(layout.copy(buttonColorNoMirror = style))
             },
         )
+        HorizontalDivider(color = colors.divider)
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_mirror),
             selected = layout.buttonColorMirror,
@@ -821,9 +816,11 @@ private fun ButtonColorStyleRow(
 ) {
     val colors = LocalAppColors.current
     Row(
-        modifier             = modifier.fillMaxWidth(),
-        verticalAlignment    = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier          = modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .padding(horizontal = ED_PADDING, vertical = ED_ITEM_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text     = label,
@@ -831,7 +828,6 @@ private fun ButtonColorStyleRow(
             style    = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.width(ED_ITEM_PADDING))
         AppDropdown(
             selected   = selected,
             options    = ButtonColorStyle.entries,
