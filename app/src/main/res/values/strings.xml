@@ -374,6 +374,7 @@ Open Settings to create a layout.</string>
     <string name="privd_error_adb_connect_failed">Could not connect to ADB. Try re-pairing if you previously revoked the pairing.</string>
     <string name="privd_error_bootstrap_push_failed">Failed to push the daemon binary. Check available storage in /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Failed to start the daemon process.</string>
+    <string name="privd_error_bootstrap_provision_failed">Failed to provision the authentication key. Re-run the setup wizard.</string>
     <string name="settings_jump_all">All</string>
     <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">General</string>

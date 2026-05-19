@@ -336,6 +336,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_error_adb_connect_failed">Verbindung zu ADB fehlgeschlagen. Falls du die Kopplung widerrufen hast, kopple erneut.</string>
     <string name="privd_error_bootstrap_push_failed">Daemon-Binary konnte nicht übertragen werden. Prüfe den verfügbaren Speicher unter /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Daemon-Prozess konnte nicht gestartet werden.</string>
+    <string name="privd_error_bootstrap_provision_failed">Authentifizierungsschlüssel konnte nicht übertragen werden. Führe den Einrichtungsassistenten erneut aus.</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Megingiard beenden</string>

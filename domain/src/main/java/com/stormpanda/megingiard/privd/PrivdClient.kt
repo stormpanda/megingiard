@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.privd
 
+import android.content.Context
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
 import com.stormpanda.megingiard.AppLog
@@ -30,12 +31,8 @@ private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
 private const val NONCE_HEX_LEN = 32   // 16 nonce bytes → 32 hex chars
 private const val HMAC_HEX_LEN = 64    // SHA-256 digest → 64 hex chars
-private val HMAC_KEY_HEX_PATTERN = Regex("[0-9A-F]{64}")
-// Default key matching the C daemon default in megingiard_privd.c.
-// Users who want genuine secrecy must set megingiard.privd.hmac.key in
-// local.properties and rebuild the daemon via build_megingiard_privd.sh.
-private const val DEFAULT_PRIVD_HMAC_KEY =
-    "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
+// UID of the Android shell user (ADB / adb shell). The daemon runs as this UID.
+private const val SHELL_UID = 2000
 
 /**
  * Async LocalSocket transport to the `megingiard_privd` daemon.
@@ -75,23 +72,41 @@ object PrivdClient {
     )
     val evdevEvents: SharedFlow<EvdevEvent> = _evdevEvents.asSharedFlow()
 
-    @Volatile private var hmacKeyBytes: ByteArray = HmacUtil.hexToBytes(DEFAULT_PRIVD_HMAC_KEY)
+    // Per-install HMAC key loaded from Android Keystore-encrypted storage at startup.
+    // Null means the Privileged Mode setup wizard has not been run yet (or the app was
+    // reinstalled and the Keystore entry was destroyed). connect() fails gracefully while
+    // null so the daemon is simply unreachable until the user completes bootstrap.
+    @Volatile private var hmacKeyBytes: ByteArray? = null
 
     /**
-     * Sets the pre-shared HMAC key used in the daemon challenge-response handshake.
-     * Must be called before the first [connect] — typically in MainActivity.onCreate
-     * via `PrivdClient.setHmacKey(BuildConfig.PRIVD_HMAC_KEY)`.  The key must be
-     * a 64-character uppercase hex string (32 bytes).  If the string is invalid the
-     * default key is retained.
+     * Loads the per-install HMAC key from Android Keystore-encrypted storage and stores
+     * it in memory for subsequent [connect] calls.
+     *
+     * Must be called before the first [connect] — typically in `MainActivity.onCreate`
+     * via `PrivdClient.loadKey(applicationContext)`. If no key has been provisioned yet
+     * (setup wizard not run), the key is left null and [connect] will return `false`
+     * until bootstrap completes and [setKey] is called.
+     *
+     * The decryption involves a short (~10 ms) hardware-backed Keystore operation.
      */
-    fun setHmacKey(hexKey: String) {
-        val clean = hexKey.uppercase().replace(":", "").replace(" ", "")
-        if (!clean.matches(HMAC_KEY_HEX_PATTERN)) {
-            AppLog.w(TAG, "setHmacKey: invalid key format — retaining default")
-            return
+    fun loadKey(context: Context) {
+        val key = PrivdPairKey.load(context)
+        if (key != null) {
+            hmacKeyBytes = key
+            AppLog.d(TAG, "loadKey: per-install key loaded from Keystore storage")
+        } else {
+            AppLog.d(TAG, "loadKey: no key provisioned — Privd will refuse to connect until bootstrap")
         }
-        hmacKeyBytes = HmacUtil.hexToBytes(clean)
-        AppLog.d(TAG, "setHmacKey: key updated")
+    }
+
+    /**
+     * Updates the in-memory HMAC key bytes directly. Called by [PrivdBootstrapper] immediately
+     * after provisioning the daemon so the subsequent [verifyConnect] handshake uses the
+     * freshly-generated key without requiring another Keystore decrypt.
+     */
+    internal fun setKey(keyBytes: ByteArray) {
+        hmacKeyBytes = keyBytes
+        AppLog.d(TAG, "setKey: pair key updated in memory")
     }
 
     @Volatile private var socket: LocalSocket? = null
@@ -117,16 +132,33 @@ object PrivdClient {
     fun connect(): Boolean {
         if (isConnected) return true
         _state.value = PrivdConnectionState.CONNECTING
+        val key = hmacKeyBytes
+        if (key == null) {
+            AppLog.w(TAG, "connect(): no per-install key provisioned — run Privileged Mode setup wizard")
+            _state.value = PrivdConnectionState.DISCONNECTED
+            return false
+        }
         return try {
             val s = LocalSocket()
             s.connect(LocalSocketAddress(ABSTRACT_NAME, LocalSocketAddress.Namespace.ABSTRACT))
+
+            // OS-level peer identity check: the abstract socket server must be running as
+            // UID 2000 (Android shell). This blocks any non-shell process from impersonating
+            // the daemon — even if it somehow obtained the per-install HMAC key.
+            val peerUid = s.peerCredentials.uid
+            if (peerUid != SHELL_UID) {
+                AppLog.w(TAG, "connect(): peer UID $peerUid is not shell ($SHELL_UID) — rejecting rogue socket server")
+                try { s.close() } catch (_: Exception) {}
+                _state.value = PrivdConnectionState.DISCONNECTED
+                return false
+            }
+
             val w = BufferedWriter(OutputStreamWriter(s.outputStream))
             val r = BufferedReader(InputStreamReader(s.inputStream))
-            // HMAC challenge-response: prove to the app that the daemon is the
-            // legitimate megingiard_privd binary (not a rogue process claiming
-            // the abstract socket). The daemon sends a random nonce, the app
-            // responds with HMAC-SHA256(key, nonce), and the daemon replies OK.
-            if (!performHmacHandshake(s, r, w)) {
+            // Mutual HMAC-SHA256 challenge-response: both parties prove they hold the
+            // per-install key that was provisioned over the trusted ADB TLS channel
+            // during Privileged Mode bootstrap. The key is never embedded in the APK.
+            if (!performHmacHandshake(s, r, w, key)) {
                 AppLog.w(TAG, "connect() rejected: HMAC handshake failed")
                 try { s.close() } catch (_: Exception) {}
                 _state.value = PrivdConnectionState.DISCONNECTED
@@ -352,6 +384,7 @@ object PrivdClient {
         s: LocalSocket,
         reader: BufferedReader,
         writer: BufferedWriter,
+        key: ByteArray,
     ): Boolean {
         return try {
             s.soTimeout = HANDSHAKE_TIMEOUT_MS
@@ -368,7 +401,7 @@ object PrivdClient {
                 return false
             }
             val nonceBytes = HmacUtil.hexToBytes(nonceHex)
-            val hmacHex = HmacUtil.computeHmacHex(hmacKeyBytes, nonceBytes)
+            val hmacHex = HmacUtil.computeHmacHex(key, nonceBytes)
 
             writer.write("AUTH $hmacHex\n")
             writer.flush()
@@ -400,7 +433,7 @@ object PrivdClient {
                 AppLog.w(TAG, "handshake: proof length ${receivedProofHex.length} != $HMAC_HEX_LEN")
                 return false
             }
-            val expectedProofHex = HmacUtil.computeHmacHex(hmacKeyBytes, verifyNonce)
+            val expectedProofHex = HmacUtil.computeHmacHex(key, verifyNonce)
             if (!HmacUtil.constantTimeEqualsHex(receivedProofHex, expectedProofHex)) {
                 AppLog.w(TAG, "handshake: PROOF mismatch — daemon is not the legitimate binary")
                 return false
