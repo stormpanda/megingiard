@@ -53,29 +53,9 @@ Native helpers follow a pre-exec verification sequence:
 
 Privileged Mode bootstrap verifies `megingiard_privd_arm64` and `megingiard_mirror.dex` before pushing either file over ADB `sync:`. A daemon verification failure aborts bootstrap; a mirror DEX verification failure leaves the normal MediaProjection fallback path available.
 
-### Privd HMAC Key Injection
+### Privd Authentication Key
 
-`megingiard_privd` and the app must be built with the same 32-byte HMAC key. The app reads `megingiard.privd.hmac.key` from `local.properties` into `BuildConfig.PRIVD_HMAC_KEY`; `build_megingiard_privd.sh` reads the same key and passes it to the C compiler as `PRIVD_HMAC_KEY_HEX`.
-
-If the key is absent, malformed, or equal to the public source default, `build_megingiard_privd.sh` refuses to build unless `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true` is set. That override is useful for local non-distribution testing, but it must not be used for distributed APKs. Generate a real key with:
-
-```bash
-openssl rand -hex 32 | tr '[:lower:]' '[:upper:]'
-```
-
-Then add it to `local.properties` and rebuild the daemon:
-
-```properties
-megingiard.privd.hmac.key=<64 uppercase hex chars>
-```
-
-```bash
-./build_megingiard_privd.sh
-```
-
-The next Gradle build regenerates the native asset hash pins from the rebuilt daemon asset.
-
-Release APK builds also reject the public default key unless the local-only Gradle override `-Pmegingiard.allowDefaultPrivdHmacKey=true` is supplied.
+The `megingiard_privd` daemon no longer uses a compile-time key. The per-install HMAC key is generated on the device during Privileged Mode bootstrap and provisioned to the daemon over the ADB TLS channel (see [Privileged Mode — Per-install Key Scheme](features/privileged-mode/FEATURE.md#per-install-key-scheme)). No key needs to be set in `local.properties` or passed to `build_megingiard_privd.sh`.
 
 ---
 

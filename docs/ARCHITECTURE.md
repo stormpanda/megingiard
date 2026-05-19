@@ -60,7 +60,9 @@ The app ships native helpers (`touchinjector_arm64`, `keyinjector_arm64`, `mouse
 
 The normal app process remains in Android's untrusted app sandbox. Privileged Mode creates a narrow shell-UID bridge by starting `megingiard_privd` through ADB Wireless Debugging. The daemon listens on the abstract socket `@megingiard.privd` and performs only the privileged kernel I/O requested by feature-specific ASCII commands.
 
-Every socket connection must complete mutual HMAC-SHA256 authentication before normal commands are processed. The daemon first challenges the app (`CHAL/AUTH/OK`), then the app challenges the daemon (`VERIFY/PROOF`). The shared 32-byte key is injected into the app via `BuildConfig.PRIVD_HMAC_KEY` and into the daemon via `PRIVD_HMAC_KEY_HEX` when `build_megingiard_privd.sh` rebuilds the native binary. Detailed protocol behavior is documented in [Privileged Mode](features/privileged-mode/FEATURE.md#security-model).
+Before the HMAC handshake, both sides verify the OS-reported peer UID via `SO_PEERCRED` / `LocalSocket.peerCredentials`: the app checks that the server is shell UID 2000; the daemon checks that the client is the provisioned app UID. If either check fails, the connection is closed immediately.
+
+Every socket connection then completes mutual HMAC-SHA256 authentication before normal commands are processed. The daemon first challenges the app (`CHAL/AUTH/OK`), then the app challenges the daemon (`VERIFY/PROOF`). The 32-byte key is generated per-install during bootstrap, encrypted under Android Keystore (AES-256-GCM, hardware-backed), and provisioned to the daemon over the ADB TLS channel — it is never embedded in the APK. Detailed protocol and key-lifecycle behavior is documented in [Privileged Mode](features/privileged-mode/FEATURE.md#security-model).
 
 ### Release Obfuscation
 

@@ -175,10 +175,11 @@ class MainActivity : ComponentActivity() {
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
 
-        // Configure the Privd socket HMAC key before any connect() attempt.
-        // The key is baked into BuildConfig at compile time from local.properties
-        // and must match the key baked into the daemon binary.
-        PrivdClient.setHmacKey(BuildConfig.PRIVD_HMAC_KEY)
+        // Load the per-install Privd pair key before any connect() attempt.
+        // The Keystore decrypt is a short hardware-backed operation (~10 ms);
+        // loading it here (before setContent) ensures the key is in place
+        // before the auto-connect collector in GlobalSettingsViewModel fires.
+        PrivdClient.loadKey(this)
 
         AppLog.i(TAG, "onCreate")
 

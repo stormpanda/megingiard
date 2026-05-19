@@ -12,45 +12,55 @@ The current security concept focuses on these threats:
 - Native helper binaries or mirror DEX assets swapped inside the APK or during deployment.
 - A rogue process claiming the `@megingiard.privd` abstract socket before the real daemon.
 - A rogue app connecting to the real daemon socket and sending privileged commands.
-- Accidental release builds without production signing or Privd HMAC configuration.
+- A public APK being decompiled to extract authentication secrets.
 
 It does not claim DRM, copy protection, network hardening, or resistance against a fully compromised device / root attacker.
 
 ## Security Layers
 
-| Layer                             | Purpose                                                                            | Implementation                                                                                                                                                                      | Detailed docs                                                                                                                         |
-| --------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| APK signature pinning             | Detect repackaged APKs signed with an unexpected certificate.                      | `SignatureGuard.verify()` compares runtime signing cert SHA-256 values with `BuildConfig.EXPECTED_SIGNING_SHA256`. Release builds fail closed when the pin is missing or malformed. | [Architecture](docs/ARCHITECTURE.md#security-architecture), [Requirements](docs/REQUIREMENTS.md#security)                             |
-| Release obfuscation and shrinking | Raise the reverse-engineering cost and reduce shipped surface.                     | Release builds enable R8 minification and resource shrinking; keep rules preserve manifest components and serialization.                                                            | [Architecture](docs/ARCHITECTURE.md#security-architecture), [app/proguard-rules.pro](app/proguard-rules.pro)                          |
-| Native asset SHA-256 pins         | Detect modified helper binaries and mirror DEX assets before use.                  | `:domain:generateNativeBinaryHashes` generates `NativeBinaryHashes.EXPECTED`; `BinaryIntegrity.verify()` checks assets fail-closed.                                                 | [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity), [Requirements](docs/REQUIREMENTS.md#security)                            |
-| Pre-exec TOCTOU mitigation        | Ensure the bytes verified in memory are the bytes made executable.                 | `NativeBinaryInjector` verifies assets before writing, re-reads and re-verifies after writing, then sets executable and non-writable bits.                                          | [Architecture](docs/ARCHITECTURE.md#security-architecture), [Build Native](docs/BUILD_NATIVE.md#runtime-verification)                 |
-| ADB bootstrap integrity           | Avoid pushing tampered daemon / mirror assets during Privileged Mode setup.        | `PrivdBootstrapper` verifies `megingiard_privd_arm64` and `megingiard_mirror.dex` before ADB sync push.                                                                             | [Privileged Mode](docs/features/privileged-mode/FEATURE.md#security-model), [Build Native](docs/BUILD_NATIVE.md#runtime-verification) |
-| Privd mutual HMAC authentication  | Authenticate both app and daemon before privileged commands are accepted.          | `CHAL/AUTH/OK/VERIFY/PROOF` over `LocalSocket`, using HMAC-SHA256 with a shared 32-byte key.                                                                                        | [Privileged Mode](docs/features/privileged-mode/FEATURE.md#security-model)                                                            |
-| Security logging                  | Make integrity and authentication failures visible in normal diagnostic logs.      | Security failures use `AppLog.w()` / `AppLog.e()` in `SignatureGuard`, `BinaryIntegrity`, and `PrivdClient`.                                                                        | [AGENTS.md](AGENTS.md#54-logging)                                                                                                     |
-| Config export checksums           | Detect accidental or unintended modification of exported user configuration files. | Export/import embeds and verifies a SHA-256 checksum over canonical serialized content.                                                                                             | [Config Feature](docs/features/config/FEATURE.md)                                                                                     |
+| Layer                             | Purpose                                                                                       | Implementation                                                                                                                                                                                                                    | Detailed docs                                                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| APK signature pinning             | Detect repackaged APKs signed with an unexpected certificate.                                 | `SignatureGuard.verify()` compares runtime signing cert SHA-256 values with `BuildConfig.EXPECTED_SIGNING_SHA256`. Release builds fail closed when the pin is missing or malformed.                                               | [Architecture](docs/ARCHITECTURE.md#security-architecture), [Requirements](docs/REQUIREMENTS.md#security)                             |
+| Release obfuscation and shrinking | Raise the reverse-engineering cost and reduce shipped surface.                                | Release builds enable R8 minification and resource shrinking; keep rules preserve manifest components and serialization.                                                                                                          | [Architecture](docs/ARCHITECTURE.md#security-architecture), [app/proguard-rules.pro](app/proguard-rules.pro)                          |
+| Native asset SHA-256 pins         | Detect modified helper binaries and mirror DEX assets before use.                             | `:domain:generateNativeBinaryHashes` generates `NativeBinaryHashes.EXPECTED`; `BinaryIntegrity.verify()` checks assets fail-closed.                                                                                               | [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity), [Requirements](docs/REQUIREMENTS.md#security)                            |
+| Pre-exec TOCTOU mitigation        | Ensure the bytes verified in memory are the bytes made executable.                            | `NativeBinaryInjector` verifies assets before writing, re-reads and re-verifies after writing, then sets executable and non-writable bits.                                                                                        | [Architecture](docs/ARCHITECTURE.md#security-architecture), [Build Native](docs/BUILD_NATIVE.md#runtime-verification)                 |
+| ADB bootstrap integrity           | Avoid pushing tampered daemon / mirror assets during Privileged Mode setup.                   | `PrivdBootstrapper` verifies `megingiard_privd_arm64` and `megingiard_mirror.dex` before ADB sync push.                                                                                                                           | [Privileged Mode](docs/features/privileged-mode/FEATURE.md#security-model), [Build Native](docs/BUILD_NATIVE.md#runtime-verification) |
+| Privd mutual HMAC authentication  | Authenticate both app and daemon before privileged commands are accepted.                     | `CHAL/AUTH/OK/VERIFY/PROOF` over `LocalSocket`, using HMAC-SHA256 with a per-install 32-byte key encrypted at rest in Android Keystore (AES-256-GCM). The key is never embedded in the APK. See **Per-install key scheme** below. | [Privileged Mode](docs/features/privileged-mode/FEATURE.md#security-model)                                                            |
+| OS-level peer credential checks   | Enforce that only the legitimate peer can initiate a connection before any protocol exchange. | App side: `LocalSocket.peerCredentials.uid` must equal 2000 (shell). Daemon side: `getsockopt(SO_PEERCRED)` must match the provisioned app UID. If either check fails, the connection is closed before the HMAC handshake.        | [Privileged Mode](docs/features/privileged-mode/FEATURE.md#security-model)                                                            |
+| Security logging                  | Make integrity and authentication failures visible in normal diagnostic logs.                 | Security failures use `AppLog.w()` / `AppLog.e()` in `SignatureGuard`, `BinaryIntegrity`, and `PrivdClient`.                                                                                                                      | [AGENTS.md](AGENTS.md#54-logging)                                                                                                     |
+| Config export checksums           | Detect accidental or unintended modification of exported user configuration files.            | Export/import embeds and verifies a SHA-256 checksum over canonical serialized content.                                                                                                                                           | [Config Feature](docs/features/config/FEATURE.md)                                                                                     |
 
 ## Configuration Keys
 
 Security-sensitive build values are read from `local.properties`:
 
-| Key                         | Meaning                                                                                                                                                                      | Required for distribution                                                                                         |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `megingiard.signing.sha256` | SHA-256 fingerprint of the expected APK signing certificate. Injected into `BuildConfig.EXPECTED_SIGNING_SHA256`.                                                            | Yes. Release builds abort if missing or malformed unless explicitly overridden for local testing.                 |
-| `megingiard.privd.hmac.key` | 64-character hex string (32 bytes) shared by the app and `megingiard_privd`. Injected into `BuildConfig.PRIVD_HMAC_KEY` and `PRIVD_HMAC_KEY_HEX` when rebuilding the daemon. | Yes. Release builds and daemon rebuilds reject the public default unless explicitly overridden for local testing. |
+| Key                         | Meaning                                                                                                           | Required for distribution                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `megingiard.signing.sha256` | SHA-256 fingerprint of the expected APK signing certificate. Injected into `BuildConfig.EXPECTED_SIGNING_SHA256`. | Yes. Release builds abort if missing or malformed unless explicitly overridden for local testing. |
 
-Generate a Privd HMAC key with:
+## Per-install Key Scheme
 
-```bash
-openssl rand -hex 32 | tr '[:lower:]' '[:upper:]'
-```
+The previous scheme embedded the Privd HMAC key in `BuildConfig` at compile time. Anyone who downloads the public APK can extract that key via decompilation — without any device access. The current scheme eliminates this weakness.
 
-Whenever `megingiard.privd.hmac.key` changes, rebuild the daemon with:
+**How it works:**
 
-```bash
-./build_megingiard_privd.sh
-```
+1. **Key generation** — During Privileged Mode bootstrap the app generates 32 random bytes with `SecureRandom`. This key is unique per install and never appears in the APK.
+2. **Keystore encryption** — The key is encrypted under an AES-256-GCM key that lives in Android Keystore (`megingiard_privd_pair_key_v1`, hardware-backed when the device has a TEE or StrongBox). The ciphertext is stored in `noBackupFilesDir/privd_pair_key.enc`.
+3. **Provisioning** — The app transmits the plaintext key to the daemon over the already-authenticated ADB TLS channel: `megingiard_privd --provision <key_hex> <app_uid>`. The daemon writes it to `/data/local/tmp/megingiard_privd.key` (mode 0600, shell-owned). The app UID is stored alongside the key so the daemon can enforce peer identity.
+4. **Usage** — On subsequent app starts the app decrypts the key from Keystore storage (`PrivdPairKey.load()`) and loads it into `PrivdClient`. The daemon reads it from the state file at startup. The existing mutual `CHAL/AUTH/OK/VERIFY/PROOF` handshake then uses this per-install key.
+5. **Uninstall invalidation** — Android destroys the Keystore AES key when the app is uninstalled. The ciphertext in `noBackupFilesDir` therefore becomes permanently unreadable after reinstall, forcing the user to re-run the setup wizard. A reinstalled app (potentially from a different source) cannot silently inherit the old daemon's trust relationship.
 
-For local non-distribution testing only, release builds can be forced with `-Pmegingiard.allowDefaultPrivdHmacKey=true`, and the daemon script can be forced with `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true`. Do not use either override for distributed APKs.
+**Attack vectors covered by this scheme:**
+
+| Scenario                                                   | Outcome                                                                      |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Public APK decompiled by an attacker                       | No key in APK — decompilation yields nothing useful                          |
+| Rogue app tries to connect to the daemon                   | Daemon `SO_PEERCRED` check rejects wrong UID before handshake                |
+| Rogue process binds the socket first, impersonating daemon | App `LocalSocket.peerCredentials.uid` check rejects non-shell server         |
+| App reinstalled (possibly from a different source)         | Keystore entry destroyed — cannot decrypt stored key — re-bootstrap required |
+| Daemon binary from old install serves connections          | Old daemon has no state file → refuses to start                              |
+
+**Security property:** Compromising only the app (without the device's Keystore) or only the daemon binary (without the state file) does not grant access to the other party's secrets.
 
 ## Verification and Tests
 
@@ -65,8 +75,7 @@ Runtime Android branches such as `SignatureGuard.verify()` and the full `LocalSo
 
 ## Residual Risks and Future Hardening
 
-- The default Privd HMAC key is public. Release builds and daemon rebuilds now reject it by default, but explicit local override switches still exist for non-distribution testing.
-- HMAC key rotation and signing-certificate rotation are manual rebuild / redeploy operations today.
+- HMAC key rotation and signing-certificate rotation are manual re-bootstrap / redeploy operations today.
 - A fully compromised / rooted device can patch code, binaries, memory, or filesystem contents outside the assumptions of this model.
 - Socket parser fuzzing and end-to-end tamper tests are not yet part of automated CI.
 

@@ -95,6 +95,13 @@ enum class PrivdError {
 
     /** Spawning the daemon process via `adb shell` failed. */
     BOOTSTRAP_SPAWN_FAILED,
+
+    /**
+     * Provisioning the per-install HMAC key to the daemon failed during bootstrap.
+     * Cause: key generation error or the `--provision` ADB shell command returned
+     * a non-zero exit. Re-run the Privileged Mode setup wizard to retry.
+     */
+    BOOTSTRAP_PROVISION_FAILED,
 }
 
 /**

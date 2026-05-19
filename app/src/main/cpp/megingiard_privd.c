@@ -78,6 +78,18 @@ static volatile sig_atomic_t g_should_exit = 0;
  */
 static int g_gamepad_fd = -1;
 
+/* ---------------------------------------------------------------------------
+ * Per-install shared secret — loaded from STATE_FILE at daemon startup and
+ * provisioned by the app over the trusted ADB TLS channel during bootstrap.
+ * Never compiled into the binary; the binary has no hardcoded key.
+ * --------------------------------------------------------------------------- */
+#define STATE_FILE      "/data/local/tmp/megingiard_privd.key"
+#define KEY_HEX_LEN     64     /* 32 bytes * 2 hex chars */
+#define HMAC_KEY_BYTES  32
+
+static uint8_t g_hmac_key[HMAC_KEY_BYTES];  /* loaded from STATE_FILE */
+static uid_t   g_expected_app_uid;           /* UID of the authorized app process */
+
 /* Evdev-streaming state (SUB GAMEPAD / UNSUB GAMEPAD). */
 static volatile int g_reader_active = 0;
 static pthread_t g_reader_thread;
@@ -558,15 +570,6 @@ static void hmac_sha256(const uint8_t *key, size_t key_len,
     sha256_final(&ctx, out);
 }
 
-/*
- * Default pre-shared key — used when PRIVD_HMAC_KEY_HEX is not supplied at
- * compile time (i.e. megingiard.privd.hmac.key not set in local.properties).
- * Functional but not secret; set a custom key for real isolation.
- */
-#ifndef PRIVD_HMAC_KEY_HEX
-#define PRIVD_HMAC_KEY_HEX "A1B2C3D4E5F6A7B8C9D0E1F2A3B4C5D6E7F8A9B0C1D2E3F4A5B6C7D8E9F0A1B2"
-#endif
-
 #define NONCE_BYTES      16
 #define NONCE_HEX_LEN    32   /* NONCE_BYTES * 2 */
 #define HMAC_HEX_LEN     64   /* SHA256_DIGEST_LEN * 2 */
@@ -594,6 +597,89 @@ static int read_line_n(int fd, char *out, int max_len) {
 }
 
 /*
+ * Reads KEY= and UID= from STATE_FILE, decodes into g_hmac_key and
+ * g_expected_app_uid. Returns 1 on success, 0 if the file is missing
+ * or cannot be parsed (daemon must refuse to start without it).
+ */
+static int load_state_file(void) {
+    FILE *f = fopen(STATE_FILE, "r");
+    if (!f) {
+        fprintf(stderr, "privd: state file not found: %s\n", STATE_FILE);
+        return 0;
+    }
+    char line[128];
+    int got_key = 0, got_uid = 0;
+    while (fgets(line, sizeof(line), f)) {
+        /* Strip trailing newline. */
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\n') line[--len] = '\0';
+
+        if (strncmp(line, "KEY=", 4) == 0) {
+            const char *hex = line + 4;
+            if (strlen(hex) != KEY_HEX_LEN) continue;
+            for (int i = 0; i < HMAC_KEY_BYTES; i++) {
+                char b[3] = { hex[i * 2], hex[i * 2 + 1], '\0' };
+                g_hmac_key[i] = (uint8_t)strtol(b, NULL, 16);
+            }
+            got_key = 1;
+        } else if (strncmp(line, "UID=", 4) == 0) {
+            long uid = strtol(line + 4, NULL, 10);
+            if (uid > 0) {
+                g_expected_app_uid = (uid_t)uid;
+                got_uid = 1;
+            }
+        }
+    }
+    fclose(f);
+    if (!got_key || !got_uid) {
+        fprintf(stderr, "privd: state file missing KEY or UID\n");
+        return 0;
+    }
+    return 1;
+}
+
+/*
+ * --provision <key_hex> <app_uid>
+ * Writes the state file and exits. Called by PrivdBootstrapper during bootstrap
+ * via `adb shell megingiard_privd --provision <key_hex> <app_uid>`.
+ *
+ * State file format: KEY=<64 uppercase hex>\nUID=<decimal>\n, mode 0600.
+ * Returns 0 on success, 1 on error.
+ */
+static int provision_state(const char *key_hex, const char *uid_str) {
+    if (strlen(key_hex) != KEY_HEX_LEN) {
+        fprintf(stderr, "privd: provision: invalid key length %zu (need %d)\n",
+                strlen(key_hex), KEY_HEX_LEN);
+        return 1;
+    }
+    /* Validate key is hex. */
+    for (int i = 0; i < KEY_HEX_LEN; i++) {
+        char c = key_hex[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))) {
+            fprintf(stderr, "privd: provision: non-hex char '%c' in key\n", c);
+            return 1;
+        }
+    }
+    long uid = strtol(uid_str, NULL, 10);
+    if (uid <= 0) {
+        fprintf(stderr, "privd: provision: invalid UID %ld\n", uid);
+        return 1;
+    }
+    /* Write with mode 0600 so only the shell user (UID 2000) can read it. */
+    int fd = open(STATE_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (fd < 0) {
+        fprintf(stderr, "privd: provision: cannot write %s: %s\n", STATE_FILE, strerror(errno));
+        return 1;
+    }
+    dprintf(fd, "KEY=%s\nUID=%ld\n", key_hex, uid);
+    close(fd);
+    /* Ensure umask didn't widen permissions. */
+    chmod(STATE_FILE, 0600);
+    fprintf(stderr, "privd: provisioned (UID=%ld)\n", uid);
+    return 0;
+}
+
+/*
  * Mutual HMAC-SHA256 challenge-response.
  *
  * Server (daemon) → Client: CHAL <32-hex-nonce>\n   (daemon challenges app)
@@ -602,7 +688,8 @@ static int read_line_n(int fd, char *out, int max_len) {
  * Client → Server (daemon): VERIFY <32-hex-nonce2>\n (app challenges daemon back)
  * Server (daemon) → Client: PROOF <64-hex-hmac>\n   (daemon proves it knows the key)
  *
- * Both halves use HMAC-SHA256(pre_shared_key, nonce_bytes).
+ * Both halves use HMAC-SHA256(per_install_key, nonce_bytes).
+ * The key is loaded from STATE_FILE into g_hmac_key at daemon startup.
  * Returns 1 on successful mutual authentication, 0 on any failure.
  * The caller must close client_fd on failure.
  */
@@ -646,14 +733,8 @@ static int authenticate_client(int client_fd) {
     if (strncmp(auth_line, "AUTH ", 5) != 0) return 0;
     const char *received_hex = auth_line + 5;
 
-    /* Decode PRIVD_HMAC_KEY_HEX (64 hex chars) → 32 key bytes. */
-    const char *key_hex = PRIVD_HMAC_KEY_HEX;
-    if (strlen(key_hex) != 64) return 0;
-    uint8_t key[SHA256_DIGEST_LEN];
-    for (int i = 0; i < SHA256_DIGEST_LEN; i++) {
-        char b[3] = { key_hex[i*2], key_hex[i*2+1], '\0' };
-        key[i] = (uint8_t)strtol(b, NULL, 16);
-    }
+    /* Use the per-install key loaded from the state file at startup. */
+    const uint8_t *key = g_hmac_key;
 
     /* Compute expected HMAC-SHA256(key, nonce). */
     uint8_t expected[SHA256_DIGEST_LEN];
@@ -858,7 +939,7 @@ static void detach_from_shell(void) {
     signal(SIGHUP, SIG_IGN);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
     /* Ignore SIGHUP immediately so the daemon survives the ADB shell stream
      * closing before setsid() is called.  The bootstrapper spawns with '&'
      * and closes the stream as soon as it reads MGRD_SPAWN_OK; the default
@@ -869,6 +950,20 @@ int main(void) {
     signal(SIGTERM, signal_handler);
     signal(SIGINT,  signal_handler);
     signal(SIGPIPE, SIG_IGN);
+
+    /* --provision <key_hex> <app_uid>: write the state file and exit.
+     * Called by PrivdBootstrapper during bootstrap over the ADB TLS channel. */
+    if (argc == 4 && strcmp(argv[1], "--provision") == 0) {
+        return provision_state(argv[2], argv[3]);
+    }
+
+    /* Daemon mode: load per-install key + authorized app UID from state file.
+     * Refuse to start if no state file is present — daemon cannot authenticate
+     * without a provisioned key. */
+    if (!load_state_file()) {
+        fprintf(stderr, "privd: refusing to start without state file — run bootstrap wizard\n");
+        return 1;
+    }
 
     g_gamepad_fd = discover_gamepad_fd();
     if (g_gamepad_fd < 0) {
@@ -895,10 +990,21 @@ int main(void) {
             if (errno == EINTR) continue;
             break;
         }
+        /* OS-level peer identity check: reject connections from any process
+         * that is not the provisioned Megingiard app.  This blocks rogue
+         * apps from even reaching the HMAC challenge-response, regardless of
+         * whether they somehow obtained the per-install key. */
+        struct ucred peer_cred;
+        socklen_t cred_len = sizeof(peer_cred);
+        if (getsockopt(client, SOL_SOCKET, SO_PEERCRED, &peer_cred, &cred_len) < 0 ||
+            peer_cred.uid != g_expected_app_uid) {
+            close(client);
+            continue;
+        }
         /* HMAC challenge-response: reject clients that cannot prove they hold
-         * the pre-shared key.  authenticate_client() sends CHAL, reads AUTH,
-         * verifies HMAC-SHA256, and sends OK on success.  On failure the fd
-         * is left open; we close it here and loop back to accept(). */
+         * the per-install key provisioned during bootstrap.
+         * authenticate_client() sends CHAL, reads AUTH, verifies HMAC-SHA256,
+         * and sends OK on success.  On failure the fd is closed here. */
         if (!authenticate_client(client)) {
             close(client);
             continue;

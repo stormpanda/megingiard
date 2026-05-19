@@ -202,14 +202,30 @@ full app restart.
 
 Privileged Mode crosses the app sandbox boundary by delegating selected kernel I/O to `megingiard_privd`, a shell-UID helper started through ADB Wireless Debugging. The socket is therefore treated as a privileged command channel: every connection must authenticate before feature commands are accepted.
 
+#### Per-install Key Scheme
+
+The authentication key is **never embedded in the APK**. Instead:
+
+1. During bootstrap the app generates 32 random bytes with `SecureRandom`.
+2. The key is encrypted under an AES-256-GCM Keystore key (`megingiard_privd_pair_key_v1`, hardware-backed where available) and stored in `noBackupFilesDir/privd_pair_key.enc`. Backup is explicitly excluded so the key never leaves the device.
+3. The plaintext key is transmitted to the daemon over the already-authenticated ADB TLS channel: `megingiard_privd --provision <key_hex> <app_uid>`.
+4. The daemon writes it to `/data/local/tmp/megingiard_privd.key` (mode 0600, shell-owned) together with the provisioned app UID.
+5. On every subsequent app start `PrivdPairKey.load()` decrypts the key from Keystore storage and `PrivdClient.loadKey()` places it in memory.
+
+Android destroys the Keystore AES key when the app is uninstalled, making the stored ciphertext permanently unreadable. A reinstalled app therefore cannot silently inherit the old daemon's trust relationship — re-bootstrap is required.
+
+#### OS-Level Peer Credential Checks
+
+Before the HMAC handshake is attempted, both sides verify the OS-reported peer UID:
+
+- **App side:** `LocalSocket.peerCredentials.uid` must equal 2000 (Android shell UID). This blocks any non-shell process from impersonating the daemon.
+- **Daemon side:** `getsockopt(SO_PEERCRED)` on the accepted connection fd must match the app UID stored in the state file. This blocks rogue apps from connecting even if they somehow obtained the per-install key.
+
+If either check fails the connection is closed immediately.
+
 #### Mutual HMAC-SHA256 Handshake
 
-Every new LocalSocket connection begins with mutual challenge-response. Both sides must know the same 32-byte pre-shared key:
-
-- App side: `BuildConfig.PRIVD_HMAC_KEY`, configured from `megingiard.privd.hmac.key` in `local.properties`.
-- Daemon side: `PRIVD_HMAC_KEY_HEX`, injected by `build_megingiard_privd.sh` when compiling `megingiard_privd_arm64`.
-
-If no key is configured, debug builds can still fall back to the public source default. Release builds reject that default unless `-Pmegingiard.allowDefaultPrivdHmacKey=true` is supplied, and `build_megingiard_privd.sh` rejects it unless `MEGINGIARD_ALLOW_DEFAULT_PRIVD_HMAC_KEY=true` is set. Those overrides are for local non-distribution testing only; the default key is not secret and must not be treated as production isolation.
+Every new LocalSocket connection (after the peer-credential check) uses mutual challenge-response. Both sides must know the per-install key:
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -221,8 +237,8 @@ Daemon -> App     PROOF <64-hex-hmac2>\n   HMAC-SHA256(key, nonce2)
 
 The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. This blocks two important local attacks:
 
-- A rogue app cannot connect to the real daemon and issue commands unless it can produce a valid `AUTH` response.
-- A rogue process that binds `@megingiard.privd` before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response.
+- A rogue app cannot connect to the real daemon and issue commands unless it can produce a valid `AUTH` response (requires the per-install key that is not in the APK).
+- A rogue process that binds `@megingiard.privd` before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response and pass the UID check.
 
 Malformed messages, missing messages, wrong HMAC values, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds and is reset to normal blocking I/O only after the full mutual exchange succeeds.
 
@@ -232,13 +248,13 @@ The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator.
 
 `PrivdBootstrapper` verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A daemon verification failure aborts bootstrap; a mirror DEX verification failure is logged and leaves the normal MediaProjection fallback path available.
 
-Detailed native rebuild, HMAC key injection, and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
+Detailed native rebuild and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
 
 #### Operational Notes
 
-- Changing `megingiard.privd.hmac.key` requires rebuilding `megingiard_privd_arm64` with `./build_megingiard_privd.sh` so the app and daemon stay in sync.
-- Rebuilding the daemon changes the asset bytes; the next Gradle build regenerates the expected SHA-256 pin through `:domain:generateNativeBinaryHashes`.
-- Key rotation and signing-certificate rotation are manual rebuild / redeploy operations today.
+- The HMAC key is provisioned automatically during the Privileged Mode setup wizard. No manual key management is required.
+- Re-running the setup wizard generates a fresh key and re-provisions the daemon.
+- Key rotation and signing-certificate rotation are manual re-bootstrap / redeploy operations today.
 
 ### Wire Protocol
 
@@ -336,6 +352,12 @@ state even after an unexpected drop.
 `viewModelScope` so the blocking `LocalSocket.connect()` never runs on the
 main thread.
 
+The `BOOTSTRAPPING` state covers the entire wizard flow; the finer-grained `BootstrapStage`
+enum (IDLE / PAIRING / CONNECTING_ADB / PUSHING_BINARY / SPAWNING_DAEMON /
+VERIFYING / DONE) is exposed by `PrivdBootstrapper.stage` for the wizard UI.
+Key provisioning happens during the `PUSHING_BINARY` stage (after a successful binary push
+but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
+
 ### Strategy Routing in GamepadInjector
 
 `GamepadInjector` is a strategy router. At `start()` time it decides:
@@ -357,7 +379,7 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (abstract-socket server, evdev writer, passive read-only physical gamepad event stream)                               |
 | `app/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
-| `build_megingiard_privd.sh`                              | NDK build script                                                                                                                           |
+| `domain/.../privd/PrivdPairKey.kt`                       | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()`                                                        |
 | `domain/.../privd/PrivdClient.kt`                        | LocalSocket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                       |
 | `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
 | `domain/.../privd/PrivdGamepadInjector.kt`               | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                                            |

@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.privd
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
+import com.stormpanda.megingiard.security.HmacUtil
 import io.github.muntashirakon.adb.AdbStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,8 @@ private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_PATH = "/data/local/tmp/megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
+// Marker echoed by the daemon's --provision mode on success (exits 0, then shell echoes this).
+private const val PROVISION_OK_MARKER = "MGRD_PROVISION_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
 private const val VERIFY_INITIAL_DELAY_MS = 500L
 private const val VERIFY_RETRY_COUNT = 20
@@ -155,6 +158,35 @@ object PrivdBootstrapper {
             _stage.value = BootstrapStage.IDLE
             return false
         }
+        // Provision: generate a fresh per-install key, push it to the daemon via ADB shell,
+        // and update PrivdClient's in-memory copy so the subsequent verifyConnect() handshake
+        // uses the new key without an extra Keystore decrypt roundtrip.
+        val keyBytes = runCatching { PrivdPairKey.generateAndStore(context) }.getOrElse { e ->
+            AppLog.e(TAG, "generateAndStore() threw: $e")
+            null
+        }
+        if (keyBytes == null) {
+            PrivdManager.reportBootstrapFailure(PrivdError.BOOTSTRAP_PROVISION_FAILED)
+            disconnectQuietly(mgr)
+            _stage.value = BootstrapStage.IDLE
+            return false
+        }
+        val provisionOk = runCatching {
+            provisionDaemon(mgr, HmacUtil.bytesToHex(keyBytes), android.os.Process.myUid())
+        }.getOrElse { e ->
+            AppLog.w(TAG, "provisionDaemon() threw: $e")
+            false
+        }
+        if (!provisionOk) {
+            PrivdManager.reportBootstrapFailure(PrivdError.BOOTSTRAP_PROVISION_FAILED)
+            disconnectQuietly(mgr)
+            _stage.value = BootstrapStage.IDLE
+            return false
+        }
+        // Key is now stored on both sides. Update in-memory copy before verifyConnect().
+        PrivdClient.setKey(keyBytes)
+        AppLog.i(TAG, "bootstrapAndConnect: per-install key provisioned (app UID=${android.os.Process.myUid()})")
+
         // Spawn
         _stage.value = BootstrapStage.SPAWNING_DAEMON
         val spawnOk = runCatching { spawnDaemon(mgr) }.getOrElse { e ->
@@ -351,6 +383,28 @@ object PrivdBootstrapper {
     }
 
     private fun currentEpochSeconds(): Int = ((System.currentTimeMillis() / MS_PER_SECOND) and UINT_MASK).toInt()
+
+    /**
+     * Runs the daemon in provisioning mode: `megingiard_privd --provision <keyHex> <appUid>`.
+     *
+     * The daemon writes the per-install HMAC key and the expected app UID to a shell-owned
+     * 0600 state file (`/data/local/tmp/megingiard_privd.key`), then exits with 0.
+     * The shell then echoes [PROVISION_OK_MARKER] confirming success.
+     *
+     * This step runs between [pushDaemon] and [spawnDaemon] so the daemon has a valid key
+     * when it starts. The key is transmitted over the already-verified ADB TLS channel.
+     *
+     * @param mgr   The open ADB connection to use.
+     * @param keyHex 64 uppercase hex characters (32 bytes) — the per-install HMAC key.
+     * @param appUid The Android UID of the Megingiard app process.
+     * @return `true` if the daemon wrote the state file successfully.
+     */
+    private fun provisionDaemon(mgr: PrivdAdbConnectionManager, keyHex: String, appUid: Int): Boolean {
+        val cmd = "shell:$DAEMON_REMOTE_PATH --provision $keyHex $appUid && echo $PROVISION_OK_MARKER"
+        AppLog.d(TAG, "provision cmd issued (keyHex redacted, appUid=$appUid)")
+        val stream = mgr.openStream(cmd) ?: return false
+        return stream.use { s -> readUntilMarker(s, PROVISION_OK_MARKER) }
+    }
 
     private fun spawnDaemon(mgr: PrivdAdbConnectionManager): Boolean {
         // Kill any previous daemon instance before spawning a fresh one.

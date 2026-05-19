@@ -135,13 +135,14 @@ class PrivdSubsystemTest {
 
     @Test
     fun `PrivdError enum covers all bootstrap failure modes`() {
-        assertEquals(6, PrivdError.entries.size)
+        assertEquals(7, PrivdError.entries.size)
         assertNotNull(PrivdError.valueOf("DAEMON_UNREACHABLE"))
         assertNotNull(PrivdError.valueOf("PAIRING_FAILED"))
         assertNotNull(PrivdError.valueOf("ADB_DISCOVERY_FAILED"))
         assertNotNull(PrivdError.valueOf("ADB_CONNECT_FAILED"))
         assertNotNull(PrivdError.valueOf("BOOTSTRAP_PUSH_FAILED"))
         assertNotNull(PrivdError.valueOf("BOOTSTRAP_SPAWN_FAILED"))
+        assertNotNull(PrivdError.valueOf("BOOTSTRAP_PROVISION_FAILED"))
     }
 
     @Test

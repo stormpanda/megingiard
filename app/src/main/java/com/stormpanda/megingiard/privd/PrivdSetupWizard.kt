@@ -456,7 +456,8 @@ private fun errorStringResource(error: PrivdError?): Int? = when (error) {
     PrivdError.PAIRING_FAILED         -> R.string.privd_error_pairing_failed
     PrivdError.ADB_DISCOVERY_FAILED   -> R.string.privd_error_adb_discovery_failed
     PrivdError.ADB_CONNECT_FAILED     -> R.string.privd_error_adb_connect_failed
-    PrivdError.BOOTSTRAP_PUSH_FAILED  -> R.string.privd_error_bootstrap_push_failed
-    PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
-    null                              -> null
+    PrivdError.BOOTSTRAP_PUSH_FAILED       -> R.string.privd_error_bootstrap_push_failed
+    PrivdError.BOOTSTRAP_SPAWN_FAILED      -> R.string.privd_error_bootstrap_spawn_failed
+    PrivdError.BOOTSTRAP_PROVISION_FAILED  -> R.string.privd_error_bootstrap_provision_failed
+    null                                   -> null
 }
