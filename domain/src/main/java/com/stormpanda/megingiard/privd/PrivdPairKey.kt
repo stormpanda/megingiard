@@ -136,7 +136,7 @@ internal object PrivdPairKey {
         val ciphertext = cipher.doFinal(rawKey)
         // [IV (12 bytes)] + [ciphertext + GCM tag (32 + 16 = 48 bytes)] = 60 bytes total
         encryptedKeyFile(context).writeBytes(iv + ciphertext)
-        AppLog.d(TAG, "store: encrypted key blob written (${(iv + ciphertext).size + IV_LEN_BYTES} bytes)")
+        AppLog.d(TAG, "store: encrypted key blob written (${(iv + ciphertext).size} bytes)")
     }
 
     private fun encryptedKeyFile(context: Context): File =
