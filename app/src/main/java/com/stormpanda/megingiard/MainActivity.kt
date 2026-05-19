@@ -30,7 +30,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.config.ConfigManager
-import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
@@ -79,17 +78,24 @@ class MainActivity : ComponentActivity() {
     // GlobalSettingsScreen (which may be inside MirrorPresentation) posts requests
     // to ConfigManager and these launchers pick them up.
 
-    private var pendingExportMetadata: ExportMetadata? = null
+    private var pendingExportKind: ConfigManager.ExportKind? = null
+    private var pendingInAppImportMode = ConfigManager.ImportMode.BACKUP_RESTORE
 
     private val createDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE)
     ) { uri ->
         AppStateManager.setFilePickerOpen(false)
-        val meta = pendingExportMetadata ?: return@registerForActivityResult
-        pendingExportMetadata = null
+        val kind = pendingExportKind ?: return@registerForActivityResult
+        pendingExportKind = null
         if (uri == null) return@registerForActivityResult
         lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { ConfigManager.writeToUri(this@MainActivity, uri, ConfigManager.buildExport(meta)) }
+            runCatching {
+                val export = when (kind) {
+                    is ConfigManager.ExportKind.Backup -> ConfigManager.buildExport(kind.metadata)
+                    is ConfigManager.ExportKind.ProfileShare -> ConfigManager.buildProfileExport(kind.metadata, kind.profile)
+                }
+                ConfigManager.writeToUri(this@MainActivity, uri, export)
+            }
                 .onSuccess {
                     AppLog.i(TAG, "Export written to $uri")
                     ConfigManager.setExportResult(ConfigManager.ExportResult.Success)
@@ -108,7 +114,7 @@ class MainActivity : ComponentActivity() {
         if (uri == null) {
             return@registerForActivityResult
         }
-        ConfigManager.setPendingInAppUri(uri)
+        ConfigManager.setPendingInAppUri(uri, pendingInAppImportMode)
     }
 
     private val createLogDocumentLauncher = registerForActivityResult(
@@ -228,8 +234,8 @@ class MainActivity : ComponentActivity() {
         // inside MirrorPresentation and thus cannot hold ActivityResultLaunchers itself).
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                ConfigManager.exportRequest.collect { meta ->
-                    pendingExportMetadata = meta
+                ConfigManager.exportRequest.collect { kind ->
+                    pendingExportKind = kind
                     AppStateManager.setFilePickerOpen(true)
                     createDocumentLauncher.launch(ConfigManager.exportFilename.value)
                 }
@@ -237,7 +243,8 @@ class MainActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                ConfigManager.importRequest.collect {
+                ConfigManager.importRequest.collect { mode ->
+                    pendingInAppImportMode = mode
                     AppStateManager.setFilePickerOpen(true)
                     // Use "*/*" instead of the custom MGRD MIME type: the Android file
                     // picker (DocumentsUI) does not know the custom MIME type and would

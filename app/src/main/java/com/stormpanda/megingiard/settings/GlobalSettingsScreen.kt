@@ -58,6 +58,8 @@ import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.privd.DeadzoneDialog
 import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
@@ -123,6 +125,9 @@ fun GlobalSettingsScreen(
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
     var importSuccess by rememberSaveable { mutableStateOf(false) }
+    var showProfileExportDialog by rememberSaveable { mutableStateOf(false) }
+    var profileImportSuccess by rememberSaveable { mutableStateOf(false) }
+    val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
     var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
@@ -273,6 +278,7 @@ fun GlobalSettingsScreen(
                     ) {
                         ConfigSection(
                             onShowExportDialog = { showExportMetadataDialog = true },
+                            onShowProfileExportDialog = { showProfileExportDialog = true },
                             onImportPreviewReady = { showImportPreviewDialog = it },
                         )
                     }
@@ -373,16 +379,43 @@ fun GlobalSettingsScreen(
                 onDismiss = { showExportMetadataDialog = false },
             )
         }
+        if (showProfileExportDialog) {
+            ProfileExportDialog(
+                colors = colors,
+                accentColor = effectiveAccent,
+                onConfirm = { metadata, profile ->
+                    showProfileExportDialog = false
+                    ConfigManager.requestProfileExport(
+                        metadata = metadata,
+                        profile = profile,
+                        filename = buildProfileExportFilename(metadata, profile.name),
+                    )
+                },
+                onDismiss = { showProfileExportDialog = false },
+            )
+        }
         showImportPreviewDialog?.let { export ->
             ImportPreviewDialog(
                 export = export,
+                importMode = pendingInAppImportMode,
                 colors = colors,
                 accentColor = effectiveAccent,
                 onConfirm = {
                     showImportPreviewDialog = null
+                    val mode = pendingInAppImportMode
                     coroutineScope.launch {
-                        runCatching { ConfigManager.applyImport(export) }
-                            .onSuccess { importSuccess = true }
+                        runCatching {
+                            when (mode) {
+                                ConfigManager.ImportMode.BACKUP_RESTORE -> ConfigManager.applyImport(export)
+                                ConfigManager.ImportMode.PROFILE_SHARE  -> ConfigManager.applyProfileImport(export)
+                            }
+                        }
+                            .onSuccess {
+                                when (mode) {
+                                    ConfigManager.ImportMode.BACKUP_RESTORE -> importSuccess = true
+                                    ConfigManager.ImportMode.PROFILE_SHARE  -> profileImportSuccess = true
+                                }
+                            }
                             .onFailure { e -> importError = e.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.config_error_unknown) }
                         ConfigManager.clearInAppPendingImport()
                     }
@@ -411,6 +444,16 @@ fun GlobalSettingsScreen(
                 colors = colors,
                 accentColor = effectiveAccent,
                 onDismiss = { importSuccess = false },
+            )
+        }
+        if (profileImportSuccess) {
+            InTreeMessageDialog(
+                title = stringResource(R.string.config_success_title),
+                text = stringResource(R.string.config_profile_import_success),
+                buttonText = stringResource(R.string.config_ok),
+                colors = colors,
+                accentColor = effectiveAccent,
+                onDismiss = { profileImportSuccess = false },
             )
         }
         when (val result = exportResult) {
@@ -591,6 +634,7 @@ private fun SettingsSection(
 @Composable
 private fun ConfigSection(
     onShowExportDialog: () -> Unit,
+    onShowProfileExportDialog: () -> Unit,
     onImportPreviewReady: (MegingiardExport) -> Unit,
 ) {
     // Import preview: ConfigManager carries the parsed file once MainAppScreen
@@ -613,7 +657,21 @@ private fun ConfigSection(
         label = stringResource(R.string.settings_config_import),
         description = stringResource(R.string.settings_config_import_desc),
         accentColor = effectiveAccent,
-        onClick = { ConfigManager.requestImport() },
+        onClick = { ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE) },
+    )
+    AppDivider()
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_export_profile),
+        description = stringResource(R.string.settings_config_export_profile_desc),
+        accentColor = effectiveAccent,
+        onClick = onShowProfileExportDialog,
+    )
+    AppDivider()
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_import_profile),
+        description = stringResource(R.string.settings_config_import_profile_desc),
+        accentColor = effectiveAccent,
+        onClick = { ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE) },
     )
 }
 
@@ -724,12 +782,17 @@ private fun ExportMetadataDialog(
 @Composable
 private fun ImportPreviewDialog(
     export: MegingiardExport,
+    importMode: ConfigManager.ImportMode,
     colors: AppColors,
     accentColor: Color,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val metadata = export.metadata
+    val warningText = when (importMode) {
+        ConfigManager.ImportMode.BACKUP_RESTORE -> stringResource(R.string.config_import_warning_backup)
+        ConfigManager.ImportMode.PROFILE_SHARE  -> stringResource(R.string.config_import_warning_profile)
+    }
     BackHandler(onBack = onDismiss)
     Box(
         modifier = Modifier
@@ -776,25 +839,34 @@ private fun ImportPreviewDialog(
                 )
             }
             Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.config_import_sections_label),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.labelMedium,
-            )
-            if ("global" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+            val hasSettingsBullets = importMode == ConfigManager.ImportMode.BACKUP_RESTORE &&
+                ("global" in export.settings || "mirror" in export.settings ||
+                    "touchpad" in export.settings || "keyboard" in export.settings ||
+                    "macropad_settings" in export.settings)
+            val hasSectionBullets = hasSettingsBullets || export.profiles.isNotEmpty()
+            if (hasSectionBullets) {
+                Text(
+                    text = stringResource(R.string.config_import_sections_label),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
-            if ("mirror" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-            }
-            if ("touchpad" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-            }
-            if ("keyboard" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-            }
-            if ("macropad_settings" in export.settings) {
-                Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+            if (importMode == ConfigManager.ImportMode.BACKUP_RESTORE) {
+                if ("global" in export.settings) {
+                    Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                }
+                if ("mirror" in export.settings) {
+                    Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                }
+                if ("touchpad" in export.settings) {
+                    Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                }
+                if ("keyboard" in export.settings) {
+                    Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                }
+                if ("macropad_settings" in export.settings) {
+                    Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                }
             }
             if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                 Text(
@@ -805,7 +877,7 @@ private fun ImportPreviewDialog(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = stringResource(R.string.config_import_warning),
+                text = warningText,
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.labelSmall,
             )
@@ -860,6 +932,131 @@ private fun InTreeMessageDialog(
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(buttonText, color = accentColor)
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Profile export dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+// In-tree version — full-screen scrim + centered card, no Android Dialog window.
+@Composable
+private fun ProfileExportDialog(
+    colors: AppColors,
+    accentColor: Color,
+    onConfirm: (ExportMetadata, PadProfile) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val profiles by MacroPadState.profiles.collectAsState()
+    val activeProfile by MacroPadState.activeProfile.collectAsState()
+    var selectedProfile by remember(profiles) {
+        mutableStateOf(activeProfile ?: profiles.firstOrNull())
+    }
+    var author by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var tags by rememberSaveable { mutableStateOf("") }
+    val context = LocalContext.current
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        unfocusedBorderColor = colors.divider,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = colors.onSurfaceSecondary,
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedTextColor = colors.onSurface,
+        unfocusedTextColor = colors.onSurface,
+    )
+    val focusManager = LocalFocusManager.current
+    BackHandler(onBack = onDismiss)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = GS_DIALOG_SCRIM_ALPHA))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(GS_DIALOG_WIDTH_FRACTION)
+                .background(colors.surface, RoundedCornerShape(GS_DIALOG_CORNER))
+                .verticalScroll(rememberScrollState())
+                .clickable(enabled = true, onClick = {})
+                .padding(GS_DIALOG_PADDING),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.config_profile_export_dialog_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (profiles.size > 1) {
+                Text(
+                    text = stringResource(R.string.config_profile_export_select),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                AppDropdown(
+                    selected = selectedProfile ?: profiles.first(),
+                    options = profiles,
+                    optionText = { it.name },
+                    onSelected = { selectedProfile = it },
+                    fillMaxWidth = true,
+                )
+            }
+            OutlinedTextField(
+                value = author,
+                onValueChange = { author = it },
+                label = { Text(stringResource(R.string.config_export_author), style = MaterialTheme.typography.bodySmall) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+            )
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text(stringResource(R.string.config_export_description), style = MaterialTheme.typography.bodySmall) },
+                maxLines = 3,
+                modifier = Modifier.fillMaxWidth(),
+                colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+            )
+            OutlinedTextField(
+                value = tags,
+                onValueChange = { tags = it },
+                label = { Text(stringResource(R.string.config_export_tags), style = MaterialTheme.typography.bodySmall) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.config_export_cancel), color = colors.onSurfaceSecondary)
+                }
+                val profile = selectedProfile ?: profiles.firstOrNull()
+                TextButton(
+                    onClick = {
+                        if (profile == null) return@TextButton
+                        val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        val metadata = ConfigManager.defaultMetadata(context).copy(
+                            author = author.trim().ifEmpty { null },
+                            description = description.trim().ifEmpty { null },
+                            tags = parsedTags,
+                        )
+                        onConfirm(metadata, profile)
+                    },
+                    enabled = profile != null,
+                ) {
+                    Text(stringResource(R.string.config_export_confirm), color = if (profile != null) accentColor else colors.onSurfaceSecondary)
                 }
             }
         }
@@ -936,6 +1133,22 @@ private fun buildExportFilename(metadata: ExportMetadata): String {
     }
     metadata.description?.takeIf { it.isNotBlank() }?.let { raw ->
         parts.add(raw.trim().take(30).replace(FILENAME_UNSAFE, "_"))
+    }
+    return parts.joinToString("_") + ".mgrd"
+}
+
+/**
+ * Builds a descriptive export filename for a profile share.
+ *
+ * Format: `megingiard_profile_<date>[_<profileName up to 30 chars>][_<author up to 20 chars>].mgrd`
+ */
+private fun buildProfileExportFilename(metadata: ExportMetadata, profileName: String): String {
+    val parts = mutableListOf("megingiard_profile", LocalDate.now().toString())
+    profileName.trim().takeIf { it.isNotBlank() }?.let { raw ->
+        parts.add(raw.take(30).replace(FILENAME_UNSAFE, "_"))
+    }
+    metadata.author?.takeIf { it.isNotBlank() }?.let { raw ->
+        parts.add(raw.trim().take(20).replace(FILENAME_UNSAFE, "_"))
     }
     return parts.joinToString("_") + ".mgrd"
 }

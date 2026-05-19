@@ -61,16 +61,27 @@ object ConfigManager {
 
     // ── Coordinator SharedFlows (export) ──────────────────────────────────────
 
+    /** Discriminates backup exports from profile-share exports. */
+    sealed interface ExportKind {
+        /** Full-app backup: all settings + all profiles. */
+        data class Backup(val metadata: ExportMetadata) : ExportKind
+        /** Single-profile share: no settings, one profile. */
+        data class ProfileShare(val metadata: ExportMetadata, val profile: PadProfile) : ExportKind
+    }
+
+    /** Discriminates backup restores from profile-only imports. */
+    enum class ImportMode { BACKUP_RESTORE, PROFILE_SHARE }
+
     /**
      * Emits a one-shot export command to MainActivity.
      * Uses [BufferOverflow.DROP_OLDEST] so a second rapid call overrides a pending one.
      */
-    private val _exportRequest = MutableSharedFlow<ExportMetadata>(
+    private val _exportRequest = MutableSharedFlow<ExportKind>(
         replay = 0,
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
-    val exportRequest: SharedFlow<ExportMetadata> = _exportRequest.asSharedFlow()
+    val exportRequest: SharedFlow<ExportKind> = _exportRequest.asSharedFlow()
 
     /** Suggested default filename for the "create document" picker. */
     private val _exportFilename = MutableStateFlow("")
@@ -79,7 +90,13 @@ object ConfigManager {
     fun requestExport(metadata: ExportMetadata, filename: String) {
         AppLog.d(TAG, "requestExport filename=$filename")
         _exportFilename.value = filename
-        _exportRequest.tryEmit(metadata)
+        _exportRequest.tryEmit(ExportKind.Backup(metadata))
+    }
+
+    fun requestProfileExport(metadata: ExportMetadata, profile: PadProfile, filename: String) {
+        AppLog.d(TAG, "requestProfileExport profile=${profile.name} filename=$filename")
+        _exportFilename.value = filename
+        _exportRequest.tryEmit(ExportKind.ProfileShare(metadata, profile))
     }
 
     // ── Coordinator SharedFlows (import from Settings) ────────────────────────
@@ -88,16 +105,16 @@ object ConfigManager {
      * Emits a one-shot import command to MainActivity (open file picker).
      * Uses [BufferOverflow.DROP_OLDEST] — a second call while the first is processing is a no-op.
      */
-    private val _importRequest = MutableSharedFlow<Unit>(
+    private val _importRequest = MutableSharedFlow<ImportMode>(
         replay = 0,
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
-    val importRequest: SharedFlow<Unit> = _importRequest.asSharedFlow()
+    val importRequest: SharedFlow<ImportMode> = _importRequest.asSharedFlow()
 
-    fun requestImport() {
-        AppLog.d(TAG, "requestImport")
-        _importRequest.tryEmit(Unit)
+    fun requestImport(mode: ImportMode = ImportMode.BACKUP_RESTORE) {
+        AppLog.d(TAG, "requestImport mode=$mode")
+        _importRequest.tryEmit(mode)
     }
 
     // ── Coordinator StateFlows (import from external ACTION_VIEW intent) ────────
@@ -140,9 +157,14 @@ object ConfigManager {
     private val _pendingInAppParsedImport = MutableStateFlow<MegingiardExport?>(null)
     val pendingInAppParsedImport: StateFlow<MegingiardExport?> = _pendingInAppParsedImport.asStateFlow()
 
+    /** Tracks whether the pending in-app import is a full backup or a profile share. */
+    private val _pendingInAppImportMode = MutableStateFlow(ImportMode.BACKUP_RESTORE)
+    val pendingInAppImportMode: StateFlow<ImportMode> = _pendingInAppImportMode.asStateFlow()
+
     /** Called by MainActivity when the in-app file picker returns a .mgrd URI. */
-    fun setPendingInAppUri(uri: Uri) {
-        AppLog.i(TAG, "setPendingInAppUri: $uri")
+    fun setPendingInAppUri(uri: Uri, mode: ImportMode = ImportMode.BACKUP_RESTORE) {
+        AppLog.i(TAG, "setPendingInAppUri: $uri mode=$mode")
+        _pendingInAppImportMode.value = mode
         _pendingInAppUri.value = uri
     }
 
@@ -158,6 +180,7 @@ object ConfigManager {
         AppLog.d(TAG, "clearInAppPendingImport")
         _pendingInAppUri.value = null
         _pendingInAppParsedImport.value = null
+        _pendingInAppImportMode.value = ImportMode.BACKUP_RESTORE
     }
 
     // ── Export result feedback ────────────────────────────────────────────────
@@ -198,6 +221,24 @@ object ConfigManager {
             metadata = metadata,
             checksum = checksum,
             settings = settings,
+            profiles = profiles,
+        )
+    }
+
+    /**
+     * Builds a profile-only export containing a single [profile].
+     * Settings are always empty so importing this file never overwrites app settings.
+     */
+    suspend fun buildProfileExport(metadata: ExportMetadata, profile: PadProfile): MegingiardExport {
+        AppLog.i(TAG, "buildProfileExport: profile=${profile.name}")
+        val profiles = listOf(profile)
+        val checksum = computeChecksum(emptyMap(), profiles)
+        AppLog.d(TAG, "buildProfileExport: checksum=$checksum")
+        return MegingiardExport(
+            schemaVersion = SCHEMA_VERSION,
+            metadata = metadata,
+            checksum = checksum,
+            settings = emptyMap(),
             profiles = profiles,
         )
     }
@@ -293,7 +334,7 @@ object ConfigManager {
     /**
      * Applies all settings and macropad data from [export] to the running app state.
      * Settings are awaited so callers know the DataStore write completed before showing success.
-     * MacroPad profiles get new UUIDs and "(Imported)" suffix.
+     * MacroPad profiles get new UUIDs to avoid collisions; names are kept as-is.
      */
     suspend fun applyImport(export: MegingiardExport) {
         AppLog.i(TAG, "applyImport: schema=${export.schemaVersion}")
@@ -303,6 +344,16 @@ object ConfigManager {
         if (export.profiles.isNotEmpty()) {
             importMacroPadData(export.profiles)
         }
+    }
+
+    /**
+     * Imports only the profiles from [export]; never touches app settings.
+     * Throws [IllegalStateException] if [export] contains no profiles.
+     */
+    suspend fun applyProfileImport(export: MegingiardExport) {
+        AppLog.i(TAG, "applyProfileImport: schema=${export.schemaVersion} profiles=${export.profiles.size}")
+        check(export.profiles.isNotEmpty()) { "The file does not contain any profiles" }
+        importMacroPadData(export.profiles)
     }
 
     // ── MacroPad import with UUID remapping ─────────────────────────────────
@@ -322,7 +373,7 @@ object ConfigManager {
             val remappedMacros = profile.macros.map { macro ->
                 val newId = UUID.randomUUID().toString()
                 macroIdMap[macro.id] = newId
-                macro.copy(id = newId, name = importedName(macro.name))
+                macro.copy(id = newId)
             }
 
             // Remap macro references in button actions
@@ -346,7 +397,7 @@ object ConfigManager {
 
             val importedProfile = profile.copy(
                 id = newProfileId,
-                name = importedName(profile.name),
+                name = profile.name,
                 layouts = remappedLayouts,
                 macros = remappedMacros,
                 activeLayoutId = preservedActiveLayoutId,
@@ -361,8 +412,6 @@ object ConfigManager {
         val newMacroId = macroIdMap[action.macroId] ?: action.macroId
         return PadAction.Macro(macroId = newMacroId)
     }
-
-    private fun importedName(original: String) = "$original (Imported)"
 
     // ── Checksum ─────────────────────────────────────────────────────────────
 
