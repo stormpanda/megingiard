@@ -292,6 +292,17 @@ MacroPadEditor (Composable, opened from MacroPadToolSettings)
       └── Macro library (MacroListEditor, per-profile flat list)
 
 MacroTimelineEditor (Composable, opened from MacroListEditor)
+  ├── Top bar: macro name field + save button + undo/redo
+  ├── Shift-mode chip selector (default shift behaviour)
+  ├── Section header: "MACRO-STEPS" — view-mode chips (List / Timeline)
+  │     List mode:
+  │       ├── Step list (reorderable, each step editable/deletable)
+  │       └── StepActionRow (Add / Record Touch / Record Gamepad / Test)
+  │     Timeline mode:
+  │       ├── MacroVerticalTimeline (Canvas-rendered step bars, tap to edit)
+  │       └── StepActionRow
+  ├── Section header: "MACRO SETTINGS"
+  ├── Loop toggle + pause slider
   ├── Record Touch → TouchRecordingManager → RecordingMirrorPresentation
   └── Record Gamepad → GamepadRecordingOverlay
      ├── live passthrough via GamepadInjector (gamepadinjector_arm64)

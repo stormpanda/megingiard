@@ -41,7 +41,6 @@ import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -79,6 +78,8 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
+import com.stormpanda.megingiard.ui.AppSettingsRow
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
@@ -420,7 +421,7 @@ private fun EditorTopBar(
             textStyle    = MaterialTheme.typography.titleMedium,
             fillMaxWidth = true,
             footerContent = { dismiss ->
-                HorizontalDivider(color = colors.divider)
+                AppDivider()
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.settings_macropad_new_profile), color = accentColor, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { dismiss(); onNewProfileRequested() },
@@ -613,10 +614,7 @@ private fun EditorBody(
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )
-                    HorizontalDivider(
-                        color    = colors.divider,
-                        modifier = Modifier.padding(horizontal = ED_PADDING),
-                    )
+                    AppDivider(modifier = Modifier.padding(horizontal = ED_PADDING))
                 }
             }
         }
@@ -788,7 +786,7 @@ private fun LayoutSettingsContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth().background(colors.surface)) {
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_no_mirror),
             selected = layout.buttonColorNoMirror,
@@ -796,7 +794,7 @@ private fun LayoutSettingsContent(
                 MacroPadState.updateLayout(layout.copy(buttonColorNoMirror = style))
             },
         )
-        HorizontalDivider(color = colors.divider)
+        AppDivider()
         ButtonColorStyleRow(
             label    = stringResource(R.string.macropad_editor_button_color_mirror),
             selected = layout.buttonColorMirror,
@@ -815,13 +813,7 @@ private fun ButtonColorStyleRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    Row(
-        modifier          = modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = ED_PADDING, vertical = ED_ITEM_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    AppSettingsRow(modifier = modifier) {
         Text(
             text     = label,
             color    = colors.onSurface,

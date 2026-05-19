@@ -26,7 +26,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
+import com.stormpanda.megingiard.ui.AppDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -219,12 +219,12 @@ private fun MacroListView(
             }
         }
 
-        HorizontalDivider(color = colors.divider)
+        AppDivider()
 
         // ── Flat macro list ──────────────────────────────────────────────────
         LazyColumn(
             state    = lazyListState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().background(colors.surface),
         ) {
             item(key = "section_list") {
                 Text(
@@ -248,7 +248,7 @@ private fun MacroListView(
                         onDelete           = { deletingMacroId = macro.id },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )
-                    HorizontalDivider(color = colors.divider)
+                    AppDivider()
                 }
             }
         }

@@ -2,10 +2,8 @@ package com.stormpanda.megingiard.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -28,6 +25,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.AppSettingsRow
+import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
 import java.util.Locale
 
@@ -66,17 +65,10 @@ internal fun SettingsCategoryHeader(
 @Composable
 internal fun OverlayPositionRow(
     overlayAtBottom: Boolean,
-    accentColor: Color,
-    colors: AppColors,
     onChanged: (Boolean) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    val colors = LocalAppColors.current
+    AppSettingsRow {
         Text(
             text = stringResource(R.string.settings_overlay_position),
             color = colors.onSurface,
@@ -100,16 +92,9 @@ internal fun ThemeMode.displayNameResId(): Int = when (this) {
 internal fun ThemePickerRow(
     themeMode: ThemeMode,
     accentColor: Color,
-    colors: AppColors,
     onChanged: (ThemeMode) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    AppSettingsRow {
         SettingLabelColumn(
             label = stringResource(R.string.settings_theme),
             subtitle = stringResource(themeMode.displayNameResId()),
@@ -125,20 +110,15 @@ internal fun ThemePickerRow(
     }
 }
 
+private val GS_ACCENT_ROW_V_PADDING = 16.dp
+
 @Composable
 internal fun AccentColorRow(
     accentColor: Color,
-    colors: AppColors,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    val colors = LocalAppColors.current
+    AppSettingsRow(onClick = onClick, verticalPadding = GS_ACCENT_ROW_V_PADDING) {
         Text(
             text = stringResource(R.string.settings_accent_color),
             color = colors.onSurface,
@@ -174,16 +154,9 @@ internal fun AppLanguage.displayNameResId(): Int = when (this) {
 internal fun LogLevelPickerRow(
     logLevel: AppLog.Level,
     accentColor: Color,
-    colors: AppColors,
     onChanged: (AppLog.Level) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    AppSettingsRow {
         SettingLabelColumn(
             label = stringResource(R.string.settings_log_level),
             subtitle = logLevel.displayName(),
@@ -203,16 +176,9 @@ internal fun LogLevelPickerRow(
 internal fun LanguagePickerRow(
     language: AppLanguage,
     accentColor: Color,
-    colors: AppColors,
     onChanged: (AppLanguage) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    AppSettingsRow {
         SettingLabelColumn(
             label = stringResource(R.string.settings_language),
             subtitle = stringResource(language.displayNameResId()),
@@ -239,17 +205,9 @@ internal fun LanguagePickerRow(
 @Composable
 internal fun SaveLogReportRow(
     accentColor: Color,
-    colors: AppColors,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    AppSettingsRow(onClick = onClick) {
         SettingLabelColumn(
             label = stringResource(R.string.settings_save_log_report),
             subtitle = stringResource(R.string.settings_save_log_report_desc),
@@ -277,17 +235,9 @@ internal fun ConfigActionRow(
     label: String,
     description: String,
     accentColor: Color,
-    colors: AppColors,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    AppSettingsRow(onClick = onClick) {
         SettingLabelColumn(label = label, subtitle = description, modifier = Modifier.weight(1f))
         Icon(
             imageVector = Icons.AutoMirrored.Rounded.ArrowForward,

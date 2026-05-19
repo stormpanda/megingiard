@@ -26,7 +26,7 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 ### FR-TH2: Token-Based Colour Architecture
 
-- All screen and component colours MUST be expressed through the 30 semantic tokens defined in `AppColors`.
+- All screen and component colours MUST be expressed through the 35 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
   - HSV colour-wheel rendering math in `ColorWheelPicker.kt` (saturation gradient, brightness overlay, selector dot ring).
   - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour (e.g. white in Dark/Light, dark red in Cyberpunk).
@@ -45,44 +45,45 @@ Megingiard supports user-selectable colour themes. The app currently provides th
 
 ### Token Definitions — `ui/AppTheme.kt`
 
-Thirty semantic `AppColors` tokens cover all theming needs:
+Thirty-five semantic `AppColors` tokens cover all theming needs:
 
-| Token                    | Semantic purpose                                                        |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `appBackground`          | Full-screen background                                                  |
-| `surface`                | Card / panel / row surface                                              |
-| `surfaceVariant`         | Elevated surface (e.g. dragged item)                                    |
-| `onSurface`              | Primary text                                                            |
-| `onSurfaceSecondary`     | Secondary / hint text                                                   |
-| `divider`                | Subtle separator lines                                                  |
-| `controlOverlay`         | Floating control pill background                                        |
-| `onControlOverlay`       | Text / icons on the control overlay                                     |
-| `fingerCircle`           | Finger-indicator circle — always white-tinted (theme-invariant)         |
-| `keyBackground`          | Key face (normal)                                                       |
-| `keyPressed`             | Key face (pressed)                                                      |
-| `keyModifierActive`      | Modifier key when sticky/held                                           |
-| `touchpadBackground`     | Touchpad surface                                                        |
-| `touchpadIndicator`      | Touchpad border / hint dots                                             |
-| `pickerBackground`       | Color-picker dialog background                                          |
-| `accentBorder`           | Accent-colour swatch border                                             |
-| `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme) |
-| `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined) |
-| `pillIdleColor`          | Always-visible pull-tab pill colour                                     |
-| `controlIndicatorActive` | Active mode indicator dot in the navigation pill                        |
-| `navPillBody`            | Navigation pill background (tracks accent in Dark/Light)                |
-| `buttonBody`             | Mirror control button background (tracks accent in Dark/Light)          |
-| `controlOverlayBorder`   | Border/outline of the carousel control overlay container                |
-| `navPillBorder`          | Border/outline of the navigation pill                                   |
-| `mirrorPillBorder`       | Border/outline of the mirror control pill                               |
-| `buttonIconTint`         | Icon tint on mirror control buttons                                     |
-| `error`                  | Destructive/error action color                                          |
-| `onError`                | Text/icons on error-colored surfaces                                    |
-| `actionColorGamepad`     | Badge tint for gamepad/joystick macro step chips                        |
-| `actionColorSystem`      | Badge tint for system/d-pad macro step chips                            |
-| `macroPadSurface`        | MacroPad button-placement canvas/surface                                |
-| `macroPadOnSurface`      | MacroPad button-placement text/icons                                    |
-| `macroPadAccentBorder`   | MacroPad placement border/outline tint                                  |
-| `sectionHeaderColor`     | Uppercase section-header label tint                                     |
+| Token                    | Semantic purpose                                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `appBackground`          | Full-screen background                                                                                                             |
+| `surface`                | Card / panel / row surface                                                                                                         |
+| `surfaceVariant`         | Elevated surface (e.g. dragged item)                                                                                               |
+| `onSurface`              | Primary text                                                                                                                       |
+| `onSurfaceSecondary`     | Secondary / hint text                                                                                                              |
+| `divider`                | Subtle separator lines                                                                                                             |
+| `controlOverlay`         | Floating control pill background                                                                                                   |
+| `onControlOverlay`       | Text / icons on the control overlay                                                                                                |
+| `fingerCircle`           | Finger-indicator circle — always white-tinted (theme-invariant)                                                                    |
+| `keyBackground`          | Key face (normal)                                                                                                                  |
+| `keyPressed`             | Key face (pressed)                                                                                                                 |
+| `keyModifierActive`      | Modifier key when sticky/held                                                                                                      |
+| `touchpadBackground`     | Touchpad surface                                                                                                                   |
+| `touchpadIndicator`      | Touchpad border / hint dots                                                                                                        |
+| `pickerBackground`       | Color-picker dialog background                                                                                                     |
+| `accentBorder`           | Accent-colour swatch border                                                                                                        |
+| `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
+| `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined)                                                            |
+| `pillIdleColor`          | Always-visible pull-tab pill colour                                                                                                |
+| `controlIndicatorActive` | Active mode indicator dot in the navigation pill                                                                                   |
+| `navPillBody`            | Navigation pill background (tracks accent in Dark/Light)                                                                           |
+| `buttonBody`             | Mirror control button background (tracks accent in Dark/Light)                                                                     |
+| `controlOverlayBorder`   | Border/outline of the carousel control overlay container                                                                           |
+| `navPillBorder`          | Border/outline of the navigation pill                                                                                              |
+| `mirrorPillBorder`       | Border/outline of the mirror control pill                                                                                          |
+| `buttonIconTint`         | Icon tint on mirror control buttons                                                                                                |
+| `error`                  | Destructive/error action color                                                                                                     |
+| `onError`                | Text/icons on error-colored surfaces                                                                                               |
+| `actionColorGamepad`     | Badge tint for gamepad/joystick macro step chips                                                                                   |
+| `actionColorSystem`      | Badge tint for system/d-pad macro step chips                                                                                       |
+| `macroPadSurface`        | MacroPad button-placement canvas/surface                                                                                           |
+| `macroPadOnSurface`      | MacroPad button-placement text/icons                                                                                               |
+| `macroPadAccentBorder`   | MacroPad placement border/outline tint                                                                                             |
+| `sectionHeaderColor`     | Uppercase section-header label tint                                                                                                |
+| `settingsSeparator`      | Thin divider between transparent settings rows (distinct from `divider`); tuned per theme to the settings screen/dialog background |
 
 ### Palettes
 
@@ -90,7 +91,7 @@ Three palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `lightPalette` — white/light-grey surfaces with near-black text.
-- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white pull-tab/section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules.
+- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules. The pull-tab pill uses `CP_PILL_IDLE` (`Color.White.copy(alpha = 0.4f)`), consistent with the per-palette `DARK_PILL_IDLE` and `LIGHT_PILL_IDLE` constants in the other themes.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -153,6 +154,28 @@ MaterialTheme(
 - Selection dropdowns use the shared `AppDropdown` composable, styled after the Ambient Settings vignette-shape picker: a compact rounded trigger with subtle surface tint, trailing drop-down icon, themed surface menu, and accent-coloured selected item.
 - `AppDropdown` supports compact trailing controls, full-width form fields, disabled empty states, and optional footer actions for selectors such as the MacroPad profile picker.
 - Context/action menus that are not value selectors may continue to use Material `DropdownMenu` directly.
+
+### Settings Rows — `ui/AppSettingsRow.kt`
+
+All settings rows across the app (Global Settings, Keyboard/Touchpad tool settings, MacroPad editor layout settings) use the shared container composables `AppSettingsRow` and `AppDivider`.
+
+**`AppSettingsRow`** is a transparent container:
+
+- Applies consistent `16.dp` horizontal and `12.dp` vertical padding by default (both overridable).
+- Enforces a `48.dp` minimum touch-target height.
+- Adds `Modifier.clickable` only when `onClick` is non-null (rows without an action are not clickable).
+- Has **no background** — the parent section/dialog/screen owns the background.
+
+**`AppDivider`** renders a thin `HorizontalDivider` using `AppColors.settingsSeparator` as its default colour.
+
+- `settingsSeparator` is a dedicated token distinct from `divider`; it is tuned per theme for the standard settings/content background, while `divider` continues to serve non-row drawing (timeline grid lines, lane tick marks).
+- Values: Dark `White(α=0.10)`, Light `#1C1C1E(α=0.10)`, Cyberpunk `CP_SECTION_HEADER(α=0.12)`.
+- Use `AppDivider` everywhere a visible horizontal rule is needed — settings rows, content lists, dialog dividers, and card separators alike.
+- The `divider` token is reserved for non-row guide lines drawn directly on a Canvas (e.g. `MacroVerticalTimeline`).
+
+**`pillIdleColor` — per-palette constants:** Each palette defines its own named constant (`DARK_PILL_IDLE`, `LIGHT_PILL_IDLE`, `CP_PILL_IDLE`), all set to `Color.White.copy(alpha = 0.4f)`. This ensures consistent pull-tab visibility across Dark, Light, and Cyberpunk themes while keeping theme-specific constants for future divergence.
+
+**Background ownership rule:** Settings rows are transparent. The parent `Column` that groups a set of settings rows is responsible for setting `Modifier.background(colors.surface)`. This is why `GlobalSettingsScreen.SettingsSection` and `AmbientSettingsOverlay` wrap their row groups in `Column(modifier = Modifier.fillMaxWidth().background(colors.surface))` rather than per-row backgrounds.
 
 ### Persistence — `SettingsManager.kt`
 
