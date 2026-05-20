@@ -115,13 +115,13 @@ The `(1 - normalizedY)` inversion maps the display's **top edge** (`normalizedY 
 >
 > In **mouse mode** `FullscreenMouseOverlay` uses `MouseInjector` instead. Relative delta values from Compose pointer events are scaled by `TP_MOUSE_SENSITIVITY` and forwarded to `MouseInjector.moveMouse(dx, dy)`. Tap gestures (single-finger and two-finger) are detected via slop + time thresholds and mapped to LMB / RMB clicks.
 
-### Secondary Display Rendering (Ambient Mode)
+### Secondary Display Rendering (Background Display Mode)
 
-When the MacroPad is in **ambient mode** (`AmbientSettings.macropadAmbientEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `AmbientMacroPadOverlay` — so it appears on the secondary display.
+When the MacroPad is in **background display mode** (`BackgroundSettings.macropadBackgroundEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
 
-`MainAppScreen` suppresses the `FullscreenMouseOverlay` instance on the primary display whenever ambient mode is active, ensuring only one instance of `MouseInjector` runs at a time.
+`MainAppScreen` suppresses the `FullscreenMouseOverlay` instance on the primary display whenever background display mode is active, ensuring only one instance of `MouseInjector` runs at a time.
 
-Dismissal on the secondary display reuses the existing swipe-to-close path in `AmbientMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
+Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
 
 ### Pointer Event Handling in FullscreenMouseOverlay
 

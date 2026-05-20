@@ -193,8 +193,8 @@ internal fun PadButton(
             Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
         } else if (btn.action is PadAction.ScrollWheel) {
             ScrollWheelFace(accentColor = effectiveContentAccent)
-        } else if (btn.action is PadAction.AmbientPeek) {
-            AmbientPeekFace(accentColor = effectiveContentAccent)
+        } else if (btn.action is PadAction.BackgroundPeek) {
+            BackgroundPeekFace(accentColor = effectiveContentAccent)
         } else {
             val iconName = btn.iconName
             if (iconName != null) {
@@ -243,7 +243,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun AmbientPeekFace(accentColor: Color) {
+internal fun BackgroundPeekFace(accentColor: Color) {
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     Icon(
         imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,

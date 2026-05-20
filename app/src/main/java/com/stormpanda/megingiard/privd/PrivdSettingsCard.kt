@@ -16,9 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import com.stormpanda.megingiard.ui.AppDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -58,6 +61,7 @@ private const val PR_DIALOG_SCRIM_ALPHA = 0.5f
 private const val PR_DIALOG_WIDTH_FRACTION = 0.85f
 private val PR_DIALOG_CORNER = 16.dp
 private val PR_DIALOG_PADDING = 20.dp
+private val PR_ARROW_ICON_SIZE = 16.dp
 private val PR_DIALOG_SLIDER_GAP = 8.dp
 private val PR_DIALOG_PCT_WIDTH = 52.dp
 
@@ -232,6 +236,32 @@ internal fun PrivdSettingsCard(
             )
         }
 
+        // ── Per-feature toggle: Privileged screen mirror ─────────────────────
+        AppDivider()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = PR_ROW_V_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.privd_feature_mirror),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.privd_feature_mirror_desc),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Switch(
+                checked = mirrorEnabled,
+                onCheckedChange = { viewModel.setPrivdMirrorEnabled(it) },
+            )
+        }
+
         // ── Per-feature toggle: Gamepad merge ───────────────────────────────
         AppDivider()
         Row(
@@ -284,32 +314,6 @@ internal fun PrivdSettingsCard(
             )
         }
 
-        // ── Per-feature toggle: Privileged Mirror ─────────────────────────────
-        AppDivider()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = PR_ROW_V_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.privd_feature_mirror),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = stringResource(R.string.privd_feature_mirror_desc),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Switch(
-                checked = mirrorEnabled,
-                onCheckedChange = { viewModel.setPrivdMirrorEnabled(it) },
-            )
-        }
-
         // ── Dead-zone configuration row ──────────────────────────────────────
         AppDivider()
         Row(
@@ -331,10 +335,16 @@ internal fun PrivdSettingsCard(
                         (deadzoneLeft * 100).toInt(),
                         (deadzoneRight * 100).toInt(),
                     ),
-                    color = colors.onSurfaceSecondary,
+                    color = colors.accent,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                contentDescription = null,
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(PR_ARROW_ICON_SIZE),
+            )
         }
     }
 }

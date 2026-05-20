@@ -162,8 +162,8 @@ fun PillMenu(
                         enter = slideInVertically { -it },
                         exit  = slideOutVertically { -it },
                     ),
-                onAmbientSettings = {
-                    AppStateManager.setAmbientSettingsActive(true)
+                onBackgroundSettings = {
+                    AppStateManager.setBackgroundSettingsActive(true)
                     onDismiss()
                 },
                 onStart = {
@@ -432,7 +432,7 @@ private fun MirrorControlCard(
     isViewportEditActive: Boolean,
     isTouchProjectionActive: Boolean,
     modifier: Modifier = Modifier,
-    onAmbientSettings: () -> Unit,
+    onBackgroundSettings: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
@@ -455,12 +455,12 @@ private fun MirrorControlCard(
             .padding(horizontal = PM_CONTENT_PADDING, vertical = PM_MIRROR_CARD_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Ambient Settings button (left)
+        // Background Settings button (left)
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .border(PM_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .clickable(onClick = onAmbientSettings)
+                .clickable(onClick = onBackgroundSettings)
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
         ) {

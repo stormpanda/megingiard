@@ -275,7 +275,7 @@ internal fun PadSurface(
         ) {
             // Render buttons (filtered by peek state)
             val visibleButtons = if (isPeekActive) {
-                layout.buttons.filter { it.action is PadAction.AmbientPeek }
+                layout.buttons.filter { it.action is PadAction.BackgroundPeek }
             } else {
                 layout.buttons
             }

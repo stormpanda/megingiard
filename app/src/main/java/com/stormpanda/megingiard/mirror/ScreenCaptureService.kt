@@ -21,7 +21,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CaptureRequestActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
-import com.stormpanda.megingiard.settings.AmbientSettings
+import com.stormpanda.megingiard.settings.BackgroundSettings
 import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -156,7 +156,7 @@ class ScreenCaptureService : Service() {
                     virtualDisplay?.setSurface(activeSurface)
                     AppLog.d(TAG, "VirtualDisplay surface reattached after show()")
                 } else {
-                    val ambientEnabled = AmbientSettings.macropadAmbientEnabled.value
+                    val ambientEnabled = BackgroundSettings.macropadBackgroundEnabled.value
                     if (ambientEnabled) {
                         try {
                             virtualDisplay = mediaProjection?.createVirtualDisplay(

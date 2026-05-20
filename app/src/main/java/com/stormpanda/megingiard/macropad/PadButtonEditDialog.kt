@@ -60,7 +60,7 @@ private const val PBD_ICON_FULLSCREEN_MOUSE = "mouse"
 private const val PBD_ICON_FULLSCREEN_KEYBOARD = "keyboard"
 private const val PBD_ICON_MACRO = "smart_button"
 private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
-private const val PBD_ICON_AMBIENT_PEEK = "visibility"
+private const val PBD_ICON_BACKGROUND_PEEK = "visibility"
 
 /**
  * Maps a [PadAction] type to its localised label string resource.
@@ -79,7 +79,7 @@ private fun PadAction.defaultLabelRes(): Int? = when (this) {
     is PadAction.FullScreenMouse       -> R.string.macropad_action_fullscreen_mouse
     is PadAction.FullScreenKeyboard    -> R.string.macropad_action_fullscreen_keyboard
     is PadAction.Macro                 -> R.string.macropad_action_macro
-    is PadAction.AmbientPeek           -> R.string.macropad_action_ambient_peek
+    is PadAction.BackgroundPeek           -> R.string.macropad_action_ambient_peek
     else                               -> null
 }
 
@@ -95,7 +95,7 @@ private fun PadAction.editorDefaultIconName(): String? = when (this) {
     is PadAction.FullScreenMouse       -> PBD_ICON_FULLSCREEN_MOUSE
     is PadAction.FullScreenKeyboard    -> PBD_ICON_FULLSCREEN_KEYBOARD
     is PadAction.Macro                 -> PBD_ICON_MACRO
-    is PadAction.AmbientPeek           -> PBD_ICON_AMBIENT_PEEK
+    is PadAction.BackgroundPeek           -> PBD_ICON_BACKGROUND_PEEK
     else                               -> null
 }
 

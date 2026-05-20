@@ -40,8 +40,6 @@
     <string name="theme_light">Hell</string>
     <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
-    <string name="settings_show_navigation_coach_marks">Navigationshinweise anzeigen</string>
-    <string name="settings_show_navigation_coach_marks_desc">Erstnutzer-Hinweis zum Öffnen des Pill-Menüs anzeigen</string>
     <string name="settings_show_mirror_control_labels">Spiegelsteuerungsbeschriftungen anzeigen</string>
     <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
@@ -268,8 +266,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_feature_gamepad_recording">Physisches Gamepad aufzeichnen</string>
     <string name="privd_feature_gamepad_recording_desc">Nimmt Makro-Schritte direkt vom physischen Gamepad auf (Analogsticks, Tasten). Wenn aktiviert, nutzt die Aufnahme-Schaltfläche im Timeline-Editor den physischen Controller statt des virtuellen On-Screen-Gamepads.</string>
 
-    <string name="privd_feature_mirror">Privilegierte Spiegelung</string>
-    <string name="privd_feature_mirror_desc">Spiegelt den Primärbildschirm über den geräteinternen privilegierten Daemon (kein MediaProjection-Dialog, geringere CPU-Last). DRM-geschützte Videoframes erscheinen schwarz — wie bei scrcpy.</string>
+    <string name="privd_feature_mirror">Privilegierter Bildschirm-Spiegel</string>
+    <string name="privd_feature_mirror_desc">Spiegelt den Primärbildschirm über den geräteinternen privilegierten Daemon (kein MediaProjection-Dialog, geringere CPU-Last).</string>
 
     <!-- Dead-zone-Einstellungen Zeile + Dialog -->
     <string name="privd_deadzone_title">Deadzones einstellen</string>
@@ -460,8 +458,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_name_error_empty">Name darf nicht leer sein.</string>
     <string name="settings_name_error_duplicate">Dieser Name existiert bereits.</string>
     <string name="overlay_exit_hint_swipe">Vom Rand-Pill wischen, um dieses Vollbild-Overlay zu schließen.</string>
-    <string name="pill_coach_mark_text">Wische vom Rand-Pill, um das Menü zu öffnen.</string>
-    <string name="pill_coach_mark_dismiss">Verstanden</string>
     <string name="wrong_screen_retry">Erkennung wiederholen</string>
     <string name="wrong_screen_help">Hilfe</string>
     <string name="wrong_screen_help_message">Öffne die Letzte Apps-Ansicht, ziehe Megingiard auf das untere Display, dann tippe Erkennung wiederholen.</string>
@@ -475,6 +471,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
     <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="settings_restore_defaults_confirm_button">Wiederherstellen</string>
+    <string name="settings_restore_defaults_confirm_countdown">Wiederherstellen (%1$d)</string>
     <string name="settings_cancel">Abbrechen</string>
 
     <!-- Configuration export/import -->

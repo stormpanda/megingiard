@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
@@ -55,12 +54,12 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
-import com.stormpanda.megingiard.macropad.AmbientSettingsOverlay
+import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.settings.AmbientSettings
+import com.stormpanda.megingiard.settings.BackgroundSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
@@ -87,10 +86,8 @@ fun MainAppScreen() {
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
-    val isAmbientSettingsActive by AppStateManager.isAmbientSettingsActive.collectAsState()
-    val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
-    val showNavigationCoachMarks by SettingsManager.showNavigationCoachMarks.collectAsState()
-    val ambientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
+    val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
+    val ambientEnabled by BackgroundSettings.macropadBackgroundEnabled.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
     val density = LocalDensity.current
@@ -189,27 +186,20 @@ fun MainAppScreen() {
             )
         }
         AnimatedVisibility(
-            visible  = isAmbientSettingsActive,
+            visible  = isBackgroundSettingsActive,
             enter    = slideInVertically { it } + fadeIn(),
             exit     = slideOutVertically { it } + fadeOut(),
             modifier = Modifier.fillMaxSize(),
         ) {
-            AmbientSettingsOverlay(
-                onDone = { AppStateManager.setAmbientSettingsActive(false) },
+            BackgroundSettingsOverlay(
+                onDone = { AppStateManager.setBackgroundSettingsActive(false) },
             )
         }
 
         // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
         // are open because those modals render their own full-screen chrome.
-        if (!isEditorActive && !isAmbientSettingsActive) {
+        if (!isEditorActive && !isBackgroundSettingsActive) {
             IdlePill()
-            if (showNavigationCoachMarks && !isPillMenuOpen) {
-                NavigationCoachMark(
-                    overlayAtBottom = overlayAtBottom,
-                    colors = colors,
-                    onDismiss = { SettingsManager.setShowNavigationCoachMarks(false) },
-                )
-            }
         }
 
         // ── Global wrong-screen overlay ─────────────────────────────────────
@@ -341,40 +331,6 @@ private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
                     },
                     containerColor = colors.surface,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NavigationCoachMark(
-    overlayAtBottom: Boolean,
-    colors: AppColors,
-    onDismiss: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(
-                top = if (overlayAtBottom) 0.dp else 24.dp,
-                bottom = if (overlayAtBottom) 24.dp else 0.dp,
-            ),
-        contentAlignment = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .background(colors.surface.copy(alpha = 0.92f), RoundedCornerShape(20.dp))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.pill_coach_mark_text),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.pill_coach_mark_dismiss), color = colors.accent)
             }
         }
     }

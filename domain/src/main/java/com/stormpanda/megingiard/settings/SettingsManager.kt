@@ -64,9 +64,6 @@ object SettingsManager {
     private val _overlayAtBottom = MutableStateFlow(false)
     val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
 
-    private val _showNavigationCoachMarks = MutableStateFlow(true)
-    val showNavigationCoachMarks: StateFlow<Boolean> = _showNavigationCoachMarks.asStateFlow()
-
     private val _showMirrorControlLabels = MutableStateFlow(false)
     val showMirrorControlLabels: StateFlow<Boolean> = _showMirrorControlLabels.asStateFlow()
 
@@ -76,7 +73,7 @@ object SettingsManager {
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
     // Touchpad settings live in [TouchpadSettings].
-    // MacroPad ambient display settings live in [AmbientSettings].
+    // MacroPad background display settings live in [BackgroundSettings].
     // MacroPad recording dialogs + gamepad-swap + macropad profile data live in [MacroPadSettings].
 
     // App language
@@ -122,7 +119,7 @@ object SettingsManager {
         // can persist their own settings without each one opening its own DataStore.
         KeyboardSettings.init(dataStore, scope)
         TouchpadSettings.init(dataStore, scope)
-        AmbientSettings.init(dataStore, scope)
+        BackgroundSettings.init(dataStore, scope)
         MirrorSettings.init(dataStore, scope)
         MacroPadSettings.init(dataStore, scope)
 
@@ -136,7 +133,6 @@ object SettingsManager {
                 _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                 _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                 _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
-                _showNavigationCoachMarks.value = prefs[KEY_SHOW_NAVIGATION_COACH_MARKS] ?: true
                 _showMirrorControlLabels.value = prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] ?: false
                 _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
                 MirrorSettings.loadFrom(prefs)
@@ -145,7 +141,7 @@ object SettingsManager {
                 _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                 _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
                 AppLog.level = _logLevel.value
-                AmbientSettings.loadFrom(prefs)
+                BackgroundSettings.loadFrom(prefs)
                 MacroPadSettings.loadFrom(prefs)
             }
         }
@@ -187,16 +183,6 @@ object SettingsManager {
         }
     }
 
-    fun setShowNavigationCoachMarks(value: Boolean) {
-        AppLog.d(TAG, "setShowNavigationCoachMarks($value)")
-        _showNavigationCoachMarks.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_SHOW_NAVIGATION_COACH_MARKS] = value
-            }
-        }
-    }
-
     fun setShowMirrorControlLabels(value: Boolean) {
         AppLog.d(TAG, "setShowMirrorControlLabels($value)")
         _showMirrorControlLabels.value = value
@@ -234,7 +220,7 @@ object SettingsManager {
 
     // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].
 
-    // MacroPad ambient setters live in [AmbientSettings].
+    // MacroPad background setters live in [BackgroundSettings].
     // MacroPad recording-dialog flags + gamepad-swap setter + saveMacroPadData live in [MacroPadSettings].
 
     // Mirror session state save/restore lives in [MirrorSettings].

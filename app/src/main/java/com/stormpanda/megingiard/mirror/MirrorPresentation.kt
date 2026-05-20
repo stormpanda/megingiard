@@ -43,11 +43,11 @@ import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
-import com.stormpanda.megingiard.macropad.AmbientMacroPadOverlay
+import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
-import com.stormpanda.megingiard.settings.AmbientSettings
+import com.stormpanda.megingiard.settings.BackgroundSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
 import com.stormpanda.megingiard.ui.AppDimens
@@ -241,7 +241,7 @@ class MirrorPresentation(
                         colorScheme = colorSchemeFor(appColors, themeMode),
                         typography = megingiardTypography
                     ) {
-                        val ambientEnabled by AmbientSettings.macropadAmbientEnabled.collectAsState()
+                        val ambientEnabled by BackgroundSettings.macropadBackgroundEnabled.collectAsState()
                         val capturing by ScreenCaptureManager.isCapturing.collectAsState()
                         val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
                         val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
@@ -394,12 +394,12 @@ class MirrorPresentation(
                                 )
                             }
 
-                            // Layer 2: AmbientMacroPadOverlay — always rendered when active
+                            // Layer 2: BackgroundMacroPadOverlay — always rendered when active
                             // so IdlePill remains visible in all modes. Internally hides
                             // buttons/dim/vignette during touch projection, freeze, and
                             // viewport edit.
                             if (ambientEnabled && capturing) {
-                                AmbientMacroPadOverlay(showIdlePill = false)
+                                BackgroundMacroPadOverlay(showIdlePill = false)
                             }
 
                             // Layer 3: Viewport edit gesture overlay — transparent fullscreen
@@ -411,7 +411,7 @@ class MirrorPresentation(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         // Reserve the IdlePill swipe edge zone so
-                                        // AmbientMacroPadOverlay's SwipeGestureProcessor
+                                        // BackgroundMacroPadOverlay's SwipeGestureProcessor
                                         // can detect the edge-swipe and call
                                         // handleEdgeSwipe() → closeActiveModal().
                                         .padding(
@@ -430,16 +430,16 @@ class MirrorPresentation(
                                 )
                             }
 
-                            // Layer 4: Fullscreen Mouse Overlay — rendered above ambient
-                            // content when triggered from AmbientMacroPadOverlay buttons.
-                            // Dismissed via edge-swipe → AmbientMacroPadOverlay's
+                            // Layer 4: Fullscreen Mouse Overlay — rendered above background
+                            // content when triggered from BackgroundMacroPadOverlay buttons.
+                            // Dismissed via edge-swipe → BackgroundMacroPadOverlay's
                             // SwipeGestureProcessor → AppStateManager.closeActiveModal().
                             if (ambientEnabled && capturing && isFullscreenMouseActive) {
                                 FullscreenMouseOverlay()
                             }
 
-                            // Layer 5: Fullscreen Keyboard Overlay — rendered above ambient
-                            // content when triggered from AmbientMacroPadOverlay buttons.
+                            // Layer 5: Fullscreen Keyboard Overlay — rendered above background
+                            // content when triggered from BackgroundMacroPadOverlay buttons.
                             // Dismissed via edge-swipe → AppStateManager.closeActiveModal().
                             if (ambientEnabled && capturing && isFullscreenKeyboardActive) {
                                 KeyboardScreen(
@@ -451,7 +451,7 @@ class MirrorPresentation(
                             // Layer 6: IdlePill — always the topmost layer so the swipe
                             // affordance and PillMenu are never covered by fullscreen
                             // overlays (keyboard / mouse). Suppressed inside
-                            // AmbientMacroPadOverlay (showIdlePill = false) to ensure
+                            // BackgroundMacroPadOverlay (showIdlePill = false) to ensure
                             // only one IdlePill instance exists at a time.
                             if (ambientEnabled && capturing) {
                                 IdlePill()
@@ -490,7 +490,7 @@ class MirrorPresentation(
                 AppStateManager.isPillMenuOpen,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
-                AppStateManager.isAmbientSettingsActive,
+                AppStateManager.isBackgroundSettingsActive,
             ) { fullscreenKeyboard, pillMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
@@ -499,7 +499,7 @@ class MirrorPresentation(
                         isPillMenuOpen = pillMenuOpen,
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
-                        isAmbientSettingsActive = ambientSettingsActive,
+                        isBackgroundSettingsActive = ambientSettingsActive,
                     )
                 )
             }
@@ -509,11 +509,11 @@ class MirrorPresentation(
         scope.launch {
             combine(
                 AppStateManager.isOnValidScreen,
-                AmbientSettings.macropadAmbientEnabled,
+                BackgroundSettings.macropadBackgroundEnabled,
                 ScreenCaptureManager.isCapturing,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
-                AppStateManager.isAmbientSettingsActive,
+                AppStateManager.isBackgroundSettingsActive,
                 AppStateManager.isAmbientPreviewActive,
             ) { values ->
                 val isValid = values[0] as Boolean
@@ -539,7 +539,7 @@ class MirrorPresentation(
                 //
                 // ambientPreviewActive: during preview mode the Presentation stays visible
                 // so the user can see the live mirror + dimmed buttons behind the
-                // transparent AmbientSettingsOverlay on the primary screen (same visual
+                // transparent BackgroundSettingsOverlay on the primary screen (same visual
                 // as viewport edit mode). Primary-screen input is unaffected because the
                 // Presentation sits on the secondary display.
                 capturing && isValid && ambientEnabled &&

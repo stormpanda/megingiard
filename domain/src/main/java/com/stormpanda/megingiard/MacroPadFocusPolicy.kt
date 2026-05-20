@@ -8,7 +8,7 @@ data class MacroPadFocusPolicyState(
     val isPillMenuOpen: Boolean = false,
     val isFilePickerOpen: Boolean = false,
     val isEditorActive: Boolean = false,
-    val isAmbientSettingsActive: Boolean = false,
+    val isBackgroundSettingsActive: Boolean = false,
 )
 
 /**
@@ -20,7 +20,7 @@ fun shouldKeepPrimaryGameFocus(state: MacroPadFocusPolicyState): Boolean {
     val hasInteractiveOverlay = state.isPillMenuOpen ||
         state.isFilePickerOpen ||
         state.isEditorActive ||
-        state.isAmbientSettingsActive
+        state.isBackgroundSettingsActive
     return state.isFullscreenKeyboardActive ||
         (state.isMacroPadSurfaceActive && !hasInteractiveOverlay)
 }

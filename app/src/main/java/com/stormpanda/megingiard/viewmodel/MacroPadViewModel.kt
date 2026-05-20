@@ -44,7 +44,7 @@ private data class InjectorGate(
  *   - Restart as soon as all guards are clear.
  *
  * [watchInjectorLifecycle] is the single authoritative restart path.
- * [MacroPadEditor] and [AmbientSettingsOverlay] only stop injectors on entry;
+ * [MacroPadEditor] and [BackgroundSettingsOverlay] only stop injectors on entry;
  * they do NOT restart on exit — this watcher handles that.
  */
 class MacroPadViewModel(application: Application) : AndroidViewModel(application) {
@@ -71,7 +71,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
             combine(
                 AppStateManager.isPillMenuOpen,
                 AppStateManager.isEditorActive,
-                AppStateManager.isAmbientSettingsActive,
+                AppStateManager.isBackgroundSettingsActive,
                 AppStateManager.promptInFlight,
             ) { pillMenu, editor, ambient, prompt ->
                 val stopAll = editor || ambient || prompt

@@ -85,7 +85,7 @@ internal fun ActionGroup.actions(): List<ActionCategory> = when (this) {
         ActionCategory.MIRROR_FREEZE,
         ActionCategory.MIRROR_VIEWPORT_EDIT,
         ActionCategory.MIRROR_TOUCH_PROJECTION,
-        ActionCategory.AMBIENT_PEEK,
+        ActionCategory.BACKGROUND_PEEK,
     )
     ActionGroup.OTHER    -> listOf(
         ActionCategory.FULLSCREEN_MOUSE,
@@ -94,7 +94,7 @@ internal fun ActionGroup.actions(): List<ActionCategory> = when (this) {
 }
 
 internal enum class ActionCategory {
-    KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, AMBIENT_PEEK,
+    KEYBOARD_KEY, GAMEPAD_BUTTON, MOUSE_BUTTON, SCROLL_WHEEL, TRACKPOINT, MACRO, BACKGROUND_PEEK,
     LAYOUT_NEXT, LAYOUT_PREVIOUS, PROFILE_SWITCHER,
     MIRROR_PLAY_STOP, MIRROR_FREEZE, MIRROR_VIEWPORT_EDIT, MIRROR_TOUCH_PROJECTION,
     FULLSCREEN_MOUSE, FULLSCREEN_KEYBOARD,
@@ -107,7 +107,7 @@ internal fun ActionCategory.labelResId(): Int = when (this) {
     ActionCategory.SCROLL_WHEEL          -> R.string.macropad_action_scroll_wheel
     ActionCategory.TRACKPOINT            -> R.string.macropad_action_trackpoint
     ActionCategory.MACRO                 -> R.string.macropad_action_macro
-    ActionCategory.AMBIENT_PEEK          -> R.string.macropad_action_ambient_peek
+    ActionCategory.BACKGROUND_PEEK          -> R.string.macropad_action_ambient_peek
     ActionCategory.LAYOUT_NEXT           -> R.string.macropad_action_layout_next
     ActionCategory.LAYOUT_PREVIOUS       -> R.string.macropad_action_layout_previous
     ActionCategory.PROFILE_SWITCHER      -> R.string.macropad_action_profile_switcher
@@ -126,7 +126,7 @@ internal fun ActionCategory.defaultAction(): PadAction = when (this) {
     ActionCategory.SCROLL_WHEEL          -> PadAction.ScrollWheel
     ActionCategory.TRACKPOINT            -> PadAction.TrackpointMove()
     ActionCategory.MACRO                 -> PadAction.Macro(MacroPadState.activeProfile.value?.macros?.firstOrNull()?.id ?: "")
-    ActionCategory.AMBIENT_PEEK          -> PadAction.AmbientPeek
+    ActionCategory.BACKGROUND_PEEK          -> PadAction.BackgroundPeek
     ActionCategory.LAYOUT_NEXT           -> PadAction.LayoutNext
     ActionCategory.LAYOUT_PREVIOUS       -> PadAction.LayoutPrevious
     ActionCategory.PROFILE_SWITCHER      -> PadAction.ProfileSwitcher
@@ -152,7 +152,7 @@ internal fun ActionCategory.group(): ActionGroup = when (this) {
     ActionCategory.MIRROR_FREEZE,
     ActionCategory.MIRROR_VIEWPORT_EDIT,
     ActionCategory.MIRROR_TOUCH_PROJECTION,
-    ActionCategory.AMBIENT_PEEK           -> ActionGroup.MIRROR
+    ActionCategory.BACKGROUND_PEEK           -> ActionGroup.MIRROR
     ActionCategory.FULLSCREEN_MOUSE,
     ActionCategory.FULLSCREEN_KEYBOARD    -> ActionGroup.OTHER
 }
@@ -168,7 +168,7 @@ internal fun PadAction.categoryResId(): Int = when (this) {
     is PadAction.ScrollWheel        -> R.string.macropad_action_scroll_wheel
     is PadAction.TrackpointMove     -> R.string.macropad_action_trackpoint
     is PadAction.Macro              -> R.string.macropad_action_macro
-    is PadAction.AmbientPeek        -> R.string.macropad_action_ambient_peek
+    is PadAction.BackgroundPeek        -> R.string.macropad_action_ambient_peek
     is PadAction.LayoutNext         -> R.string.macropad_action_layout_next
     is PadAction.LayoutPrevious     -> R.string.macropad_action_layout_previous
     is PadAction.ProfileSwitcher    -> R.string.macropad_action_profile_switcher
@@ -187,7 +187,7 @@ internal fun PadAction.toCategory(): ActionCategory = when (this) {
     is PadAction.ScrollWheel                                                   -> ActionCategory.SCROLL_WHEEL
     is PadAction.TrackpointMove                                                -> ActionCategory.TRACKPOINT
     is PadAction.Macro                                                         -> ActionCategory.MACRO
-    is PadAction.AmbientPeek                                                   -> ActionCategory.AMBIENT_PEEK
+    is PadAction.BackgroundPeek                                                   -> ActionCategory.BACKGROUND_PEEK
     is PadAction.LayoutNext                                                    -> ActionCategory.LAYOUT_NEXT
     is PadAction.LayoutPrevious                                                -> ActionCategory.LAYOUT_PREVIOUS
     is PadAction.ProfileSwitcher                                               -> ActionCategory.PROFILE_SWITCHER
@@ -211,7 +211,7 @@ private fun ActionCategory.isEnabled(
     ActionCategory.SCROLL_WHEEL,
     ActionCategory.TRACKPOINT             -> enableMouse
     ActionCategory.MACRO                  -> hasMacros
-    ActionCategory.AMBIENT_PEEK,
+    ActionCategory.BACKGROUND_PEEK,
     ActionCategory.LAYOUT_NEXT,
     ActionCategory.LAYOUT_PREVIOUS,
     ActionCategory.PROFILE_SWITCHER,
@@ -257,7 +257,7 @@ internal fun PadAction.displayLabel(): String {
             val macroName = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == macroId }?.name ?: macroId
             context.getString(R.string.macropad_display_macro, macroName)
         }
-        is PadAction.AmbientPeek     -> context.getString(R.string.macropad_action_ambient_peek)
+        is PadAction.BackgroundPeek     -> context.getString(R.string.macropad_action_ambient_peek)
         is PadAction.LayoutNext         -> context.getString(R.string.macropad_action_layout_next)
         is PadAction.LayoutPrevious     -> context.getString(R.string.macropad_action_layout_previous)
         is PadAction.ProfileSwitcher    -> context.getString(R.string.macropad_action_profile_switcher)
@@ -446,7 +446,7 @@ internal fun ActionPicker(
             is PadAction.Macro          -> MacroPicker(current, accentColor, onEditMacro, onChange)
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
-            is PadAction.AmbientPeek,
+            is PadAction.BackgroundPeek,
             is PadAction.LayoutNext,
             is PadAction.LayoutPrevious,
             is PadAction.ProfileSwitcher,

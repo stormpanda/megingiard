@@ -52,7 +52,7 @@ import kotlin.math.sqrt
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private const val AM_SCREEN_PADDING_DP = 8
+private const val AM_SCREEN_PADDING_DP = 0
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
 private val AM_SWIPE_EDGE_ZONE = 40.dp
 private val AM_SWIPE_THRESHOLD = 25.dp
@@ -68,14 +68,14 @@ private data class AmbientInjectorGate(
     val stopMouseAndGamepad: Boolean,
 )
 
-private const val TAG = "AmbientMacroPadOverlay"
+private const val TAG = "BackgroundMacroPadOverlay"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ambient MacroPad Overlay — renders MacroPad buttons over the screen mirror
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
+internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsState()
     val layout by MacroPadState.activeLayout.collectAsState()
@@ -116,7 +116,7 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
         combine(
             AppStateManager.isPillMenuOpen,
             AppStateManager.isEditorActive,
-            AppStateManager.isAmbientSettingsActive,
+            AppStateManager.isBackgroundSettingsActive,
         ) { pillMenu, editor, ambient ->
             val stopAll = editor || ambient
             AmbientInjectorGate(
@@ -154,7 +154,7 @@ internal fun AmbientMacroPadOverlay(showIdlePill: Boolean = true) {
     // Stop all injectors and reset peek state when leaving
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.d(TAG, "AmbientMacroPadOverlay disposed → all injectors stopped")
+            AppLog.d(TAG, "BackgroundMacroPadOverlay disposed → all injectors stopped")
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()

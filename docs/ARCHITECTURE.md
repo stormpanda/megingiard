@@ -23,7 +23,7 @@ Secondary Display (non-default displayId) — bottom screen, Megingiard UI
   │    └─ MacroPad-centric main content
   └─ MirrorPresentation (android.app.Presentation — ambient mirroring modes)
        ├─ SurfaceView: hardware VirtualDisplay output (mirrors primary display)
-       └─ ComposeView → AmbientMacroPadOverlay / MirrorScreen
+       └─ ComposeView → BackgroundMacroPadOverlay / MirrorScreen
 ```
 
 `MainActivity` and `MainAppScreen` run on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). `MirrorPresentation` is layered on top of `MainAppScreen` on the same secondary display when ambient mirroring is active and hidden (`hide()`) when it is not needed.

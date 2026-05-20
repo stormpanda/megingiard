@@ -106,13 +106,13 @@ com.stormpanda.megingiard [app module]
 │ └── ToolSettingsComponents.kt # Reusable row Composables (SliderSettingRow, dropdowns, etc.)
 ├── macropad/
 │ ├── MacroPadScreen.kt # Main pad Composable (button grid, multi-touch, injector lifecycle)
-│ ├── MacroPadButton.kt # PadButton, ScrollWheelFace, AmbientPeekFace Composables
+│ ├── MacroPadButton.kt # PadButton, ScrollWheelFace, BackgroundPeekFace Composables
 │ ├── MacroPadEditor.kt # Full-screen layout editor (profile/layout CRUD, drag-repositioning)
 │ ├── PadCanvas.kt # Draggable editor canvas (DraggableButton, PadCanvas)
 │ ├── PadButtonEditDialog.kt # Button create/edit dialog
 │ ├── PadActionPicker.kt # Action-selection UI with category tabs
-│ ├── AmbientMacroPadOverlay.kt # Ambient overlay (dim + vignette + buttons on secondary display)
-│ ├── AmbientSettingsOverlay.kt # Per-layout ambient settings editor
+│ ├── BackgroundMacroPadOverlay.kt # Background overlay (dim + vignette + buttons on secondary display)
+│ ├── BackgroundSettingsOverlay.kt # Per-layout background settings editor
 │ ├── MacroListEditor.kt # In-editor macro list (add/edit/delete/reorder)
 │ ├── MacroStepEditDialog.kt # Macro step timing/action editor dialog
 │ ├── MacroTimelineEditor.kt # Visual macro timeline editor

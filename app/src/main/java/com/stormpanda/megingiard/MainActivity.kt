@@ -275,7 +275,7 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.isPillMenuOpen,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
-                AppStateManager.isAmbientSettingsActive,
+                AppStateManager.isBackgroundSettingsActive,
             ) { values ->
                 val fullscreenKeyboard = values[0] as Boolean
                 val onValidScreen = values[1] as Boolean
@@ -290,7 +290,7 @@ class MainActivity : ComponentActivity() {
                         isPillMenuOpen = pillMenuOpen,
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
-                        isAmbientSettingsActive = ambientSettingsActive,
+                        isBackgroundSettingsActive = ambientSettingsActive,
                     )
                 )
             }

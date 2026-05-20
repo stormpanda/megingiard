@@ -35,8 +35,6 @@
     <string name="theme_light">Light</string>
     <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Place controls at bottom</string>
-    <string name="settings_show_navigation_coach_marks">Show navigation coach marks</string>
-    <string name="settings_show_navigation_coach_marks_desc">Display the first-run hint for opening the Pill Menu</string>
     <string name="settings_show_mirror_control_labels">Show mirror control labels</string>
     <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
@@ -166,6 +164,7 @@ Open Settings to create a layout.</string>
     <string name="settings_restore_defaults_desc">Deletes all profiles and creates a blank default profile</string>
     <string name="settings_restore_defaults_confirm">This will delete all existing profiles and macros and create a single blank profile. This action cannot be undone.</string>
     <string name="settings_restore_defaults_confirm_button">Restore</string>
+    <string name="settings_restore_defaults_confirm_countdown">Restore (%1$d)</string>
     <string name="settings_cancel">Cancel</string>
     <string name="settings_config_export">Create backup</string>
     <string name="settings_config_export_desc">Save all settings and MacroPad profiles as a .mgrd backup file</string>
@@ -225,7 +224,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mouse_button">Mouse Button</string>
     <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
-    <string name="macropad_action_ambient_peek">Ambient Peek</string>
+    <string name="macropad_action_ambient_peek">Background Peek</string>
     <string name="macropad_action_layout_next">Next Layout</string>
     <string name="macropad_action_layout_previous">Previous Layout</string>
     <string name="macropad_action_profile_switcher">Profile Switcher</string>
@@ -251,11 +250,11 @@ Open Settings to create a layout.</string>
     <string name="macropad_layout_template_blank">Blank</string>
 
     <!-- MacroPad ambient display settings -->
-    <string name="settings_macropad_ambient">Ambient Display</string>
+    <string name="settings_macropad_ambient">Background Display</string>
     <string name="settings_macropad_ambient_hint">Starts Screen Mirror automatically (permission required on first use)</string>
     <string name="settings_macropad_ambient_preview">Preview for display</string>
     <string name="settings_macropad_ambient_preview_hint">Transparent window while display is being adjusted</string>
-    <string name="settings_macropad_ambient_apply_theme">Apply theme to ambient display</string>
+    <string name="settings_macropad_ambient_apply_theme">Apply theme to background display</string>
     <string name="settings_macropad_ambient_apply_theme_hint">When disabled, all buttons appear in neutral grey style</string>
     <string name="settings_macropad_dim">Dimming</string>
     <string name="settings_macropad_vignette">Vignette</string>
@@ -315,8 +314,8 @@ Open Settings to create a layout.</string>
     <string name="privd_feature_gamepad_recording">Physical gamepad recording</string>
     <string name="privd_feature_gamepad_recording_desc">Capture macro steps directly from the physical gamepad (analog sticks, buttons). When enabled, the Record button in the timeline editor uses the physical controller instead of the on-screen virtual gamepad.</string>
 
-    <string name="privd_feature_mirror">Privileged mirror</string>
-    <string name="privd_feature_mirror_desc">Mirror the primary screen via the on-device privileged daemon (no MediaProjection consent dialog, lower CPU). DRM-protected video frames will appear black — same as scrcpy.</string>
+    <string name="privd_feature_mirror">Privileged screen mirror</string>
+    <string name="privd_feature_mirror_desc">Mirror the primary screen via the on-device privileged daemon (no MediaProjection consent dialog, lower CPU).</string>
 
     <!-- Dead-zone settings row + dialog -->
     <string name="privd_deadzone_title">Configure dead zones</string>
@@ -399,8 +398,6 @@ Open Settings to create a layout.</string>
     <string name="settings_name_error_empty">Name cannot be empty.</string>
     <string name="settings_name_error_duplicate">This name already exists.</string>
     <string name="overlay_exit_hint_swipe">Swipe from the pill edge to close this fullscreen overlay.</string>
-    <string name="pill_coach_mark_text">Swipe from the edge pill to open the menu.</string>
-    <string name="pill_coach_mark_dismiss">Got it</string>
     <string name="wrong_screen_retry">Retry detection</string>
     <string name="wrong_screen_help">Help</string>
     <string name="wrong_screen_help_message">Open Recent Apps, drag Megingiard to the bottom display, then tap Retry.</string>
@@ -554,7 +551,7 @@ Open Settings to create a layout.</string>
     <string name="pill_menu_new_profile">New Profile</string>
     <string name="pill_menu_new_layout">New Layout</string>
     <string name="pill_menu_edit_layout">Edit Profile/Layout</string>
-    <string name="pill_menu_ambient_settings">Ambient Settings</string>
+    <string name="pill_menu_ambient_settings">Background Settings</string>
     <string name="pill_menu_global_settings">Global Settings</string>
     <string name="pill_menu_dismiss_dialog">Dismiss dialog</string>
     <string name="pill_menu_profile_name_hint">Profile name</string>

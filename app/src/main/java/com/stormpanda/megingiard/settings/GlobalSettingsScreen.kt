@@ -70,6 +70,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import java.time.LocalDate
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "GlobalSettingsScreen"
@@ -85,6 +86,8 @@ private val GS_DIALOG_PADDING = 20.dp
 private val GS_SECTION_CHIP_SPACING = 8.dp
 private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
+private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
+private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 
 private enum class SettingsSectionFilter {
     GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE, DIAGNOSTICS
@@ -102,7 +105,6 @@ fun GlobalSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
-    val showNavigationCoachMarks by viewModel.showNavigationCoachMarks.collectAsState()
     val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
@@ -131,6 +133,16 @@ fun GlobalSettingsScreen(
     val coroutineScope = rememberCoroutineScope()
 
     var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
+    var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
+    LaunchedEffect(showRestoreDefaultsConfirm) {
+        if (showRestoreDefaultsConfirm) {
+            restoreCountdown = GS_RESTORE_COUNTDOWN_SECONDS
+            while (restoreCountdown > 0) {
+                delay(GS_RESTORE_COUNTDOWN_INTERVAL_MS)
+                restoreCountdown--
+            }
+        }
+    }
     // SettingsSectionFilter is a private local enum — not Parcelable; UI-ephemeral, keep as remember
     var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
 
@@ -189,13 +201,6 @@ fun GlobalSettingsScreen(
                         OverlayPositionRow(
                             overlayAtBottom = overlayAtBottom,
                             onChanged = { viewModel.setOverlayAtBottom(it) }
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_show_navigation_coach_marks),
-                            description = stringResource(R.string.settings_show_navigation_coach_marks_desc),
-                            checked = showNavigationCoachMarks,
-                            onCheckedChange = { viewModel.setShowNavigationCoachMarks(it) },
                         )
                         AppDivider()
                         RememberSettingRow(
@@ -353,7 +358,12 @@ fun GlobalSettingsScreen(
             InTreeConfirmDialog(
                 title = stringResource(R.string.settings_restore_defaults),
                 text = stringResource(R.string.settings_restore_defaults_confirm),
-                confirmText = stringResource(R.string.settings_restore_defaults_confirm_button),
+                confirmText = if (restoreCountdown > 0) {
+                    stringResource(R.string.settings_restore_defaults_confirm_countdown, restoreCountdown)
+                } else {
+                    stringResource(R.string.settings_restore_defaults_confirm_button)
+                },
+                confirmEnabled = restoreCountdown == 0,
                 dismissText = stringResource(R.string.settings_cancel),
                 colors = colors,
                 accentColor = effectiveAccent,
@@ -1073,6 +1083,7 @@ private fun InTreeConfirmDialog(
     title: String,
     text: String,
     confirmText: String,
+    confirmEnabled: Boolean = true,
     dismissText: String,
     colors: AppColors,
     accentColor: Color,
@@ -1106,8 +1117,11 @@ private fun InTreeConfirmDialog(
                 TextButton(onClick = onDismiss) {
                     Text(dismissText, color = colors.onSurfaceSecondary)
                 }
-                TextButton(onClick = onConfirm) {
-                    Text(confirmText, color = accentColor)
+                TextButton(onClick = onConfirm, enabled = confirmEnabled) {
+                    Text(
+                        text = confirmText,
+                        color = if (confirmEnabled) accentColor else colors.onSurfaceSecondary,
+                    )
                 }
             }
         }

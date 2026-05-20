@@ -18,7 +18,7 @@ private const val TAG = "AppStateManager"
 enum class AmbientPreviewType { DIM, VIGNETTE_AREA, VIGNETTE_TRANSITION, VIGNETTE_OPACITY }
 
 /**
- * Shared between [AmbientSettingsOverlay] (primary screen) and [AmbientMacroPadOverlay]
+ * Shared between [BackgroundSettingsOverlay] (primary screen) and [BackgroundMacroPadOverlay]
  * (secondary screen). Non-null while a preview slider is active.
  */
 data class AmbientPreviewConfig(
@@ -169,12 +169,12 @@ object AppStateManager {
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
 
-    private val _isAmbientSettingsActive = MutableStateFlow(false)
-    val isAmbientSettingsActive: StateFlow<Boolean> = _isAmbientSettingsActive.asStateFlow()
+    private val _isBackgroundSettingsActive = MutableStateFlow(false)
+    val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
 
     /**
-     * Configuration for the ambient preview slider, shared between [AmbientSettingsOverlay]
-     * on the primary screen and [AmbientMacroPadOverlay] on the secondary screen.
+     * Configuration for the ambient preview slider, shared between [BackgroundSettingsOverlay]
+     * on the primary screen and [BackgroundMacroPadOverlay] on the secondary screen.
      * Non-null while a preview is active. Does NOT participate in mutual exclusion.
      */
     private val _ambientPreviewConfig = MutableStateFlow<AmbientPreviewConfig?>(null)
@@ -211,7 +211,7 @@ object AppStateManager {
         _isFullscreenKeyboardActive,
         _isFullscreenMouseActive,
         _isViewportEditActive,
-        _isAmbientSettingsActive,
+        _isBackgroundSettingsActive,
         MacroPadState.isPeekActive,
     ) { kb, ms, vp, amb, peek -> kb || ms || vp || amb || peek }
         .stateIn(scope, SharingStarted.Eagerly, false)
@@ -222,7 +222,7 @@ object AppStateManager {
             _fullscreenKeyboardLayout.value = layout
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
-            _isAmbientSettingsActive.value = false
+            _isBackgroundSettingsActive.value = false
         }
         _isFullscreenKeyboardActive.value = active
     }
@@ -233,7 +233,7 @@ object AppStateManager {
             _fullscreenMouseSensitivity.value = sensitivity
             _isFullscreenKeyboardActive.value = false
             _isViewportEditActive.value = false
-            _isAmbientSettingsActive.value = false
+            _isBackgroundSettingsActive.value = false
         }
         _isFullscreenMouseActive.value = active
     }
@@ -243,19 +243,19 @@ object AppStateManager {
         if (active) {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
-            _isAmbientSettingsActive.value = false
+            _isBackgroundSettingsActive.value = false
         }
         _isViewportEditActive.value = active
     }
 
-    fun setAmbientSettingsActive(active: Boolean) {
-        AppLog.i(TAG, "setAmbientSettingsActive($active)")
+    fun setBackgroundSettingsActive(active: Boolean) {
+        AppLog.i(TAG, "setBackgroundSettingsActive($active)")
         if (active) {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
         }
-        _isAmbientSettingsActive.value = active
+        _isBackgroundSettingsActive.value = active
     }
 
     fun setEditorActive(active: Boolean) {
@@ -265,11 +265,11 @@ object AppStateManager {
 
     /** Closes whichever fullscreen modal overlay is currently active. */
     fun closeActiveModal() {
-        AppLog.i(TAG, "closeActiveModal: kb=${_isFullscreenKeyboardActive.value} ms=${_isFullscreenMouseActive.value} vp=${_isViewportEditActive.value} amb=${_isAmbientSettingsActive.value} peek=${MacroPadState.isPeekActive.value}")
+        AppLog.i(TAG, "closeActiveModal: kb=${_isFullscreenKeyboardActive.value} ms=${_isFullscreenMouseActive.value} vp=${_isViewportEditActive.value} amb=${_isBackgroundSettingsActive.value} peek=${MacroPadState.isPeekActive.value}")
         _isFullscreenKeyboardActive.value = false
         _isFullscreenMouseActive.value = false
         _isViewportEditActive.value = false
-        _isAmbientSettingsActive.value = false
+        _isBackgroundSettingsActive.value = false
         _isAmbientPreviewActive.value = false
         _ambientPreviewConfig.value = null
         MacroPadState.resetPeek()

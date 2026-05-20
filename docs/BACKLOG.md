@@ -98,7 +98,7 @@ Buttons for layout navigation, mirror control, etc. are created without any pre-
 
 #### Idea
 
-Define a **default label and default icon** for every `PadAction` that does not have its own fixed rendering (i.e. everything except `ScrollWheel`, `TrackpointMove`, `AmbientPeek`):
+Define a **default label and default icon** for every `PadAction` that does not have its own fixed rendering (i.e. everything except `ScrollWheel`, `TrackpointMove`, `BackgroundPeek`):
 
 | PadAction               | Default Label    | Default Icon (Material Symbols) |
 | ----------------------- | ---------------- | ------------------------------- |

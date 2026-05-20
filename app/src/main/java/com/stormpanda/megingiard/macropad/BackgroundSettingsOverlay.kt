@@ -64,7 +64,7 @@ import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
-private const val TAG = "AmbientSettingsOverlay"
+private const val TAG = "BackgroundSettingsOverlay"
 
 // ── Slider bounds ───────────────────────────────────────────────────────────
 private const val ASO_DIM_MAX = 0.9f
@@ -99,22 +99,22 @@ private fun VignetteShape.labelResId(): Int = when (this) {
  * Reads from and writes to the active [PadLayout] via [MacroPadState].
  */
 @Composable
-internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
+internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
 
     // Stop all uinput virtual devices while ambient settings are open.
-    // MacroPadViewModel.watchInjectorLifecycle() detects isAmbientSettingsActive=false
+    // MacroPadViewModel.watchInjectorLifecycle() detects isBackgroundSettingsActive=false
     // and restarts injectors automatically when this screen is dismissed.
     DisposableEffect(Unit) {
-        AppLog.i(TAG, "AmbientSettingsOverlay visible \u2192 stopping injectors")
+        AppLog.i(TAG, "BackgroundSettingsOverlay visible \u2192 stopping injectors")
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
             AppStateManager.setAmbientPreviewConfig(null)
-            AppLog.i(TAG, "AmbientSettingsOverlay dismissed \u2192 injector restart handled by MacroPadViewModel watcher")
+            AppLog.i(TAG, "BackgroundSettingsOverlay dismissed → injector restart handled by MacroPadViewModel watcher")
         }
     }
 
@@ -133,7 +133,7 @@ internal fun AmbientSettingsOverlay(onDone: () -> Unit) {
     var vignetteOpacity by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteOpacity) }
     var vignetteColorInt by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteColor) }
 
-    // Preview mode: driven by AppStateManager so the secondary screen (AmbientMacroPadOverlay)
+    // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
     val isInPreview = previewConfig != null

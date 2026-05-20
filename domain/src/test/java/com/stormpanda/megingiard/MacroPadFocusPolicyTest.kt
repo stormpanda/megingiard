@@ -66,7 +66,7 @@ class MacroPadFocusPolicyTest {
             shouldKeepPrimaryGameFocus(
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
-                    isAmbientSettingsActive = true,
+                    isBackgroundSettingsActive = true,
                 )
             )
         )

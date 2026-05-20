@@ -38,7 +38,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val appLanguage: StateFlow<AppLanguage> = SettingsManager.appLanguage
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
-    val showNavigationCoachMarks: StateFlow<Boolean> = SettingsManager.showNavigationCoachMarks
     val showMirrorControlLabels: StateFlow<Boolean> = SettingsManager.showMirrorControlLabels
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
@@ -61,7 +60,6 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
-    fun setShowNavigationCoachMarks(value: Boolean) = SettingsManager.setShowNavigationCoachMarks(value)
     fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
     fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)

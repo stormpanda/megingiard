@@ -44,7 +44,7 @@ Each button supports one of the following actions:
 | `MouseButton`    | BTN_LEFT/RIGHT/MIDDLE/4/5 | `mouseinjector_arm64`   |
 | `ScrollWheel`    | REL_WHEEL via uinput      | `mouseinjector_arm64`   |
 | `TrackpointMove` | REL_X / REL_Y via uinput  | `mouseinjector_arm64`   |
-| `AmbientPeek`    | App-level peek toggle     | _(none)_                |
+| `BackgroundPeek` | App-level peek toggle     | _(none)_                |
 
 - `KeyboardKey` actions use `KeyInjector` / `ShellKeyInjector` from the keyboard package. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). The `keyinjector_arm64` binary accepts keycodes in the range **1–464** (extended from the original 1–254 to include Fn).
 - `GamepadButton` actions use `GamepadInjector` / `ShellGamepadInjector`. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
@@ -65,7 +65,7 @@ Each button supports one of the following actions:
 - Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
 - When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
-- During normal MacroPad use on the secondary display, the hosting Activity window is marked `FLAG_NOT_FOCUSABLE` so touch input on the MacroPad does not steal focus from a primary-display game that owns Android pointer capture. The flag is cleared while PillMenu, file picker, editor, or ambient settings overlays are open because those screens may need focused app input.
+- During normal MacroPad use on the secondary display, the hosting Activity window is marked `FLAG_NOT_FOCUSABLE` so touch input on the MacroPad does not steal focus from a primary-display game that owns Android pointer capture. The flag is cleared while PillMenu, file picker, editor, or background settings overlays are open because those screens may need focused app input.
 
 ### FR-P5: Trackpoint Button
 
@@ -73,8 +73,8 @@ Each button supports one of the following actions:
 - Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
 - In use mode, dragging a finger on a trackpoint button translates relative motion into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta (`MP_TRACKPOINT_SENSITIVITY = 3f`).
 - **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
-- **AmbientPeek buttons** render a visibility icon: `Icons.Rounded.Visibility` when peek is inactive, `Icons.Rounded.VisibilityOff` when active.
-- In the editor, the `ButtonEditDialog` hides the label field and shape picker when action is `TrackpointMove`, `ScrollWheel`, or `AmbientPeek`.
+- **BackgroundPeek buttons** render a visibility icon: `Icons.Rounded.Visibility` when peek is inactive, `Icons.Rounded.VisibilityOff` when active.
+- In the editor, the `ButtonEditDialog` hides the label field and shape picker when action is `TrackpointMove`, `ScrollWheel`, or `BackgroundPeek`.
 
 ### FR-P6: Multi-Touch Button Support
 
@@ -136,7 +136,7 @@ Each button supports one of the following actions:
 
 ### FR-P8: Multi-Layout Profiles
 
-- Each profile MUST support **multiple named layouts** (`PadLayout`). Each layout has its own button list, enabled/disabled state, and ambient display settings.
+- Each profile MUST support **multiple named layouts** (`PadLayout`). Each layout has its own button list, enabled/disabled state, and background display settings.
 - Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
 - Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable **layout bar** with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
 - Each layout chip has an **enable/disable toggle** and, when more than one layout exists, a delete action. Disabled layouts are skipped in the Pill Menu layout list in use mode.
@@ -145,15 +145,15 @@ Each button supports one of the following actions:
 - Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all enabled layouts** in the profile (via `withSyncedDeviceFlags()`).
 - Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). If a stored `PadProfile` does not contain a `layouts` list, a default layout named "Layout 1" is created on load, populated with the profile's top-level `buttons` list.
 
-### FR-P9: Ambient Display
+### FR-P9: Background Display
 
-- An optional **Ambient Display** mode renders the Screen Mirror output behind the MacroPad buttons on the secondary display.
+- An optional **Background Display** mode renders the Screen Mirror output behind the MacroPad buttons on the secondary display.
 - Enabled via a **toggle** in MacroPad tool settings (default: off).
-- When Ambient Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
-- When ambient is enabled and capturing is active, the `MirrorPresentation` renders `AmbientMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
-- In ambient mode, the **Idle Pill** MUST remain visible on the secondary display, and edge swipes from the configured pill edge MUST open/close the Pill Menu so users can always access navigation/actions even if no mirror-control button exists in the current layout.
-- **Per-layout ambient settings:** Dimming and vignette parameters are stored **per layout** in `PadLayout` (not globally). Each layout has its own `ambientDim`, `ambientVignetteEnabled`, `ambientVignetteShape`, `ambientVignetteVisibleArea`, `ambientVignetteTransition`, `ambientVignetteOpacity`, and `ambientVignetteColor` fields. Switching layouts automatically applies the active layout's ambient settings.
-- **Ambient Settings Overlay** (`AmbientSettingsOverlay`): A dedicated full-screen overlay (opened from the editor) for configuring the active layout's ambient parameters. Provides sliders for dim and vignette settings, shape dropdown, and colour picker. Changes are committed to `MacroPadState.updateLayout()` on slider release (live-update + persist-on-release pattern).
+- When Background Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
+- When background display is enabled and capturing is active, the `MirrorPresentation` renders `BackgroundMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
+- In background display mode, the **Idle Pill** MUST remain visible on the secondary display, and edge swipes from the configured pill edge MUST open/close the Pill Menu so users can always access navigation/actions even if no mirror-control button exists in the current layout.
+- **Per-layout background settings:** Dimming and vignette parameters are stored **per layout** in `PadLayout` (not globally). Each layout has its own `ambientDim`, `ambientVignetteEnabled`, `ambientVignetteShape`, `ambientVignetteVisibleArea`, `ambientVignetteTransition`, `ambientVignetteOpacity`, and `ambientVignetteColor` fields. Switching layouts automatically applies the active layout's background settings.
+- **Background Settings Overlay** (`BackgroundSettingsOverlay`): A dedicated full-screen overlay (opened from the editor) for configuring the active layout's background parameters. Provides sliders for dim and vignette settings, shape dropdown, and colour picker. Changes are committed to `MacroPadState.updateLayout()` on slider release (live-update + persist-on-release pattern).
 - **Dimming** (0–90%, adjustable via slider, default 0%) draws a semi-transparent black overlay on top of the mirror background.
 - **Vignette** (optional, default off) darkens the screen edges using a shape-specific gradient layer. Configurable via five settings:
   - **Shape** (`RADIAL` / `LETTERBOX` / `PILLARBOX` / `TOP` / `BOTTOM` / `LEFT` / `RIGHT`): `RADIAL` = circular vignette centred on the screen; `LETTERBOX` = horizontal dark bars at top and bottom; `PILLARBOX` = vertical dark bars at left and right; `TOP`/`BOTTOM`/`LEFT`/`RIGHT` = single-edge vignette that fades inward from the selected side only.
@@ -162,13 +162,13 @@ Each button supports one of the following actions:
   - **Opacity** (0–100%, default 60%): alpha of the vignette colour.
   - **Color** (any ARGB colour, selected via `ColorWheelPicker`, default black `0xFF000000`).
     Like dim, the vignette is hidden when Peek is active.
-- A special **Ambient Peek** action (`PadAction.AmbientPeek`) can be assigned to any button. When tapped, all other buttons are hidden, dim and vignette are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
+- A special **Background Peek** action (`PadAction.BackgroundPeek`) can be assigned to any button. When tapped, all other buttons are hidden, dim and vignette are removed, and the full mirror output is shown. Tapping again restores normal MacroPad view. Peek state resets when leaving MacroPad mode.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
 - **Per-layout button color style** (`PadLayout.buttonColorNoMirror` / `PadLayout.buttonColorMirror`): Each layout can independently configure the button color style for two states: when mirroring is inactive and when it is active (ambient overlay).
   - `buttonColorNoMirror` — defaults to `ButtonColorStyle.ACCENTED`. Buttons use the active accent colour and `macroPadOnSurface` text token.
   - `buttonColorMirror` — defaults to `ButtonColorStyle.NEUTRAL`. Buttons use a neutral white/grey palette (soft grey outline `#AAAAAA`, near-white text `#DDDDDD` at 90 % opacity) that is theme-independent.
   - Both settings are exposed in the **Layout Settings** section of the layout editor (below the toolbar, above the button list) as dropdowns using the shared app dropdown styling.
-  - The neutral style is implemented via the `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. `MacroPadScreen` passes `neutralStyle = layout.buttonColorNoMirror == ButtonColorStyle.NEUTRAL`; `AmbientMacroPadOverlay` passes `neutralStyle = layout.buttonColorMirror == ButtonColorStyle.NEUTRAL`.
+  - The neutral style is implemented via the `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. `MacroPadScreen` passes `neutralStyle = layout.buttonColorNoMirror == ButtonColorStyle.NEUTRAL`; `BackgroundMacroPadOverlay` passes `neutralStyle = layout.buttonColorMirror == ButtonColorStyle.NEUTRAL`.
   - These settings are persisted as part of `PadLayout` and are included in config exports automatically.
 
 ### FR-P10: Optional Button Icons
@@ -180,7 +180,7 @@ Each button supports one of the following actions:
   - In the **editor canvas** (`PadCanvas`, `DraggableButton`): the icon is shown at `60 dp × 0.72 × min(cols, rows)` (≈ 43 dp for 1×1).
   - In the **button list** (`MacroPadEditor`, `ButtonListItem`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
-- When the action type is `ScrollWheel`, `TrackpointMove`, or `AmbientPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
+- When the action type is `ScrollWheel`, `TrackpointMove`, or `BackgroundPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
 - Icon selection opens `IconPickerDialog`, a full-screen overlay with three zones:
   1. **Header** — Cancel (text button) | title | ✓ confirm (icon button).
   2. **Search row** — `OutlinedTextField` + Filled checkbox.
@@ -212,7 +212,7 @@ Each button supports one of the following actions:
   | `Macro`                 | _(from macro name)_ | `smart_button`  |
   | All others              | _(empty)_           | _(null)_        |
 
-- `ScrollWheel`, `TrackpointMove`, and `AmbientPeek` are excluded — they have fixed rendering and do not use labels or icons.
+- `ScrollWheel`, `TrackpointMove`, and `BackgroundPeek` are excluded — they have fixed rendering and do not use labels or icons.
 
 ### FR-P12: Grouped Action Dropdown in Button Editor
 
@@ -249,7 +249,7 @@ Each button supports one of the following actions:
 
 - Each `PadButton` carries a `hapticStrength: HapticStrength` field (serialised; default `OFF` — existing profiles load without migration).
 - Five strength levels are available: `OFF`, `LIGHT`, `MEDIUM`, `STRONG`, `CUSTOM`.
-- The strength selector is displayed in `ButtonEditDialog` as a row of five shared selectable chips, matching the button shape selector and trackpoint size selector. It is shown for all action types, including `AmbientPeek`, `TrackpointMove`, and `ScrollWheel`.
+- The strength selector is displayed in `ButtonEditDialog` as a row of five shared selectable chips, matching the button shape selector and trackpoint size selector. It is shown for all action types, including `BackgroundPeek`, `TrackpointMove`, and `ScrollWheel`.
 - When haptics are enabled (`LIGHT`, `MEDIUM`, `STRONG`, or `CUSTOM`), two sliders appear beneath the chip row:
   - **Duration** — 1 to 200 ms (integer steps)
   - **Amplitude** — 5 to 100 in steps of 5 (20 discrete user-facing values; the value is mapped proportionally to Android's 1–255 amplitude range, so 100 maps to 255)
@@ -309,11 +309,11 @@ MacroTimelineEditor (Composable, opened from MacroListEditor)
      └── timed step compilation via GamepadRecordingManager
 ```
 
-#### Ambient Display Rendering Pipeline
+#### Background Display Rendering Pipeline
 
-When Ambient Display is enabled and `ScreenCaptureService` is capturing:
+When Background Display is enabled and `ScreenCaptureService` is capturing:
 
-1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `AmbientMacroPadOverlay` in its `ComposeView`.
+1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `BackgroundMacroPadOverlay` in its `ComposeView`.
 2. The `SurfaceView` receives the `VirtualDisplay` output directly (live hardware path — no PixelCopy overhead).
 3. A dim overlay (`Color.Black.copy(alpha = ambientDim)`) is drawn on top.
 4. If vignette is enabled, a shape-specific gradient layer is drawn between the dim overlay and the MacroPad buttons using private `DrawScope` extension functions (`drawRadialVignette`, `drawLetterboxVignette`, `drawPillarboxVignette`, `drawTopVignette`, `drawBottomVignette`, `drawLeftVignette`, `drawRightVignette`):
@@ -325,8 +325,8 @@ When Ambient Display is enabled and `ScreenCaptureService` is capturing:
   `VIGNETTE_MIN_STOP_GAP = 0.001f` ensures no two adjacent colour-stops share the same fractional position (which would crash `Brush`).
 
 5. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
-6. When `isPeekActive` is true, only `AmbientPeek` buttons are rendered (the Press hit-test list is also filtered to `AmbientPeek` buttons so hidden buttons cannot be triggered), and dim/vignette are overridden to 0.
-   - **Peek state reset:** `MacroPadState.resetPeek()` is called in two places: in `AmbientMacroPadOverlay`'s `DisposableEffect.onDispose` (leaving ambient mode), and in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode entirely). This ensures peek state never leaks across mode switches, regardless of which screen was active when the mode changed.
+6. When `isPeekActive` is true, only `BackgroundPeek` buttons are rendered (the Press hit-test list is also filtered to `BackgroundPeek` buttons so hidden buttons cannot be triggered), and dim/vignette are overridden to 0.
+   - **Peek state reset:** `MacroPadState.resetPeek()` is called in two places: in `BackgroundMacroPadOverlay`'s `DisposableEffect.onDispose` (leaving background display mode), and in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode entirely). This ensures peek state never leaks across mode switches, regardless of which screen was active when the mode changed.
 
 ### Data Model
 
@@ -520,7 +520,7 @@ DisposableEffect(Unit) {
 }
 ```
 
-The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. The same stop/restart pattern is also used by `PillMenu` and `AmbientSettingsOverlay` — injectors are stopped while these modals are open so the Android soft IME can appear for text input fields. `AmbientMacroPadOverlay` additionally observes `isPillMenuOpen` and stops/restarts injectors when the PillMenu opens from inside the Presentation window.
+The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. The same stop/restart pattern is also used by `PillMenu` and `BackgroundSettingsOverlay` — injectors are stopped while these modals are open so the Android soft IME can appear for text input fields. `BackgroundMacroPadOverlay` additionally observes `isPillMenuOpen` and stops/restarts injectors when the PillMenu opens from inside the Presentation window.
 
 ### Hit Testing
 
@@ -580,8 +580,8 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 | `GamepadRecordStartDialog.kt`    | Confirmation dialog before gamepad recording; includes "Don't show again" flow wired to `MacroPadSettings.skipGamepadRecordDialog`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `PadActionPicker.kt`             | Grouped action picker (group → action) plus existing action-specific inline editors; `MacroPicker` uses single dropdown listing macros from active profile                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `PadButtonEditDialog.kt`         | Button create/edit dialog; `initialAction` param for pre-setting Macro action; uses shared selectable chips for button shape, trackpoint size, and haptic strength selectors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `AmbientMacroPadOverlay.kt`      | Ambient Display overlay on secondary display: mirror background + dim/vignette + MacroPad buttons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `AmbientSettingsOverlay.kt`      | Per-layout ambient settings editor: dim slider, vignette shape/visible area/transition/opacity/colour                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `BackgroundMacroPadOverlay.kt`   | Background Display overlay on secondary display: mirror background + dim/vignette + MacroPad buttons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `BackgroundSettingsOverlay.kt`   | Per-layout background settings editor: dim slider, vignette shape/visible area/transition/opacity/colour                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `GamepadInjector.kt`             | Public facade over `ShellGamepadInjector` (incl. `joystick()` for ABS axes)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `ShellGamepadInjector.kt`        | Native binary lifecycle + writer thread; handles GD/GU/HD/JS commands                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `GamepadKeycodes.kt`             | Linux BTN\_\* + ABS\_\* constants + preset list                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |

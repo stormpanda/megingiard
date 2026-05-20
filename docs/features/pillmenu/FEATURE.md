@@ -41,7 +41,7 @@ throughout the app.
   - **Nothing is open** → opens the Pill Menu (`openPillMenu()`).
 - The edge zone width (`AM_SWIPE_EDGE_ZONE = 40 dp`) and the minimum swipe distance threshold
   (`AM_SWIPE_THRESHOLD = 25 dp`) are consistent across all screens that host the pill
-  (`MainAppScreen`, `AmbientMacroPadOverlay`, `FullscreenMouseOverlay`, `MirrorPresentation`).
+  (`MainAppScreen`, `BackgroundMacroPadOverlay`, `FullscreenMouseOverlay`, `MirrorPresentation`).
 - Tapping the scrim (the darkened area outside the Pill Menu cards) MUST dismiss the Pill Menu.
 
 ### FR-PM3: Profile & Layout Selection (Bottom Card)
@@ -70,8 +70,8 @@ throughout the app.
 
 - The top card slides in from the top of the screen and is **always shown** when the Pill Menu is
   open (it is not conditional on mirroring being active). It contains:
-  - **Ambient Settings** button (left side): opens `AmbientSettingsOverlay` by setting
-    `AppStateManager.isAmbientSettingsActive = true`, then dismisses the Pill Menu.
+  - **Background Settings** button (left side): opens `BackgroundSettingsOverlay` by setting
+    `AppStateManager.isBackgroundSettingsActive = true`, then dismisses the Pill Menu.
   - **Start / Stop** icon button: starts mirroring via `AppStateManager.requestMirrorStart()` or
     stops it via `requestMirrorStop()`. Shows a Play icon when not capturing, a Stop icon when
     capturing.
@@ -103,14 +103,14 @@ throughout the app.
 ### Component Layout
 
 ```
-MainAppScreen (or AmbientMacroPadOverlay)
+MainAppScreen (or BackgroundMacroPadOverlay)
   └── IdlePill
         ├── PillTab          — slim pill affordance at screen edge
         ├── "× close" label  — visible when isAnyModalActive == true
         └── PillMenu         — full-screen overlay when isPillMenuOpen == true
               ├── Scrim (Color.Black @ 55% alpha)
               ├── MirrorControlCard (slides in from top)
-              │     ├── "Ambient Settings" TextButton
+              │     ├── "Background Settings" TextButton
               │     ├── Start/Stop IconButton
               │     ├── Freeze/Unfreeze IconButton
               │     ├── Viewport Edit IconButton
@@ -153,7 +153,7 @@ derived from `SettingsManager.overlayAtBottom`. When the processor fires, it cal
 | ---------------------------------------------- | ---------------------- | ------------------------------- |
 | `AppStateManager.isPillMenuOpen`               | `AppStateManager`      | `handleEdgeSwipe()` / scrim tap |
 | `AppStateManager.isEditorActive`               | `AppStateManager`      | "Edit Layout" button            |
-| `AppStateManager.isAmbientSettingsActive`      | `AppStateManager`      | "Ambient Settings" button       |
+| `AppStateManager.isBackgroundSettingsActive`   | `AppStateManager`      | "Background Settings" button    |
 | `AppStateManager.isViewportEditActive`         | `AppStateManager`      | "Viewport Edit" button          |
 | `ScreenCaptureManager.isFrozen`                | `ScreenCaptureManager` | "Freeze/Unfreeze" button        |
 | `ScreenCaptureManager.isTouchProjectionActive` | `ScreenCaptureManager` | "Touch Projection" button       |
@@ -161,7 +161,7 @@ derived from `SettingsManager.overlayAtBottom`. When the processor fires, it cal
 | `MacroPadState.activeLayout`                   | `MacroPadState`        | Layout chip tap / new layout    |
 
 `isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of
-`isEditorActive`, `isAmbientSettingsActive`, `isViewportEditActive`, or the fullscreen overlay flags
+`isEditorActive`, `isBackgroundSettingsActive`, `isViewportEditActive`, or the fullscreen overlay flags
 are true. The Idle Pill reads this to decide whether to show the "× close" label.
 
 ### Source Files

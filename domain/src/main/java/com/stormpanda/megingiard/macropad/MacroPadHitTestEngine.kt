@@ -84,7 +84,7 @@ class MacroPadHitTestEngine(
         isPeekActive: Boolean,
     ): PadButton? {
         val hitList = if (isPeekActive) {
-            buttons.filter { it.action is PadAction.AmbientPeek }
+            buttons.filter { it.action is PadAction.BackgroundPeek }
         } else {
             buttons
         }
@@ -250,7 +250,7 @@ class MacroPadHitTestEngine(
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove -> !profile.enableMouse
             is PadAction.Macro -> false
-            is PadAction.AmbientPeek -> false
+            is PadAction.BackgroundPeek -> false
             is PadAction.LayoutNext,
             is PadAction.LayoutPrevious,
             is PadAction.ProfileSwitcher,
@@ -273,7 +273,7 @@ class MacroPadHitTestEngine(
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove -> if (!profile.enableMouse) DisabledReason.MOUSE else null
             is PadAction.Macro -> null
-            is PadAction.AmbientPeek -> null
+            is PadAction.BackgroundPeek -> null
             is PadAction.LayoutNext,
             is PadAction.LayoutPrevious,
             is PadAction.ProfileSwitcher,

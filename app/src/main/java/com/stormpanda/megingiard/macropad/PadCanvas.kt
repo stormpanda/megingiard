@@ -194,7 +194,7 @@ private fun DraggableButton(
         is PadAction.ScrollWheel,
         is PadAction.TrackpointMove              -> !enableMouse
         is PadAction.Macro                       -> !enableGamepad
-        is PadAction.AmbientPeek                 -> false
+        is PadAction.BackgroundPeek                 -> false
         is PadAction.LayoutNext,
         is PadAction.LayoutPrevious,
         is PadAction.ProfileSwitcher,

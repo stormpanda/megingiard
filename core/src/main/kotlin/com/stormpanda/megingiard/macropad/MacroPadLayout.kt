@@ -160,7 +160,7 @@ sealed class PadAction {
      */
     @Serializable
     @SerialName("ambient_peek")
-    data object AmbientPeek : PadAction()
+    data object BackgroundPeek : PadAction()
 
     // ── Screen Mirroring ───────────────────────────────────────────────────
 

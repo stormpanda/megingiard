@@ -46,7 +46,7 @@ fun injectActionDown(action: PadAction) {
                 if (running) MacroExecutor.stop(action.macroId) else MacroExecutor.execute(macro)
             }
         }
-        is PadAction.AmbientPeek          -> { AppLog.d(TAG, "actionDown: AmbientPeek"); MacroPadState.togglePeek() }
+        is PadAction.BackgroundPeek          -> { AppLog.d(TAG, "actionDown: BackgroundPeek"); MacroPadState.togglePeek() }
         is PadAction.LayoutNext             -> { AppLog.d(TAG, "actionDown: LayoutNext"); MacroPadState.nextLayout() }
         is PadAction.LayoutPrevious         -> { AppLog.d(TAG, "actionDown: LayoutPrevious"); MacroPadState.previousLayout() }
         is PadAction.ProfileSwitcher        -> { AppLog.d(TAG, "actionDown: ProfileSwitcher"); AppStateManager.openPillMenu() }
@@ -91,7 +91,7 @@ fun injectActionUp(action: PadAction) {
         is PadAction.ScrollWheel     -> { /* handled via drag events */ }
         is PadAction.TrackpointMove  -> { /* handled via drag events */ }
         is PadAction.Macro                 -> { /* toggle on down; up is no-op */ }
-        is PadAction.AmbientPeek            -> { /* toggle on down; up is no-op */ }
+        is PadAction.BackgroundPeek            -> { /* toggle on down; up is no-op */ }
         is PadAction.LayoutNext             -> { /* fires on down; up is no-op */ }
         is PadAction.LayoutPrevious         -> { /* fires on down; up is no-op */ }
         is PadAction.ProfileSwitcher        -> { /* fires on down; up is no-op */ }
