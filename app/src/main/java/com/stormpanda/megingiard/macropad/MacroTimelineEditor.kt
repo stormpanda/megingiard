@@ -106,7 +106,6 @@ private const val MT_BAR_LABEL_TEXT_SIZE_SP = 10
 private const val MT_TIMELINE_SIDE_PADDING = 10
 private const val MT_VIEW_CHIP_SPACING = 6
 private const val MT_TIMING_MAX_MS = 10_000L
-private const val MT_NEW_STEP_START_OFFSET_MS = 2_000L
 
 // Post-start delay before showing the recording overlay: waits for InputFlinger to register
 // the uinput device so early user taps are not silently dropped (mirrors MAC_GAMEPAD_INJECTOR_INIT_MS).
@@ -717,7 +716,7 @@ internal fun MacroTimelineEditor(
 
     if (showAddStep || editingStepIndex != null) {
         val stepToEdit: MacroStep? = editingStepIndex?.let { steps[it] }
-        val suggestedStartTimeMs = (steps.totalDurationMs() + MT_NEW_STEP_START_OFFSET_MS).coerceAtLeast(0L)
+        val suggestedStartTimeMs = steps.totalDurationMs()
         MacroStepEditDialog(
             step = stepToEdit,
             accentColor = accentColor,

@@ -60,7 +60,6 @@ private const val TAG = "MacroStepEditDialog"
 private const val MSD_GRID_CELL_SIZE        = 44
 private const val MSD_GRID_SPACING          = 4
 private const val MSD_DEFAULT_DURATION_MS   = 100L
-private const val MSD_DEFAULT_NEW_STEP_START_OFFSET_MS = 2_000L
 private const val MSD_TIMING_BASE_START_MAX_MS = 10_000
 private const val MSD_TIMING_BASE_DURATION_MAX_MS = 1_000
 private const val MSD_TIMING_SCALE_STEP_MS = 1_000
@@ -136,8 +135,7 @@ internal fun MacroStepEditDialog(
 
     val initialStartMs = when {
         step != null -> clampLongToNonNegativeInt(step.startTimeMs)
-        suggestedStartTimeMs > 0L -> clampLongToNonNegativeInt(suggestedStartTimeMs)
-        else -> clampLongToNonNegativeInt(MSD_DEFAULT_NEW_STEP_START_OFFSET_MS)
+        else -> clampLongToNonNegativeInt(suggestedStartTimeMs)
     }
     val initialDurationMs = clampLongToNonNegativeInt(step?.durationMs ?: MSD_DEFAULT_DURATION_MS)
 
