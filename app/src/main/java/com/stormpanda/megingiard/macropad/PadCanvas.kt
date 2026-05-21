@@ -72,16 +72,16 @@ private const val ED_EDGE_MARGIN        = 0.05f
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
 private val PC_GRID_STEP_DP        = 30.dp
-private const val PC_GRID_LINE_ALPHA    = 0.12f
+private const val PC_GRID_LINE_ALPHA    = 0.35f
 private const val PC_GRID_STROKE_PX     = 1f
 private const val PC_RADIAL_CENTER_X    = 0.5f
 private const val PC_RADIAL_CENTER_Y    = 0.5f
 
 // Radial grid: snap points evenly distributed along each circle
-private val PC_RADIAL_DOT_RADIUS    = 2.dp
-private val PC_RADIAL_CENTER_DOT    = 3.dp
-private const val PC_RADIAL_DOT_ALPHA      = 0.35f
-private const val PC_RADIAL_MIN_POINTS     = 4
+private val PC_RADIAL_DOT_RADIUS       = 3.dp
+private val PC_RADIAL_CENTER_DOT       = 5.dp
+private const val PC_RADIAL_MIN_POINTS = 4
+private const val PC_RADIAL_EXTRA_RINGS = 3
 
 // Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
 private const val PC_BTN_GRADIENT_OUTER    = 0.9f
@@ -370,14 +370,14 @@ private fun GridOverlay(gridMode: GridMode, gridStepPx: Float, gridColor: Color)
                 val maxRadius = maxOf(w, h) / 2f
                 val dotRadius = dotRadiusPx
                 val centerDotRadius = centerDotPx
-                val dotColor = gridColor.copy(alpha = PC_RADIAL_DOT_ALPHA)
+                val dotColor = gridColor
 
                 // Concentric circles with evenly-distributed snap dots.
                 // Odd circles (1, 3, 5 …): phase 45° → diagonals as anchors.
                 // Even circles (2, 4, 6 …): phase 0° → cardinal directions as anchors.
                 var r = gridStepPx
                 var circleIndex = 1
-                while (r <= maxRadius) {
+                while (r <= maxRadius + PC_RADIAL_EXTRA_RINGS * gridStepPx) {
                     drawCircle(gridColor, radius = r, center = Offset(cx, cy), style = Stroke(PC_GRID_STROKE_PX))
                     val n = radialPointCount(r, buttonUnitPx)
                     val phaseOffset = if (circleIndex % 2 == 1) PI / 4.0 else 0.0

@@ -95,7 +95,6 @@ private val ED_TOP_BAR_HEIGHT          = 56.dp
 private val ED_PADDING                 = 16.dp
 private val ED_ITEM_PADDING            = 12.dp
 private val ED_GRID_TOGGLE_SIZE        = 36.dp
-private val ED_GRID_TOGGLE_MARGIN      = 8.dp
 private val ED_SECTION_HEADER_V_PADDING = 10.dp
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -465,7 +464,7 @@ private fun EditorBody(
     val layoutRef  by rememberUpdatedState(layout)
 
     val lazyListState = rememberLazyListState()
-    // Items before buttons: section_layout(0), layouts(1), canvas(2), toolbar(3),
+    // Items before buttons: section_layout(0), layouts(1), toolbar(2), canvas(3),
     // section_layout_settings(4), layout_settings(5), section_buttons(6) → offset = 7
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
         val offset     = 7
@@ -505,58 +504,31 @@ private fun EditorBody(
             )
         }
 
-        // 3. Pad canvas with grid toggle overlay
-        item(key = "canvas") {
-            Box {
-                PadCanvas(profile = profile, layout = layout, accentColor = accentColor, gridMode = gridMode)
-
-                val gridIcon = when (gridMode) {
-                    GridMode.OFF         -> Icons.Rounded.GridOff
-                    GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
-                    GridMode.RADIAL      -> Icons.Rounded.TripOrigin
-                }
-                val gridCd = when (gridMode) {
-                    GridMode.OFF         -> stringResource(R.string.macropad_editor_grid_off)
-                    GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular)
-                    GridMode.RADIAL      -> stringResource(R.string.macropad_editor_grid_radial)
-                }
-                IconButton(
-                    onClick = {
-                        gridMode = when (gridMode) {
-                            GridMode.OFF         -> GridMode.RECTANGULAR
-                            GridMode.RECTANGULAR -> GridMode.RADIAL
-                            GridMode.RADIAL      -> GridMode.OFF
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(ED_GRID_TOGGLE_MARGIN)
-                        .size(ED_GRID_TOGGLE_SIZE)
-                        .clip(CircleShape)
-                        .background(colors.surface.copy(alpha = 0.8f)),
-                ) {
-                    Icon(
-                        gridIcon,
-                        contentDescription = gridCd,
-                        tint     = if (gridMode == GridMode.OFF) colors.onSurfaceSecondary else accentColor,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        }
-
-        // 4. Action toolbar (Add Button / Macros…)
+        // 3. Action toolbar (Add Button / Macros… / Grid toggle)
         item(key = "toolbar") {
             EditorToolbar(
-                profile        = profile,
-                accentColor    = accentColor,
-                onManageMacros = onManageMacros,
-                onAddButton    = onAddButton,
-                modifier       = Modifier
+                profile          = profile,
+                accentColor      = accentColor,
+                gridMode         = gridMode,
+                onManageMacros   = onManageMacros,
+                onAddButton      = onAddButton,
+                onGridModeChange = {
+                    gridMode = when (gridMode) {
+                        GridMode.OFF         -> GridMode.RECTANGULAR
+                        GridMode.RECTANGULAR -> GridMode.RADIAL
+                        GridMode.RADIAL      -> GridMode.OFF
+                    }
+                },
+                modifier         = Modifier
                     .background(colors.surface)
                     .padding(horizontal = ED_PADDING)
-                    .padding(vertical = ED_PADDING),
+                    .padding(top = ED_PADDING / 2, bottom = ED_PADDING),
             )
+        }
+
+        // 4. Pad canvas
+        item(key = "canvas") {
+            PadCanvas(profile = profile, layout = layout, accentColor = accentColor, gridMode = gridMode)
         }
 
         // 5. Layout settings section header
@@ -747,15 +719,25 @@ private fun LayoutChip(
 
 @Composable
 private fun EditorToolbar(
-    profile:         PadProfile,
-    accentColor:     Color,
-    onManageMacros:  () -> Unit,
-    onAddButton:     () -> Unit,
-    modifier:        Modifier = Modifier,
+    profile:          PadProfile,
+    accentColor:      Color,
+    gridMode:         GridMode,
+    onManageMacros:   () -> Unit,
+    onAddButton:      () -> Unit,
+    onGridModeChange: () -> Unit,
+    modifier:         Modifier = Modifier,
 ) {
+    val colors   = LocalAppColors.current
+    val gridIcon = when (gridMode) {
+        GridMode.OFF         -> Icons.Rounded.GridOff
+        GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
+        GridMode.RADIAL      -> Icons.Rounded.TripOrigin
+    }
+    val gridTint = if (gridMode == GridMode.OFF) colors.onSurfaceSecondary else accentColor
     Row(
         modifier              = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(ED_ITEM_PADDING),
+        verticalAlignment     = Alignment.CenterVertically,
     ) {
         // Add Button
         EditorActionChip(
@@ -771,6 +753,14 @@ private fun EditorToolbar(
             icon        = Icons.Rounded.Edit,
             accentColor = accentColor,
             onClick     = onManageMacros,
+            modifier    = Modifier.weight(1f),
+        )
+        // Grid toggle
+        EditorActionChip(
+            label       = stringResource(R.string.macropad_editor_grid_toggle),
+            icon        = gridIcon,
+            accentColor = gridTint,
+            onClick     = onGridModeChange,
             modifier    = Modifier.weight(1f),
         )
     }
