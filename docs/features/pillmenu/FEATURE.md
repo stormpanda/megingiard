@@ -12,10 +12,10 @@
 The Idle Pill and Pill Menu are the primary navigation surface of the app. A slim pill-shaped
 affordance is always visible at the configured screen edge on the secondary display. Swiping from
 that edge opens the Pill Menu — a two-card overlay that provides profile and layout switching,
-layout editing, settings access, and full mirror controls including the Ambient Settings shortcut.
+layout editing, settings access, and full mirror controls including the Background Settings shortcut.
 
-The same swipe gesture closes any open modal (Pill Menu, Layout Editor, Ambient Settings, Fullscreen
-Keyboard, Fullscreen Mouse Overlay), making the Idle Pill the universal "go back" mechanism
+The same swipe gesture closes any open modal (Pill Menu, Layout Editor, Background Settings, Fullscreen
+keyboard, Fullscreen Mouse Overlay), making the Idle Pill the universal "go back" mechanism
 throughout the app.
 
 ---
@@ -93,7 +93,7 @@ throughout the app.
   focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
   Toggling keyboard availability could otherwise background the app immediately after opening the menu.
 - Injector stop/restart for Pill Menu and modal transitions is handled by the injector lifecycle
-  watchers (`MacroPadViewModel.watchInjectorLifecycle()` and ambient equivalent). The Pill Menu
+  watchers (`MacroPadViewModel.watchInjectorLifecycle()` and background equivalent). The Pill Menu
   Composable does not directly manage injector processes.
 
 ---
@@ -169,6 +169,9 @@ are true. The Idle Pill reads this to decide whether to show the "× close" labe
 | File                       | Responsibility                                                                            |
 | -------------------------- | ----------------------------------------------------------------------------------------- |
 | `ui/IdlePill.kt`           | Always-visible pill tab + "× close" label; `PILL_INSET` constant for screen edge inset    |
-| `ui/PillMenu.kt`           | Full-screen Pill Menu overlay: two-card layout, profile/layout CRUD, mirror controls card |
+| `ui/PillMenu.kt`           | Full-screen Pill Menu overlay: state coordinator and overlays orchestrator                |
+| `ui/PillMenuComponents.kt` | ProfileRow, LayoutRow, SectionLabel, and PillActionChip composables                       |
+| `ui/PillMenuDialogs.kt`    | InTreeNameInputDialog dialog helper for new profile/layout creation                        |
+| `ui/PillMirrorCard.kt`     | Slide-in MirrorControlCard and MirrorControlIconButton composables                        |
 | `AppStateManager.kt`       | `isPillMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers       |
 | `SwipeGestureProcessor.kt` | Edge-swipe detection (`pointerInput`); calls `AppStateManager.handleEdgeSwipe()`          |
