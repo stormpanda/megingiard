@@ -541,16 +541,6 @@ private fun EditorBody(
                         enableMouse        = profile.enableMouse,
                         isDragging         = isDragging,
                         onEdit             = { onEditButton(btn) },
-                        onUpdate           = { updated ->
-                            val curLayout = MacroPadState.activeLayout.value
-                            if (curLayout != null) {
-                                MacroPadState.updateLayout(
-                                    curLayout.copy(buttons = curLayout.buttons.map {
-                                        if (it.id == btn.id) updated else it
-                                    })
-                                )
-                            }
-                        },
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )

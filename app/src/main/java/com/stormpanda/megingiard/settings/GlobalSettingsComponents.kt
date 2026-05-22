@@ -274,7 +274,6 @@ internal fun ConfigActionRow(
 @Composable
 internal fun SectionJumpRow(
     colors: AppColors,
-    accentColor: Color,
     selectedSectionFilter: SettingsSectionFilter?,
     onSelectAll: () -> Unit,
     onSelectGeneral: () -> Unit,
@@ -300,50 +299,36 @@ internal fun SectionJumpRow(
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_all),
-            colors = colors,
-            accentColor = accentColor,
             selected = selectedSectionFilter == null,
             onClick = onSelectAll,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_general),
-            colors = colors,
-            accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.GENERAL,
             onClick = onSelectGeneral,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_appearance),
-            colors = colors,
-            accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.APPEARANCE,
             onClick = onSelectAppearance,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_data),
-            colors = colors,
-            accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.DATA,
             onClick = onSelectData,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_config),
-            colors = colors,
-            accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
             onClick = onSelectConfig,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_privileged_mode),
-            colors = colors,
-            accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE,
             onClick = onSelectPrivilegedMode,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_diagnostics),
-            colors = colors,
-            accentColor = accentColor,
             selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS,
             onClick = onSelectDiagnostics,
         )
@@ -353,8 +338,6 @@ internal fun SectionJumpRow(
 @Composable
 private fun SectionJumpChip(
     label: String,
-    colors: AppColors,
-    accentColor: Color,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -368,7 +351,6 @@ private fun SectionJumpChip(
 @Composable
 internal fun SettingsSection(
     title: String,
-    accentColor: Color,
     colors: AppColors,
     content: @Composable ColumnScope.() -> Unit,
 ) {

@@ -15,7 +15,7 @@ that edge opens the Pill Menu — a two-card overlay that provides profile and l
 layout editing, settings access, and full mirror controls including the Background Settings shortcut.
 
 The same swipe gesture closes any open modal (Pill Menu, Layout Editor, Background Settings, Fullscreen
-keyboard, Fullscreen Mouse Overlay), making the Idle Pill the universal "go back" mechanism
+Keyboard, Fullscreen Mouse Overlay), making the Idle Pill the universal "go back" mechanism
 throughout the app.
 
 ---

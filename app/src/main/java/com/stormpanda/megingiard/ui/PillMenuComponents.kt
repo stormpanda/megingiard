@@ -67,7 +67,6 @@ internal fun ProfileRow(
                 SelectableChip(
                     text = profile.name,
                     isSelected = isActive,
-                    colors = colors,
                     contentDescription = profile.name,
                     onClick = { onProfileSelected(profile) },
                 )
@@ -109,7 +108,6 @@ internal fun LayoutRow(
                 SelectableChip(
                     text = layout.name,
                     isSelected = layout.id == activeLayout?.id,
-                    colors = colors,
                     contentDescription = layout.name,
                     onClick = { onLayoutSelected(layout.id) },
                 )
@@ -169,7 +167,6 @@ internal fun PillActionChip(
 private fun SelectableChip(
     text: String,
     isSelected: Boolean,
-    colors: AppColors,
     contentDescription: String? = null,
     onClick: () -> Unit,
 ) {

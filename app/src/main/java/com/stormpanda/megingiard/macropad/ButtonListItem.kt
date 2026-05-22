@@ -43,7 +43,6 @@ internal fun ButtonListItem(
     enableMouse:        Boolean,
     isDragging:         Boolean,
     onEdit:             () -> Unit,
-    onUpdate:           (PadButton) -> Unit,
     onDelete:           () -> Unit,
     dragHandleModifier: Modifier,
     modifier:           Modifier = Modifier,

@@ -135,7 +135,6 @@ fun GlobalSettingsScreen(
             ) {
                 SectionJumpRow(
                     colors = colors,
-                    accentColor = effectiveAccent,
                     selectedSectionFilter = selectedSectionFilter,
                     onSelectAll = { selectedSectionFilter = null },
                     onSelectGeneral = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
@@ -148,7 +147,6 @@ fun GlobalSettingsScreen(
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
                     SettingsSection(
                         title = stringResource(R.string.settings_section_general),
-                        accentColor = effectiveAccent,
                         colors = colors,
                     ) {
                         OverlayPositionRow(
@@ -195,7 +193,6 @@ fun GlobalSettingsScreen(
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
                     SettingsSection(
                         title = stringResource(R.string.settings_section_appearance),
-                        accentColor = effectiveAccent,
                         colors = colors,
                     ) {
                         ThemePickerRow(
@@ -216,7 +213,6 @@ fun GlobalSettingsScreen(
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DATA) {
                     SettingsSection(
                         title = stringResource(R.string.settings_section_data),
-                        accentColor = effectiveAccent,
                         colors = colors,
                     ) {
                         ConfigActionRow(
@@ -231,7 +227,6 @@ fun GlobalSettingsScreen(
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
                     SettingsSection(
                         title = stringResource(R.string.settings_section_config),
-                        accentColor = effectiveAccent,
                         colors = colors,
                     ) {
                         ConfigSection(
@@ -245,7 +240,6 @@ fun GlobalSettingsScreen(
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
                     SettingsSection(
                         title = stringResource(R.string.settings_section_privileged_mode),
-                        accentColor = effectiveAccent,
                         colors = colors,
                     ) {
                         PrivdSettingsCard(
@@ -259,7 +253,6 @@ fun GlobalSettingsScreen(
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
                     SettingsSection(
                         title = stringResource(R.string.settings_section_diagnostics),
-                        accentColor = effectiveAccent,
                         colors = colors,
                     ) {
                         LogLevelPickerRow(
