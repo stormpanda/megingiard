@@ -79,13 +79,18 @@ internal fun ButtonListItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Shape indicator
+        val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
         val chipShape = if (isTrackpoint || btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(4.dp)
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .clip(chipShape)
-                .background(accentColor.copy(alpha = 0.2f))
-                .border(1.dp, accentColor, chipShape),
+                .then(
+                    if (isIconOnly) Modifier
+                    else Modifier
+                        .clip(chipShape)
+                        .background(accentColor.copy(alpha = 0.2f))
+                        .border(1.dp, accentColor, chipShape)
+                ),
             contentAlignment = Alignment.Center,
         ) {
             if (isTrackpoint) {

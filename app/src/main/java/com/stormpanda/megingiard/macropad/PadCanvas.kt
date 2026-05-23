@@ -222,8 +222,10 @@ private fun DraggableButton(
     val left = btn.posX * w - chipWidthPx / 2f
     val top  = btn.posY * h - chipHeightPx / 2f
 
+    val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
+
     val chipShape = if (isTrackpoint) CircleShape else when (btn.buttonShape) {
-        ButtonShape.SQUARE -> RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
+        ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
         ButtonShape.CIRCLE -> when (btn.buttonSize) {
             ButtonSize.SIZE_2X2                      -> CircleShape
             ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
@@ -248,21 +250,28 @@ private fun DraggableButton(
                     center = Offset(size.width / 2f, size.height / 2f),
                     radius = halfDiag,
                 )
-                if (isDeviceDisabled) {
-                    val p = Paint().apply {
-                        colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                        this.alpha = ED_BTN_DISABLED_ALPHA
-                    }
-                    drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
-                    drawRect(brush = bgBrush)
+                if (isIconOnly) {
                     drawContent()
-                    drawContext.canvas.restore()
                 } else {
-                    drawRect(brush = bgBrush)
-                    drawContent()
+                    if (isDeviceDisabled) {
+                        val p = Paint().apply {
+                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                            this.alpha = ED_BTN_DISABLED_ALPHA
+                        }
+                        drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                        drawRect(brush = bgBrush)
+                        drawContent()
+                        drawContext.canvas.restore()
+                    } else {
+                        drawRect(brush = bgBrush)
+                        drawContent()
+                    }
                 }
             }
-            .border(1.dp, accentColor, chipShape)
+            .then(
+                if (isIconOnly) Modifier
+                else Modifier.border(1.dp, accentColor, chipShape)
+            )
             .pointerInput(btn.id, canvasSize) {
                 detectDragGestures(
                     onDragStart = {

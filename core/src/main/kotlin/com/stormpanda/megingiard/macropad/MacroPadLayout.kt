@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 // Shape enums
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum class ButtonShape { SQUARE, CIRCLE }
+enum class ButtonShape { SQUARE, CIRCLE, ICON_ONLY }
 
 /**
  * Grid multiplier for a button: cols × rows relative to the base button unit.

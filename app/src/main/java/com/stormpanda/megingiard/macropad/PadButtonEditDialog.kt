@@ -323,10 +323,11 @@ internal fun ButtonEditDialog(
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 ButtonShape.entries.forEach { shape ->
                                     val selected = shape == buttonShape
-                                    val shapeLabel = if (shape == ButtonShape.CIRCLE)
-                                        stringResource(R.string.macropad_editor_shape_circle)
-                                    else
-                                        stringResource(R.string.macropad_editor_shape_square)
+                                    val shapeLabel = when (shape) {
+                                        ButtonShape.CIRCLE    -> stringResource(R.string.macropad_editor_shape_circle)
+                                        ButtonShape.SQUARE    -> stringResource(R.string.macropad_editor_shape_square)
+                                        ButtonShape.ICON_ONLY -> stringResource(R.string.macropad_editor_shape_icon_only)
+                                    }
                                     AppSelectableChip(
                                         text     = shapeLabel,
                                         selected = selected,

@@ -24,7 +24,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 - Each profile can contain an **arbitrary number of buttons** placed anywhere on the pad canvas.
 - Button positions are stored as **normalised coordinates** [0.0, 1.0] relative to the pad dimensions, so the layout scales correctly at any pad size.
-- Each button has a user-defined **label**, a **shape** (circle or square), a **size weight** (1.0 = default unit size), and an **action** (see FR-P3).
+- Each button has a user-defined **label**, a **shape** (circle, square, or icon only), a **size weight** (1.0 = default unit size), and an **action** (see FR-P3).
 - Buttons MUST be repositioned by **drag** inside the editor canvas.
 - The editor provides a **grid snap overlay** that can be toggled on and off at any time during layout editing. Two grid modes are available:
   - **Rectangular** — vertical and horizontal lines spaced at 30 dp (half the 60 dp button unit), forming a uniform grid. Crossing points are the snap targets.
@@ -92,7 +92,7 @@ Each button supports one of the following actions:
 - A **macro** is a named, **per-profile** sequence of timed input steps stored in `PadProfile.macros`. Each profile maintains its own macro list; macros are not shared across profiles.
 - Macros are managed via the **Macro Library** editor (opened from the "Macros…" chip in the layout editor toolbar).
 - Each macro contains a list of **`MacroStep`** subtypes: `GamepadButtonTap`, `JoystickMove`, `JoystickPath`, `DPadTap`, and `TouchTap`. Each step has `startTimeMs` and `durationMs` fields that allow overlapping parallel steps within the same macro. `JoystickPath` is created exclusively by the physical gamepad recorder and carries a list of timestamped `PathSample` entries that replay the full continuous stick trajectory.
-- A **`PadAction.Macro(macroId)`** button action MUST reference a macro by ID. Pressing the button is **tap-to-toggle**: the first tap starts the macro; a second tap stops it by cancelling its coroutine. The button pulses with an infinite alpha animation while the macro is running (driven by `MacroExecutor.runningMacroIds` StateFlow).
+- A **`PadAction.Macro(macroId)`** button action MUST reference a macro by ID. Pressing the button is **tap-to-toggle**: the first tap starts the macro; a second tap stops it by cancelling its coroutine. While the macro is running (driven by `MacroExecutor.runningMacroIds` StateFlow), the button triggers a **unified animation**: the icon/text content breathes (`1.0x` to `1.12x`) on all button shapes, the background pulses with an infinite alpha animation for `SQUARE`/`CIRCLE` buttons, and expanding circular ripple rings (Sonar Ripple) pulse outward past the button borders and fade to zero **exclusively** for the `ICON_ONLY` shape.
 - Macros support a **Loop** mode (`Macro.loopEnabled = true`): the step sequence repeats until the user stops it with a second tap. An optional `Macro.loopPauseMs` (0–2000 ms, in 100 ms steps, auto-extending scale) controls the delay between loop iterations.
 - The MacroPad editor toolbar exposes two chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
 - The macro editor supports two switchable editing modes:
@@ -385,7 +385,7 @@ PadProfile
         ├── iconName: String?   (optional Material Symbols snake_case ligature name, e.g. "arrow_back"; shown instead of label in use mode + editor canvas; null = label)
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
-        ├── buttonShape: ButtonShape (SQUARE | CIRCLE)
+        ├── buttonShape: ButtonShape (SQUARE | CIRCLE | ICON_ONLY)
         ├── action: PadAction   (sealed)
         │     KeyboardKey(keycode, label)
         │     GamepadButton(btnCode, label)

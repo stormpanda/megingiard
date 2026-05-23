@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,11 +34,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Paint
@@ -131,17 +135,51 @@ internal fun PadButton(
         pressedAlpha
     }
 
+    val infiniteTransition = rememberInfiniteTransition(label = "btnRunning")
+    val runningBreathe by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue  = 1.12f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "btnBreathe",
+    )
+    val rippleProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue  = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(MP_PULSE_HALF_PERIOD_MS * 2, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "btnRippleProgress",
+    )
+    val pressedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1.0f,
+        animationSpec = tween(animDuration),
+        label = "btnPressedScale",
+    )
+    val contentScale = if (isPressed) {
+        pressedScale
+    } else if (isRunning) {
+        runningBreathe
+    } else {
+        1.0f
+    }
+
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
 
     val chipShape = if (isTrackpoint) CircleShape else when (btn.buttonShape) {
-        ButtonShape.SQUARE -> RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
+        ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
         ButtonShape.CIRCLE -> when (btn.buttonSize) {
             ButtonSize.SIZE_2X2                      -> CircleShape
             ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
             ButtonSize.SIZE_1X1                      -> CircleShape
         }
     }
+
+    val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
     val chipWidthPx  = with(density) {
         if (isTrackpoint) (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
@@ -162,6 +200,19 @@ internal fun PadButton(
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
             .width(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .drawBehind {
+                if (isRunning && isIconOnly) {
+                    val maxRadius = minOf(size.width, size.height) * 0.75f
+                    val currentRadius = maxRadius * (0.2f + rippleProgress * 0.8f)
+                    val rippleAlpha = (1f - rippleProgress) * 0.6f
+                    drawCircle(
+                        color = effectiveContentAccent.copy(alpha = rippleAlpha),
+                        radius = currentRadius,
+                        center = Offset(size.width / 2f, size.height / 2f),
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
+            }
             .clip(chipShape)
             .drawWithContent {
                 val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
@@ -173,45 +224,60 @@ internal fun PadButton(
                     center = Offset(size.width / 2f, size.height / 2f),
                     radius = halfDiag,
                 )
-                if (isDeviceDisabled) {
-                    val p = Paint().apply {
-                        colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                        this.alpha = MP_BTN_DISABLED_ALPHA
-                    }
-                    drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
-                    drawRect(brush = bgBrush)
+                if (isIconOnly) {
                     drawContent()
-                    drawContext.canvas.restore()
                 } else {
-                    drawRect(brush = bgBrush)
-                    drawContent()
+                    if (isDeviceDisabled) {
+                        val p = Paint().apply {
+                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                            this.alpha = MP_BTN_DISABLED_ALPHA
+                        }
+                        drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                        drawRect(brush = bgBrush)
+                        drawContent()
+                        drawContext.canvas.restore()
+                    } else {
+                        drawRect(brush = bgBrush)
+                        drawContent()
+                    }
                 }
             }
-            .border(1.dp, effectiveBorder, chipShape),
+            .then(
+                if (isIconOnly) Modifier
+                else Modifier.border(1.dp, effectiveBorder, chipShape)
+            ),
     ) {
-        if (isTrackpoint) {
-            Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
-        } else if (btn.action is PadAction.ScrollWheel) {
-            ScrollWheelFace(accentColor = effectiveContentAccent)
-        } else if (btn.action is PadAction.BackgroundPeek) {
-            BackgroundPeekFace(accentColor = effectiveContentAccent)
-        } else {
-            val iconName = btn.iconName
-            if (iconName != null) {
-                MaterialSymbol(
-                    name = iconName,
-                    size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                    tint = effectiveTextTint,
-                    filled = btn.iconFilled,
-                )
+        Box(
+            modifier = Modifier.graphicsLayer {
+                scaleX = contentScale
+                scaleY = contentScale
+            },
+            contentAlignment = Alignment.Center
+        ) {
+            if (isTrackpoint) {
+                Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
+            } else if (btn.action is PadAction.ScrollWheel) {
+                ScrollWheelFace(accentColor = effectiveContentAccent)
+            } else if (btn.action is PadAction.BackgroundPeek) {
+                BackgroundPeekFace(accentColor = effectiveContentAccent)
             } else {
-                Text(
-                    text     = btn.label,
-                    color    = effectiveTextTint,
-                    fontSize = (11 * btn.buttonSize.cols).sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                val iconName = btn.iconName
+                if (iconName != null) {
+                    MaterialSymbol(
+                        name = iconName,
+                        size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                        tint = effectiveTextTint,
+                        filled = btn.iconFilled,
+                    )
+                } else {
+                    Text(
+                        text     = btn.label,
+                        color    = effectiveTextTint,
+                        fontSize = (11 * btn.buttonSize.cols).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
