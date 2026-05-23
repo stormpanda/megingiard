@@ -56,6 +56,7 @@ private const val AM_SCREEN_PADDING_DP = 0
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
 private val AM_SWIPE_EDGE_ZONE = 40.dp
 private val AM_SWIPE_THRESHOLD = 25.dp
+private val AM_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val AM_PERCENT_DIVISOR = 100f
 // Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
 private const val VIGNETTE_MIN_STOP_GAP = 0.001f
@@ -100,8 +101,9 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
-    val swipeProcessor = remember(overlayAtBottom, edgeZonePx, swipeThresholdPx) {
-        SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+    val pillZoneWidthPx = with(density) { AM_SWIPE_PILL_ZONE_WIDTH.toPx() }
+    val swipeProcessor = remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, pillZoneWidthPx) {
+        SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, pillZoneWidthPx)
     }
 
     // Effective dim/vignette: overridden to 0 when peeking
@@ -174,24 +176,37 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx) {
+            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, pillZoneWidthPx) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val primaryChange = event.changes.firstOrNull()
+                        val x = primaryChange?.position?.x ?: 0f
+                        val y = primaryChange?.position?.y ?: 0f
                         when (event.type) {
                             PointerEventType.Press -> {
                                 swipeProcessor.onPress(
-                                    primaryChange?.position?.y ?: 0f,
-                                    size.height.toFloat(),
+                                    pointerY = y,
+                                    containerHeight = size.height.toFloat(),
+                                    pointerX = x,
+                                    containerWidth = size.width.toFloat(),
                                 )
+                                if (swipeProcessor.isNearEdge) {
+                                    event.changes.forEach { it.consume() }
+                                }
                             }
                             PointerEventType.Move -> {
-                                swipeProcessor.onMove(primaryChange?.position?.y ?: 0f)
+                                swipeProcessor.onMove(y)
+                                if (swipeProcessor.isNearEdge) {
+                                    event.changes.forEach { it.consume() }
+                                }
                             }
                             PointerEventType.Release -> {
                                 val allPointersLifted = !event.changes.any { it.pressed }
                                 swipeProcessor.onRelease(allPointersLifted)
+                                if (swipeProcessor.isNearEdge) {
+                                    event.changes.forEach { it.consume() }
+                                }
                             }
                             else -> {}
                         }

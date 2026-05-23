@@ -18,6 +18,7 @@ class SwipeGestureProcessor(
     private val edgeZonePx: Float,
     private val swipeThresholdPx: Float,
     private val overlayAtBottom: Boolean,
+    private val pillZoneWidthPx: Float? = null,
     private val onTouchingChanged: (Boolean) -> Unit = { AppStateManager.setTouching(it) },
     private val onEdgeSwipe: () -> Unit = { AppStateManager.handleEdgeSwipe() },
 ) {
@@ -25,13 +26,24 @@ class SwipeGestureProcessor(
     private var swipeTriggered = false
 
     /** Call on every Press event with the first pointer's Y and the container height. */
-    fun onPress(pointerY: Float, containerHeight: Float) {
+    fun onPress(
+        pointerY: Float,
+        containerHeight: Float,
+        pointerX: Float = 0f,
+        containerWidth: Float = 0f,
+    ) {
         onTouchingChanged(true)
-        val nearEdge = if (overlayAtBottom) {
+        val inPillZoneX = if (pillZoneWidthPx != null && containerWidth > 0f) {
+            val center = containerWidth / 2f
+            pointerX >= center - pillZoneWidthPx / 2f && pointerX <= center + pillZoneWidthPx / 2f
+        } else {
+            true
+        }
+        val nearEdge = (if (overlayAtBottom) {
             pointerY >= containerHeight - edgeZonePx
         } else {
             pointerY <= edgeZonePx
-        }
+        }) && inPillZoneX
         swipeStartY = if (nearEdge) pointerY else Float.NaN
         swipeTriggered = false
     }

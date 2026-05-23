@@ -109,6 +109,7 @@ fun FullscreenMouseOverlay() {
                         val sh = size.height.toFloat()
 
                         for (change in event.changes) {
+                            if (change.isConsumed) continue
                             val id = change.id.value
                             when (event.type) {
                                 PointerEventType.Press -> {

@@ -86,6 +86,7 @@ import com.stormpanda.megingiard.input.TouchInjector
 
 private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
+private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 
 class MirrorPresentation(
@@ -257,6 +258,7 @@ class MirrorPresentation(
                         val density = LocalDensity.current
                         val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
                         val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
+                        val pillZoneWidthPx = with(density) { MP_SWIPE_PILL_ZONE_WIDTH.toPx() }
                         val projectionController = remember(edgeZonePx, overlayAtBottom) {
                             TouchProjectionController(edgeZonePx, overlayAtBottom)
                         }
@@ -282,17 +284,39 @@ class MirrorPresentation(
                                 // dismiss-swipe works even when FullscreenMouseOverlay or
                                 // KeyboardScreen is the hit-test target.
                                 // Only active while a fullscreen overlay is shown.
-                                .pointerInput(isFullscreenMouseActive, isFullscreenKeyboardActive, overlayAtBottom) {
+                                .pointerInput(isFullscreenMouseActive, isFullscreenKeyboardActive, overlayAtBottom, pillZoneWidthPx) {
                                     if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
-                                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+                                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, pillZoneWidthPx)
                                     awaitPointerEventScope {
                                         while (true) {
                                             val event = awaitPointerEvent(PointerEventPass.Initial)
-                                            val y = event.changes.firstOrNull()?.position?.y ?: 0f
+                                            val firstChange = event.changes.firstOrNull()
+                                            val x = firstChange?.position?.x ?: 0f
+                                            val y = firstChange?.position?.y ?: 0f
                                             when (event.type) {
-                                                PointerEventType.Press -> swipe.onPress(y, size.height.toFloat())
-                                                PointerEventType.Move  -> swipe.onMove(y)
-                                                PointerEventType.Release -> swipe.onRelease(!event.changes.any { it.pressed })
+                                                PointerEventType.Press -> {
+                                                    swipe.onPress(
+                                                        pointerY = y,
+                                                        containerHeight = size.height.toFloat(),
+                                                        pointerX = x,
+                                                        containerWidth = size.width.toFloat(),
+                                                    )
+                                                    if (swipe.isNearEdge) {
+                                                        event.changes.forEach { it.consume() }
+                                                    }
+                                                }
+                                                PointerEventType.Move  -> {
+                                                    swipe.onMove(y)
+                                                    if (swipe.isNearEdge) {
+                                                        event.changes.forEach { it.consume() }
+                                                    }
+                                                }
+                                                PointerEventType.Release -> {
+                                                    swipe.onRelease(!event.changes.any { it.pressed })
+                                                    if (swipe.isNearEdge) {
+                                                        event.changes.forEach { it.consume() }
+                                                    }
+                                                }
                                                 else -> Unit
                                             }
                                         }

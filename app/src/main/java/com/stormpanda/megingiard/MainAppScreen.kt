@@ -76,6 +76,7 @@ import kotlinx.coroutines.launch
 private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
+private val MAS_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
@@ -97,6 +98,7 @@ fun MainAppScreen() {
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
+    val pillZoneWidthPx = with(density) { MAS_SWIPE_PILL_ZONE_WIDTH.toPx() }
 
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
@@ -150,27 +152,39 @@ fun MainAppScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(overlayAtBottom, isValidScreen) {
-                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, pillZoneWidthPx)
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             if (!isValidScreen) {
                                 continue
                             }
+                            val firstChange = event.changes.firstOrNull()
+                            val x = firstChange?.position?.x ?: 0f
+                            val y = firstChange?.position?.y ?: 0f
                             when (event.type) {
                                 PointerEventType.Press -> {
                                     swipe.onPress(
-                                        event.changes.firstOrNull()?.position?.y ?: 0f,
-                                        size.height.toFloat()
+                                        pointerY = y,
+                                        containerHeight = size.height.toFloat(),
+                                        pointerX = x,
+                                        containerWidth = size.width.toFloat(),
                                     )
+                                    if (swipe.isNearEdge) {
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                                 PointerEventType.Move -> {
-                                    swipe.onMove(
-                                        event.changes.firstOrNull()?.position?.y ?: 0f
-                                    )
+                                    swipe.onMove(y)
+                                    if (swipe.isNearEdge) {
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                                 PointerEventType.Release -> {
                                     swipe.onRelease(!event.changes.any { it.pressed })
+                                    if (swipe.isNearEdge) {
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                                 else -> {}
                             }

@@ -45,6 +45,7 @@ Pill the universal "go back" mechanism throughout the app.
 - The edge zone width (`AM_SWIPE_EDGE_ZONE = 40 dp`) and the minimum swipe distance threshold
   (`AM_SWIPE_THRESHOLD = 25 dp`) are consistent across all screens that host the pill
   (`MainAppScreen`, `BackgroundMacroPadOverlay`, `FullscreenMouseOverlay`, `MirrorPresentation`).
+- To give the visual Idle Pill absolute touch precedence over underlying buttons, keys, or touchpad overlay zones, the active swipe gesture is horizontally constrained to a **"pill zone"** of `120 dp` width centered at the screen edge. Within this pill zone, the parent swipe gesture detectors consume all pointer events in Compose's `PointerEventPass.Initial` pass, preventing them from being delivered to underlying child composables. Outside the horizontal bounds of this 120 dp zone, edge touches remain clickable and holdable for any buttons or keys placed near the sides.
 - Tapping the scrim (the darkened area outside the Pill Menu cards) MUST dismiss the Pill Menu.
 
 ### FR-PM3: Profile & Layout Selection (Bottom Card)
@@ -150,8 +151,15 @@ Both cards share the same surface style:
 The edge-swipe gesture is **not** captured by `IdlePill`. It is handled by `SwipeGestureProcessor`
 inside the `pointerInput` modifier of whichever screen is currently active. Each screen that hosts
 the pill creates its own `SwipeGestureProcessor` instance with the edge-zone and threshold parameters
-derived from `SettingsManager.overlayAtBottom`. When the processor fires, it calls
-`AppStateManager.handleEdgeSwipe()`, which routes to open, close, or modal-dismiss as appropriate.
+derived from `SettingsManager.overlayAtBottom` as well as a horizontal **"pill zone"** width of `120 dp`
+(converted to pixels).
+
+To prevent touch conflicts with underlying MacroPad buttons or keyboard keys, if a touch is initiated
+within the horizontal pill zone centered at the screen edge, the parent gesture detector consumes the
+touch events during Compose's `Initial` pass. Interactive child overlay composables (such as `PadSurface`
+and `FullscreenMouseOverlay`) check and skip already consumed event changes, giving absolute touch
+precedence to the Idle Pill navigation. When the processor fires, it calls `AppStateManager.handleEdgeSwipe()`,
+which routes to open, close, or modal-dismiss as appropriate.
 
 ### State Ownership
 

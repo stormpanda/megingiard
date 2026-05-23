@@ -232,6 +232,7 @@ internal fun PadSurface(
                             }
 
                             event.changes.forEach { change ->
+                                if (change.isConsumed) return@forEach
                                 val id = change.id.value
 
                                 when (event.type) {
