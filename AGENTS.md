@@ -31,6 +31,7 @@
 | `PRD.md`                                   | Product requirements (German, authoritative)                                             |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
+| `docs/MANUAL_VERIFICATION.md`               | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
