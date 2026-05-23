@@ -185,24 +185,24 @@ Privileged Mode is powerful, and you should understand its security scope:
 
 ### Verifying the APK Download
 
-Each release includes an MD5 checksum file (e.g. `Megingiard-vX.Y.Z-checksum-md5.txt`). Verify the hash of your downloaded APK before installation to confirm its authenticity.
+Each release includes a SHA-256 checksum file (e.g. `Megingiard-vX.Y.Z-checksum-sha256.txt`). Verify the hash of your downloaded APK before installation to ensure its integrity.
 
 **macOS**
 ```sh
-md5 Megingiard-vX.Y.Z.apk
+shasum -a 256 Megingiard-vX.Y.Z.apk
 ```
 
 **Linux**
 ```sh
-md5sum Megingiard-vX.Y.Z.apk
+sha256sum Megingiard-vX.Y.Z.apk
 ```
 
 **Windows (PowerShell)**
 ```powershell
-Get-FileHash Megingiard-vX.Y.Z.apk -Algorithm MD5 | Select-Object -ExpandProperty Hash
+Get-FileHash Megingiard-vX.Y.Z.apk -Algorithm SHA256 | Select-Object -ExpandProperty Hash
 ```
 
-Ensure the output matches the checksum in the `.txt` file exactly before sideloading.
+Ensure the output matches the checksum in the `.txt` file exactly before sideloading. For absolute authenticity, always verify the developer's signing certificate fingerprint.
 
 ### Pairing Wizard Steps
 
@@ -280,7 +280,7 @@ For the full terms and conditions, please refer to the [LICENSE](LICENSE) file a
 
 ## Support This App
 
-Megingiard is completely free and open for personal use. If you enjoy using it and want to support its ongoing development, feel free to buy me a non-existent coffee! Your support and feedback are highly appreciated. <3
+Megingiard is completely free to use for personal, non-commercial use. If you enjoy using it and want to support its ongoing development, feel free to buy me a non-existent coffee! Your support and feedback are highly appreciated. <3
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/stormpanda)
 
