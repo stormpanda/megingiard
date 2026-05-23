@@ -273,6 +273,7 @@ Megingiard is a proprietary, source-available project. It is licensed under the 
 
 * **Source Code & Binaries:** You are permitted to view the source code, compile it, and run the application solely for your own **personal, non-commercial use**.
 * **Prohibitions:** Any commercial exploitation, redistribution of modified source/binaries, and pre-installation or bundling on commercial hardware/devices without prior written consent are strictly prohibited.
+* **Open Source Transition Commitment:** The Copyright Holder commits to transitioning the entire codebase to a fully permissive, OSI-approved open-source license (such as MIT or Apache 2.0) with full redistribution rights in the event that active development is permanently discontinued without a successor.
 
 For the full terms and conditions, please refer to the [LICENSE](LICENSE) file at the root of the repository.
 
