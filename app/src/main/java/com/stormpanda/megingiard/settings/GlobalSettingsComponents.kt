@@ -2,13 +2,19 @@ package com.stormpanda.megingiard.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.Icon
@@ -16,6 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -23,8 +33,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.config.ConfigManager
+import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
@@ -32,13 +46,18 @@ import java.util.Locale
 
 private const val TAG = "GlobalSettingsComponents"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Constants ───────────────────────────────────────────────────────────────
 private val GS_COLOR_PREVIEW_SIZE = 28.dp
 private val GS_COLOR_ICON_SPACER = 8.dp
 private val GS_ACCENT_ARROW_SIZE = 16.dp
 private val GS_DIVIDER_START_INSET = 56.dp
+private val GS_SECTION_CHIP_SPACING = 8.dp
+private val GS_SECTION_HEADER_PADDING_H = 16.dp
+private val GS_SECTION_HEADER_PADDING_V = 10.dp
+
+internal enum class SettingsSectionFilter {
+    GENERAL, APPEARANCE, DATA, CONFIGURATION, PRIVILEGED_MODE, DIAGNOSTICS
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Global settings UI components
@@ -246,4 +265,146 @@ internal fun ConfigActionRow(
             modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
         )
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Extracted Layout & Categories Components
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+internal fun SectionJumpRow(
+    colors: AppColors,
+    selectedSectionFilter: SettingsSectionFilter?,
+    onSelectAll: () -> Unit,
+    onSelectGeneral: () -> Unit,
+    onSelectAppearance: () -> Unit,
+    onSelectData: () -> Unit,
+    onSelectConfig: () -> Unit,
+    onSelectPrivilegedMode: () -> Unit,
+    onSelectDiagnostics: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(GS_SECTION_CHIP_SPACING),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_filter_label),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_all),
+            selected = selectedSectionFilter == null,
+            onClick = onSelectAll,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_general),
+            selected = selectedSectionFilter == SettingsSectionFilter.GENERAL,
+            onClick = onSelectGeneral,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_appearance),
+            selected = selectedSectionFilter == SettingsSectionFilter.APPEARANCE,
+            onClick = onSelectAppearance,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_data),
+            selected = selectedSectionFilter == SettingsSectionFilter.DATA,
+            onClick = onSelectData,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_config),
+            selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
+            onClick = onSelectConfig,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_privileged_mode),
+            selected = selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE,
+            onClick = onSelectPrivilegedMode,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_diagnostics),
+            selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS,
+            onClick = onSelectDiagnostics,
+        )
+    }
+}
+
+@Composable
+private fun SectionJumpChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    AppSelectableChip(
+        text     = label,
+        selected = selected,
+        onClick  = onClick,
+    )
+}
+
+@Composable
+internal fun SettingsSection(
+    title: String,
+    colors: AppColors,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Text(
+        text = title.uppercase(Locale.ROOT),
+        color = colors.sectionHeaderColor,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surfaceVariant)
+            .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
+    )
+    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) { content() }
+    AppDivider()
+}
+
+@Composable
+internal fun ConfigSection(
+    onShowExportDialog: () -> Unit,
+    onShowProfileExportDialog: () -> Unit,
+    onImportPreviewReady: (MegingiardExport) -> Unit,
+) {
+    val pendingImport by ConfigManager.pendingInAppParsedImport.collectAsState()
+    LaunchedEffect(pendingImport) {
+        if (pendingImport != null) onImportPreviewReady(pendingImport!!)
+    }
+
+    val effectiveAccent = LocalAppColors.current.accent
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_export),
+        description = stringResource(R.string.settings_config_export_desc),
+        accentColor = effectiveAccent,
+        onClick = onShowExportDialog,
+    )
+    AppDivider()
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_import),
+        description = stringResource(R.string.settings_config_import_desc),
+        accentColor = effectiveAccent,
+        onClick = { ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE) },
+    )
+    AppDivider()
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_export_profile),
+        description = stringResource(R.string.settings_config_export_profile_desc),
+        accentColor = effectiveAccent,
+        onClick = onShowProfileExportDialog,
+    )
+    AppDivider()
+    ConfigActionRow(
+        label = stringResource(R.string.settings_config_import_profile),
+        description = stringResource(R.string.settings_config_import_profile_desc),
+        accentColor = effectiveAccent,
+        onClick = { ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE) },
+    )
 }

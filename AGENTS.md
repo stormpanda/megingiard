@@ -29,13 +29,16 @@
 | `PRD.md`                                   | Product requirements (German, authoritative)                                             |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
-| `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |
-| `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
-| `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
+| `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
-| `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
-| `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
+| `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
 | `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
+| `docs/features/macropad/FEATURE.md`        | MacroPad — profiles, layouts, and custom macro triggers & execution                      |
+| `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |
+| `docs/features/pillmenu/FEATURE.md`        | Idle Pill & Pill Menu — navigation overlays & mirror control cards                       |
+| `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
+| `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
+| `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
 
 > [!IMPORTANT]
 > **Documentation language: English only.**
@@ -100,37 +103,51 @@ com.stormpanda.megingiard [app module]
 │ ├── KeyboardKeyCap.kt # KeyCap Composable, key bounds tracking
 │ └── KeyboardMouseOverlay.kt # Mouse button overlay (LMB/MMB/RMB/scroll)
 ├── settings/
-│ ├── ColorWheelPicker.kt # HSV color picker (hue wheel + brightness slider)
-│ ├── GlobalSettingsScreen.kt # Full-screen settings Composable (scaffold + state only)
-│ ├── GlobalSettingsComponents.kt # Extracted setting row Composables for GlobalSettingsScreen
-│ └── ToolSettingsComponents.kt # Reusable row Composables (SliderSettingRow, dropdowns, etc.)
+│   ├── ColorWheelPicker.kt        # HSV color picker (hue wheel + brightness slider)
+│   ├── GlobalSettingsComponents.kt # Extracted setting row and section Composables for GlobalSettingsScreen
+│   ├── GlobalSettingsDialogs.kt   # Extracted in-tree overlay dialogs and filename builders
+│   ├── GlobalSettingsScreen.kt    # Full-screen settings Composable (scaffold + state hoists only)
+│   └── ToolSettingsComponents.kt  # Reusable row Composables (SliderSettingRow, dropdowns, etc.)
 ├── macropad/
-│ ├── MacroPadScreen.kt # Main pad Composable (button grid, multi-touch, injector lifecycle)
-│ ├── MacroPadButton.kt # PadButton, ScrollWheelFace, BackgroundPeekFace Composables
-│ ├── MacroPadEditor.kt # Full-screen layout editor (profile/layout CRUD, drag-repositioning)
-│ ├── PadCanvas.kt # Draggable editor canvas (DraggableButton, PadCanvas)
-│ ├── PadButtonEditDialog.kt # Button create/edit dialog
-│ ├── PadActionPicker.kt # Action-selection UI with category tabs
-│ ├── BackgroundMacroPadOverlay.kt # Background overlay (dim + vignette + buttons on secondary display)
-│ ├── BackgroundSettingsOverlay.kt # Per-layout background settings editor
-│ ├── MacroListEditor.kt # In-editor macro list (add/edit/delete/reorder)
-│ ├── MacroStepEditDialog.kt # Macro step timing/action editor dialog
-│ ├── MacroTimelineEditor.kt # Visual macro timeline editor
-│ ├── IconPickerDialog.kt # Material Symbols icon grid picker
-│ ├── MaterialSymbols.kt # Material Symbols typeface integration
-│ ├── MaterialIconRegistry.kt # Icon name → Material Symbols lookup
-│ └── RoundedIconNames.kt # Rounded variant icon name list
+│   ├── BackgroundMacroPadOverlay.kt # Background overlay (dim + vignette + buttons on secondary display)
+│   ├── BackgroundSettingsOverlay.kt # Per-layout background settings editor
+│   ├── ButtonListItem.kt          # Editor component rendering a single button list item
+│   ├── EditorBaseComponents.kt    # Reusable UI pieces for layout editor (headers, grid snaps, etc.)
+│   ├── EditorInlineOverlays.kt    # Full-screen dialogs and template pickers within editor tree
+│   ├── EditorLayoutComponents.kt  # Tab bars and drag-reorder lists for profile layouts
+│   ├── IconPickerDialog.kt        # Material Symbols icon grid picker
+│   ├── MacroListEditor.kt         # In-editor macro list (add/edit/delete/reorder)
+│   ├── MacroPadButton.kt          # PadButton, ScrollWheelFace, BackgroundPeekFace Composables
+│   ├── MacroPadEditor.kt          # Full-screen layout editor (retains core body, orchestrator, and top bar)
+│   ├── MacroPadScreen.kt          # Main pad Composable (button grid, multi-touch, injector lifecycle)
+│   ├── MacroStepEditDialog.kt     # Macro step timing/action editor dialog
+│   ├── MacroStepListItem.kt       # Editor step list item component with quick timing controls
+│   ├── MacroTimelineEditor.kt     # Visual macro timeline editor (orchestrates list/timeline views)
+│   ├── MacroVerticalTimeline.kt   # Canvas-rendered vertical timeline visualization of steps
+│   ├── MaterialIconRegistry.kt    # Icon name → Material Symbols lookup
+│   ├── MaterialSymbols.kt         # Material Symbols typeface integration
+│   ├── PadActionDisplay.kt        # Category/group enums and localized string/label formatting
+│   ├── PadActionPicker.kt         # Base dropdown container for action selection categories
+│   ├── PadActionSubPickers.kt     # Modular sub-pickers for configuring action details
+│   ├── PadButtonEditDialog.kt     # Button create/edit dialog
+│   ├── PadCanvas.kt               # Draggable editor canvas (DraggableButton, PadCanvas)
+│   ├── RoundedIconNames.kt        # Rounded variant icon name list
+│   ├── TimelineBaseComponents.kt  # Action buttons and structural headers for the timeline editor
+│   └── TimelineLoopSettings.kt    # Looping toggle switch and pause delay slider
 ├── touchpad/
-│ └── FullscreenMouseOverlay.kt # Fullscreen relative-mouse overlay (triggered by FullScreenMouse action)
+│   └── FullscreenMouseOverlay.kt  # Fullscreen relative-mouse overlay (triggered by FullScreenMouse action)
 ├── viewmodel/
-│ ├── GlobalSettingsViewModel.kt # Settings VM facade (reads/writes SettingsManager + MacroPadSettings)
-│ ├── MirrorViewModel.kt # Mirror state exposure, viewport/touch-injector lifecycle
-│ ├── MacroPadViewModel.kt # Multi-injector lifecycle, MacroPadHitTestEngine factory
-│ └── KeyboardViewModel.kt # Key/mouse injector lifecycle, KeyRepeatController
+│   ├── GlobalSettingsViewModel.kt # Settings VM facade (reads/writes SettingsManager + MacroPadSettings)
+│   ├── MirrorViewModel.kt         # Mirror state exposure, viewport/touch-injector lifecycle
+│   ├── MacroPadViewModel.kt       # Multi-injector lifecycle, MacroPadHitTestEngine factory
+│   └── KeyboardViewModel.kt       # Key/mouse injector lifecycle, KeyRepeatController
 └── ui/
-├── AppTheme.kt # AppColors token system, palette factory (Dark/Light/Cyberpunk)
-├── IdlePill.kt # Always-visible edge pill (swipe affordance + close label)
-└── PillMenu.kt # Pill overlay (profile/layout card + mirror controls card)
+    ├── AppTheme.kt                # AppColors token system, palette factory (Dark/Light/Cyberpunk)
+    ├── IdlePill.kt                # Always-visible edge pill (swipe affordance + close label)
+    ├── PillMenu.kt                # Pill overlay (retains only main state collection and overlays)
+    ├── PillMenuComponents.kt      # ProfileRow, LayoutRow, SectionLabel, and PillActionChip
+    ├── PillMenuDialogs.kt         # InTreeNameInputDialog helper dialog
+    └── PillMirrorCard.kt          # MirrorControlCard and MirrorControlIconButton
 \`\`\`
 
 ### domain module (`domain/src/main/java/com/stormpanda/megingiard`)
