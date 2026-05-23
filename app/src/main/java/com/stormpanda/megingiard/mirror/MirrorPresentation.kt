@@ -340,7 +340,6 @@ class MirrorPresentation(
                                                             y - swipeStartY
                                                         }
                                                         if (delta >= swipeThresholdPx) {
-                                                            ScreenCaptureManager.setTouchProjectionActive(false)
                                                             swipeStartY = Float.NaN
                                                         }
                                                     } else {

@@ -71,6 +71,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - While Touch Projection is active, normal touches (outside the edge zone) MUST NOT show the control button row — only edge-swipe reveals the buttons, reducing visual distraction during precise input.
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
+- Touch Projection MUST NOT be automatically deactivated when the pill menu is accessed via edge-swipe. It remains active until explicitly turned off by the user (e.g. by tapping the Touch Projection button in the Pill Menu, unlocking, stopping the mirror session, or switching to another tool).
 
 ### FR-M8: Auto-start Gating (Global + Per-Layout Memory)
 
