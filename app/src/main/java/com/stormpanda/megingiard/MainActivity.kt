@@ -36,6 +36,7 @@ import com.stormpanda.megingiard.macropad.MacroExecutor
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
 import com.stormpanda.megingiard.mirror.DisplayDetector
@@ -367,13 +368,15 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.setOnValidScreen(isOnValidScreenLocal)
             }
 
+            val isOnValidScreen by AppStateManager.isOnValidScreen.collectAsState()
+
             val activeLayout by MacroPadState.activeLayout.collectAsState()
 
             // Reconcile the running mirror session with the active layout's persisted
             // desired state. PadLayout.mirrorAutoStart is the single source of truth:
             // true means this layout should mirror (subject to the global auto-start
             // gate when not already running), false means this layout should not mirror.
-            LaunchedEffect(isOnValidScreenLocal) {
+            LaunchedEffect(isOnValidScreen) {
                 var lastPolicyLayoutId: String? = null
                 // True while privd mirror is enabled and the daemon is still connecting
                 // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
@@ -393,10 +396,18 @@ class MainActivity : ComponentActivity() {
                     ScreenCaptureManager.isCapturing,
                     SettingsManager.autoStartCapture,
                     MacroPadState.activeLayout,
-                ) { promptInFlight, suppressedLayoutId, capturing, globalAutoStart, currentLayout ->
+                    AppStateManager.isOnValidScreen,
+                ) { values ->
+                    val promptInFlight = values[0] as Boolean
+                    val suppressedLayoutId = values[1] as? String
+                    val capturing = values[2] as Boolean
+                    val globalAutoStart = values[3] as Boolean
+                    val currentLayout = values[4] as? PadLayout
+                    val onValidScreen = values[5] as Boolean
+
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
-                        isOnValidScreen = isOnValidScreenLocal,
+                        isOnValidScreen = onValidScreen,
                         isCapturing = capturing,
                         globalAutoStart = globalAutoStart,
                         layoutId = currentLayout?.id,
@@ -441,41 +452,47 @@ class MainActivity : ComponentActivity() {
             // ── Mirror button signals from MacroPad ───────────────────────────────
             // MirrorPlayStop button sets these flags in AppStateManager; MainActivity
             // handles them here because sending intents or launching Activities requires
-            // a Context only available in the Activity layer.
-            val mirrorStartRequested by AppStateManager.mirrorStartRequested.collectAsState()
-            val mirrorStopRequested by AppStateManager.mirrorStopRequested.collectAsState()
-
-            LaunchedEffect(mirrorStartRequested) {
-                if (!mirrorStartRequested) return@LaunchedEffect
-                AppLog.i(TAG, "mirrorStartRequested → triggering capture flow")
-                AppStateManager.consumeMirrorStartRequest()
-                val requestedLayoutId = activeLayout?.id
-                if (requestedLayoutId != null) {
-                    val layoutId = requestedLayoutId
-                    AppStateManager.clearMirrorAutoStartSuppression(layoutId)
-                    MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
-                    MacroPadState.activeLayout
-                        .map { layout -> layout?.id == layoutId && layout?.mirrorAutoStart == true }
-                        .first { it }
-                }
-                // Manual start bypasses the global auto-start gate — launch directly.
-                if (isOnValidScreenLocal &&
-                    !ScreenCaptureManager.isCapturing.value &&
-                    !AppStateManager.promptInFlight.value
-                ) {
-                    startMirrorByPolicy()
+            LaunchedEffect(Unit) {
+                AppStateManager.mirrorStartRequested.collect { requested ->
+                    if (!requested) return@collect
+                    AppLog.i(TAG, "mirrorStartRequested → triggering capture flow")
+                    AppStateManager.consumeMirrorStartRequest()
+                    val alreadyPrompting = AppStateManager.promptInFlight.value
+                    if (!alreadyPrompting) {
+                        AppStateManager.setPromptInFlight(true)
+                    }
+                    val requestedLayoutId = activeLayout?.id
+                    if (requestedLayoutId != null) {
+                        val layoutId = requestedLayoutId
+                        AppStateManager.clearMirrorAutoStartSuppression(layoutId)
+                        MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+                        MacroPadState.activeLayout
+                            .map { layout -> layout?.id == layoutId && layout?.mirrorAutoStart == true }
+                            .first { it }
+                    }
+                    // Manual start bypasses the global auto-start gate — launch directly.
+                    if (isOnValidScreen &&
+                        !ScreenCaptureManager.isCapturing.value &&
+                        !alreadyPrompting
+                    ) {
+                        startMirrorByPolicy()
+                    } else if (!alreadyPrompting) {
+                        AppStateManager.setPromptInFlight(false)
+                    }
                 }
             }
 
-            LaunchedEffect(mirrorStopRequested) {
-                if (!mirrorStopRequested) return@LaunchedEffect
-                AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
-                AppStateManager.consumeMirrorStopRequest()
-                activeLayout?.id?.let { layoutId ->
-                    AppStateManager.suppressMirrorAutoStart(layoutId)
-                    MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+            LaunchedEffect(Unit) {
+                AppStateManager.mirrorStopRequested.collect { requested ->
+                    if (!requested) return@collect
+                    AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
+                    AppStateManager.consumeMirrorStopRequest()
+                    activeLayout?.id?.let { layoutId ->
+                        AppStateManager.suppressMirrorAutoStart(layoutId)
+                        MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+                    }
+                    if (isCapturing) stopMirrorService()
                 }
-                if (isCapturing) stopMirrorService()
             }
 
             val themeMode by SettingsManager.themeMode.collectAsState()

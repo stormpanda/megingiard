@@ -233,8 +233,8 @@ When a full-screen UI overlay is visible:
 
 ### Secondary Display Rendering (Background Display Mode)
 
-When the MacroPad is in **background display mode** (`BackgroundSettings.macropadBackgroundEnabled == true` and `ScreenCaptureManager.isCapturing == true`), `KeyboardScreen` is composed inside `MirrorPresentation` as **Layer 5** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
+When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `KeyboardScreen` is composed inside `MirrorPresentation` as **Layer 5** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
 
-`MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever background display mode is active, ensuring only one instance of `KeyInjector` runs at a time.
+`MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `KeyInjector` runs at a time.
 
 Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenKeyboardActive.value = false`.

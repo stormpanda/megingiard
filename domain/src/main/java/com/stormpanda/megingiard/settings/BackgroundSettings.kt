@@ -31,8 +31,7 @@ object BackgroundSettings {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var scope: CoroutineScope
 
-    private val _macropadBackgroundEnabled = MutableStateFlow(false)
-    val macropadBackgroundEnabled: StateFlow<Boolean> = _macropadBackgroundEnabled.asStateFlow()
+
 
     private val _macropadBackgroundDim = MutableStateFlow(0f)
     val macropadBackgroundDim: StateFlow<Float> = _macropadBackgroundDim.asStateFlow()
@@ -67,7 +66,6 @@ object BackgroundSettings {
     }
 
     internal fun loadFrom(prefs: Preferences) {
-        _macropadBackgroundEnabled.value = prefs[KEY_MACROPAD_AMBIENT_ENABLED] ?: false
         _macropadBackgroundDim.value = prefs[KEY_MACROPAD_AMBIENT_DIM] ?: 0f
         _macropadBackgroundVignetteEnabled.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED] ?: false
         _macropadBackgroundVignetteVisibleArea.value = prefs[KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA] ?: 0.7f
@@ -79,11 +77,7 @@ object BackgroundSettings {
         _macropadBackgroundApplyTheme.value = prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] ?: false
     }
 
-    fun setMacropadBackgroundEnabled(value: Boolean) {
-        AppLog.d(TAG, "setMacropadBackgroundEnabled($value)")
-        _macropadBackgroundEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_MACROPAD_AMBIENT_ENABLED] = value } }
-    }
+
 
     fun setMacropadBackgroundDim(value: Float) {
         AppLog.d(TAG, "setMacropadBackgroundDim($value)")

@@ -21,7 +21,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CaptureRequestActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
-import com.stormpanda.megingiard.settings.BackgroundSettings
 import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -156,19 +155,16 @@ class ScreenCaptureService : Service() {
                     virtualDisplay?.setSurface(activeSurface)
                     AppLog.d(TAG, "VirtualDisplay surface reattached after show()")
                 } else {
-                    val ambientEnabled = BackgroundSettings.macropadBackgroundEnabled.value
-                    if (ambientEnabled) {
-                        try {
-                            virtualDisplay = mediaProjection?.createVirtualDisplay(
-                                "ScreenCapture",
-                                srcWidth, srcHeight, dpi,
-                                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                                activeSurface, null, null
-                            )
-                            AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
-                        } catch (e: Exception) {
-                            AppLog.e(TAG, "Exception creating VirtualDisplay", e)
-                        }
+                    try {
+                        virtualDisplay = mediaProjection?.createVirtualDisplay(
+                            "ScreenCapture",
+                            srcWidth, srcHeight, dpi,
+                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                            activeSurface, null, null
+                        )
+                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Exception creating VirtualDisplay", e)
                     }
                 }
             }

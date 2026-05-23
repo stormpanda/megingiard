@@ -47,7 +47,6 @@ import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
-import com.stormpanda.megingiard.settings.BackgroundSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.Locale
 import com.stormpanda.megingiard.ui.AppDimens
@@ -242,7 +241,6 @@ class MirrorPresentation(
                         colorScheme = colorSchemeFor(appColors, themeMode),
                         typography = megingiardTypography
                     ) {
-                        val ambientEnabled by BackgroundSettings.macropadBackgroundEnabled.collectAsState()
                         val capturing by ScreenCaptureManager.isCapturing.collectAsState()
                         val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
                         val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
@@ -421,7 +419,7 @@ class MirrorPresentation(
                             // so IdlePill remains visible in all modes. Internally hides
                             // buttons/dim/vignette during touch projection, freeze, and
                             // viewport edit.
-                            if (ambientEnabled && capturing) {
+                            if (capturing) {
                                 BackgroundMacroPadOverlay(showIdlePill = false)
                             }
 
@@ -457,14 +455,14 @@ class MirrorPresentation(
                             // content when triggered from BackgroundMacroPadOverlay buttons.
                             // Dismissed via edge-swipe → BackgroundMacroPadOverlay's
                             // SwipeGestureProcessor → AppStateManager.closeActiveModal().
-                            if (ambientEnabled && capturing && isFullscreenMouseActive) {
+                            if (capturing && isFullscreenMouseActive) {
                                 FullscreenMouseOverlay()
                             }
 
                             // Layer 5: Fullscreen Keyboard Overlay — rendered above background
                             // content when triggered from BackgroundMacroPadOverlay buttons.
                             // Dismissed via edge-swipe → AppStateManager.closeActiveModal().
-                            if (ambientEnabled && capturing && isFullscreenKeyboardActive) {
+                            if (capturing && isFullscreenKeyboardActive) {
                                 KeyboardScreen(
                                     modifier = Modifier.fillMaxSize(),
                                     forcedLayout = fullscreenKeyboardLayout,
@@ -476,7 +474,7 @@ class MirrorPresentation(
                             // overlays (keyboard / mouse). Suppressed inside
                             // BackgroundMacroPadOverlay (showIdlePill = false) to ensure
                             // only one IdlePill instance exists at a time.
-                            if (ambientEnabled && capturing) {
+                            if (capturing) {
                                 IdlePill()
                             }
                         }
@@ -532,7 +530,6 @@ class MirrorPresentation(
         scope.launch {
             combine(
                 AppStateManager.isOnValidScreen,
-                BackgroundSettings.macropadBackgroundEnabled,
                 ScreenCaptureManager.isCapturing,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
@@ -540,12 +537,11 @@ class MirrorPresentation(
                 AppStateManager.isAmbientPreviewActive,
             ) { values ->
                 val isValid = values[0] as Boolean
-                val ambientEnabled = values[1] as Boolean
-                val capturing = values[2] as Boolean
-                val filePickerOpen = values[3] as Boolean
-                val editorActive = values[4] as Boolean
-                val ambientSettingsActive = values[5] as Boolean
-                val ambientPreviewActive = values[6] as Boolean
+                val capturing = values[1] as Boolean
+                val filePickerOpen = values[2] as Boolean
+                val editorActive = values[3] as Boolean
+                val ambientSettingsActive = values[4] as Boolean
+                val ambientPreviewActive = values[5] as Boolean
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
@@ -565,7 +561,7 @@ class MirrorPresentation(
                 // transparent BackgroundSettingsOverlay on the primary screen (same visual
                 // as viewport edit mode). Primary-screen input is unaffected because the
                 // Presentation sits on the secondary display.
-                capturing && isValid && ambientEnabled &&
+                capturing && isValid &&
                     !filePickerOpen && !editorActive &&
                     (!ambientSettingsActive || ambientPreviewActive)
             }.collect { shouldShow ->

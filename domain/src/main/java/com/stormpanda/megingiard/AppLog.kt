@@ -21,7 +21,7 @@ object AppLog {
 
     enum class Level { VERBOSE, DEBUG, INFO, WARN, ERROR, NONE }
 
-    @Volatile var level: Level = Level.WARN
+    @Volatile var level: Level = Level.DEBUG
 
     fun v(tag: String, msg: String) {
         if (level <= Level.VERBOSE) Log.v("$APPLOG_TAG_PREFIX.$tag", msg)
