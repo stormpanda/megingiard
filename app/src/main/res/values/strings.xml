@@ -501,8 +501,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_editor_undo">Undo</string>
     <string name="macropad_macro_editor_redo">Redo</string>
     <string name="macropad_macro_editor_view_label">View</string>
-    <string name="macropad_macro_editor_view_list">List</string>
-    <string name="macropad_macro_editor_view_timeline">Time</string>
+    <string name="macropad_macro_editor_view_list">List/Edit</string>
+    <string name="macropad_macro_editor_view_timeline">Timeline</string>
     <string name="macropad_macro_editor_shift_subsequent">Shift subsequent steps</string>
     <string name="macropad_macro_editor_shift_none">Off</string>
     <string name="macropad_macro_editor_shift_start_delta">Start &#916;</string>

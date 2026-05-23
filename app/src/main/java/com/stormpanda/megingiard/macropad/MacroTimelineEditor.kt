@@ -328,71 +328,73 @@ internal fun MacroTimelineEditor(
                 )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.surface)
-                    .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(
-                    onClick = {
-                        if (undoStack.isNotEmpty()) {
-                            val previous = undoStack.last()
-                            undoStack = undoStack.dropLast(1)
-                            redoStack = (redoStack + listOf(steps)).takeLast(MTE_UNDO_STACK_MAX)
-                            steps = previous
-                            AppLog.d(TAG, "undo stack=${undoStack.size} redo stack=${redoStack.size}")
-                        }
-                    },
-                    enabled = undoStack.isNotEmpty(),
+            if (viewMode == MacroEditorViewMode.LIST) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.surface)
+                        .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.Undo,
-                        contentDescription = stringResource(R.string.macropad_macro_editor_undo),
-                        tint = if (undoStack.isNotEmpty()) colors.onSurface else colors.onSurfaceSecondary,
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        if (redoStack.isNotEmpty()) {
-                            val restored = redoStack.last()
-                            redoStack = redoStack.dropLast(1)
-                            undoStack = (undoStack + listOf(steps)).takeLast(MTE_UNDO_STACK_MAX)
-                            steps = restored
-                            AppLog.d(TAG, "undo stack=${undoStack.size} redo stack=${redoStack.size}")
-                        }
-                    },
-                    enabled = redoStack.isNotEmpty(),
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.Redo,
-                        contentDescription = stringResource(R.string.macropad_macro_editor_redo),
-                        tint = if (redoStack.isNotEmpty()) colors.onSurface else colors.onSurfaceSecondary,
-                    )
-                }
-
-                Spacer(Modifier.width(8.dp))
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Spacer(Modifier.width(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(MTE_VIEW_CHIP_SPACING.dp)) {
-                    ShiftMode.entries.forEach { mode ->
-                        AppSelectableChip(
-                            text = stringResource(
-                                when (mode) {
-                                    ShiftMode.NONE        -> R.string.macropad_macro_editor_shift_none
-                                    ShiftMode.START_DELTA -> R.string.macropad_macro_editor_shift_start_delta
-                                    ShiftMode.END_DELTA   -> R.string.macropad_macro_editor_shift_end_delta
-                                }
-                            ),
-                            selected = shiftModeDefault == mode,
-                            onClick  = { shiftModeDefault = mode },
+                    IconButton(
+                        onClick = {
+                            if (undoStack.isNotEmpty()) {
+                                val previous = undoStack.last()
+                                undoStack = undoStack.dropLast(1)
+                                redoStack = (redoStack + listOf(steps)).takeLast(MTE_UNDO_STACK_MAX)
+                                steps = previous
+                                AppLog.d(TAG, "undo stack=${undoStack.size} redo stack=${redoStack.size}")
+                            }
+                        },
+                        enabled = undoStack.isNotEmpty(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.Undo,
+                            contentDescription = stringResource(R.string.macropad_macro_editor_undo),
+                            tint = if (undoStack.isNotEmpty()) colors.onSurface else colors.onSurfaceSecondary,
                         )
+                    }
+                    IconButton(
+                        onClick = {
+                            if (redoStack.isNotEmpty()) {
+                                val restored = redoStack.last()
+                                redoStack = redoStack.dropLast(1)
+                                undoStack = (undoStack + listOf(steps)).takeLast(MTE_UNDO_STACK_MAX)
+                                steps = restored
+                                AppLog.d(TAG, "undo stack=${undoStack.size} redo stack=${redoStack.size}")
+                            }
+                        },
+                        enabled = redoStack.isNotEmpty(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.Redo,
+                            contentDescription = stringResource(R.string.macropad_macro_editor_redo),
+                            tint = if (redoStack.isNotEmpty()) colors.onSurface else colors.onSurfaceSecondary,
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = stringResource(R.string.macropad_macro_editor_shift_subsequent),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(MTE_VIEW_CHIP_SPACING.dp)) {
+                        ShiftMode.entries.forEach { mode ->
+                            AppSelectableChip(
+                                text = stringResource(
+                                    when (mode) {
+                                        ShiftMode.NONE        -> R.string.macropad_macro_editor_shift_none
+                                        ShiftMode.START_DELTA -> R.string.macropad_macro_editor_shift_start_delta
+                                        ShiftMode.END_DELTA   -> R.string.macropad_macro_editor_shift_end_delta
+                                    }
+                                ),
+                                selected = shiftModeDefault == mode,
+                                onClick  = { shiftModeDefault = mode },
+                            )
+                        }
                     }
                 }
             }
@@ -493,39 +495,6 @@ internal fun MacroTimelineEditor(
                             onEditStep = { editingStepIndex = it },
                         )
                     }
-
-                    AppDivider()
-
-                    StepActionRow(
-                        steps = steps,
-                        accentColor = accentColor,
-                        onAdd = { showAddStep = true },
-                        onRecordGamepad = { requestGamepadRecording() },
-                        onRecordTouch = { requestTouchRecording() },
-                        onTest = {
-                            // Force loopEnabled=false for test runs: a looping macro would run
-                            // indefinitely in the editor with no obvious way to stop it.
-                            MacroExecutor.execute(
-                                macro.copy(
-                                    name = localName.trim().ifBlank { macro.name },
-                                    steps = steps,
-                                    loopEnabled = false,
-                                    loopPauseMs = 0,
-                                ),
-                            )
-                        },
-                    )
-                    AppDivider()
-                    MtSectionHeader(R.string.macropad_macro_section_settings)
-                    MtLoopSection(
-                        loopEnabled = loopEnabled,
-                        loopPauseMs = loopPauseMs,
-                        loopPauseMaxMs = loopPauseMaxMs,
-                        accentColor = accentColor,
-                        onLoopEnabledChange = { loopEnabled = it },
-                        onLoopPauseMsChange = { loopPauseMs = it },
-                        onLoopPauseMaxMsChange = { loopPauseMaxMs = it },
-                    )
                 }
             }
         }

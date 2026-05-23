@@ -531,8 +531,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_editor_undo">Rückgängig</string>
     <string name="macropad_macro_editor_redo">Wiederherstellen</string>
     <string name="macropad_macro_editor_view_label">Ansicht</string>
-    <string name="macropad_macro_editor_view_list">Liste</string>
-    <string name="macropad_macro_editor_view_timeline">Zeit</string>
+    <string name="macropad_macro_editor_view_list">Liste/Bearbeiten</string>
+    <string name="macropad_macro_editor_view_timeline">Zeitleiste</string>
     <string name="macropad_macro_editor_shift_subsequent">Nachfolgende Schritte verschieben</string>
     <string name="macropad_macro_editor_shift_none">Aus</string>
     <string name="macropad_macro_editor_shift_start_delta">Start &#916;</string>

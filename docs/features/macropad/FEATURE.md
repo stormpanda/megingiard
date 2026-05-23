@@ -96,20 +96,20 @@ Each button supports one of the following actions:
 - Macros support a **Loop** mode (`Macro.loopEnabled = true`): the step sequence repeats until the user stops it with a second tap. An optional `Macro.loopPauseMs` (0–2000 ms, in 100 ms steps, auto-extending scale) controls the delay between loop iterations.
 - The MacroPad editor toolbar exposes two chips: **"Macros…"** (opens the macro library) and **"Add Macro Button"** (opens the button editor pre-filled with the first available macro action).
 - The macro editor supports two switchable editing modes:
-  - **List View**: step list only (no timeline strip above the list), optimized for quick per-step editing.
-  - **Timeline View**: a **full-height vertical timeline** (Canvas) where time runs top-to-bottom and steps are rendered in lanes by overlap.
+  - **List/Edit View**: step list only (no timeline strip above the list), optimized for full per-step editing, testing, recording, and macro loop configuration.
+  - **Timeline View**: a **full-height vertical timeline** (Canvas) where time runs top-to-bottom and steps are rendered in lanes by overlap, optimized to maximize screen real estate by hiding secondary controls.
     - The timeline always uses the full available screen width.
     - Lane widths are divided adaptively based on the current number of required overlap lanes.
     - A small horizontal inset is applied so the timeline content is not flush against the screen edges.
     - Each step block contains a short action label (for example gamepad short code, joystick stick+direction, D-Pad direction, or Tap).
-- Both editor modes expose the same action row: **"Step"**, **"Record"** (gamepad), **"Record"** (touch), and **"Test Run"** (when steps are present). All four buttons have equal width (`Modifier.weight(1f)`) and equal height. Below the action row a **Loop toggle** and (when enabled) a **Pause between repetitions** slider are shown.
+- The List/Edit mode exposes the action row: **"Step"**, **"Record"** (gamepad), **"Record"** (touch), and **"Test Run"** (when steps are present), along with the **Loop toggle** and a **Pause between repetitions** slider. These editing and settings controls, along with the undo/redo/shift control header, are hidden in **Timeline** mode to give the timeline maximum screen real estate.
 - Gamepad recording has two strategies depending on Privileged Mode availability:
   - **Virtual overlay (always available):** Uses the on-screen gamepad overlay (`GamepadRecordingOverlay`) and records `GamepadButtonTap`, `JoystickMove`, and `DPadTap` steps via `GamepadRecordingManager`.
   - **Physical pass-through (requires Privileged Mode with gamepad recording enabled and daemon running):** Reads the physical controller's raw evdev stream via `PhysicalGamepadRecordingManager`. The daemon subscribes to the physical device node (`SUB GAMEPAD`) without an exclusive grab, so the target game continues to receive the same input simultaneously. Button presses become `GamepadButtonTap` steps, D-Pad hat changes become `DPadTap` steps, and analog stick movement becomes `JoystickPath` steps containing all accumulated `PathSample` entries. A gesture begins when the stick exceeds the per-stick dead-zone threshold (read from `MacroPadSettings.deadzoneLeft` / `deadzoneRight`) and ends when it returns inside the dead zone; any open gesture at stop time is force-closed with the last known position. All samples within a gesture are stored verbatim — no decimation is applied. **End-of-step invariant:** `JoystickPath.durationMs` is always strictly greater than the largest `PathSample.offsetMs` (the recorder uses `lastOffsetMs + 1`), and the compiler additionally skips any sample whose offset would land at or after `durationMs`. This guarantees the end-of-step neutral reset event is the last event at the step's end timestamp and the stick returns to neutral.
 - **`MacroStepEditDialog` editing of `JoystickPath` steps:** `JoystickPath` is treated as a recorded, non-editable step type analogous to `TouchTap`. The dialog renders a read-only summary (stick + sample count) and exposes only the timing controls (start / duration). The path sample list is preserved verbatim by the dialog's `copy()` builder; switching to a different step type is intentionally disabled.
-- The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion).
-- Mode switching is exposed as two always-visible chips (**List/Liste** / **Time/Zeit**) with a leading **View/Ansicht** label, and the chips use the same visual style as the Idle Pill Profile/Layout selector chips.
-- The control header uses compact vertical spacing to preserve more vertical space for the step list/timeline area, and the global **Shift mode** 3-chip selector is right-aligned.
+- The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion), visible only when in **List/Edit** mode.
+- Mode switching is exposed as two always-visible chips (**List/Edit / Liste/Bearbeiten** and **Timeline / Zeitleiste**) with a leading **View/Ansicht** label, using the same visual style as the Idle Pill Profile/Layout selector chips.
+- The control header (Undo/Redo and global **Shift mode** 3-chip selector) uses compact vertical spacing to preserve vertical space and is hidden in **Timeline** mode to maximize screen real estate.
 - The editor includes a global **Shift mode** selector (default: **End Δ**) whose value pre-fills the per-step selector in `MacroStepEditDialog`.
 - `MacroStepEditDialog` contains its own **Shift mode** 3-chip selector. The mode selected here is what is actually applied when saving the step.
 - In `MacroStepEditDialog`, step-type chips use the same visual style as Idle Pill selector chips and include leading icons (controller icon for Gamepad, stick icon for Joystick, and D-pad-like grid icon for D-Pad).
@@ -292,17 +292,15 @@ MacroPadEditor (Composable, opened from MacroPadToolSettings)
       └── Macro library (MacroListEditor, per-profile flat list)
 
 MacroTimelineEditor (Composable, opened from MacroListEditor)
-  ├── Top bar: macro name field + save button + undo/redo
-  ├── Shift-mode chip selector (default shift behaviour)
-  ├── Section header: "MACRO-STEPS" — view-mode chips (List / Timeline)
-  │     List mode:
+  ├── Top bar: macro name field + save button
+  ├── Section header: "MACRO-STEPS" — view-mode chips (List/Edit / Timeline)
+  │     List/Edit mode:
+  │       ├── Undo/Redo & Shift-mode chip selector
   │       ├── Step list (reorderable, each step editable/deletable)
-  │       └── StepActionRow (Add / Record Touch / Record Gamepad / Test)
+  │       ├── StepActionRow (Add / Record Touch / Record Gamepad / Test)
+  │       └── Macro settings section header & Loop toggle + pause slider
   │     Timeline mode:
-  │       ├── MacroVerticalTimeline (Canvas-rendered step bars, tap to edit)
-  │       └── StepActionRow
-  ├── Section header: "MACRO SETTINGS"
-  ├── Loop toggle + pause slider
+  │       └── MacroVerticalTimeline (Canvas-rendered step bars, tap to edit)
   ├── Record Touch → TouchRecordingManager → RecordingMirrorPresentation
   └── Record Gamepad → GamepadRecordingOverlay
      ├── live passthrough via GamepadInjector (gamepadinjector_arm64)
