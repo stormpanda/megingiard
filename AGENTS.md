@@ -25,6 +25,8 @@
 | Document                                   | Purpose                                                                                  |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | `README.md`                                | Project overview, feature list, quick links                                              |
+| `LICENSE`                                  | Megingiard Source-Available License (Version 1.0)                                        |
+| `CONTRIBUTING.md`                          | Contribution guidelines, codebase standards, and licensing compliance                    |
 | `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
 | `PRD.md`                                   | Product requirements (German, authoritative)                                             |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |

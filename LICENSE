@@ -1,0 +1,46 @@
+Megingiard Source-Available License
+Version 1.0
+
+Copyright (c) 2026 Maik Thomalla / Stormpanda
+
+## Preamble
+This license governs the use, copying, modification, compilation, and distribution of the Megingiard software, including all of its source code files, assets, resources, and compiled binary releases (including but not limited to APKs, DEX files, shared libraries, and native binaries) hosted on GitHub or distributed through other channels.
+
+Megingiard is, and will always remain, completely free of charge for personal, non-commercial use. The Copyright Holder commits that the software and its official binary releases will stay free for individuals using the software under this License.
+
+Megingiard is a source-available, proprietary project. It is NOT open-source software under the Open Source Initiative (OSI) definition. By accessing, downloading, compiling, running, or otherwise using this software (in source or binary form), you agree to be bound by the terms and conditions of this license.
+
+## 1. Grant of Rights
+Subject to the terms and conditions of this License, the Copyright Holder hereby grants you a personal, non-exclusive, non-transferable, royalty-free, limited license to:
+* View, download, and read the source code of this software.
+* Compile the source code solely for your own personal, non-commercial use.
+* Install, run, and execute the compiled application or official binary releases solely for your own personal, non-commercial use on hardware that you personally own.
+
+## 2. Restrictions
+Any use of the software not expressly permitted in Section 1 is strictly prohibited. Without limiting the generality of the foregoing, you shall not, and shall not permit any third party to, do any of the following without the prior written permission of the Copyright Holder:
+
+### 2.1 Commercial Exploitation
+Without the prior written permission of the Copyright Holder, you may not use the software, source code, or binary releases (modified or unmodified) for any commercial purpose whatsoever. This includes, but is not limited to:
+* Selling, renting, leasing, licensing, or redistributing the software for a fee.
+* Bundling or using the software in connection with any commercial services, subscription offerings, paid support, or enterprise deployments.
+* Integrating advertising, tracking, or monetized SDKs into the software.
+
+### 2.2 Hardware Pre-installation and Bundling
+Without the prior written permission of the Copyright Holder, you may not pre-install, flash, bundle, package, ship, or otherwise distribute this software (whether in source code, compiled binary, or pre-installed system image form) on any physical consumer hardware, handheld gaming consoles, dual-screen devices, or other commercial devices. 
+Commercial device manufacturers, retailers, and distributors are strictly prohibited from pre-loading or distributing Megingiard without an explicit, separate, signed commercial license agreement from the Copyright Holder.
+
+### 2.3 Redistribution and Modification
+* **Source Code:** You may modify the source code for your own personal, non-commercial use. However, without the prior written permission of the Copyright Holder, you may not redistribute, publish, or share your modified source code, except by submitting a Pull Request directly to the official upstream Megingiard repository.
+* **Binaries:** Without the prior written permission of the Copyright Holder, you may not redistribute compiled binary versions of this software (either modified or unmodified). Official unmodified binary releases (e.g., APKs, releases hosted on GitHub) may only be distributed by directing users to download them from the official upstream Megingiard repository/releases page, unless otherwise authorized in writing.
+
+## 3. Contributions
+By submitting any contribution (including pull requests, bug reports, feature suggestions, or modifications) to the official Megingiard repository, you grant the Copyright Holder a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable license to use, reproduce, modify, display, perform, sublicense, and distribute your contribution, under this License or any subsequent license version chosen by the Copyright Holder, without any compensation or acknowledgement required.
+
+## 4. Termination
+This License and the rights granted hereunder will terminate automatically and immediately upon any breach by you of the terms of this License. Upon termination, you must cease all use of the software and destroy all copies of the source code and binary releases in your possession.
+
+## 5. Disclaimer of Warranty
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## 6. Limitation of Liability
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
