@@ -19,8 +19,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M2: Viewport Management (Pan & Zoom)
 
-- Users MUST be able to zoom into the mirrored image using a two-finger **Pinch-to-Zoom** gesture (range: 1× to 5×).
-- Users MUST be able to pan the zoomed image by dragging with one finger.
+- Zoom and pan gestures MUST only be active when the user explicitly enters **Viewport Edit Mode** (`isViewportEditActive = true`) via the controls panel. Outside of Viewport Edit Mode, all pan and zoom gestures are locked.
+- While Viewport Edit Mode is active, users MUST be able to zoom into the mirrored image using a two-finger **Pinch-to-Zoom** gesture (range: 1× to 5×).
+- While Viewport Edit Mode is active, users MUST be able to pan the zoomed image by dragging with one finger.
 - Panning MUST be gallery-style constrained: the viewport MUST be hard-clamped to the exact image edges at the current zoom level — panning into empty/black space is prohibited.
 - A **Snap-Back** mechanic MUST restore the viewport to `scale = 1.0, offset = (0, 0)` automatically when:
   - the user pinches out below the threshold of **1.15×**, or
@@ -29,49 +30,43 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M3: Freeze Frame
 
-- A **Freeze** button MUST be available in the controls overlay.
+- A **Freeze** button MUST be available in the Mirror Control Card of the Pill Menu.
 - Activating Freeze MUST capture the current live frame as a high-resolution static image ("frozen frame").
-- The frozen frame MUST remain fully interactive: pan and zoom work identically to the live mode.
+- The frozen frame MUST remain fully interactive: entering Viewport Edit Mode allows pan and zoom to work on the frozen frame identically to the live mode.
 - **Unfreezing** resumes the live mirror from the current live state.
 - The frozen frame serves as a reference (e.g. for in-game puzzles or map details) without consuming resources on the live stream.
 
-### FR-M4: Controls Overlay (Auto-Hide)
+### FR-M4: Controls Access & Pill Menu
 
-- All mirror controls (Stop, Freeze/Unfreeze, mirror start/stop, touch projection) MUST be hidden by default.
-- An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on pill position) over the idle pill indicator MUST show the **Pill Menu** (profile/layout card + mirror controls card).
-- A **tap anywhere** on the mirror surface MUST show the **Stop and Freeze/Unfreeze buttons**, independent of the Pill Menu.
-- The overlay and buttons MUST auto-hide after the configured timeout (default: configurable in Settings).
-- Any interaction during the timeout MUST reset the timer.
-- The auto-hide timer MUST be paused while a finger is touching the screen, even if the finger is held still.
-- Stop and Freeze/Unfreeze buttons MUST be centered on the screen (not corner-aligned) to avoid being obscured by the Pill Menu.
+- All mirror controls (Play/Stop, Freeze/Unfreeze, Edit Viewport, and Touch Projection) MUST reside inside the **Mirror Control Card** at the top of the **Pill Menu** overlay.
+- An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on pill position) over the idle pill indicator MUST show the **Pill Menu** overlay panel.
+- There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Pill Menu overlay until it is manually dismissed by tapping the scrim or close elements.
 - Mirror control icon buttons in the Pill Menu MUST use ergonomic touch targets (minimum 48 dp).
 - Mirror control labels MAY be shown below icon buttons via a global setting to improve discoverability.
 
 ### FR-M5: Stop Mirroring
 
-- A **Stop** button MUST be available in the controls overlay.
-- Stopping MUST release the `MediaProjection` and cease all capture activity.
-- After stopping, Megingiard (on the secondary display) shows a "Start Mirroring" button to re-initiate capture with a new consent flow.
+- A **Stop** button MUST be available inside the Mirror Control Card of the Pill Menu.
+- Stopping MUST release the `MediaProjection` (or privileged binder session) and cease all capture activity.
+- After stopping, the Pill Menu control card updates to show a "Play" button to re-initiate capture with a new consent/direct flow.
 
 ### FR-M6: View Lock
 
-- A **Lock** button MUST be available in the controls overlay.
-- When locked, all pan and zoom gestures MUST be disabled, including double-tap reset.
-- Unlocking MUST restore full pan/zoom functionality.
-- If **Touch Projection** is active when the user taps the Lock button (to unlock), Touch Projection MUST also be deactivated.
+- A **Lock** or **Unlock** mechanism is integrated into Touch Projection and Viewport Edit toggles.
+- Activating **Touch Projection** automatically activates **View Lock** (zoom/pan gestures are disabled during touch projection to maintain mapping accuracy).
+- Tapping to turn off/unlock **Touch Projection** MUST restore standard viewport operations (when Viewport Edit Mode is engaged).
 
 ### FR-M7: Touch Projection
 
-- A **Touch Projection** button MUST be available in the controls overlay.
+- A **Touch Projection** button MUST be available inside the Mirror Control Card of the Pill Menu.
 - When active, all touch events on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
 - The projected touch position MUST account for the current **zoom level and pan offset**: a user touching a zoomed-in area MUST interact with the correct pixel on the primary display, not the raw viewport pixel.
-- Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the overlay.
+- Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Pill Menu.
 - When the user's finger moves outside the visible content area (due to zoom), an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
 - Activating Touch Projection MUST automatically activate View Lock (zoom/pan during forwarding is not supported).
-- While Touch Projection is active, normal touches (outside the edge zone) MUST NOT show the control button row — only edge-swipe reveals the buttons, reducing visual distraction during precise input.
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
-- Touch Projection MUST NOT be automatically deactivated when the pill menu is accessed via edge-swipe. It remains active until explicitly turned off by the user (e.g. by tapping the Touch Projection button in the Pill Menu, unlocking, stopping the mirror session, or switching to another tool).
+- Touch Projection MUST NOT be automatically deactivated when the pill menu is accessed via edge-swipe. It remains active until explicitly turned off by the user (e.g. by tapping the Touch Projection button in the Pill Menu, stopping the mirror session, or switching to another layout/tool).
 
 ### FR-M8: Auto-start Gating (Global + Per-Layout Memory)
 

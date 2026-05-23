@@ -28,9 +28,9 @@
 | `LICENSE`                                  | Megingiard Source-Available License (Version 1.0)                                        |
 | `CONTRIBUTING.md`                          | Contribution guidelines, codebase standards, and licensing compliance                    |
 | `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
-| `PRD.md`                                   | Product requirements (German, authoritative)                                             |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
+| `docs/MANUAL_VERIFICATION.md`               | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
@@ -61,7 +61,7 @@
 >    Requirements or Technical Implementation section.
 > 3. Update `FEATURE.md` to reflect the change — correct outdated descriptions, remove stale
 >    requirements, add documentation for new behaviour.
-> 4. If the change is architecturally significant, also update `docs/ARCHITECTURE.md` and `PRD.md`.
+> 4. If the change is architecturally significant, also update `docs/ARCHITECTURE.md`.
 >
 > This applies to **all** changes — including bug fixes, refactors, and dependency updates that
 > affect runtime behaviour. Do not skip this step.
@@ -728,7 +728,7 @@ After implementing any change that affects a feature’s behaviour, interface, o
    - Correct or remove outdated requirements or technical descriptions.
    - Add documentation for new behaviour introduced by the change.
 4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant,
-   also review `docs/ARCHITECTURE.md` and `PRD.md`.
+   also review `docs/ARCHITECTURE.md`.
 5. **New features** — create a new `docs/features/<feature>/FEATURE.md` using
    [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
    point, then **add a row to the Documentation Map table in §2**.
