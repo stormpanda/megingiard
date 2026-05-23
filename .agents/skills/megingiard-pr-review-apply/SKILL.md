@@ -35,7 +35,7 @@ The user provides a free-form request to implement requested GitHub PR review ch
 5. ✅ **Wait for explicit approval** — do not edit code before user confirms the plan.
 6. ✅ **Implement approved changes** — apply minimal, traceable edits and keep behavior aligned with requested review changes.
 7. ✅ **Run static validation only** — perform static checks and map each review item to implemented change or explicit rationale.
-8. ✅ **Run documentation sync check** — update affected FEATURE.md files and, if architecture changed, also docs/ARCHITECTURE.md and PRD.md.
+8. ✅ **Run documentation sync check** — update affected FEATURE.md files and, if architecture changed, also docs/ARCHITECTURE.md.
 9. ✅ **Deliver final report** — include mapping from comments to fixes, unresolved items, and a Conventional Commits message proposal.
 10. ⚡ **Fallback mode without gh auth** — if GitHub CLI is unavailable or unauthenticated, ask for PR URL/number and continue with user-provided context.
 

@@ -60,7 +60,6 @@ Identify the affected feature area and read the relevant documentation in full:
 | Design System / Theming  | `docs/features/theming/FEATURE.md`  |
 | Config Export/Import     | `docs/features/config/FEATURE.md`   |
 | Overall architecture     | `docs/ARCHITECTURE.md`              |
-| Product requirements     | `PRD.md`                            |
 
 Also read:
 
@@ -171,7 +170,7 @@ After implementation, always synchronize documentation:
 1. Open the relevant `docs/features/<feature>/FEATURE.md`
 2. Check whether Functional Requirements or Technical Implementation sections are now outdated
 3. Add new requirements and a technical description for the new behavior
-4. If the architecture is affected: review `docs/ARCHITECTURE.md` and `PRD.md`
+4. If the architecture is affected: review `docs/ARCHITECTURE.md`
 
 **Brand-new feature:**
 

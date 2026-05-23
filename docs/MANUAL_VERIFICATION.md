@@ -224,4 +224,4 @@ All Pull Requests (PRs) submitted to the Megingiard repository **MUST** satisfy 
 - [ ] **No android.util.Log**: All logging calls are routed through `com.stormpanda.megingiard.AppLog`.
 - [ ] **Process reaping**: Switching out of touchpad or keyboard overlay completely kills the child helper binaries (`mouseinjector`, `keyinjector`).
 - [ ] **MediaProjection placement**: The media capture consent dialog opens reliably on the Top Screen (Display 0).
-- [ ] **Documentation Sync**: Any changes impacting runtime behavior have been synchronized with the respective feature's `FEATURE.md` file, and `docs/ARCHITECTURE.md` or `PRD.md` if architecturally significant.
+- [ ] **Documentation Sync**: Any changes impacting runtime behavior have been synchronized with the respective feature's `FEATURE.md` file, and `docs/ARCHITECTURE.md` if architecturally significant.
