@@ -1,8 +1,11 @@
 # Feature: Virtual Keyboard
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/keyboard/` (UI + injection), `app/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
-> **Native source:** `app/src/main/cpp/keyinjector.c`
-> **Binary asset:** `app/src/main/assets/keyinjector_arm64`
+> **Related source:**
+> - `:app` module: `app/src/main/java/com/stormpanda/megingiard/keyboard/` (UI Composables), `app/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt` (ViewModel)
+> - `:domain` module: `domain/src/main/java/com/stormpanda/megingiard/keyboard/` (Key repeat + state logic + facades), `domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt` (Settings facade), `domain/src/main/java/com/stormpanda/megingiard/input/` (Shared mouse injection infrastructure)
+> - `:core` module: `core/src/main/kotlin/com/stormpanda/megingiard/keyboard/` (Layout structures + keycode constants)
+> **Native source:** `app/src/main/cpp/keyinjector.c` (Virtual keyboard), `app/src/main/cpp/mouseinjector.c` (Virtual mouse/trackpoint)
+> **Binary assets:** `app/src/main/assets/keyinjector_arm64`, `app/src/main/assets/mouseinjector_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
@@ -184,9 +187,9 @@ onPress: enqueue DOWN immediately followed by UP
 
 The trackpoint key renders as an accent-colored `●` in the home row. When the user touches and moves the trackpoint:
 
-1. Delta movement (in Compose dp units) is scaled by a sensitivity factor.
-2. The delta is converted to normalised [0, 1] coordinates relative to the keyboard surface.
-3. `TouchInjector.injectTouch(TouchAction.MOVE, normalizedX, normalizedY)` forwards the movement via the shared touch injection infrastructure.
+1. Delta movement (in Compose pixels) is scaled by a sensitivity factor (`KB_TRACKPOINT_MOUSE_SENSITIVITY`).
+2. The relative pixel change is passed directly to `MouseInjector.moveMouse(dx, dy)`.
+3. `MouseInjector` forwards the relative move command (`MM <dx> <dy>`) to the native `mouseinjector_arm64` binary which controls the relative cursor on the primary screen.
 
 ### Overlay Blocking
 
@@ -199,26 +202,34 @@ When a full-screen UI overlay is visible:
 
 | Setting            | DataStore Key           | Default  | Description                                               |
 | ------------------ | ----------------------- | -------- | --------------------------------------------------------- |
-| Keyboard Layout    | `kb_layout`             | `QWERTZ` | Regional layout variant                                   |
+| Keyboard Layout    | `kb_layout`             | `QWERTZ` | Regional layout variant (`QWERTZ`, `QWERTY`, `AZERTY`)    |
 | Trackpoint Enabled | `kb_trackpoint_enabled` | `true`   | Show/hide the trackpoint key                              |
 | Key Repeat Enabled | `kb_repeat_enabled`     | `true`   | Enable/disable key repeat (disabled: keyUp sent on press) |
 | Fullscreen Mode    | `kb_fullscreen`         | `false`  | Expand keyboard to use full screen area                   |
+| Button Position    | `kb_mouse_btn_pos`      | `LEFT`   | Mouse button overlay placement (`LEFT`, `RIGHT`, or `BOTH`) |
 
 ### Source Files
 
-| File                             | Responsibility                                                                            |
-| -------------------------------- | ----------------------------------------------------------------------------------------- |
-| `KeyboardScreen.kt`              | Compose UI: layout rendering, gesture handling, modifier highlighting, trackpoint overlay |
-| `KeyboardState.kt`               | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key                    |
-| `KeyboardLayout.kt`              | `KeyDef` data class; QWERTZ / QWERTY / AZERTY layout definitions                          |
-| `KeyInjector.kt`                 | Public facade: `start()` / `stop()` / `keyDown()` / `keyUp()` / `keyTap()`                |
-| `ShellKeyInjector.kt`            | Native binary lifecycle; `LinkedBlockingQueue` writer thread; stdin protocol              |
-| `KeyAction.kt`                   | Shared `DOWN / UP` enum for key injection                                                 |
-| `LinuxKeycodes.kt`               | Linux `input-event-codes.h` constants (A–Z, 0–9, F1–F12, modifiers, navigation)           |
-| `keyinjector.c`                  | C source for the native binary (see `docs/BUILD_NATIVE.md`)                               |
-| `keyinjector_arm64`              | Pre-built ARM64 binary asset (`app/src/main/assets/`)                                     |
-| `../input/TouchInjector.kt`      | Shared trackpoint cursor movement (reused from Virtual Touchpad)                          |
-| `../input/ShellInputInjector.kt` | Shared touch injection infrastructure (reused by trackpoint cursor movement)              |
+| Module / Path | File | Responsibility |
+| --- | --- | --- |
+| **`:app`** | [KeyboardScreen.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardScreen.kt) | Compose UI: layout rendering, gesture handling, and trackpoint overlay integration |
+| **`:app`** | [KeyboardKeyCap.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardKeyCap.kt) | KeyCap Composable: rendering, highlighting, and bounds reporting |
+| **`:app`** | [KeyboardMouseOverlay.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardMouseOverlay.kt) | Mouse Overlay: renders columns for mouse buttons (LMB/MMB/RMB/M4/M5) and scroll wheel |
+| **`:app`** | [KeyboardViewModel.kt](../../../app/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt) | VM coordinating keyboard state, repeat controller scope, and injector startup/shutdown |
+| **`:domain`** | [KeyboardState.kt](../../../domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardState.kt) | Modifier key state machine (INACTIVE / STICKY / HELD) per modifier key |
+| **`:domain`** | [KeyRepeatController.kt](../../../domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyRepeatController.kt) | Coordinated timing: repeat triggers, modifier holds, pointer maps, and trackpoint relative movement |
+| **`:domain`** | [KeyInjector.kt](../../../domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyInjector.kt) | Public business logic facade for keyboard event injection |
+| **`:domain`** | [ShellKeyInjector.kt](../../../domain/src/main/java/com/stormpanda/megingiard/keyboard/ShellKeyInjector.kt) | Native binary deployment and `LinkedBlockingQueue` writer thread sending `KD/KU` to stdin |
+| **`:domain`** | [KeyboardSettings.kt](../../../domain/src/main/java/com/stormpanda/megingiard/settings/KeyboardSettings.kt) | Persistence bridge: synchronizes key, trackpoint, repeat, and overlay position defaults to/from DataStore |
+| **`:domain`** | [MouseInjector.kt](../../../domain/src/main/java/com/stormpanda/megingiard/input/MouseInjector.kt) | Public business logic facade for mouse clicks and relative pointer movements |
+| **`:domain`** | [ShellMouseInjector.kt](../../../domain/src/main/java/com/stormpanda/megingiard/input/ShellMouseInjector.kt) | Native relative mouse binary deployment, move coalescing, and writer thread sending `MB/MM/MW` |
+| **`:core`** | [KeyboardLayout.kt](../../../core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyboardLayout.kt) | `KeyDef` data class, layouts configurations (QWERTZ/QWERTY/AZERTY), and layout lookup utility |
+| **`:core`** | [KeyAction.kt](../../../core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyAction.kt) | Shared keyboard action `DOWN / UP` enum |
+| **`:core`** | [LinuxKeycodes.kt](../../../core/src/main/kotlin/com/stormpanda/megingiard/keyboard/LinuxKeycodes.kt) | Linux `input-event-codes.h` KEY_* code maps (all keys used are <= 125) |
+| Native Source | `app/src/main/cpp/keyinjector.c` | C source for native keyboard input emulator device setup |
+| Native Source | `app/src/main/cpp/mouseinjector.c` | C source for native relative mouse emulator device setup |
+| Binary Asset | `app/src/main/assets/keyinjector_arm64` | Pre-built virtual keyboard injection executable |
+| Binary Asset | `app/src/main/assets/mouseinjector_arm64` | Pre-built virtual relative-mouse injection executable |
 
 ### Secondary Display Rendering (Background Display Mode)
 

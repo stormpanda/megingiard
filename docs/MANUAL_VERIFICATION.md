@@ -60,10 +60,10 @@ The relative touchpad is activated as a fullscreen modal overlay on the bottom s
 | Action / Test Step | Expected Behavior / Visual Verification | Failure Recovery / Notes |
 | :--- | :--- | :--- |
 | **1. Set up Touchpad Button** | • Open the layout editor (Pill Menu → **Edit Layout**).<br>• Add or edit a button.<br>• Map the action to **Mouse** → **FullScreenMouse**.<br>• Save changes and exit the editor. | Ensure layout data is persisted. |
-| **2. Launch Touchpad** | • Tap the newly mapped touchpad button on the MacroPad.<br>• The screen turns dark with a subtle 4:3 boundary and helper text.<br>• Dragging a finger displays a touch indicator. | If daemon fails to start, verify `/dev/input/event6` is writeable by the shell UID (2000). |
+| **2. Launch Touchpad** | • Tap the newly mapped touchpad button on the MacroPad.<br>• The screen turns dark with a subtle 4:3 boundary, an auto-fading exit hint, and mouse button overlays (if configured).<br>• Dragging a finger moves the top-screen cursor. | If daemon fails to start, verify `/dev/uinput` is writeable by the shell UID (2000). |
 | **3. Move Cursor** | • Move a finger on the touchpad surface.<br>• Top screen mouse cursor moves fluidly with <1ms latency. | Continuous pointer movements must not write logs to logcat at any log level. |
-| **4. Tap Gestures** | • **Single-finger tap** -> Left Mouse Button (LMB) click.<br>• **Two-finger tap** -> Right Mouse Button (RMB) click (context menu opens).<br>• **Two-finger vertical drag** -> Scroll wheel action. | Check that coordinate mapping converts raw touches to top-screen coordinates. |
-| **5. Dismiss Touchpad** | • Swipe inward from the configured edge (top or bottom) over the overlay boundary.<br>• The touchpad overlay closes, revealing the MacroPad screen.<br>• The native touchpad injector process is reaped. | Run `adb shell ps -A \| grep touchinjector` to verify the process is completely terminated. |
+| **4. Tap Gestures** | • **Single-finger tap** -> Left Mouse Button (LMB) click.<br>• **Two-finger tap** -> Right Mouse Button (RMB) click (context menu opens).<br>• **Two-finger vertical drag** -> Scroll wheel action. | Verify cursor moves fluidly via relative deltas. Scroll wheel and tap clicks register correctly on top screen. |
+| **5. Dismiss Touchpad** | • Swipe inward from the configured edge (top or bottom) over the overlay boundary.<br>• The touchpad overlay closes, revealing the MacroPad screen.<br>• The native mouse injector process is reaped. | Run `adb shell ps -A \| grep mouseinjector` to verify the process is completely terminated. |
 
 ---
 
@@ -221,6 +221,6 @@ All Pull Requests (PRs) submitted to the Megingiard repository **MUST** satisfy 
 - [ ] **Explicit Typography Tokens**: No modified Compose file uses raw `.sp` or inline sizes; all text leverages `MaterialTheme.typography.*` tokens.
 - [ ] **Logcat Tag**: Every new class declares a `private const val TAG` not exceeding 23 characters.
 - [ ] **No android.util.Log**: All logging calls are routed through `com.stormpanda.megingiard.AppLog`.
-- [ ] **Process reaping**: Switching out of touchpad or keyboard overlay completely kills the child helper binaries (`touchinjector`, `keyinjector`).
+- [ ] **Process reaping**: Switching out of touchpad or keyboard overlay completely kills the child helper binaries (`mouseinjector`, `keyinjector`).
 - [ ] **MediaProjection placement**: The media capture consent dialog opens reliably on the Top Screen (Display 0).
 - [ ] **Documentation Sync**: Any changes impacting runtime behavior have been synchronized with the respective feature's `FEATURE.md` file, and `docs/ARCHITECTURE.md` or `PRD.md` if architecturally significant.

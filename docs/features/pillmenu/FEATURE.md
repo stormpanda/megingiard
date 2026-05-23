@@ -10,13 +10,15 @@
 ### Overview
 
 The Idle Pill and Pill Menu are the primary navigation surface of the app. A slim pill-shaped
-affordance is always visible at the configured screen edge on the secondary display. Swiping from
-that edge opens the Pill Menu — a two-card overlay that provides profile and layout switching,
-layout editing, settings access, and full mirror controls including the Background Settings shortcut.
+affordance is always visible at the configured screen edge on the primary display, and also on the
+secondary display (inside the Presentation window) when screen mirroring is active with ambient
+mode enabled. Swiping from that edge opens the Pill Menu — a two-card overlay that provides
+profile and layout switching, layout editing, settings access, and full mirror controls including
+the Background Settings shortcut.
 
-The same swipe gesture closes any open modal (Pill Menu, Layout Editor, Background Settings, Fullscreen
-Keyboard, Fullscreen Mouse Overlay), making the Idle Pill the universal "go back" mechanism
-throughout the app.
+The same swipe gesture closes any open interactive modal overlay (Pill Menu, Background Settings,
+Fullscreen Keyboard, Fullscreen Mouse Overlay, Viewport Edit, Peek/Scroll Peek), making the Idle
+Pill the universal "go back" mechanism throughout the app.
 
 ---
 
@@ -29,8 +31,9 @@ throughout the app.
 - The pill tab is **purely visual** — it does not capture touch events. The edge-swipe gesture is
   detected by `SwipeGestureProcessor` in the host screen's `pointerInput` modifier.
 - When any modal is active (`AppStateManager.isAnyModalActive == true`), a **"× close" label**
-  appears on the interior side of the pill (below the pill for bottom-edge placement, above for
-  top-edge), indicating that a swipe will close the active modal rather than open the Pill Menu.
+  appears on the interior side of the pill (above the pill for bottom-edge placement, below for
+  top-edge, toward the center interior of the screen), indicating that a swipe will close the
+  active modal rather than open the Pill Menu.
 
 ### FR-PM2: Edge-Swipe Gesture Routing
 
@@ -54,7 +57,8 @@ throughout the app.
   that layout and dismisses the menu.
 - A **"+" icon button** at the trailing end of each row opens a name-input dialog:
   - **New Profile** dialog creates a blank profile with a single blank layout sharing the same name.
-  - **New Layout** dialog creates a blank layout in the active profile (no template selection).
+  - **New Layout** dialog triggers `NewLayoutOverlay`, which supports entering a name and either
+    creating a blank layout or selecting an existing layout from any profile to use as a template.
   - The input dialog prevents duplicate names within the same context (profile names globally,
     layout names within the active profile). Confirming an empty name falls back to a default
     string (`"New Profile"` / `"New Layout"`).
@@ -70,13 +74,15 @@ throughout the app.
 
 - The top card slides in from the top of the screen and is **always shown** when the Pill Menu is
   open (it is not conditional on mirroring being active). It contains:
-  - **Background Settings** button (left side): opens `BackgroundSettingsOverlay` by setting
+  - **Background Settings** button (left side): renders as "Background Settings" on screen (resource
+    `R.string.pill_menu_ambient_settings`) and opens `BackgroundSettingsOverlay` by setting
     `AppStateManager.isBackgroundSettingsActive = true`, then dismisses the Pill Menu.
   - **Start / Stop** icon button: starts mirroring via `AppStateManager.requestMirrorStart()` or
     stops it via `requestMirrorStop()`. Shows a Play icon when not capturing, a Stop icon when
     capturing.
-  - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Tinted with
-    `colors.accent` when frozen. Disabled when not capturing.
+  - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
+    icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
+    with `colors.accent` when frozen. Disabled when not capturing.
   - **Viewport Edit** icon button: sets `AppStateManager.setViewportEditActive(true)` and dismisses
     the menu, entering pan/zoom editing mode. Tinted with `colors.accent` when active. Disabled when
     not capturing.
@@ -109,18 +115,18 @@ MainAppScreen (or BackgroundMacroPadOverlay)
         ├── "× close" label  — visible when isAnyModalActive == true
         └── PillMenu         — full-screen overlay when isPillMenuOpen == true
               ├── Scrim (Color.Black @ 55% alpha)
-              ├── MirrorControlCard (slides in from top)
-              │     ├── "Background Settings" TextButton
+              ├── MirrorControlCard (standalone Composable, slides in from top)
+              │     ├── "Background Settings" Bordered Row Button
               │     ├── Start/Stop IconButton
               │     ├── Freeze/Unfreeze IconButton
               │     ├── Viewport Edit IconButton
               │     └── Touch Projection IconButton
-              └── ProfileLayoutCard (slides in from bottom)
+              └── Bottom Column card (inline Column, slides in from bottom)
                     ├── Profile chips row  (+  new profile button)
                     ├── Layout chips row   (+  new layout button)
                     ├── Divider
-                    ├── "Edit Layout" ActionButton
-                    └── "Global Settings" ActionButton
+                    ├── "Edit Layout" ActionButton (PillActionChip)
+                    └── "Global Settings" ActionButton (PillActionChip)
 ```
 
 ### Visibility & Animation
@@ -160,18 +166,20 @@ derived from `SettingsManager.overlayAtBottom`. When the processor fires, it cal
 | `MacroPadState.activeProfile`                  | `MacroPadState`        | Profile chip tap / new profile  |
 | `MacroPadState.activeLayout`                   | `MacroPadState`        | Layout chip tap / new layout    |
 
-`isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of
-`isEditorActive`, `isBackgroundSettingsActive`, `isViewportEditActive`, or the fullscreen overlay flags
-are true. The Idle Pill reads this to decide whether to show the "× close" label.
+`isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of the
+interactive overlays (`isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,
+`isBackgroundSettingsActive`, or `MacroPadState.isPeekActive`) are active. `isEditorActive` is
+intentionally excluded since the Idle Pill is hidden entirely while the editor is open. The Idle
+Pill reads `isAnyModalActive` to decide whether to show the "× close" label.
 
 ### Source Files
 
-| File                       | Responsibility                                                                            |
-| -------------------------- | ----------------------------------------------------------------------------------------- |
-| `ui/IdlePill.kt`           | Always-visible pill tab + "× close" label; `PILL_INSET` constant for screen edge inset    |
-| `ui/PillMenu.kt`           | Full-screen Pill Menu overlay: state coordinator and overlays orchestrator                |
-| `ui/PillMenuComponents.kt` | ProfileRow, LayoutRow, SectionLabel, and PillActionChip composables                       |
-| `ui/PillMenuDialogs.kt`    | InTreeNameInputDialog dialog helper for new profile/layout creation                        |
-| `ui/PillMirrorCard.kt`     | Slide-in MirrorControlCard and MirrorControlIconButton composables                        |
-| `AppStateManager.kt`       | `isPillMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers       |
-| `SwipeGestureProcessor.kt` | Edge-swipe detection (`pointerInput`); calls `AppStateManager.handleEdgeSwipe()`          |
+| File | Responsibility |
+| --- | --- |
+| [`IdlePill.kt`](../../../app/src/main/java/com/stormpanda/megingiard/ui/IdlePill.kt) | Always-visible pill tab + "× close" label; `PILL_INSET` constant for screen edge inset |
+| [`PillMenu.kt`](../../../app/src/main/java/com/stormpanda/megingiard/ui/PillMenu.kt) | Full-screen Pill Menu overlay: state coordinator and overlays orchestrator |
+| [`PillMenuComponents.kt`](../../../app/src/main/java/com/stormpanda/megingiard/ui/PillMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and PillActionChip composables |
+| [`PillMenuDialogs.kt`](../../../app/src/main/java/com/stormpanda/megingiard/ui/PillMenuDialogs.kt) | InTreeNameInputDialog dialog helper for new profile/layout creation |
+| [`PillMirrorCard.kt`](../../../app/src/main/java/com/stormpanda/megingiard/ui/PillMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
+| [`AppStateManager.kt`](../../../domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isPillMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers |
+| [`SwipeGestureProcessor.kt`](../../../domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); calls `AppStateManager.handleEdgeSwipe()` |
