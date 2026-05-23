@@ -109,8 +109,23 @@ object MacroPadState {
         activeProfileId: String?,
     ) {
         var needsSave = false
+        val inputProfiles = if (profiles.isEmpty()) {
+            needsSave = true
+            val defaultId = UUID.randomUUID().toString()
+            val defaultLayoutId = UUID.randomUUID().toString()
+            listOf(
+                PadProfile(
+                    id = defaultId,
+                    name = "Default",
+                    layouts = listOf(PadLayout(id = defaultLayoutId, name = "Default")),
+                    activeLayoutId = defaultLayoutId,
+                )
+            )
+        } else {
+            profiles
+        }
 
-        val processed = profiles.map { profile ->
+        val processed = inputProfiles.map { profile ->
             var p = profile
 
             // Ensure every profile has at least one layout (guard against
@@ -134,8 +149,16 @@ object MacroPadState {
         }
 
         _profiles.value = withFlags
-        _activeProfileId.value = activeProfileId
-        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$activeProfileId, needsSave=$needsSave")
+
+        val resolvedActiveId = if (activeProfileId == null || withFlags.none { it.id == activeProfileId }) {
+            needsSave = true
+            withFlags.firstOrNull()?.id
+        } else {
+            activeProfileId
+        }
+        _activeProfileId.value = resolvedActiveId
+
+        AppLog.d(TAG, "loadFrom: ${withFlags.size} profiles, activeId=$resolvedActiveId, needsSave=$needsSave")
         if (needsSave) MacroPadSettings.saveMacroPadData()
     }
 

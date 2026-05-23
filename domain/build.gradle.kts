@@ -122,4 +122,5 @@ dependencies {
     implementation(libs.conscrypt.android)
 
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }

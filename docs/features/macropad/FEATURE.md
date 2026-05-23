@@ -19,6 +19,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - Exactly **one profile is active** at a time; the active profile is displayed in use mode. Changing the active profile takes effect immediately.
   Each profile stores its own layout list, macro list, and device flags (see FR-P4, FR-P7, FR-P8).
 - Profiles MUST persist across app restarts via **DataStore** (serialised as JSON using `kotlinx.serialization`).
+- On a clean install or whenever no profiles exist in the DataStore yet, a single default profile named `"Default"` with a default layout named `"Default"` MUST be created automatically on bootup and persisted.
 
 ### FR-P2: Free-Placement Buttons
 
