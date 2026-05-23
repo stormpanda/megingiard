@@ -233,17 +233,19 @@ Presentation visibility is driven by a combined `StateFlow` in `MirrorPresentati
 
 ```kotlin
 combine(
-    isOnValidScreen, macropadBackgroundEnabled, isCapturing,
-    isFilePickerOpen, isEditorActive, isBackgroundSettingsActive
+    isOnValidScreen, isCapturing,
+    isFilePickerOpen, isEditorActive, isBackgroundSettingsActive,
+    isAmbientPreviewActive
 ) { values ->
     val isValid = values[0] as Boolean
-    val ambientEnabled = values[1] as Boolean
-    val capturing = values[2] as Boolean
-    val filePickerOpen = values[3] as Boolean
-    val editorActive = values[4] as Boolean
-    val ambientSettingsActive = values[5] as Boolean
-    capturing && isValid && ambientEnabled &&
-        !filePickerOpen && !editorActive && !ambientSettingsActive
+    val capturing = values[1] as Boolean
+    val filePickerOpen = values[2] as Boolean
+    val editorActive = values[3] as Boolean
+    val ambientSettingsActive = values[4] as Boolean
+    val ambientPreviewActive = values[5] as Boolean
+    capturing && isValid &&
+        !filePickerOpen && !editorActive &&
+        (!ambientSettingsActive || ambientPreviewActive)
 }.collect { shouldShow -> if (shouldShow) show() else hide() }
 ```
 

@@ -79,7 +79,6 @@ internal val KEY_PRIVD_DEADZONE_LEFT  = floatPreferencesKey("privd_deadzone_left
 internal val KEY_PRIVD_DEADZONE_RIGHT = floatPreferencesKey("privd_deadzone_right")
 
 // MacroPad ambient display settings
-internal val KEY_MACROPAD_AMBIENT_ENABLED = booleanPreferencesKey("macropad_ambient_enabled")
 internal val KEY_MACROPAD_AMBIENT_DIM = floatPreferencesKey("macropad_ambient_dim")
 internal val KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED = booleanPreferencesKey("macropad_ambient_vignette_enabled")
 internal val KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA = floatPreferencesKey("macropad_ambient_vignette_visible_area")
@@ -112,7 +111,7 @@ private val KEYBOARD_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_KB_FULLSCREEN, KEY_KB_MOUSE_BTN_POS,
 )
 private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_MACROPAD_AMBIENT_ENABLED, KEY_MACROPAD_AMBIENT_DIM,
+    KEY_MACROPAD_AMBIENT_DIM,
     KEY_MACROPAD_AMBIENT_VIGNETTE_ENABLED, KEY_MACROPAD_AMBIENT_VIGNETTE_VISIBLE_AREA,
     KEY_MACROPAD_AMBIENT_VIGNETTE_TRANSITION, KEY_MACROPAD_AMBIENT_VIGNETTE_OPACITY,
     KEY_MACROPAD_AMBIENT_VIGNETTE_COLOR, KEY_MACROPAD_AMBIENT_VIGNETTE_SHAPE,
