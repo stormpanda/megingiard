@@ -3,7 +3,7 @@
 > **Related source:** `app/src/main/java/com/stormpanda/megingiard/macropad/`
 > **Native source:** `app/src/main/cpp/gamepadinjector.c`, `app/src/main/cpp/mouseinjector.c`
 > **Binary assets:** `app/src/main/assets/gamepadinjector_arm64`, `app/src/main/assets/mouseinjector_arm64`
-> **Build instructions:** [`docs/BUILD_NATIVE.md`](../BUILD_NATIVE.md)
+> **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
 

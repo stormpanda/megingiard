@@ -88,20 +88,27 @@ The project is split into three Gradle modules:
 
 ### app module (`app/src/main/java/com/stormpanda/megingiard`)
 
-\`\`\`
+```
 com.stormpanda.megingiard [app module]
 ├── AppStateManager.kt # Stub — migrated to :domain module
 ├── CaptureRequestActivity.kt # MediaProjection consent dialog (transparent Activity)
 ├── MainActivity.kt # Entry point: permission checks, display detection, file pickers
 ├── MainAppScreen.kt # Top-level Composable (MacroPad content + fullscreen overlays)
+├── security/
+│   └── SignatureGuard.kt # APK signing signature validation check
+├── privd/
+│   ├── PrivdSetupWizard.kt # Multi-step wizard UI for privileged daemon setup and HMAC provisioning
+│   └── PrivdSettingsCard.kt # Privileged Mode settings and connection status overlay
 ├── mirror/
-│ ├── MirrorPresentation.kt # android.app.Presentation on secondary display
-│ ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
-│ └── ScreenCaptureService.kt # Foreground Service managing MediaProjection + VirtualDisplay
+│   ├── MirrorPresentation.kt # android.app.Presentation on secondary display
+│   ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
+│   ├── RecordingMirrorPresentation.kt # Dedicated Presentation window for touch-recording mirror taps
+│   ├── DirectMirrorSurfaceBridge.kt # Surface routing bridge for direct privd rendering
+│   └── ScreenCaptureService.kt # Foreground Service managing MediaProjection + VirtualDisplay
 ├── keyboard/
-│ ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
-│ ├── KeyboardKeyCap.kt # KeyCap Composable, key bounds tracking
-│ └── KeyboardMouseOverlay.kt # Mouse button overlay (LMB/MMB/RMB/scroll)
+│   ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
+│   ├── KeyboardKeyCap.kt # KeyCap Composable, key bounds tracking
+│   └── KeyboardMouseOverlay.kt # Mouse button overlay (LMB/MMB/RMB/scroll)
 ├── settings/
 │   ├── ColorWheelPicker.kt        # HSV color picker (hue wheel + brightness slider)
 │   ├── GlobalSettingsComponents.kt # Extracted setting row and section Composables for GlobalSettingsScreen
@@ -115,6 +122,7 @@ com.stormpanda.megingiard [app module]
 │   ├── EditorBaseComponents.kt    # Reusable UI pieces for layout editor (headers, grid snaps, etc.)
 │   ├── EditorInlineOverlays.kt    # Full-screen dialogs and template pickers within editor tree
 │   ├── EditorLayoutComponents.kt  # Tab bars and drag-reorder lists for profile layouts
+│   ├── GamepadRecordingOverlay.kt # Gamepad touch recording UI overlay
 │   ├── IconPickerDialog.kt        # Material Symbols icon grid picker
 │   ├── MacroListEditor.kt         # In-editor macro list (add/edit/delete/reorder)
 │   ├── MacroPadButton.kt          # PadButton, ScrollWheelFace, BackgroundPeekFace Composables
@@ -148,44 +156,60 @@ com.stormpanda.megingiard [app module]
     ├── PillMenuComponents.kt      # ProfileRow, LayoutRow, SectionLabel, and PillActionChip
     ├── PillMenuDialogs.kt         # InTreeNameInputDialog helper dialog
     └── PillMirrorCard.kt          # MirrorControlCard and MirrorControlIconButton
-\`\`\`
+```
 
 ### domain module (`domain/src/main/java/com/stormpanda/megingiard`)
 
-\`\`\`
+```
 com.stormpanda.megingiard [domain module]
 ├── AppLog.kt # Unified logging facade (level-gated, tag-prefixed)
 ├── AppStateManager.kt # Global app-level state (lifecycle + modal overlay flags)
 ├── SwipeGestureProcessor.kt # Edge-swipe gesture detection (shared by pill + mirror)
+├── security/
+│   ├── BinaryIntegrity.kt # SHA-256 asset hash verification before execution
+│   └── HmacUtil.kt # HMAC-SHA256 signature utility for daemon auth
+├── privd/
+│   ├── PrivdBootstrapper.kt # Handles daemon deploy, wireless pairing, and port discovery
+│   ├── PrivdManager.kt # Main coordinator for Privileged Mode service status and execution
+│   ├── PrivdClient.kt # Manages the LocalSocket IPC communication with the daemon
+│   └── EvdevEvent.kt # evdev structure parsing for raw event streams
 ├── mirror/
-│ ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, lock, projection, bitmap)
-│ ├── MirrorViewportController.kt # Zoom/pan business logic + debounced DataStore persistence
-│ ├── TouchProjectionController.kt # Gesture state machine for touch-projection (DOWN→MOVE\*→UP)
-│ └── DisplayDetector.kt # Multi-display detection via DisplayManager
+│   ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, lock, projection, bitmap)
+│   ├── MirrorViewportController.kt # Zoom/pan business logic + debounced DataStore persistence
+│   ├── DirectPrivdMirrorSession.kt # Setup and teardown of direct shell virtual display mirror path
+│   ├── TouchProjectionController.kt # Gesture state machine for touch-projection (DOWN→MOVE*→UP)
+│   └── DisplayDetector.kt # Multi-display detection via DisplayManager
 ├── input/
-│ ├── TouchInjector.kt # Normalised → physical coordinate transform facade
-│ ├── ShellInputInjector.kt # Native touchinjector_arm64 lifecycle + MOVE coalescing
-│ ├── MouseInjector.kt # Public facade over ShellMouseInjector
-│ └── ShellMouseInjector.kt # Native mouseinjector_arm64 lifecycle + MOVE coalescing
+│   ├── TouchInjector.kt # Normalised → physical coordinate transform facade
+│   ├── ShellInputInjector.kt # Native touchinjector_arm64 lifecycle + MOVE coalescing
+│   ├── MouseInjector.kt # Public facade over ShellMouseInjector
+│   ├── ShellMouseInjector.kt # Native mouseinjector_arm64 lifecycle + MOVE coalescing
+│   └── NativeBinaryInjector.kt # Base helper class for deploying and validating native assets
 ├── keyboard/
-│ ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
-│ ├── ShellKeyInjector.kt # Native keyinjector_arm64 lifecycle (1–255 keycodes only)
-│ ├── KeyboardState.kt # Modifier state machine (INACTIVE/STICKY/HELD)
-│ └── KeyRepeatController.kt # Key repeat + trackpoint tracking per keyboard session
+│   ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
+│   ├── ShellKeyInjector.kt # Native keyinjector_arm64 lifecycle (1–255 keycodes only)
+│   ├── KeyboardState.kt # Modifier state machine (INACTIVE↔STICKY↔HELD)
+│   └── KeyRepeatController.kt # Key repeat + trackpoint tracking per keyboard session
 ├── settings/
-│ └── SettingsManager.kt # App-wide settings persistence via DataStore
+│   ├── SettingsManager.kt # App-wide settings persistence via DataStore
+│   └── SettingsKeys.kt # Hardcoded keys for settings storage
 ├── config/
-│ └── ConfigManager.kt # Export/import coordinator: SAF I/O, UUID remap, checksum
+│   └── ConfigManager.kt # Export/import coordinator: SAF I/O, UUID remap, checksum
+├── log/
+│   └── LogReportManager.kt # Packages logcat output into ZIP/TXT format for bug reporting
 ├── touchpad/
-│ └── TouchpadGestureProcessor.kt # Mouse/touch mode gesture processing (tap-to-click, two-finger-tap)
+│   └── TouchpadGestureProcessor.kt # Mouse/touch mode gesture processing (tap-to-click, two-finger-tap)
 └── macropad/
-├── MacroPadState.kt # Singleton: profiles + layouts + macros CRUD, persistence
-├── MacroPadActionDispatch.kt # injectActionDown/Up — routes PadAction types to injectors
-├── MacroPadHitTestEngine.kt # Button lookup, per-pointer tracking, scroll/trackpoint dispatch
-├── MacroExecutor.kt # Timed macro playback (compiles steps → flat event list)
-├── GamepadInjector.kt # Public facade over ShellGamepadInjector
-└── ShellGamepadInjector.kt # Native gamepadinjector_arm64 lifecycle + writer thread
-\`\`\`
+    ├── MacroPadState.kt # Singleton: profiles + layouts + macros CRUD, persistence
+    ├── MacroPadActionDispatch.kt # injectActionDown/Up — routes PadAction types to injectors
+    ├── MacroPadHitTestEngine.kt # Button lookup, per-pointer tracking, scroll/trackpoint dispatch
+    ├── TouchRecordingManager.kt # Buffers and stores screen taps as macro steps
+    ├── GamepadRecordingManager.kt # Captures touch-gamepad events for macro steps
+    ├── PhysicalGamepadRecordingManager.kt # Listens to physical USB/BT controller input for recording
+    ├── MacroExecutor.kt # Timed macro playback (compiles steps → flat event list)
+    ├── GamepadInjector.kt # Public facade over ShellGamepadInjector
+    └── ShellGamepadInjector.kt # Native gamepadinjector_arm64 lifecycle + writer thread
+```
 
 ### core module (`core/src/main/kotlin/com/stormpanda/megingiard`)
 

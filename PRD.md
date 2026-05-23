@@ -24,13 +24,13 @@ The app offers a set of tools, each of which occupies the entire secondary scree
 - Touch input is injected in real-time via a native binary directly into the kernel input stream (< 1 ms latency).
 - 16:9 touch surface with a visual touch indicator and hint text.
 
-### 2.3 Virtuelle Tastatur → [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md)
+### 2.3 Virtual Keyboard → [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md)
 
-- Vollständige virtuelle Tastatur (**QWERTZ / QWERTY / AZERTY**) mit Buchstabenreihen, Zahlenreihe, F1–F12, Pfeiltasten und allen Standard-Modifikatoren.
-- **Modifier-Keys** mit intelligentem Drei-Zustands-Verhalten: kurzes Tippen aktiviert den Sticky-Modus (einmalige Verwendung), langes Drücken hält den Modifier bis zum Loslassen.
-- **Trackpoint:** Analoger Zeiger-Cursor, der Mausbewegungen auf dem primären Display simuliert – steuerbar direkt über die Tastatur.
-- **Key Repeat:** Konfigurierbare Wiederholungsrate für gehaltene Tasten; bei deaktiviertem Repeat wird Key-Up sofort gesendet, um das Kernel-Repeat zu unterdrücken.
-- Eingaben werden in Echtzeit via nativem Binary direkt in `/dev/uinput` injiziert (< 1 ms Latenz).
+- Full virtual keyboard (**QWERTZ / QWERTY / AZERTY**) containing letter rows, number row, F1–F12, arrow keys, and all standard modifiers.
+- **Modifier Keys** with intelligent three-state behavior: a short tap activates sticky mode (single-use), while a long press holds the modifier active until released.
+- **Trackpoint:** Analog pointer cursor simulating mouse movements on the primary display — controllable directly from the keyboard.
+- **Key Repeat:** Configurable repeat rate for held keys; when key repeat is disabled, the Key-Up event is sent immediately to suppress kernel-level repeating.
+- Input is injected in real-time via a native binary directly into `/dev/uinput` (< 1 ms latency).
 
 ### 2.4 MacroPad → [docs/features/macropad/FEATURE.md](docs/features/macropad/FEATURE.md)
 

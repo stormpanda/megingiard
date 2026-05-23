@@ -3,7 +3,7 @@
 > **Related source:** `app/src/main/java/com/stormpanda/megingiard/keyboard/` (UI + injection), `app/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
 > **Native source:** `app/src/main/cpp/keyinjector.c`
 > **Binary asset:** `app/src/main/assets/keyinjector_arm64`
-> **Build instructions:** [`docs/BUILD_NATIVE.md`](../BUILD_NATIVE.md)
+> **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
 
