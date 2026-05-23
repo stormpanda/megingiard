@@ -114,13 +114,15 @@ object MacroPadSettings {
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
-        if (macropadProfilesJson != null) {
-            val profiles = runCatching {
+        val profiles = if (macropadProfilesJson != null) {
+            runCatching {
                 macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
             }.getOrElse { emptyList() }
-            val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
-            MacroPadState.loadFrom(profiles, activeId)
+        } else {
+            emptyList()
         }
+        val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
+        MacroPadState.loadFrom(profiles, activeId)
     }
 
     fun setSkipTouchRecordDialog(value: Boolean) {
