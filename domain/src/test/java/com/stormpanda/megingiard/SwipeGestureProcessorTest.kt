@@ -174,4 +174,36 @@ class SwipeGestureProcessorTest {
         p.onRelease(allPointersUp = true)
         assertFalse(p.isNearEdge)
     }
+
+    // ── pill-zone horizontal constraints ──────────────────────────────────────
+
+    @Test
+    fun `isNearEdge is true when press lands in edge zone and within pill zone`() {
+        val p = SwipeGestureProcessor(
+            edgeZonePx = EDGE_ZONE_PX,
+            swipeThresholdPx = THRESHOLD_PX,
+            overlayAtBottom = false,
+            pillZoneWidthPx = 100f,
+            onTouchingChanged = {},
+            onEdgeSwipe = {},
+        )
+        // container width = 400f -> center = 200f -> pill zone = [150f, 250f]
+        p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 180f, containerWidth = 400f)
+        assertTrue(p.isNearEdge)
+    }
+
+    @Test
+    fun `isNearEdge is false when press lands in edge zone but outside pill zone`() {
+        val p = SwipeGestureProcessor(
+            edgeZonePx = EDGE_ZONE_PX,
+            swipeThresholdPx = THRESHOLD_PX,
+            overlayAtBottom = false,
+            pillZoneWidthPx = 100f,
+            onTouchingChanged = {},
+            onEdgeSwipe = {},
+        )
+        // container width = 400f -> center = 200f -> pill zone = [150f, 250f]
+        p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 100f, containerWidth = 400f)
+        assertFalse(p.isNearEdge)
+    }
 }
