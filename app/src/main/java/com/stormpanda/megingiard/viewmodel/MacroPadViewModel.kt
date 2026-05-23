@@ -73,8 +73,18 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
                 AppStateManager.promptInFlight,
-            ) { pillMenu, editor, ambient, prompt ->
-                val stopAll = editor || ambient || prompt
+                AppStateManager.isFullscreenKeyboardActive,
+                AppStateManager.isFullscreenMouseActive,
+                AppStateManager.isViewportEditActive,
+            ) { array ->
+                val pillMenu = array[0]
+                val editor = array[1]
+                val ambient = array[2]
+                val prompt = array[3]
+                val kb = array[4]
+                val mouse = array[5]
+                val vp = array[6]
+                val stopAll = editor || ambient || prompt || kb || mouse || vp
                 InjectorGate(
                     stopKeyboard = stopAll,
                     stopMouseAndGamepad = stopAll || pillMenu,

@@ -117,8 +117,17 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
             AppStateManager.isPillMenuOpen,
             AppStateManager.isEditorActive,
             AppStateManager.isBackgroundSettingsActive,
-        ) { pillMenu, editor, ambient ->
-            val stopAll = editor || ambient
+            AppStateManager.isFullscreenKeyboardActive,
+            AppStateManager.isFullscreenMouseActive,
+            AppStateManager.isViewportEditActive,
+        ) { array ->
+            val pillMenu = array[0]
+            val editor = array[1]
+            val ambient = array[2]
+            val kb = array[3]
+            val mouse = array[4]
+            val vp = array[5]
+            val stopAll = editor || ambient || kb || mouse || vp
             AmbientInjectorGate(
                 stopKeyboard = stopAll,
                 stopMouseAndGamepad = stopAll || pillMenu,
