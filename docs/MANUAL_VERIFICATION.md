@@ -172,11 +172,12 @@ Megingiard enforces a strict trust model to ensure no rogue local app can exploi
 ## 4. Settings, Theming & Portability
 
 ### 4.1 Log Level Configuration
-- **Step**: Go to Global Settings -> **Log Level** dropdown. Set to **VERBOSE**.
-- **Action**: Tap letters in Keyboard mode.
-- **Verification**: Terminal floods with keycap event logs.
+- **Step**: Go to Global Settings -> **Log Level** dropdown. Set to **DEBUG**.
+- **Action**: Open Keyboard overlay, start and stop the keyboard session, or tap modifier keys (Ctrl, Alt, Shift) to cycle through modifier states.
+- **Verification**: Terminal displays `KeyboardViewModel` session lifecycle logs (`KeyInjector + MouseInjector started`) at **INFO** level, and `KeyboardState` modifier state machine transition logs (`STICKY`, `HELD`, etc.) at **DEBUG** level.
 - **Step**: Switch Log Level back to **WARN**.
-- **Verification**: Keycaps logs cease completely. Only system warnings persist.
+- **Action**: Tap modifier keys and cycle through states again.
+- **Verification**: No session lifecycle or modifier transition logs appear in terminal. Only system warnings/errors persist.
 
 ### 4.2 Application Theming
 - **Action**: Swap the active theme in Settings between **Dark**, **Light**, and **Cyberpunk**.

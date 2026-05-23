@@ -10,8 +10,8 @@
 ### Overview
 
 The Idle Pill and Pill Menu are the primary navigation surface of the app. A slim pill-shaped
-affordance is always visible at the configured screen edge on the primary display, and also on the
-secondary display (inside the Presentation window) when screen mirroring is active with ambient
+affordance is always visible at the configured screen edge on the secondary (non-default) display, and also
+inside the Presentation window (on the secondary display) when screen mirroring is active with ambient
 mode enabled. Swiping from that edge opens the Pill Menu — a two-card overlay that provides
 profile and layout switching, layout editing, settings access, and full mirror controls including
 the Background Settings shortcut.

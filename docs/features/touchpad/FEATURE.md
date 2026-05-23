@@ -97,14 +97,13 @@ A dedicated background daemon thread (`MouseInjectorWriter`) drains a `LinkedBlo
 ```
 loop:
   command = queue.take()               // blocks until an event is available
-  if command is Move:
-    while queue.peek() is Move:
-      nextMove = queue.poll()
-      command = Move(command.dx + nextMove.dx, command.dy + nextMove.dy) // coalesce deltas
+  if isCoalescible(command):
+    while isCoalescible(queue.peek()):
+      command = queue.poll()           // drain, keeping only the latest command
   write command to binary stdin
 ```
 
-**Rationale:** Mouse move events can arrive faster than the binary can write/process them. Coalescing consecutive relative moves into a single accumulated delta eliminates queue buildup and input lag while maintaining responsive cursor tracking. Clicks and scroll events are never dropped or coalesced.
+**Rationale:** Touch or mouse move events can arrive faster than the binary can process them. For coordinate tracking and relative motion, keeping only the latest position/delta is sufficient to keep up with the physical finger movement. Coalescing by keeping only the latest command eliminates queue buildup and input lag. Clicks, scrolls, and key presses are non-coalescible and are never dropped.
 
 ### Gesture & Movement Processing
 
