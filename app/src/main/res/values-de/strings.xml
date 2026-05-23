@@ -461,8 +461,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_name_error_duplicate">Dieser Name existiert bereits.</string>
     <string name="overlay_exit_hint_swipe">Vom Rand-Pill wischen, um dieses Vollbild-Overlay zu schließen.</string>
     <string name="wrong_screen_retry">Erkennung wiederholen</string>
-    <string name="wrong_screen_help">Hilfe</string>
-    <string name="wrong_screen_help_message">Öffne die Letzte Apps-Ansicht, ziehe Megingiard auf das untere Display, dann tippe Erkennung wiederholen.</string>
+    <string name="wrong_screen_help_title">Anweisungen zur Einrichtung &amp; Platzierung</string>
+    <string name="wrong_screen_help_step1">1. Öffne Megingiard erneut auf dem sekundären Bildschirm, und tippe auf \"Erkennung wiederholen\".</string>
+    <string name="wrong_screen_help_step2">2. Vorschlag: Falls von deinem Launcher unterstützt, pinne Megingiard an den unteren Bildschirm an, um ein Verschieben zu verhindern.</string>
+    <string name="wrong_screen_help_step3">3. Fokusmodus: Setze den Fokusmodus in den AYN-Softwareeinstellungen auf \"Hauptbildschirm\" (Primary Screen), da Megingiard ausschließlich Touch-Steuerung verwendet.</string>
     <string name="mirror_control_label_start">Start</string>
     <string name="mirror_control_label_stop">Stop</string>
     <string name="mirror_control_label_freeze">Einfrieren</string>

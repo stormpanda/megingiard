@@ -20,7 +20,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -130,143 +134,139 @@ fun MainAppScreen() {
             }
     }
 
-    BackHandler { showExitDialog = true }
+    if (!isValidScreen) {
+        WrongScreenOverlay(
+            colors = colors,
+            onRetry = {
+                val displayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
+                DisplayDetector.updateDisplayValidity(displayId)
+                AppLog.i(TAG, "wrong-screen retry tapped: displayId=$displayId")
+            },
+        )
+    } else {
+        BackHandler { showExitDialog = true }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(overlayAtBottom, isValidScreen) {
-                val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        if (!isValidScreen) {
-                            continue
-                        }
-                        when (event.type) {
-                            PointerEventType.Press -> {
-                                swipe.onPress(
-                                    event.changes.firstOrNull()?.position?.y ?: 0f,
-                                    size.height.toFloat()
-                                )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(overlayAtBottom, isValidScreen) {
+                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom)
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (!isValidScreen) {
+                                continue
                             }
-                            PointerEventType.Move -> {
-                                swipe.onMove(
-                                    event.changes.firstOrNull()?.position?.y ?: 0f
-                                )
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    swipe.onPress(
+                                        event.changes.firstOrNull()?.position?.y ?: 0f,
+                                        size.height.toFloat()
+                                    )
+                                }
+                                PointerEventType.Move -> {
+                                    swipe.onMove(
+                                        event.changes.firstOrNull()?.position?.y ?: 0f
+                                    )
+                                }
+                                PointerEventType.Release -> {
+                                    swipe.onRelease(!event.changes.any { it.pressed })
+                                }
+                                else -> {}
                             }
-                            PointerEventType.Release -> {
-                                swipe.onRelease(!event.changes.any { it.pressed })
-                            }
-                            else -> {}
                         }
                     }
                 }
+        ) {
+            // MacroPad is the sole content screen
+            MacroPadScreen()
+
+            // Fullscreen modal overlays — rendered above MacroPad but below IdlePill.
+            // Suppressed when ambient mode is active: the overlays are rendered on the
+            // secondary display inside MirrorPresentation instead.
+            if (isFullscreenMouseActive && !(ambientEnabled && isCapturing)) FullscreenMouseOverlay()
+            if (isFullscreenKeyboardActive && !(ambientEnabled && isCapturing)) KeyboardScreen(
+                modifier = Modifier.fillMaxSize(),
+                forcedLayout = fullscreenKeyboardLayout,
+            )
+            AnimatedVisibility(
+                visible  = isEditorActive,
+                enter    = slideInVertically { it } + fadeIn(),
+                exit     = slideOutVertically { it } + fadeOut(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                MacroPadEditor(
+                    onDone = { AppStateManager.setEditorActive(false) },
+                )
             }
-    ) {
-        // MacroPad is the sole content screen
-        MacroPadScreen()
+            AnimatedVisibility(
+                visible  = isBackgroundSettingsActive,
+                enter    = slideInVertically { it } + fadeIn(),
+                exit     = slideOutVertically { it } + fadeOut(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                BackgroundSettingsOverlay(
+                    onDone = { AppStateManager.setBackgroundSettingsActive(false) },
+                )
+            }
 
-        // Fullscreen modal overlays — rendered above MacroPad but below IdlePill.
-        // Suppressed when ambient mode is active: the overlays are rendered on the
-        // secondary display inside MirrorPresentation instead.
-        if (isFullscreenMouseActive && !(ambientEnabled && isCapturing)) FullscreenMouseOverlay()
-        if (isFullscreenKeyboardActive && !(ambientEnabled && isCapturing)) KeyboardScreen(
-            modifier = Modifier.fillMaxSize(),
-            forcedLayout = fullscreenKeyboardLayout,
-        )
-        AnimatedVisibility(
-            visible  = isEditorActive,
-            enter    = slideInVertically { it } + fadeIn(),
-            exit     = slideOutVertically { it } + fadeOut(),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            MacroPadEditor(
-                onDone = { AppStateManager.setEditorActive(false) },
+            // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
+            // are open because those modals render their own full-screen chrome.
+            if (!isEditorActive && !isBackgroundSettingsActive) {
+                IdlePill()
+            }
+        }
+
+        pendingImport?.let { export ->
+            IncomingImportDialog(
+                export = export,
+                onConfirm = {
+                    coroutineScope.launch {
+                        ConfigManager.applyImport(export)
+                        ConfigManager.clearPendingImport()
+                    }
+                },
+                onDismiss = { ConfigManager.clearPendingImport() },
             )
         }
-        AnimatedVisibility(
-            visible  = isBackgroundSettingsActive,
-            enter    = slideInVertically { it } + fadeIn(),
-            exit     = slideOutVertically { it } + fadeOut(),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            BackgroundSettingsOverlay(
-                onDone = { AppStateManager.setBackgroundSettingsActive(false) },
-            )
-        }
 
-        // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
-        // are open because those modals render their own full-screen chrome.
-        if (!isEditorActive && !isBackgroundSettingsActive) {
-            IdlePill()
-        }
-
-        // ── Global wrong-screen overlay ─────────────────────────────────────
-        // Blocks all interaction and renders on top of everything when the app
-        // is running on the primary display instead of the secondary screen.
-        if (!isValidScreen) {
-            WrongScreenOverlay(
-                colors = colors,
-                onRetry = {
-                    val displayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
-                    DisplayDetector.updateDisplayValidity(displayId)
-                    AppLog.i(TAG, "wrong-screen retry tapped: displayId=$displayId")
+        importError?.let { error ->
+            AlertDialog(
+                onDismissRequest = { importError = null },
+                containerColor = colors.surface,
+                title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
+                text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, style = MaterialTheme.typography.labelMedium) },
+                confirmButton = {
+                    TextButton(onClick = { importError = null }) {
+                        Text(stringResource(R.string.config_ok), color = colors.accent)
+                    }
                 },
             )
         }
-    }
 
-    pendingImport?.let { export ->
-        IncomingImportDialog(
-            export = export,
-            onConfirm = {
-                coroutineScope.launch {
-                    ConfigManager.applyImport(export)
-                    ConfigManager.clearPendingImport()
-                }
-            },
-            onDismiss = { ConfigManager.clearPendingImport() },
-        )
-    }
-
-    importError?.let { error ->
-        AlertDialog(
-            onDismissRequest = { importError = null },
-            containerColor = colors.surface,
-            title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
-            text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, style = MaterialTheme.typography.labelMedium) },
-            confirmButton = {
-                TextButton(onClick = { importError = null }) {
-                    Text(stringResource(R.string.config_ok), color = colors.accent)
-                }
-            },
-        )
-    }
-
-    if (showExitDialog) {
-        AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            title = { Text(stringResource(R.string.exit_dialog_title), color = colors.onSurface) },
-            text = { Text(stringResource(R.string.exit_dialog_message), color = colors.onSurface) },
-            confirmButton = {
-                TextButton(onClick = { (context as ComponentActivity).finishAndRemoveTask() }) {
-                    Text(stringResource(R.string.exit_dialog_confirm), color = colors.accent)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showExitDialog = false }) {
-                    Text(stringResource(R.string.exit_dialog_cancel), color = colors.accent)
-                }
-            },
-            containerColor = colors.surface,
-        )
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text(stringResource(R.string.exit_dialog_title), color = colors.onSurface) },
+                text = { Text(stringResource(R.string.exit_dialog_message), color = colors.onSurface) },
+                confirmButton = {
+                    TextButton(onClick = { (context as ComponentActivity).finishAndRemoveTask() }) {
+                        Text(stringResource(R.string.exit_dialog_confirm), color = colors.accent)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text(stringResource(R.string.exit_dialog_cancel), color = colors.accent)
+                    }
+                },
+                containerColor = colors.surface,
+            )
+        }
     }
 }
 
 @Composable
 private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
-    var showHelpDialog by remember { mutableStateOf(false) }
     val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
     val bounceOffset by bounceTransition.animateFloat(
         initialValue = 0f,
@@ -293,15 +293,20 @@ private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
             Text(
                 text = stringResource(R.string.wrong_screen_message),
                 color = colors.onSurface,
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             Icon(
                 Icons.Rounded.KeyboardArrowDown,
                 contentDescription = stringResource(R.string.cd_wrong_screen_arrow),
@@ -311,25 +316,49 @@ private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
                     .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) }
             )
             Spacer(Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                TextButton(onClick = onRetry) {
-                    Text(stringResource(R.string.wrong_screen_retry), color = colors.accent)
-                }
-                TextButton(onClick = { showHelpDialog = true }) {
-                    Text(stringResource(R.string.wrong_screen_help), color = colors.accent)
-                }
+
+            Column(
+                modifier = Modifier
+                    .background(colors.surface, shape = RoundedCornerShape(12.dp))
+                    .padding(20.dp)
+                    .fillMaxWidth(0.9f)
+            ) {
+                Text(
+                    text = stringResource(R.string.wrong_screen_help_title),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                Text(
+                    text = stringResource(R.string.wrong_screen_help_step1),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = stringResource(R.string.wrong_screen_help_step2),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = stringResource(R.string.wrong_screen_help_step3),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
-            if (showHelpDialog) {
-                AlertDialog(
-                    onDismissRequest = { showHelpDialog = false },
-                    title = { Text(stringResource(R.string.wrong_screen_help), color = colors.onSurface) },
-                    text = { Text(stringResource(R.string.wrong_screen_help_message), color = colors.onSurface) },
-                    confirmButton = {
-                        TextButton(onClick = { showHelpDialog = false }) {
-                            Text(stringResource(R.string.config_ok), color = colors.accent)
-                        }
-                    },
-                    containerColor = colors.surface,
+
+            Spacer(Modifier.height(24.dp))
+
+            TextButton(
+                onClick = onRetry,
+                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp))
+            ) {
+                Text(
+                    text = stringResource(R.string.wrong_screen_retry),
+                    color = colors.accent,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
         }

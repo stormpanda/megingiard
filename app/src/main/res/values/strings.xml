@@ -400,8 +400,10 @@ Open Settings to create a layout.</string>
     <string name="settings_name_error_duplicate">This name already exists.</string>
     <string name="overlay_exit_hint_swipe">Swipe from the pill edge to close this fullscreen overlay.</string>
     <string name="wrong_screen_retry">Retry detection</string>
-    <string name="wrong_screen_help">Help</string>
-    <string name="wrong_screen_help_message">Open Recent Apps, drag Megingiard to the bottom display, then tap Retry.</string>
+    <string name="wrong_screen_help_title">Setup &amp; Placement Instructions</string>
+    <string name="wrong_screen_help_step1">1. Re-open Megingiard on the secondary screen, then tap \"Retry\".</string>
+    <string name="wrong_screen_help_step2">2. Suggestion: If supported by your launcher, pin Megingiard to the bottom screen to keep it in place.</string>
+    <string name="wrong_screen_help_step3">3. Focus mode: Set the Focus Mode in the AYN settings to \"Primary Screen\" since Megingiard uses touch controls only.</string>
     <string name="mirror_control_label_start">Start</string>
     <string name="mirror_control_label_stop">Stop</string>
     <string name="mirror_control_label_freeze">Freeze</string>
