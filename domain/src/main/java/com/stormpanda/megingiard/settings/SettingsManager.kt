@@ -67,6 +67,8 @@ object SettingsManager {
     @Volatile
     private var autoBackupTriggered = false
 
+    private var lastBackupsJsonStr: String? = null
+
     private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
 
@@ -164,12 +166,18 @@ object SettingsManager {
                     MacroPadSettings.loadFrom(prefs)
 
                     val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
-                    _internalBackups.value = if (backupsJsonStr != null) {
-                        runCatching {
-                            backupsJson.decodeFromString<List<InternalBackup>>(backupsJsonStr)
-                        }.getOrElse { emptyList() }
-                    } else {
-                        emptyList()
+                    if (backupsJsonStr != lastBackupsJsonStr) {
+                        lastBackupsJsonStr = backupsJsonStr
+                        _internalBackups.value = if (backupsJsonStr != null) {
+                            runCatching {
+                                backupsJson.decodeFromString<List<InternalBackup>>(backupsJsonStr)
+                            }.getOrElse { e ->
+                                AppLog.w(TAG, "Failed to decode internal backups list: invalid JSON: ${e.javaClass.simpleName} - ${e.message}")
+                                emptyList()
+                            }
+                        } else {
+                            emptyList()
+                        }
                     }
 
                     if (!autoBackupTriggered) {
@@ -358,7 +366,10 @@ object SettingsManager {
             val currentList = if (currentJson != null) {
                 runCatching {
                     backupsJson.decodeFromString<List<InternalBackup>>(currentJson)
-                }.getOrElse { emptyList() }
+                }.getOrElse { e ->
+                    AppLog.w(TAG, "Failed to decode existing internal backups JSON during save: ${e.javaClass.simpleName} - ${e.message}")
+                    emptyList()
+                }
             } else {
                 emptyList()
             }

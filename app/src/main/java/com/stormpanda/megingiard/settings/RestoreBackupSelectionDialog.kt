@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.ui.AppColors
@@ -54,6 +56,10 @@ internal fun RestoreBackupSelectionDialog(
     onConfirm: (InternalBackup?) -> Unit, // null means External File...
     onDismiss: () -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        AppLog.d(TAG, "RestoreBackupSelectionDialog opened with ${internalBackups.size} internal backups")
+    }
+
     var selectedIndex by remember { mutableStateOf(0) } // 0 means External File, 1..N means internal backups
     val scrollState = rememberScrollState()
 
@@ -138,6 +144,7 @@ internal fun RestoreBackupSelectionDialog(
                     Text(stringResource(R.string.config_import_cancel), color = colors.onSurfaceSecondary)
                 }
                 TextButton(onClick = {
+                    AppLog.d(TAG, "Confirm clicked: selectedIndex=$selectedIndex")
                     if (selectedIndex == 0) {
                         onConfirm(null)
                     } else {
@@ -145,6 +152,7 @@ internal fun RestoreBackupSelectionDialog(
                         if (index in internalBackups.indices) {
                             onConfirm(internalBackups[index])
                         } else {
+                            AppLog.w(TAG, "Selected index $index is out of bounds for internalBackups (size ${internalBackups.size})")
                             onDismiss()
                         }
                     }

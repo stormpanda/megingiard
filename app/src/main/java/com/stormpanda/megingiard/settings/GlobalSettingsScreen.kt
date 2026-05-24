@@ -33,7 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
-import com.stormpanda.megingiard.config.InternalBackup
+
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
