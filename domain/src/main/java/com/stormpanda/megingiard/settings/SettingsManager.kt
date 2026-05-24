@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.settings
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -32,7 +33,10 @@ private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 enum class AppLanguage { SYSTEM, EN, DE }
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = SETTINGS_DATASTORE_NAME
+    name = SETTINGS_DATASTORE_NAME,
+    corruptionHandler = ReplaceFileCorruptionHandler {
+        emptyPreferences()
+    }
 )
 
 private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()

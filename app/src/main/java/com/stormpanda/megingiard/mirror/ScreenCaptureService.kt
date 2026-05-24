@@ -90,6 +90,13 @@ class ScreenCaptureService : Service() {
                             if (started) {
                                 AppLog.i(TAG, "Recording direct privileged mirror session running → showing presentation")
                                 recordingPresentation?.dismiss()
+                                
+                                // Tear down direct privileged mirror session first to avoid AYN Thor display conflict
+                                directPrivdSession?.release()
+                                directPrivdSession = null
+                                // Hide the main presentation window
+                                mirrorPresentation?.hide()
+
                                 val rp = RecordingMirrorPresentation(
                                     this@ScreenCaptureService,
                                     sd,
@@ -112,6 +119,13 @@ class ScreenCaptureService : Service() {
                         }
                         AppLog.i(TAG, "recording requested → creating RecordingMirrorPresentation")
                         recordingPresentation?.dismiss()
+                        
+                        // Release main virtualDisplay to avoid AYN Thor display conflict
+                        virtualDisplay?.release()
+                        virtualDisplay = null
+                        // Hide the main presentation window
+                        mirrorPresentation?.hide()
+
                         val rp = RecordingMirrorPresentation(
                             this@ScreenCaptureService,
                             sd,
@@ -127,9 +141,52 @@ class ScreenCaptureService : Service() {
                     recordingPresentation = null
                     
                     if (isPrivilegedMode) {
-                        AppLog.i(TAG, "recording stopped in privileged mode → releasing recording session")
+                        AppLog.i(TAG, "recording stopped in privileged mode → releasing recording session and restoring main mirror")
                         recordingPrivdSession?.release()
                         recordingPrivdSession = null
+                        
+                        mirrorPresentation?.show()
+                        val surface = mirrorPresentation?.getSurface()
+                        if (surface != null && surface.isValid && directPrivdSession == null) {
+                            AppLog.i(TAG, "surface is already valid in privileged mode → manually recreating directPrivdSession")
+                            directPrivdStartGeneration += 1L
+                            val startGeneration = directPrivdStartGeneration
+                            scope.launch {
+                                val directSession = DirectPrivdMirrorSession(capturedSrcWidth, capturedSrcHeight)
+                                directPrivdSession = directSession
+                                val directStarted = directSession.start()
+                                if (startGeneration == directPrivdStartGeneration && directPrivdSession === directSession) {
+                                    if (directStarted && DirectMirrorSurfaceBridge.sendToDirectServer(surface)) {
+                                        AppLog.i(TAG, "manually recreated direct privileged mirror session started")
+                                    } else {
+                                        directSession.release()
+                                        directPrivdSession = null
+                                        launchConsentFallback("direct privileged mirror manual recreate failed")
+                                    }
+                                } else {
+                                    directSession.release()
+                                }
+                            }
+                        }
+                    } else {
+                        AppLog.i(TAG, "recording stopped in non-privileged mode → restoring main mirror")
+                        mirrorPresentation?.show()
+                        val surface = mirrorPresentation?.getSurface()
+                        if (surface != null && surface.isValid && virtualDisplay == null) {
+                            AppLog.i(TAG, "surface is already valid → manually recreating VirtualDisplay")
+                            val dpi = resources.displayMetrics.densityDpi
+                            try {
+                                virtualDisplay = mediaProjection?.createVirtualDisplay(
+                                    "ScreenCapture",
+                                    capturedSrcWidth, capturedSrcHeight, dpi,
+                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                                    surface, null, null
+                                )
+                                AppLog.i(TAG, "VirtualDisplay recreated manually ${capturedSrcWidth}x${capturedSrcHeight} dpi=$dpi")
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Exception recreating VirtualDisplay manually", e)
+                            }
+                        }
                     }
                 }
             }
