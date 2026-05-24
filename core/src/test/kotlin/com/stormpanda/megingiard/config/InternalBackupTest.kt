@@ -14,6 +14,11 @@ import kotlinx.serialization.json.Json
  */
 class InternalBackupTest {
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+
     private val testMetadata = ExportMetadata(
         exportedAt = "2026-05-24T12:00:00Z",
         appVersionName = "2.0.0",
@@ -34,8 +39,8 @@ class InternalBackupTest {
             export = testExport
         )
 
-        val json = Json.encodeToString(backup)
-        val decoded = Json.decodeFromString<InternalBackup>(json)
+        val encoded = json.encodeToString(backup)
+        val decoded = json.decodeFromString<InternalBackup>(encoded)
 
         assertEquals(backup.dateString, decoded.dateString)
         assertEquals(backup.timestampMs, decoded.timestampMs)

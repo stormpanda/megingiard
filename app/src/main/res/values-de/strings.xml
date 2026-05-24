@@ -593,7 +593,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Restore backup selection dialog -->
     <string name="config_restore_dialog_title">Backup wiederherstellen</string>
-    <string name="config_restore_option_external">Externe Datei...</string>
+    <string name="config_restore_option_external">Externe Datei…</string>
     <string name="config_restore_option_external_sub">Wählen Sie eine .mgrd-Sicherungsdatei aus</string>
     <string name="config_restore_option_internal_sub">%1$d Profile • %2$d Layouts • %3$d Makros</string>
 </resources>

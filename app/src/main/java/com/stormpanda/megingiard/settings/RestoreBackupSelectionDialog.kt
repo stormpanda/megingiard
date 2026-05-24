@@ -141,7 +141,12 @@ internal fun RestoreBackupSelectionDialog(
                     if (selectedIndex == 0) {
                         onConfirm(null)
                     } else {
-                        onConfirm(internalBackups[selectedIndex - 1])
+                        val index = selectedIndex - 1
+                        if (index in internalBackups.indices) {
+                            onConfirm(internalBackups[index])
+                        } else {
+                            onDismiss()
+                        }
                     }
                 }) {
                     Text(stringResource(R.string.config_import_confirm), color = accentColor)

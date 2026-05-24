@@ -33,6 +33,8 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.InternalBackup
 
 
+private val backupsJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 
 /** Per-app language preference. [SYSTEM] follows the device locale. */
@@ -161,10 +163,10 @@ object SettingsManager {
                     BackgroundSettings.loadFrom(prefs)
                     MacroPadSettings.loadFrom(prefs)
 
-                    val backupsJson = prefs[KEY_INTERNAL_BACKUPS]
-                    _internalBackups.value = if (backupsJson != null) {
+                    val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
+                    _internalBackups.value = if (backupsJsonStr != null) {
                         runCatching {
-                            Json.decodeFromString<List<InternalBackup>>(backupsJson)
+                            backupsJson.decodeFromString<List<InternalBackup>>(backupsJsonStr)
                         }.getOrElse { emptyList() }
                     } else {
                         emptyList()
@@ -355,7 +357,7 @@ object SettingsManager {
             val currentJson = prefs[KEY_INTERNAL_BACKUPS]
             val currentList = if (currentJson != null) {
                 runCatching {
-                    Json.decodeFromString<List<InternalBackup>>(currentJson)
+                    backupsJson.decodeFromString<List<InternalBackup>>(currentJson)
                 }.getOrElse { emptyList() }
             } else {
                 emptyList()
@@ -363,7 +365,7 @@ object SettingsManager {
             val newList = (currentList.filter { it.dateString != backup.dateString } + backup)
                 .sortedByDescending { it.timestampMs }
                 .take(5)
-            prefs[KEY_INTERNAL_BACKUPS] = Json.encodeToString(newList)
+            prefs[KEY_INTERNAL_BACKUPS] = backupsJson.encodeToString(newList)
         }
     }
 
@@ -379,8 +381,8 @@ object SettingsManager {
 
                 AppLog.i(TAG, "Creating automatic daily configuration backup for $currentDateStr")
                 val metadata = ConfigManager.defaultMetadata(context).copy(
-                    author = "System Auto-Backup",
-                    description = "Automatic daily configuration backup"
+                    author = null,
+                    description = null
                 )
                 val export = ConfigManager.buildExport(metadata)
                 val backup = InternalBackup(

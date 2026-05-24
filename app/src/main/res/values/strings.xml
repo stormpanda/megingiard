@@ -585,7 +585,7 @@ Open Settings to create a layout.</string>
 
     <!-- Restore backup selection dialog -->
     <string name="config_restore_dialog_title">Restore Backup</string>
-    <string name="config_restore_option_external">External File...</string>
+    <string name="config_restore_option_external">External File…</string>
     <string name="config_restore_option_external_sub">Select a .mgrd file from storage</string>
     <string name="config_restore_option_internal_sub">%1$d profiles • %2$d layouts • %3$d macros</string>
 </resources>
