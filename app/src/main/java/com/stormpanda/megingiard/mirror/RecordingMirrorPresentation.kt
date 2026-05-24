@@ -61,7 +61,7 @@ class RecordingMirrorPresentation(
     display: Display,
     private val srcWidth: Int,
     private val srcHeight: Int,
-    private val mediaProjection: MediaProjection,
+    private val mediaProjection: MediaProjection?,
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
 
     private var virtualDisplay: VirtualDisplay? = null
@@ -144,17 +144,22 @@ class RecordingMirrorPresentation(
 
         sv.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
-                virtualDisplay?.release()
-                try {
-                    virtualDisplay = mediaProjection.createVirtualDisplay(
-                        RMP_VIRTUAL_DISPLAY_NAME,
-                        srcWidth, srcHeight, dpi,
-                        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                        holder.surface, null, null,
-                    )
-                    AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to create VirtualDisplay", e)
+                if (mediaProjection != null) {
+                    virtualDisplay?.release()
+                    try {
+                        virtualDisplay = mediaProjection.createVirtualDisplay(
+                            RMP_VIRTUAL_DISPLAY_NAME,
+                            srcWidth, srcHeight, dpi,
+                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                            holder.surface, null, null,
+                        )
+                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to create VirtualDisplay", e)
+                    }
+                } else {
+                    AppLog.i(TAG, "surfaceCreated in privileged mode → sending surface to direct server")
+                    DirectMirrorSurfaceBridge.sendToDirectServer(holder.surface)
                 }
             }
 

@@ -39,6 +39,8 @@ class ScreenCaptureService : Service() {
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
     private var directPrivdSession: DirectPrivdMirrorSession? = null
+    private var recordingPrivdSession: DirectPrivdMirrorSession? = null
+    private var isPrivilegedMode = false
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
@@ -71,6 +73,67 @@ class ScreenCaptureService : Service() {
                 }
             }
         }
+
+        scope.launch {
+            TouchRecordingManager.recordingRequested.collect { requested ->
+                if (requested) {
+                    val sd = capturedSecondaryDisplay ?: run {
+                        AppLog.w(TAG, "recording requested but secondary display is null — ignoring")
+                        return@collect
+                    }
+                    if (isPrivilegedMode) {
+                        AppLog.i(TAG, "recording requested in privileged mode → starting session first")
+                        scope.launch {
+                            val session = DirectPrivdMirrorSession(capturedSrcWidth, capturedSrcHeight)
+                            recordingPrivdSession = session
+                            val started = session.start()
+                            if (started) {
+                                AppLog.i(TAG, "Recording direct privileged mirror session running → showing presentation")
+                                recordingPresentation?.dismiss()
+                                val rp = RecordingMirrorPresentation(
+                                    this@ScreenCaptureService,
+                                    sd,
+                                    capturedSrcWidth,
+                                    capturedSrcHeight,
+                                    mediaProjection,
+                                )
+                                recordingPresentation = rp
+                                rp.show()
+                            } else {
+                                AppLog.e(TAG, "Failed to start recording privileged mirror session")
+                                session.release()
+                                recordingPrivdSession = null
+                            }
+                        }
+                    } else {
+                        if (mediaProjection == null) {
+                            AppLog.w(TAG, "recording requested in non-privileged mode but mediaProjection is null — ignoring")
+                            return@collect
+                        }
+                        AppLog.i(TAG, "recording requested → creating RecordingMirrorPresentation")
+                        recordingPresentation?.dismiss()
+                        val rp = RecordingMirrorPresentation(
+                            this@ScreenCaptureService,
+                            sd,
+                            capturedSrcWidth,
+                            capturedSrcHeight,
+                            mediaProjection,
+                        )
+                        recordingPresentation = rp
+                        rp.show()
+                    }
+                } else {
+                    recordingPresentation?.dismiss()
+                    recordingPresentation = null
+                    
+                    if (isPrivilegedMode) {
+                        AppLog.i(TAG, "recording stopped in privileged mode → releasing recording session")
+                        recordingPrivdSession?.release()
+                        recordingPrivdSession = null
+                    }
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -98,6 +161,7 @@ class ScreenCaptureService : Service() {
                 return START_NOT_STICKY
             }
 
+            isPrivilegedMode = false
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
@@ -186,35 +250,6 @@ class ScreenCaptureService : Service() {
                 AppStateManager.setPromptInFlight(false)
                 presentation.show()
             }
-
-            scope.launch {
-                TouchRecordingManager.recordingRequested.collect { requested ->
-                    if (requested) {
-                        val mp = mediaProjection ?: run {
-                            AppLog.w(TAG, "recording requested but mediaProjection is null — ignoring")
-                            return@collect
-                        }
-                        val sd = capturedSecondaryDisplay ?: run {
-                            AppLog.w(TAG, "recording requested but secondary display is null — ignoring")
-                            return@collect
-                        }
-                        AppLog.i(TAG, "recording requested → creating RecordingMirrorPresentation")
-                        recordingPresentation?.dismiss()
-                        val rp = RecordingMirrorPresentation(
-                            this@ScreenCaptureService,
-                            sd,
-                            capturedSrcWidth,
-                            capturedSrcHeight,
-                            mp,
-                        )
-                        recordingPresentation = rp
-                        rp.show()
-                    } else {
-                        recordingPresentation?.dismiss()
-                        recordingPresentation = null
-                    }
-                }
-            }
         }
         return START_NOT_STICKY
     }
@@ -256,6 +291,7 @@ class ScreenCaptureService : Service() {
             AppLog.w(TAG, "startPrivdPath: already capturing — ignoring duplicate start")
             return START_NOT_STICKY
         }
+        isPrivilegedMode = true
         startForegroundNotificationConnectedDevice()
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -373,5 +409,7 @@ class ScreenCaptureService : Service() {
         mirrorPresentation?.dismiss()
         directPrivdSession?.release()
         directPrivdSession = null
+        recordingPrivdSession?.release()
+        recordingPrivdSession = null
     }
 }

@@ -619,4 +619,7 @@ class MirrorPresentation(
             window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
     }
+
+    fun getSurface(): Surface? = surfaceView?.holder?.surface
 }
+
