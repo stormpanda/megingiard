@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import com.stormpanda.megingiard.config.InternalBackup
+
 private const val TAG = "GlobalSettingsVM"
 
 /**
@@ -32,6 +34,8 @@ private const val TAG = "GlobalSettingsVM"
  * decoupled from the settings layer for testing and future refactors.
  */
 class GlobalSettingsViewModel : ViewModel() {
+
+    val internalBackups: StateFlow<List<InternalBackup>> = SettingsManager.internalBackups
 
     val accentColor: StateFlow<Int> = SettingsManager.accentColor
     val themeMode: StateFlow<ThemeMode> = SettingsManager.themeMode

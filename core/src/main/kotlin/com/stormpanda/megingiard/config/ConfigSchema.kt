@@ -70,3 +70,18 @@ data class ExportMetadata(
     /** `\"\${Build.MANUFACTURER} \${Build.MODEL}\"`, or null if unavailable. */
     val deviceModel: String? = null,
 )
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal Backups Data Model
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Wraps a standard [MegingiardExport] with metadata for internal backups stored in
+ * the DataStore. Backups are labelled by date and keep track of when they were taken.
+ */
+@Serializable
+data class InternalBackup(
+    val dateString: String,   // Local date formatted as "yyyy-MM-dd"
+    val timestampMs: Long,    // Milliseconds since epoch
+    val export: MegingiardExport,
+)
