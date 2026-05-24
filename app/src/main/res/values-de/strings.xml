@@ -483,7 +483,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_config_export">Backup erstellen</string>
     <string name="settings_config_export_desc">Alle Einstellungen und MacroPad-Profile als .mgrd-Sicherungsdatei speichern</string>
     <string name="settings_config_import">Backup wiederherstellen</string>
-    <string name="settings_config_import_desc">Einstellungen und Profile aus einer .mgrd-Sicherungsdatei wiederherstellen</string>
+    <string name="settings_config_import_desc">Einstellungen anwenden und Profile aus einem internen täglichen Backup oder einer externen .mgrd-Datei wiederherstellen</string>
     <string name="settings_config_export_profile">Profil teilen</string>
     <string name="settings_config_export_profile_desc">Ein MacroPad-Profil als .mgrd-Datei zum Teilen exportieren</string>
     <string name="settings_config_import_profile">Geteiltes Profil importieren</string>
@@ -590,4 +590,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_save_log_report_desc">Aktuelle Logcat-Ausgabe als .txt-Datei für Fehlerberichte speichern</string>
     <string name="log_report_save_success">Log-Bericht gespeichert.</string>
     <string name="log_report_save_error">Log-Bericht konnte nicht gespeichert werden.</string>
+
+    <!-- Restore backup selection dialog -->
+    <string name="config_restore_dialog_title">Backup wiederherstellen</string>
+    <string name="config_restore_option_external">Externe Datei...</string>
+    <string name="config_restore_option_external_sub">Wählen Sie eine .mgrd-Sicherungsdatei aus</string>
+    <string name="config_restore_option_internal_sub">%1$d Profile • %2$d Layouts • %3$d Makros</string>
 </resources>

@@ -371,6 +371,7 @@ internal fun SettingsSection(
 @Composable
 internal fun ConfigSection(
     onShowExportDialog: () -> Unit,
+    onShowRestoreBackupDialog: () -> Unit,
     onShowProfileExportDialog: () -> Unit,
     onImportPreviewReady: (MegingiardExport) -> Unit,
 ) {
@@ -391,7 +392,7 @@ internal fun ConfigSection(
         label = stringResource(R.string.settings_config_import),
         description = stringResource(R.string.settings_config_import_desc),
         accentColor = effectiveAccent,
-        onClick = { ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE) },
+        onClick = onShowRestoreBackupDialog,
     )
     AppDivider()
     ConfigActionRow(

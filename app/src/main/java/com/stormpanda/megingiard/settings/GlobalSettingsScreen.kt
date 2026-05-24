@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
+import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -66,8 +67,11 @@ fun GlobalSettingsScreen(
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
+    val internalBackups by viewModel.internalBackups.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
+
+    var showRestoreBackupDialog by rememberSaveable { mutableStateOf(false) }
 
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     val exportResult by ConfigManager.exportResult.collectAsState()
@@ -231,6 +235,7 @@ fun GlobalSettingsScreen(
                     ) {
                         ConfigSection(
                             onShowExportDialog = { showExportMetadataDialog = true },
+                            onShowRestoreBackupDialog = { showRestoreBackupDialog = true },
                             onShowProfileExportDialog = { showProfileExportDialog = true },
                             onImportPreviewReady = { showImportPreviewDialog = it },
                         )
@@ -298,6 +303,22 @@ fun GlobalSettingsScreen(
                     showColorPicker = false
                 },
                 onDismiss = { showColorPicker = false }
+            )
+        }
+        if (showRestoreBackupDialog) {
+            RestoreBackupSelectionDialog(
+                internalBackups = internalBackups,
+                colors = colors,
+                accentColor = effectiveAccent,
+                onConfirm = { backup ->
+                    showRestoreBackupDialog = false
+                    if (backup == null) {
+                        ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE)
+                    } else {
+                        showImportPreviewDialog = backup.export
+                    }
+                },
+                onDismiss = { showRestoreBackupDialog = false }
             )
         }
         if (showRestoreDefaultsConfirm) {

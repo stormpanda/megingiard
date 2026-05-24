@@ -26,6 +26,12 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import com.stormpanda.megingiard.config.ConfigManager
+import com.stormpanda.megingiard.config.InternalBackup
+
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 
@@ -55,6 +61,13 @@ object SettingsManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
     private var initialized = false
+
+    @Volatile
+    private var autoBackupTriggered = false
+
+    private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
+    val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
+
 
     private val _autoStartCapture = MutableStateFlow(false)
     val autoStartCapture: StateFlow<Boolean> = _autoStartCapture.asStateFlow()
@@ -131,23 +144,37 @@ object SettingsManager {
             dataStore.data
                 .catch { emit(emptyPreferences()) }
                 .collect { prefs ->
-                AppLog.i(TAG, "settings loaded from DataStore")
+                    AppLog.i(TAG, "settings loaded from DataStore")
 
-                _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
-                _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
-                _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
-                _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
-                _showMirrorControlLabels.value = prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] ?: false
-                _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
-                MirrorSettings.loadFrom(prefs)
-                KeyboardSettings.loadFrom(prefs)
-                TouchpadSettings.loadFrom(prefs)
-                _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
-                _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
-                AppLog.level = _logLevel.value
-                BackgroundSettings.loadFrom(prefs)
-                MacroPadSettings.loadFrom(prefs)
-            }
+                    _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
+                    _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
+                    _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
+                    _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
+                    _showMirrorControlLabels.value = prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] ?: false
+                    _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
+                    MirrorSettings.loadFrom(prefs)
+                    KeyboardSettings.loadFrom(prefs)
+                    TouchpadSettings.loadFrom(prefs)
+                    _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
+                    _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
+                    AppLog.level = _logLevel.value
+                    BackgroundSettings.loadFrom(prefs)
+                    MacroPadSettings.loadFrom(prefs)
+
+                    val backupsJson = prefs[KEY_INTERNAL_BACKUPS]
+                    _internalBackups.value = if (backupsJson != null) {
+                        runCatching {
+                            Json.decodeFromString<List<InternalBackup>>(backupsJson)
+                        }.getOrElse { emptyList() }
+                    } else {
+                        emptyList()
+                    }
+
+                    if (!autoBackupTriggered) {
+                        autoBackupTriggered = true
+                        triggerAutoBackupIfNeeded(context.applicationContext)
+                    }
+                }
         }
     }
 
@@ -321,4 +348,51 @@ object SettingsManager {
                 }
             }
         }
+
+    suspend fun saveBackup(backup: InternalBackup) {
+        AppLog.d(TAG, "saveBackup: date=${backup.dateString}")
+        dataStore.edit { prefs ->
+            val currentJson = prefs[KEY_INTERNAL_BACKUPS]
+            val currentList = if (currentJson != null) {
+                runCatching {
+                    Json.decodeFromString<List<InternalBackup>>(currentJson)
+                }.getOrElse { emptyList() }
+            } else {
+                emptyList()
+            }
+            val newList = (currentList.filter { it.dateString != backup.dateString } + backup)
+                .sortedByDescending { it.timestampMs }
+                .take(5)
+            prefs[KEY_INTERNAL_BACKUPS] = Json.encodeToString(newList)
+        }
     }
+
+    private fun triggerAutoBackupIfNeeded(context: Context) {
+        scope.launch {
+            try {
+                val currentDateStr = java.time.LocalDate.now().toString()
+                val alreadyHasBackup = _internalBackups.value.any { it.dateString == currentDateStr }
+                if (alreadyHasBackup) {
+                    AppLog.d(TAG, "Auto-backup already exists for today ($currentDateStr), skipping.")
+                    return@launch
+                }
+
+                AppLog.i(TAG, "Creating automatic daily configuration backup for $currentDateStr")
+                val metadata = ConfigManager.defaultMetadata(context).copy(
+                    author = "System Auto-Backup",
+                    description = "Automatic daily configuration backup"
+                )
+                val export = ConfigManager.buildExport(metadata)
+                val backup = InternalBackup(
+                    dateString = currentDateStr,
+                    timestampMs = System.currentTimeMillis(),
+                    export = export
+                )
+                saveBackup(backup)
+                AppLog.i(TAG, "Automatic daily backup saved successfully.")
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to create automatic daily backup", e)
+            }
+        }
+    }
+}
