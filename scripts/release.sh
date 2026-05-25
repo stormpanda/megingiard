@@ -108,7 +108,7 @@ case "$1" in
         ./gradlew :app:assembleRelease
 
         # Ensure output dir exists, clean old artifacts, and copy the APK
-        rm -f app/release/*.apk app/release/*-checksum-*.txt
+        rm -f app/release/*.apk(N) app/release/*-checksum-*.txt(N)
         mkdir -p app/release
         generated_apk="app/build/outputs/apk/release/Megingiard-v${release_version}.apk"
         copied_apk="app/release/Megingiard-v${release_version}.apk"
