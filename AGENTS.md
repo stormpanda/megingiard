@@ -33,6 +33,7 @@
 | `docs/MANUAL_VERIFICATION.md`               | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
+| `docs/features/floating-overlay/FEATURE.md` | Floating Overlay Pad Mode — functional requirements & touch pass-through overlay implementation |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
 | `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
 | `docs/features/macropad/FEATURE.md`        | MacroPad — profiles, layouts, and custom macro triggers & execution                      |

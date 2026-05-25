@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
@@ -43,6 +44,11 @@
         <service
             android:name=".mirror.ScreenCaptureService"
             android:foregroundServiceType="mediaProjection|connectedDevice"
+            android:exported="false" />
+
+        <service
+            android:name=".overlay.FloatingOverlayService"
+            android:foregroundServiceType="connectedDevice"
             android:exported="false" />
 
     </application>

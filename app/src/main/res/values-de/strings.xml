@@ -604,4 +604,5 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_restore_option_external">Externe Datei…</string>
     <string name="config_restore_option_external_sub">Wählen Sie eine .mgrd-Sicherungsdatei aus</string>
     <string name="config_restore_option_internal_sub">%1$d Profile • %2$d Layouts • %3$d Makros</string>
+    <string name="pill_menu_floating_pad">Schwebendes Pad</string>
 </resources>

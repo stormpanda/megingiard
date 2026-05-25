@@ -148,6 +148,9 @@ object AppStateManager {
     private val _isPillMenuOpen = MutableStateFlow(false)
     val isPillMenuOpen: StateFlow<Boolean> = _isPillMenuOpen.asStateFlow()
 
+    private val _isFloatingOverlayActive = MutableStateFlow(false)
+    val isFloatingOverlayActive: StateFlow<Boolean> = _isFloatingOverlayActive.asStateFlow()
+
     fun openPillMenu() {
         AppLog.i(TAG, "openPillMenu")
         _isPillMenuOpen.value = true
@@ -156,6 +159,11 @@ object AppStateManager {
     fun closePillMenu() {
         AppLog.i(TAG, "closePillMenu")
         _isPillMenuOpen.value = false
+    }
+
+    fun setFloatingOverlayActive(active: Boolean) {
+        AppLog.i(TAG, "setFloatingOverlayActive($active)")
+        _isFloatingOverlayActive.value = active
     }
 
     // ── Modal overlay states ──────────────────────────────────────────────────

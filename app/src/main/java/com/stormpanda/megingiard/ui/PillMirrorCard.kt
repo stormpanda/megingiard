@@ -45,8 +45,10 @@ internal fun MirrorControlCard(
     isFrozen: Boolean,
     isViewportEditActive: Boolean,
     isTouchProjectionActive: Boolean,
+    isFloatingOverlayActive: Boolean,
     modifier: Modifier = Modifier,
     onBackgroundSettings: () -> Unit,
+    onToggleFloatingOverlay: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
@@ -69,20 +71,46 @@ internal fun MirrorControlCard(
             .padding(horizontal = PM_CONTENT_PADDING, vertical = PM_MIRROR_CARD_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Background Settings button (left)
+        // Ambient / Floating row (left)
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .clickable(onClick = onBackgroundSettings)
-                .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text  = stringResource(R.string.pill_menu_ambient_settings),
-                color = colors.accent,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                    .border(PM_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                    .clickable(onClick = onBackgroundSettings)
+                    .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text  = stringResource(R.string.pill_menu_ambient_settings),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            Spacer(Modifier.width(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                    .border(
+                        PM_BORDER_WIDTH, 
+                        if (isFloatingOverlayActive) colors.accent else colors.accent.copy(alpha = 0.5f), 
+                        RoundedCornerShape(PM_ACTION_BUTTON_CORNER)
+                    )
+                    .background(if (isFloatingOverlayActive) colors.accent.copy(alpha = 0.15f) else Color.Transparent)
+                    .clickable(onClick = onToggleFloatingOverlay)
+                    .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text  = stringResource(R.string.pill_menu_floating_pad),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
 
         Spacer(Modifier.weight(1f))

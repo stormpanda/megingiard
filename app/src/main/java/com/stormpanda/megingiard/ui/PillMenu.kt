@@ -95,6 +95,7 @@ fun PillMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val isFloatingOverlayActive by AppStateManager.isFloatingOverlayActive.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     val defaultProfileName = stringResource(R.string.pill_menu_new_profile)
     val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
@@ -126,6 +127,7 @@ fun PillMenu(
                 isFrozen = isFrozen,
                 isViewportEditActive = isViewportEditActive,
                 isTouchProjectionActive = isTouchProjectionActive,
+                isFloatingOverlayActive = isFloatingOverlayActive,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .animateEnterExit(
@@ -135,6 +137,37 @@ fun PillMenu(
                 onBackgroundSettings = {
                     AppStateManager.setBackgroundSettingsActive(true)
                     onDismiss()
+                },
+                onToggleFloatingOverlay = {
+                    if (isFloatingOverlayActive) {
+                        val stopIntent = android.content.Intent(
+                            context,
+                            com.stormpanda.megingiard.overlay.FloatingOverlayService::class.java
+                        ).apply {
+                            action = com.stormpanda.megingiard.overlay.ACTION_STOP_OVERLAY
+                        }
+                        context.startService(stopIntent)
+                    } else {
+                        if (!android.provider.Settings.canDrawOverlays(context)) {
+                            val settingsIntent = android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                android.net.Uri.parse("package:${context.packageName}")
+                            ).apply {
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(settingsIntent)
+                        } else {
+                            val startIntent = android.content.Intent(
+                                context,
+                                com.stormpanda.megingiard.overlay.FloatingOverlayService::class.java
+                            ).apply {
+                                action = com.stormpanda.megingiard.overlay.ACTION_START_OVERLAY
+                            }
+                            context.startForegroundService(startIntent)
+                            onDismiss()
+                            (context as? android.app.Activity)?.moveTaskToBack(true)
+                        }
+                    }
                 },
                 onStart = {
                     AppStateManager.requestMirrorStart()

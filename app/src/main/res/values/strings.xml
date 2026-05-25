@@ -596,4 +596,5 @@ Open Settings to create a layout.</string>
     <string name="config_restore_option_external">External File…</string>
     <string name="config_restore_option_external_sub">Select a .mgrd file from storage</string>
     <string name="config_restore_option_internal_sub">%1$d profiles • %2$d layouts • %3$d macros</string>
+    <string name="pill_menu_floating_pad">Floating Pad</string>
 </resources>
