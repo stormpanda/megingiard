@@ -107,7 +107,8 @@ case "$1" in
         log_info "Building release APK for version $release_version..."
         ./gradlew :app:assembleRelease
 
-        # Ensure output dir exists and copy the APK
+        # Ensure output dir exists, clean old artifacts, and copy the APK
+        rm -f app/release/*.apk app/release/*-checksum-*.txt
         mkdir -p app/release
         generated_apk="app/build/outputs/apk/release/Megingiard-v${release_version}.apk"
         copied_apk="app/release/Megingiard-v${release_version}.apk"
