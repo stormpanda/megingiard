@@ -308,19 +308,21 @@ class MacroEventCompilerTest {
     }
 
     @Test
-    fun `touch path sample at or beyond duration is filtered`() {
+    fun `touch path sample beyond duration is filtered`() {
         val step = MacroStep.TouchPath(
             startTimeMs = 0L,
             durationMs = 100L,
             samples = listOf(
                 TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // at boundary → filtered
+                TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // at boundary → kept
                 TouchSample(offsetMs = 150L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // beyond → filtered
             )
         )
         val events = buildMacroEventList(macro(step))
-        assertEquals(1, events.size)
+        assertEquals(2, events.size)
         assertEquals(MacroEventType.TOUCH_DOWN, events[0].type)
+        assertEquals(MacroEventType.TOUCH_UP, events[1].type)
+        assertEquals(100L, events[1].timeMs)
     }
 }
 

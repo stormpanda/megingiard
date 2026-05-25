@@ -390,7 +390,30 @@ private fun GestureCaptureOverlay(contentWidth: Int, contentHeight: Int) {
                         // Check if all pointers are released
                         if (recordingStarted && activePointerIds.isEmpty()) {
                             AppLog.i(TAG, "gesture recording finished with ${samples.size} samples")
-                            TouchRecordingManager.onGestureRecorded(samples)
+                            
+                            // Post-process samples: for any pointer that has not ended with TouchAction.UP,
+                            // add that right after their respective last recorded event
+                            val finalizedSamples = mutableListOf<TouchSample>()
+                            val samplesByPointer = samples.groupBy { it.pointerId }
+                            for ((pointerId, pointerSamples) in samplesByPointer) {
+                                if (pointerSamples.isEmpty()) continue
+                                finalizedSamples.addAll(pointerSamples)
+                                val lastSample = pointerSamples.last()
+                                if (lastSample.action != TouchAction.UP) {
+                                    finalizedSamples.add(
+                                        TouchSample(
+                                            offsetMs = lastSample.offsetMs + 10L, // Add UP exactly 10ms after
+                                            pointerId = pointerId,
+                                            action = TouchAction.UP,
+                                            normX = lastSample.normX,
+                                            normY = lastSample.normY
+                                        )
+                                    )
+                                }
+                            }
+                            finalizedSamples.sortBy { it.offsetMs }
+
+                            TouchRecordingManager.onGestureRecorded(finalizedSamples)
                             break
                         }
                     }

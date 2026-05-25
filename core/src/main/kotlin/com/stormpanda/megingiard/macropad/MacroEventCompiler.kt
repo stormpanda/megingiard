@@ -100,7 +100,7 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> {
             }
             is MacroStep.TouchPath -> {
                 for (sample in step.samples) {
-                    if (sample.offsetMs >= step.durationMs) continue
+                    if (sample.offsetMs > step.durationMs) continue
                     val t = step.startTimeMs + sample.offsetMs
                     val eventType = when (sample.action) {
                         TouchAction.DOWN -> MacroEventType.TOUCH_DOWN
