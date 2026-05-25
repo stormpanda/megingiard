@@ -55,4 +55,13 @@ object TouchInjector {
         val py = (normalizedX * PHYS_H).toInt()
         ShellInputInjector.injectTouch(action, px, py)
     }
+
+    /**
+     * Injects a slot-aware touch event using normalised coordinates.
+     */
+    fun injectTouch(slot: Int, action: TouchAction, normalizedX: Float, normalizedY: Float) {
+        val px = ((1f - normalizedY) * PHYS_W).toInt()
+        val py = (normalizedX * PHYS_H).toInt()
+        ShellInputInjector.injectTouch(slot, action, px, py)
+    }
 }

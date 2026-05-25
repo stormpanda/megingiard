@@ -118,6 +118,13 @@ abstract class NativeBinaryInjector<T>(
      */
     protected open fun isCoalescible(cmd: T): Boolean = false
 
+    /**
+     * Return `true` if [cmd1] and [cmd2] can be coalesced together.
+     * Only called when both commands are eligible for coalescing (i.e. [isCoalescible] is true).
+     * Default: true.
+     */
+    protected open fun canCoalesce(cmd1: T, cmd2: T): Boolean = true
+
     // -------------------------------------------------------------------------
     // Protected helper
     // -------------------------------------------------------------------------
@@ -142,7 +149,7 @@ abstract class NativeBinaryInjector<T>(
                 if (isCoalescible(cmd)) {
                     while (true) {
                         val next = queue.peek() ?: break
-                        if (!isCoalescible(next)) break
+                        if (!isCoalescible(next) || !canCoalesce(cmd, next)) break
                         queue.poll()
                         cmd = next
                     }

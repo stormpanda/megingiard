@@ -76,6 +76,7 @@ internal fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean): String =
         val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
         "$stick↻"
     }
+    is MacroStep.TouchPath -> "Gesture"
 }
 
 internal fun stepColor(
@@ -90,6 +91,7 @@ internal fun stepColor(
     is MacroStep.DPadTap -> dpadColor
     is MacroStep.TouchTap -> touchColor
     is MacroStep.JoystickPath -> joystickColor
+    is MacroStep.TouchPath -> touchColor
 }
 
 @Composable
@@ -112,6 +114,7 @@ internal fun StepListItem(
             is MacroStep.DPadTap -> R.string.macropad_macro_step_type_dpad
             is MacroStep.TouchTap -> R.string.macropad_macro_step_type_touch
             is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
+            is MacroStep.TouchPath -> R.string.macropad_macro_step_type_touch_path
         },
     )
     val description = when (step) {
@@ -126,6 +129,7 @@ internal fun StepListItem(
             val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
             "$stickLabel (${step.samples.size} pts)"
         }
+        is MacroStep.TouchPath -> "(${step.samples.size} pts)"
     }
     val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor, touchColor)
 

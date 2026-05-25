@@ -107,6 +107,7 @@ internal fun MacroTimelineEditor(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
+    val recordedGesture by TouchRecordingManager.recordedGesture.collectAsState()
     val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
@@ -150,12 +151,7 @@ internal fun MacroTimelineEditor(
     }
 
     fun requestTouchRecording() {
-        if (MacroPadSettings.skipTouchRecordDialog.value) {
-            if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
-            TouchRecordingManager.requestRecording()
-        } else {
-            showRecordTouchDialog = true
-        }
+        showRecordTouchDialog = true
     }
 
     fun requestGamepadRecording() {
@@ -178,6 +174,21 @@ internal fun MacroTimelineEditor(
         )
         AppLog.d(TAG, "recordedTouchAdded startMs=$nextStart")
         TouchRecordingManager.consumeRecordedTap()
+    }
+
+    LaunchedEffect(recordedGesture) {
+        val samples = recordedGesture ?: return@LaunchedEffect
+        if (samples.isEmpty()) return@LaunchedEffect
+        val nextStart = steps.totalDurationMs()
+        val durationMs = samples.maxOf { it.offsetMs }
+        pushUndo(steps)
+        steps = steps + MacroStep.TouchPath(
+            startTimeMs = nextStart,
+            durationMs = durationMs,
+            samples = samples,
+        )
+        AppLog.d(TAG, "recordedTouchGestureAdded size=${samples.size} durationMs=$durationMs startMs=$nextStart")
+        TouchRecordingManager.consumeRecordedGesture()
     }
 
     LaunchedEffect(gamepadRecordingState) {
@@ -207,18 +218,17 @@ internal fun MacroTimelineEditor(
 
     if (showRecordTouchDialog) {
         TouchRecordStartDialog(
-            onStart = {
+            onRecordTap = {
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
-                TouchRecordingManager.requestRecording()
+                TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+                showRecordTouchDialog = false
+            },
+            onRecordGesture = {
+                if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
+                TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
                 showRecordTouchDialog = false
             },
             onCancel = { showRecordTouchDialog = false },
-            onDontShowAgain = {
-                MacroPadSettings.setSkipTouchRecordDialog(true)
-                if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
-                TouchRecordingManager.requestRecording()
-                showRecordTouchDialog = false
-            },
         )
     }
 

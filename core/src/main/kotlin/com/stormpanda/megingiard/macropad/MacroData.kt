@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.input.TouchAction
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -105,6 +106,19 @@ sealed class MacroStep {
         val stick: JoystickStick,
         val samples: List<PathSample>,
     ) : MacroStep()
+
+    /**
+     * Replays a recorded continuous multi-touch gesture path, beginning [startTimeMs]
+     * milliseconds after macro start. [samples] is a list of relative-time touch pointer
+     * actions with normalised logical coordinates [0.0, 1.0].
+     */
+    @Serializable
+    @SerialName("touch_path")
+    data class TouchPath(
+        override val startTimeMs: Long,
+        override val durationMs: Long,
+        val samples: List<TouchSample>,
+    ) : MacroStep()
 }
 
 /**
@@ -115,6 +129,23 @@ sealed class MacroStep {
  */
 @Serializable
 data class PathSample(val offsetMs: Long, val x: Float, val y: Float)
+
+/**
+ * A single touch interaction sample within a [MacroStep.TouchPath].
+ *
+ * [offsetMs] is relative to the parent [MacroStep.TouchPath.startTimeMs].
+ * [pointerId] is the unique touch slot (0..9) identifying the finger.
+ * [action] is DOWN / MOVE / UP.
+ * [normX] and [normY] are normalised coordinates in logical display space [0.0, 1.0].
+ */
+@Serializable
+data class TouchSample(
+    val offsetMs: Long,
+    val pointerId: Int,
+    val action: TouchAction,
+    val normX: Float,
+    val normY: Float,
+)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Extension helpers
@@ -130,6 +161,7 @@ fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
     is MacroStep.DPadTap          -> copy(startTimeMs = newStartTimeMs)
     is MacroStep.TouchTap         -> copy(startTimeMs = newStartTimeMs)
     is MacroStep.JoystickPath     -> copy(startTimeMs = newStartTimeMs)
+    is MacroStep.TouchPath        -> copy(startTimeMs = newStartTimeMs)
 }
 
 /** Returns a new list where every step's start time is shifted by [offsetMs]. */

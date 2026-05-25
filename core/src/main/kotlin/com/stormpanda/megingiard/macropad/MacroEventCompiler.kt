@@ -1,17 +1,20 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.input.TouchAction
+
 // Scale factor for float axis values (-1..1) → int16 (-32768..32767).
 // Using 32768 so -1.0 maps exactly to -32768; positive side is clamped to 32767 below.
 private const val ABS_FULL_DEFLECTION = 32768
 
 /** Event types emitted by [buildMacroEventList]. */
-enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_UP }
+enum class MacroEventType { BUTTON_DOWN, BUTTON_UP, JOYSTICK_SET, HAT, TOUCH_DOWN, TOUCH_MOVE, TOUCH_UP }
 
 /**
  * A single discrete input event compiled from a [MacroStep].
  *
  * [normX] and [normY] carry normalised coordinates for [MacroEventType.TOUCH_DOWN] /
- * [MacroEventType.TOUCH_UP]; all other event types leave them at their default 0f.
+ * [MacroEventType.TOUCH_MOVE] / [MacroEventType.TOUCH_UP]; all other event types leave
+ * them at their default 0f.
  */
 data class MacroEvent(
     val timeMs: Long,
@@ -32,6 +35,7 @@ val MacroEvent.isReset: Boolean
         MacroEventType.BUTTON_UP             -> true
         MacroEventType.TOUCH_UP              -> true
         MacroEventType.BUTTON_DOWN           -> false
+        MacroEventType.TOUCH_MOVE            -> false
         MacroEventType.TOUCH_DOWN            -> false
         MacroEventType.JOYSTICK_SET,
         MacroEventType.HAT                   -> value == 0
@@ -93,6 +97,18 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> {
                 /* Return axes to neutral at step end. */
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisX, 0)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisY, 0)
+            }
+            is MacroStep.TouchPath -> {
+                for (sample in step.samples) {
+                    if (sample.offsetMs >= step.durationMs) continue
+                    val t = step.startTimeMs + sample.offsetMs
+                    val eventType = when (sample.action) {
+                        TouchAction.DOWN -> MacroEventType.TOUCH_DOWN
+                        TouchAction.MOVE -> MacroEventType.TOUCH_MOVE
+                        TouchAction.UP   -> MacroEventType.TOUCH_UP
+                    }
+                    events += MacroEvent(t, eventType, sample.pointerId, 0, sample.normX, sample.normY)
+                }
             }
         }
     }

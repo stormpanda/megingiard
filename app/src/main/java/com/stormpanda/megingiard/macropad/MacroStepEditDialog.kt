@@ -79,7 +79,7 @@ private const val MSD_TIMING_DELTA_BUTTON_V_PADDING = 2
 // Step type (editor-internal)
 // ─────────────────────────────────────────────────────────────────────────────
 
-private enum class StepType { GAMEPAD, JOYSTICK, JOYSTICK_PATH, DPAD, TOUCH }
+private enum class StepType { GAMEPAD, JOYSTICK, JOYSTICK_PATH, DPAD, TOUCH, TOUCH_PATH }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Direction arrow labels keyed by (col, row) in the 3×3 grid.
@@ -130,6 +130,7 @@ internal fun MacroStepEditDialog(
         is MacroStep.DPadTap          -> StepType.DPAD
         is MacroStep.TouchTap         -> StepType.TOUCH
         is MacroStep.JoystickPath     -> StepType.JOYSTICK_PATH
+        is MacroStep.TouchPath        -> StepType.TOUCH_PATH
         null                          -> StepType.GAMEPAD
     }
 
@@ -192,6 +193,7 @@ internal fun MacroStepEditDialog(
         StepType.JOYSTICK_PATH -> step is MacroStep.JoystickPath
         StepType.DPAD          -> !(dpadDirX == 0 && dpadDirY == 0)
         StepType.TOUCH         -> true
+        StepType.TOUCH_PATH    -> step is MacroStep.TouchPath
     }
 
     // ── Full-screen layout ────────────────────────────────────────────────────────────────
@@ -239,6 +241,10 @@ internal fun MacroStepEditDialog(
                             startTimeMs = startMs.toLong(),
                             durationMs  = durMs.toLong().coerceAtLeast(1L),
                         )
+                        StepType.TOUCH_PATH -> (step as MacroStep.TouchPath).copy(
+                            startTimeMs = startMs.toLong(),
+                            durationMs  = durMs.toLong().coerceAtLeast(1L),
+                        )
                     }
                     onConfirm(builtStep, shiftMode)
                 },
@@ -262,10 +268,10 @@ internal fun MacroStepEditDialog(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StepType.entries.forEach { type ->
-                    /* TOUCH and JOYSTICK_PATH are recorded — only show their chip when editing
+                    /* TOUCH, TOUCH_PATH and JOYSTICK_PATH are recorded — only show their chip when editing
                        a step of that type, and hide them when editing any other step. */
-                    val initialIsRecorded = initialType == StepType.TOUCH || initialType == StepType.JOYSTICK_PATH
-                    val typeIsRecorded = type == StepType.TOUCH || type == StepType.JOYSTICK_PATH
+                    val initialIsRecorded = initialType == StepType.TOUCH || initialType == StepType.TOUCH_PATH || initialType == StepType.JOYSTICK_PATH
+                    val typeIsRecorded = type == StepType.TOUCH || type == StepType.TOUCH_PATH || type == StepType.JOYSTICK_PATH
                     if (initialIsRecorded && type != initialType) return@forEach
                     if (!initialIsRecorded && typeIsRecorded) return@forEach
                     val selected = type == stepType
@@ -275,6 +281,7 @@ internal fun MacroStepEditDialog(
                         StepType.JOYSTICK_PATH -> R.string.macropad_macro_step_type_joystick_path
                         StepType.DPAD          -> R.string.macropad_macro_step_type_dpad
                         StepType.TOUCH         -> R.string.macropad_macro_step_type_touch
+                        StepType.TOUCH_PATH    -> R.string.macropad_macro_step_type_touch_path
                     }
                     val symbolName = when (type) {
                         StepType.GAMEPAD       -> "sports_esports"
@@ -282,6 +289,7 @@ internal fun MacroStepEditDialog(
                         StepType.JOYSTICK_PATH -> "joystick"
                         StepType.DPAD          -> "gamepad"
                         StepType.TOUCH         -> "touch_app"
+                        StepType.TOUCH_PATH    -> "touch_app"
                     }
                     StepTypeChip(
                         text = stringResource(labelRes),
@@ -429,6 +437,22 @@ internal fun MacroStepEditDialog(
                         color = colors.onSurface,
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                }
+
+                StepType.TOUCH_PATH -> {
+                    val touchPathStep = step as? MacroStep.TouchPath
+                    Text(
+                        stringResource(R.string.macropad_macro_step_path_readonly),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (touchPathStep != null) {
+                        Text(
+                            stringResource(R.string.macropad_macro_step_touch_path_details, touchPathStep.samples.size),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
             }
 

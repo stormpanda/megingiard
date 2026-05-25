@@ -26,10 +26,15 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.os.SystemClock
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
+import com.stormpanda.megingiard.macropad.TouchRecordingMode
+import com.stormpanda.megingiard.macropad.TouchSample
 import com.stormpanda.megingiard.mirror.projectCoordinates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -191,10 +196,18 @@ class RecordingMirrorPresentation(
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
             setContent {
-                TapCaptureOverlay(
-                    contentWidth  = finalWidth,
-                    contentHeight = finalHeight,
-                )
+                val mode by TouchRecordingManager.recordingMode.collectAsState()
+                if (mode == TouchRecordingMode.GESTURE) {
+                    GestureCaptureOverlay(
+                        contentWidth  = finalWidth,
+                        contentHeight = finalHeight,
+                    )
+                } else {
+                    TapCaptureOverlay(
+                        contentWidth  = finalWidth,
+                        contentHeight = finalHeight,
+                    )
+                }
             }
         }
         container.addView(composeView)
@@ -259,5 +272,129 @@ private fun TapCaptureOverlay(contentWidth: Int, contentHeight: Int) {
                 TouchInjector.injectTouch(TouchAction.UP, normX, normY)
                 TouchRecordingManager.onTapRecorded(normX, normY)
             },
+    )
+}
+
+/**
+ * A transparent full-screen Box that records a continuous multi-touch gesture.
+ * Recording starts when the first finger touches the screen, and stops as soon as
+ * all fingers are lifted. Captures coordinates, maps them through letterbox geometry
+ * (clamping active fingers that drag out of bounds), feeds them live to TouchInjector,
+ * and passes the completed TouchSample list to TouchRecordingManager.
+ *
+ * @param contentWidth  Width of the mirrored content area (letterboxed) in pixels.
+ * @param contentHeight Height of the mirrored content area (letterboxed) in pixels.
+ */
+@Composable
+private fun GestureCaptureOverlay(contentWidth: Int, contentHeight: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                var recordingStarted = false
+                var startEpochMs = 0L
+                val samples = mutableListOf<TouchSample>()
+                // Track active pointers to know when all pointers are released
+                val activePointerIds = mutableSetOf<Long>()
+
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val now = SystemClock.elapsedRealtime()
+                        
+                        val changes = event.changes
+                        if (changes.isEmpty()) continue
+
+                        // Process changes to track pointer down/move/up
+                        for (change in changes) {
+                            val pointerId = change.id.value
+                            val position = change.position
+                            val isPressed = change.pressed
+                            val wasPressed = change.previousPressed
+                            val isAlreadyTracked = activePointerIds.contains(pointerId)
+                            
+                            // Map coordinates through letterbox geometry.
+                            val result = projectCoordinates(
+                                touchX = position.x,
+                                touchY = position.y,
+                                screenW = size.width.toFloat(),
+                                screenH = size.height.toFloat(),
+                                sw = contentWidth.toFloat(),
+                                sh = contentHeight.toFloat(),
+                                scale = 1f,
+                                offsetX = 0f,
+                                offsetY = 0f,
+                            )
+
+                            if (result == null && !isAlreadyTracked) {
+                                // Ignore this touch event entirely if it's not already being tracked and is out of bounds
+                                continue
+                            }
+
+                            val (normX, normY) = if (result != null) {
+                                result
+                            } else {
+                                // Manual calculation and clamping since it is already tracked but went out of bounds
+                                val screenCenterX = size.width.toFloat() / 2f
+                                val screenCenterY = size.height.toFloat() / 2f
+                                val svCenterX = contentWidth.toFloat() / 2f
+                                val svCenterY = contentHeight.toFloat() / 2f
+                                val svX = (position.x - screenCenterX) + svCenterX
+                                val svY = (position.y - screenCenterY) + svCenterY
+                                val nx = (svX / contentWidth.toFloat()).coerceIn(0f, 1f)
+                                val ny = (svY / contentHeight.toFloat()).coerceIn(0f, 1f)
+                                Pair(nx, ny)
+                            }
+
+                            if (!recordingStarted) {
+                                // Start of the gesture: first pointer touches the screen
+                                recordingStarted = true
+                                startEpochMs = now
+                                AppLog.i(TAG, "gesture recording started")
+                            }
+
+                            val offsetMs = now - startEpochMs
+
+                            val action = when {
+                                isPressed && !wasPressed -> {
+                                    activePointerIds.add(pointerId)
+                                    TouchAction.DOWN
+                                }
+                                isPressed && wasPressed -> {
+                                    TouchAction.MOVE
+                                }
+                                !isPressed && wasPressed -> {
+                                    activePointerIds.remove(pointerId)
+                                    TouchAction.UP
+                                }
+                                else -> continue
+                            }
+
+                            // Keep track of our sample
+                            samples.add(
+                                TouchSample(
+                                    offsetMs = offsetMs,
+                                    pointerId = pointerId.toInt(),
+                                    action = action,
+                                    normX = normX,
+                                    normY = normY
+                                )
+                            )
+
+                            // Inject touch live so the user can see what they are doing!
+                            TouchInjector.injectTouch(pointerId.toInt(), action, normX, normY)
+
+                            change.consume()
+                        }
+
+                        // Check if all pointers are released
+                        if (recordingStarted && activePointerIds.isEmpty()) {
+                            AppLog.i(TAG, "gesture recording finished with ${samples.size} samples")
+                            TouchRecordingManager.onGestureRecorded(samples)
+                            break
+                        }
+                    }
+                }
+            }
     )
 }
