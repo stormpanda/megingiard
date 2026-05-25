@@ -9,6 +9,15 @@ private const val TAG = "TouchRecordingManager"
 
 enum class TouchRecordingMode { TAP, GESTURE }
 
+sealed interface TouchRecordingState {
+    data object Idle : TouchRecordingState
+    data class Recording(
+        val mode: TouchRecordingMode,
+        val recordedGestureCount: Int,
+    ) : TouchRecordingState
+    data class Done(val steps: List<MacroStep>) : TouchRecordingState
+}
+
 /**
  * Singleton that coordinates the touch recording flow (taps and gestures) for macro steps.
  *
@@ -16,11 +25,12 @@ enum class TouchRecordingMode { TAP, GESTURE }
  * 1. [requestRecording] — called from the timeline editor when the user taps "Record Touch"
  *    and selects a mode. Sets [recordingRequested] to `true`, which [ScreenCaptureService]
  *    observes to show [RecordingMirrorPresentation] on the secondary display.
- * 2. [onTapRecorded] or [onGestureRecorded] — called by [RecordingMirrorPresentation] when
- *    the user finishes their input. Stores the result and resets [recordingRequested].
- * 3. The timeline editor observes [recordedTap] or [recordedGesture] via `LaunchedEffect` and
- *    appends the corresponding step, then calls [consumeRecordedTap] / [consumeRecordedGesture]
- *    to clear the value.
+ * 2. [onTapRecorded] — called by [RecordingMirrorPresentation] for TAP mode and keeps
+ *    the legacy one-shot flow.
+ * 3. [recordGestureCompleted] — called for each completed GESTURE segment. The
+ *    presentation stays open until [finishRecording] or [cancelRecording].
+ * 4. The timeline editor observes [recordedTap] or [state] and appends the
+ *    corresponding step(s), then calls [consumeRecordedTap] / [resetState].
  */
 object TouchRecordingManager {
 
@@ -32,18 +42,17 @@ object TouchRecordingManager {
     /** The active recording mode (TAP or GESTURE). */
     val recordingMode: StateFlow<TouchRecordingMode> = _recordingMode.asStateFlow()
 
+    private val _state = MutableStateFlow<TouchRecordingState>(TouchRecordingState.Idle)
+    val state: StateFlow<TouchRecordingState> = _state.asStateFlow()
+
+    private val recordedGestureSteps = mutableListOf<MacroStep.TouchPath>()
+
     private val _recordedTap = MutableStateFlow<Pair<Float, Float>?>(null)
     /**
      * Normalised tap position (normX in 0..1, normY in 0..1) recorded by the user,
      * or `null` if no tap has been recorded yet / after consumption.
      */
     val recordedTap: StateFlow<Pair<Float, Float>?> = _recordedTap.asStateFlow()
-
-    private val _recordedGesture = MutableStateFlow<List<TouchSample>?>(null)
-    /**
-     * List of recorded touch samples, or `null` if no gesture has been recorded yet / after consumption.
-     */
-    val recordedGesture: StateFlow<List<TouchSample>?> = _recordedGesture.asStateFlow()
 
     /**
      * Signals that the recording mirror should be shown with the specified mode.
@@ -52,7 +61,11 @@ object TouchRecordingManager {
     fun requestRecording(mode: TouchRecordingMode) {
         AppLog.i(TAG, "requestRecording mode=$mode")
         _recordedTap.value = null
-        _recordedGesture.value = null
+        recordedGestureSteps.clear()
+        _state.value = TouchRecordingState.Recording(
+            mode = mode,
+            recordedGestureCount = 0,
+        )
         _recordingMode.value = mode
         _recordingRequested.value = true
     }
@@ -64,17 +77,42 @@ object TouchRecordingManager {
     fun onTapRecorded(normX: Float, normY: Float) {
         AppLog.i(TAG, "onTapRecorded normX=$normX normY=$normY")
         _recordedTap.value = Pair(normX, normY)
+        _state.value = TouchRecordingState.Idle
         _recordingRequested.value = false
     }
 
     /**
-     * Called by [RecordingMirrorPresentation] when the user completes their gesture in GESTURE mode.
-     * Stores the samples and clears the recording request.
+     * Called by [RecordingMirrorPresentation] when the user completes one gesture segment.
+     * The recording mirror stays open so more gestures can be added before Stop & Save.
      */
-    fun onGestureRecorded(samples: List<TouchSample>) {
+    fun recordGestureCompleted(samples: List<TouchSample>, startOffsetMs: Long) {
+        if (_state.value !is TouchRecordingState.Recording) {
+            AppLog.w(TAG, "recordGestureCompleted called while not recording — ignored")
+            return
+        }
+        if (samples.isEmpty()) return
         val completedSamples = completeTouchPathSamples(samples)
-        AppLog.i(TAG, "onGestureRecorded samples=${samples.size} completedSamples=${completedSamples.size}")
-        _recordedGesture.value = completedSamples
+        val durationMs = completedSamples.maxOfOrNull { it.offsetMs } ?: 0L
+        recordedGestureSteps += MacroStep.TouchPath(
+            startTimeMs = startOffsetMs,
+            durationMs = durationMs,
+            samples = completedSamples,
+        )
+        AppLog.i(TAG, "recordGestureCompleted samples=${samples.size} completedSamples=${completedSamples.size} startOffsetMs=$startOffsetMs")
+        _state.value = TouchRecordingState.Recording(
+            mode = TouchRecordingMode.GESTURE,
+            recordedGestureCount = recordedGestureSteps.size,
+        )
+    }
+
+    fun finishRecording() {
+        if (_state.value !is TouchRecordingState.Recording) {
+            AppLog.w(TAG, "finishRecording called while not recording — ignored")
+            return
+        }
+        AppLog.i(TAG, "finishRecording steps=${recordedGestureSteps.size}")
+        _state.value = TouchRecordingState.Done(recordedGestureSteps.sortedBy { it.startTimeMs })
+        recordedGestureSteps.clear()
         _recordingRequested.value = false
     }
 
@@ -85,7 +123,8 @@ object TouchRecordingManager {
         AppLog.i(TAG, "cancelRecording")
         _recordingRequested.value = false
         _recordedTap.value = null
-        _recordedGesture.value = null
+        recordedGestureSteps.clear()
+        _state.value = TouchRecordingState.Idle
     }
 
     /**
@@ -97,12 +136,9 @@ object TouchRecordingManager {
         _recordedTap.value = null
     }
 
-    /**
-     * Called by the timeline editor after it has appended the [MacroStep.TouchPath].
-     * Resets [recordedGesture] to `null` so the `LaunchedEffect` does not re-trigger.
-     */
-    fun consumeRecordedGesture() {
-        AppLog.d(TAG, "consumeRecordedGesture")
-        _recordedGesture.value = null
+    fun resetState() {
+        AppLog.d(TAG, "resetState")
+        recordedGestureSteps.clear()
+        _state.value = TouchRecordingState.Idle
     }
 }

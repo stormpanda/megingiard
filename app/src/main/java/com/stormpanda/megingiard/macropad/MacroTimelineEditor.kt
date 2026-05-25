@@ -107,7 +107,7 @@ internal fun MacroTimelineEditor(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
-    val recordedGesture by TouchRecordingManager.recordedGesture.collectAsState()
+    val touchRecordingState by TouchRecordingManager.state.collectAsState()
     val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
@@ -176,19 +176,18 @@ internal fun MacroTimelineEditor(
         TouchRecordingManager.consumeRecordedTap()
     }
 
-    LaunchedEffect(recordedGesture) {
-        val samples = recordedGesture ?: return@LaunchedEffect
-        if (samples.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(touchRecordingState) {
+        val recorded = touchRecordingState as? TouchRecordingState.Done ?: return@LaunchedEffect
+        if (recorded.steps.isEmpty()) {
+            TouchRecordingManager.resetState()
+            return@LaunchedEffect
+        }
         val nextStart = steps.totalDurationMs()
-        val durationMs = samples.maxOf { it.offsetMs }
+        val shiftedSteps = recorded.steps.offsetBy(nextStart)
         pushUndo(steps)
-        steps = steps + MacroStep.TouchPath(
-            startTimeMs = nextStart,
-            durationMs = durationMs,
-            samples = samples,
-        )
-        AppLog.d(TAG, "recordedTouchGestureAdded size=${samples.size} durationMs=$durationMs startMs=$nextStart")
-        TouchRecordingManager.consumeRecordedGesture()
+        steps = steps + shiftedSteps
+        AppLog.d(TAG, "recordedTouchGestureAdded count=${shiftedSteps.size} startMs=$nextStart")
+        TouchRecordingManager.resetState()
     }
 
     LaunchedEffect(gamepadRecordingState) {
