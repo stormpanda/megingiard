@@ -55,8 +55,27 @@ android {
         )
     }
 
+    signingConfigs {
+        create("release") {
+            val keyPasswordProp = localProperties.getProperty("megingiard.keystore.key.password")
+            val storePasswordProp = localProperties.getProperty("megingiard.keystore.password")
+            val aliasProp = localProperties.getProperty("megingiard.keystore.alias")
+
+            if (!keyPasswordProp.isNullOrBlank() && !storePasswordProp.isNullOrBlank() && !aliasProp.isNullOrBlank()) {
+                storeFile = rootProject.file("megingiard.jks")
+                storePassword = storePasswordProp
+                keyAlias = aliasProp
+                keyPassword = keyPasswordProp
+            }
+        }
+    }
+
     buildTypes {
         release {
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null && releaseSigningConfig.storeFile?.exists() == true) {
+                signingConfig = releaseSigningConfig
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
