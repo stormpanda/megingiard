@@ -86,8 +86,13 @@ object TouchRecordingManager {
      * The recording mirror stays open so more gestures can be added before Stop & Save.
      */
     fun recordGestureCompleted(samples: List<TouchSample>, startOffsetMs: Long) {
-        if (_state.value !is TouchRecordingState.Recording) {
+        val currentState = _state.value as? TouchRecordingState.Recording
+        if (currentState == null) {
             AppLog.w(TAG, "recordGestureCompleted called while not recording — ignored")
+            return
+        }
+        if (currentState.mode != TouchRecordingMode.GESTURE) {
+            AppLog.w(TAG, "recordGestureCompleted called in non-GESTURE mode (${currentState.mode}) — ignored")
             return
         }
         if (samples.isEmpty()) return

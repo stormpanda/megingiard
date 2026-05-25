@@ -40,13 +40,16 @@ object TouchInjector {
 
     fun stop() {
         AppLog.i(TAG, "stop()")
-        if (ShellInputInjector.isRunning) {
-            releaseAllSlots()
+        if (!ShellInputInjector.isRunning) { ShellInputInjector.stop(); return }
+        releaseAllSlots()
+        /* Flush and stop on a daemon thread to avoid blocking the calling thread.
+           stop() can be invoked from Compose DisposableEffect.onDispose (main thread). */
+        Thread {
             if (!ShellInputInjector.flushPendingTouches(TOUCH_STOP_FLUSH_TIMEOUT_MS)) {
                 AppLog.w(TAG, "stop() timed out while flushing touch release commands")
             }
-        }
-        ShellInputInjector.stop()
+            ShellInputInjector.stop()
+        }.also { it.isDaemon = true }.start()
     }
 
     val isRunning: Boolean

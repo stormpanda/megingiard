@@ -519,6 +519,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch Tap</string>
     <string name="macropad_macro_step_type_touch_path">Touch Gesture</string>
+    <string name="macropad_macro_step_label_short_tap">Tap</string>
+    <string name="macropad_macro_step_label_short_gesture">Gesture</string>
+    <string name="macropad_macro_step_short_samples_count">(%1$d pts)</string>
+    <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d pts)</string>
     <string name="macropad_macro_step_touch_path_details">Gesture Path: %1$d points recorded.</string>
     <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>
     <string name="macropad_macro_step_touch_path_readonly">Recorded touch gesture (read-only). Only timing can be edited.</string>

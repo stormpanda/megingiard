@@ -78,8 +78,10 @@ internal fun MacroVerticalTimeline(
     val dpadColor = colors.actionColorSystem
     val touchColor = MaterialTheme.colorScheme.tertiary
     val tickFormat = stringResource(R.string.macropad_macro_timeline_tick)
-    val stepLabels = remember(steps, swapFaceButtons) {
-        steps.map { shortStepLabel(it, swapFaceButtons) }
+    val tapLabel = stringResource(R.string.macropad_macro_step_label_short_tap)
+    val gestureLabel = stringResource(R.string.macropad_macro_step_label_short_gesture)
+    val stepLabels = remember(steps, swapFaceButtons, tapLabel, gestureLabel) {
+        steps.map { shortStepLabel(it, swapFaceButtons, tapLabel, gestureLabel) }
     }
 
     val pxPerMs = with(density) { MTE_VERTICAL_DP_PER_MS.dp.toPx() }

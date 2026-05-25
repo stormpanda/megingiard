@@ -99,15 +99,31 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> {
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisY, 0)
             }
             is MacroStep.TouchPath -> {
+                val activePointers = mutableMapOf<Int, Pair<Float, Float>>()
                 for (sample in step.samples) {
                     if (sample.offsetMs > step.durationMs) continue
                     val t = step.startTimeMs + sample.offsetMs
                     val eventType = when (sample.action) {
-                        TouchAction.DOWN -> MacroEventType.TOUCH_DOWN
-                        TouchAction.MOVE -> MacroEventType.TOUCH_MOVE
-                        TouchAction.UP   -> MacroEventType.TOUCH_UP
+                        TouchAction.DOWN -> {
+                            activePointers[sample.pointerId] = Pair(sample.normX, sample.normY)
+                            MacroEventType.TOUCH_DOWN
+                        }
+                        TouchAction.MOVE -> {
+                            activePointers[sample.pointerId] = Pair(sample.normX, sample.normY)
+                            MacroEventType.TOUCH_MOVE
+                        }
+                        TouchAction.UP -> {
+                            activePointers -= sample.pointerId
+                            MacroEventType.TOUCH_UP
+                        }
                     }
                     events += MacroEvent(t, eventType, sample.pointerId, 0, sample.normX, sample.normY)
+                }
+                /* Emit synthetic TOUCH_UP for any pointer still active at step end
+                   (e.g. the UP was filtered because durationMs was shortened in the editor). */
+                val stepEndMs = step.startTimeMs + step.durationMs
+                for ((pointerId, pos) in activePointers) {
+                    events += MacroEvent(stepEndMs, MacroEventType.TOUCH_UP, pointerId, 0, pos.first, pos.second)
                 }
             }
         }

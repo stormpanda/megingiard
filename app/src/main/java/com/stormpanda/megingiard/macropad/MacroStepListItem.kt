@@ -64,19 +64,19 @@ private fun joyDirArrow(x: Float, y: Float): String {
     return dirArrow(nx, ny)
 }
 
-internal fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean): String = when (step) {
+internal fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean, tapLabel: String, gestureLabel: String): String = when (step) {
     is MacroStep.GamepadButtonTap -> gamepadCodeDisplayShortLabel(step.btnCode, swapFaceButtons)
     is MacroStep.JoystickMove -> {
         val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
         "$stick${joyDirArrow(step.x, step.y)}"
     }
     is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
-    is MacroStep.TouchTap -> "Tap"
+    is MacroStep.TouchTap -> tapLabel
     is MacroStep.JoystickPath -> {
         val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
         "$stick↻"
     }
-    is MacroStep.TouchPath -> "Gesture"
+    is MacroStep.TouchPath -> gestureLabel
 }
 
 internal fun stepColor(
@@ -127,9 +127,9 @@ internal fun StepListItem(
         is MacroStep.TouchTap -> "${"%.2f".format(step.normX)}, ${"%.2f".format(step.normY)}"
         is MacroStep.JoystickPath -> {
             val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
-            "$stickLabel (${step.samples.size} pts)"
+            stringResource(R.string.macropad_macro_step_joystick_path_short, stickLabel, step.samples.size)
         }
-        is MacroStep.TouchPath -> "(${step.samples.size} pts)"
+        is MacroStep.TouchPath -> stringResource(R.string.macropad_macro_step_short_samples_count, step.samples.size)
     }
     val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor, touchColor)
 

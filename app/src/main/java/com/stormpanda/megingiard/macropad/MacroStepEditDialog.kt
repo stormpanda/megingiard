@@ -241,10 +241,14 @@ internal fun MacroStepEditDialog(
                             startTimeMs = startMs.toLong(),
                             durationMs  = durMs.toLong().coerceAtLeast(1L),
                         )
-                        StepType.TOUCH_PATH -> (step as MacroStep.TouchPath).copy(
-                            startTimeMs = startMs.toLong(),
-                            durationMs  = durMs.toLong().coerceAtLeast(1L),
-                        )
+                        StepType.TOUCH_PATH -> (step as MacroStep.TouchPath).let { tp ->
+                            tp.copy(
+                                startTimeMs = startMs.toLong(),
+                                durationMs  = durMs.toLong().coerceAtLeast(
+                                    tp.samples.maxOfOrNull { it.offsetMs }?.coerceAtLeast(1L) ?: 1L
+                                ),
+                            )
+                        }
                     }
                     onConfirm(builtStep, shiftMode)
                 },

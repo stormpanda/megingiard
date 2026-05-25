@@ -116,4 +116,23 @@ class TouchRecordingManagerTest {
 
         assertEquals(TouchRecordingState.Idle, TouchRecordingManager.state.value)
     }
+
+    @Test
+    fun `recordGestureCompleted is ignored when recording mode is TAP`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+
+        TouchRecordingManager.recordGestureCompleted(
+            samples = listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
+            ),
+            startOffsetMs = 0L,
+        )
+
+        // State must still be Recording in TAP mode with zero accumulated gestures
+        val state = TouchRecordingManager.state.value
+        assertTrue(state is TouchRecordingState.Recording)
+        assertEquals(TouchRecordingMode.TAP, (state as TouchRecordingState.Recording).mode)
+        assertEquals(0, state.recordedGestureCount)
+    }
 }
