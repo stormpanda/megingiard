@@ -18,7 +18,6 @@ import android.widget.FrameLayout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -231,7 +230,6 @@ class RecordingMirrorPresentation(
  */
 @Composable
 private fun TapCaptureOverlay(contentWidth: Int, contentHeight: Int) {
-    val creationTime = remember { SystemClock.elapsedRealtime() }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -243,10 +241,6 @@ private fun TapCaptureOverlay(contentWidth: Int, contentHeight: Int) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val now = SystemClock.elapsedRealtime()
-                        if (now - creationTime < 200L) {
-                            continue
-                        }
                         if (event.type == PointerEventType.Press) {
                             val change = event.changes.firstOrNull() ?: continue
                             if (size.width <= 0 || size.height <= 0) continue
@@ -293,7 +287,6 @@ private fun TapCaptureOverlay(contentWidth: Int, contentHeight: Int) {
  */
 @Composable
 private fun GestureCaptureOverlay(contentWidth: Int, contentHeight: Int) {
-    val creationTime = remember { SystemClock.elapsedRealtime() }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -308,9 +301,6 @@ private fun GestureCaptureOverlay(contentWidth: Int, contentHeight: Int) {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val now = SystemClock.elapsedRealtime()
-                        if (now - creationTime < 200L) {
-                            continue
-                        }
                         
                         val changes = event.changes
                         if (changes.isEmpty()) continue
