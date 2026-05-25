@@ -54,8 +54,8 @@ case "$1" in
         check_branch
 
         # Extract current version
-        version_line=$(grep -E 'versionName\s*=' "$GRADLE_FILE")
-        current_version=$(echo "$version_line" | sed -E 's/.*versionName\s*=\s*"([^"]*)".*/\1/')
+        version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+        current_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
         
         if [[ ! "$current_version" =~ "-SNAPSHOT$" ]]; then
             log_error "Current version name '$current_version' does not end with '-SNAPSHOT'."
@@ -67,7 +67,7 @@ case "$1" in
 
         # Update build.gradle.kts versionName
         # Use portable Mac/Linux sed compatible with local edits
-        sed -i '' -E "s/versionName\s*=\s*\"[^\"]*\"/versionName = \"$release_version\"/" "$GRADLE_FILE"
+        sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$release_version\"/" "$GRADLE_FILE"
 
         # Commit release version change
         git add "$GRADLE_FILE"
@@ -101,8 +101,8 @@ case "$1" in
         fi
 
         # Find version name to build
-        version_line=$(grep -E 'versionName\s*=' "$GRADLE_FILE")
-        release_version=$(echo "$version_line" | sed -E 's/.*versionName\s*=\s*"([^"]*)".*/\1/')
+        version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+        release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
         log_info "Building release APK for version $release_version..."
         ./gradlew :app:assembleRelease
@@ -135,8 +135,8 @@ case "$1" in
         fi
 
         # Find version name
-        version_line=$(grep -E 'versionName\s*=' "$GRADLE_FILE")
-        release_version=$(echo "$version_line" | sed -E 's/.*versionName\s*=\s*"([^"]*)".*/\1/')
+        version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+        release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
         apk_path="app/release/Megingiard-v${release_version}.apk"
         checksum_path="app/release/Megingiard-v${release_version}-checksum-sha256.txt"
@@ -166,12 +166,12 @@ case "$1" in
 
     bump)
         # Extract current release version
-        version_line=$(grep -E 'versionName\s*=' "$GRADLE_FILE")
-        release_version=$(echo "$version_line" | sed -E 's/.*versionName\s*=\s*"([^"]*)".*/\1/')
+        version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+        release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
         # Extract current versionCode
-        code_line=$(grep -E 'versionCode\s*=' "$GRADLE_FILE")
-        current_code=$(echo "$code_line" | sed -E 's/.*versionCode\s*=\s*([0-9]*).*/\1/')
+        code_line=$(grep -E 'versionCode[[:space:]]*=' "$GRADLE_FILE")
+        current_code=$(echo "$code_line" | sed -E 's/.*versionCode[[:space:]]*=[[:space:]]*([0-9]*).*/\1/')
 
         next_code=$((current_code + 1))
 
@@ -185,8 +185,8 @@ case "$1" in
         log_info "Next Version Name: $next_version (was $release_version)"
 
         # Update build.gradle.kts
-        sed -i '' -E "s/versionCode\s*=\s*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
-        sed -i '' -E "s/versionName\s*=\s*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
+        sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
+        sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
 
         # Commit and push
         git add "$GRADLE_FILE"
