@@ -315,12 +315,13 @@ private fun GestureCaptureOverlay(contentWidth: Int, contentHeight: Int) {
                         val changes = event.changes
                         if (changes.isEmpty()) continue
 
+                        val allPointersReleased = changes.none { it.pressed }
+
                         // Process changes to track pointer down/move/up
                         for (change in changes) {
                             val pointerId = change.id.value
                             val position = change.position
                             val isPressed = change.pressed
-                            val wasPressed = change.previousPressed
                             val isAlreadyTracked = activePointerIds.contains(pointerId)
                             
                             // Map coordinates through letterbox geometry.
@@ -366,14 +367,14 @@ private fun GestureCaptureOverlay(contentWidth: Int, contentHeight: Int) {
                             val offsetMs = now - startEpochMs
 
                             val action = when {
-                                isPressed && !wasPressed -> {
+                                isPressed && !isAlreadyTracked -> {
                                     activePointerIds.add(pointerId)
                                     TouchAction.DOWN
                                 }
-                                isPressed && wasPressed -> {
+                                isPressed && isAlreadyTracked -> {
                                     TouchAction.MOVE
                                 }
-                                !isPressed && wasPressed -> {
+                                !isPressed && isAlreadyTracked -> {
                                     activePointerIds.remove(pointerId)
                                     TouchAction.UP
                                 }
@@ -398,32 +399,9 @@ private fun GestureCaptureOverlay(contentWidth: Int, contentHeight: Int) {
                         }
 
                         // Check if all pointers are released
-                        if (recordingStarted && activePointerIds.isEmpty()) {
+                        if (recordingStarted && (activePointerIds.isEmpty() || allPointersReleased)) {
                             AppLog.i(TAG, "gesture recording finished with ${samples.size} samples")
-                            
-                            // Post-process samples: for any pointer that has not ended with TouchAction.UP,
-                            // add that right after their respective last recorded event
-                            val finalizedSamples = mutableListOf<TouchSample>()
-                            val samplesByPointer = samples.groupBy { it.pointerId }
-                            for ((pointerId, pointerSamples) in samplesByPointer) {
-                                if (pointerSamples.isEmpty()) continue
-                                finalizedSamples.addAll(pointerSamples)
-                                val lastSample = pointerSamples.last()
-                                if (lastSample.action != TouchAction.UP) {
-                                    finalizedSamples.add(
-                                        TouchSample(
-                                            offsetMs = lastSample.offsetMs + 10L, // Add UP exactly 10ms after
-                                            pointerId = pointerId,
-                                            action = TouchAction.UP,
-                                            normX = lastSample.normX,
-                                            normY = lastSample.normY
-                                        )
-                                    )
-                                }
-                            }
-                            finalizedSamples.sortBy { it.offsetMs }
-
-                            TouchRecordingManager.onGestureRecorded(finalizedSamples)
+                            TouchRecordingManager.onGestureRecorded(samples)
                             break
                         }
                     }

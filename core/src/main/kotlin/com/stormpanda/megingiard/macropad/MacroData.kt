@@ -4,6 +4,8 @@ import com.stormpanda.megingiard.input.TouchAction
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+private const val TOUCH_PATH_SYNTHETIC_UP_DELAY_MS = 10L
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Joystick stick selector
 // ─────────────────────────────────────────────────────────────────────────────
@@ -146,6 +148,26 @@ data class TouchSample(
     val normX: Float,
     val normY: Float,
 )
+
+fun completeTouchPathSamples(samples: List<TouchSample>): List<TouchSample> {
+    if (samples.isEmpty()) return samples
+
+    val completedSamples = samples.toMutableList()
+    val samplesByPointer = samples.groupBy { it.pointerId }
+    for ((pointerId, pointerSamples) in samplesByPointer) {
+        val lastSample = pointerSamples.last()
+        if (lastSample.action != TouchAction.UP) {
+            completedSamples += TouchSample(
+                offsetMs = lastSample.offsetMs + TOUCH_PATH_SYNTHETIC_UP_DELAY_MS,
+                pointerId = pointerId,
+                action = TouchAction.UP,
+                normX = lastSample.normX,
+                normY = lastSample.normY,
+            )
+        }
+    }
+    return completedSamples.sortedBy { it.offsetMs }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Extension helpers

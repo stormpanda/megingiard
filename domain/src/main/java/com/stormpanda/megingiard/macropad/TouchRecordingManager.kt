@@ -72,8 +72,9 @@ object TouchRecordingManager {
      * Stores the samples and clears the recording request.
      */
     fun onGestureRecorded(samples: List<TouchSample>) {
-        AppLog.i(TAG, "onGestureRecorded samples=${samples.size}")
-        _recordedGesture.value = samples
+        val completedSamples = completeTouchPathSamples(samples)
+        AppLog.i(TAG, "onGestureRecorded samples=${samples.size} completedSamples=${completedSamples.size}")
+        _recordedGesture.value = completedSamples
         _recordingRequested.value = false
     }
 
