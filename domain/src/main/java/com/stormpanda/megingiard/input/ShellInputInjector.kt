@@ -60,4 +60,6 @@ internal object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
     fun injectTouch(slot: Int, action: TouchAction, px: Int, py: Int) {
         enqueue(TouchCommand(slot, action, px, py))
     }
+
+    fun flushPendingTouches(timeoutMs: Long): Boolean = flushPendingCommands(timeoutMs)
 }

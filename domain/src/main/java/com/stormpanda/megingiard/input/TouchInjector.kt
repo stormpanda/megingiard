@@ -4,6 +4,9 @@ import android.content.Context
 import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "TouchInjector"
+private const val TOUCH_SLOT_MIN = 0
+private const val TOUCH_SLOT_MAX = 9
+private const val TOUCH_STOP_FLUSH_TIMEOUT_MS = 100L
 
 /**
  * Shared touch injection facade used by both Touchpad and Mirror Touch Projection.
@@ -37,6 +40,12 @@ object TouchInjector {
 
     fun stop() {
         AppLog.i(TAG, "stop()")
+        if (ShellInputInjector.isRunning) {
+            releaseAllSlots()
+            if (!ShellInputInjector.flushPendingTouches(TOUCH_STOP_FLUSH_TIMEOUT_MS)) {
+                AppLog.w(TAG, "stop() timed out while flushing touch release commands")
+            }
+        }
         ShellInputInjector.stop()
     }
 
@@ -63,5 +72,11 @@ object TouchInjector {
         val px = ((1f - normalizedY) * PHYS_W).toInt()
         val py = (normalizedX * PHYS_H).toInt()
         ShellInputInjector.injectTouch(slot, action, px, py)
+    }
+
+    fun releaseAllSlots() {
+        for (slot in TOUCH_SLOT_MIN..TOUCH_SLOT_MAX) {
+            ShellInputInjector.injectTouch(slot, TouchAction.UP, 0, 0)
+        }
     }
 }

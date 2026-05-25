@@ -51,9 +51,10 @@ In the current implementation, the Virtual Touchpad is mapped to the `FullScreen
 
 ### Why Native Binaries
 
-Android's `adb shell input` APIs perform synchronous Binder IPC to `InputManagerService` for each event — approximately **7 ms per call**, which is too slow for real-time mouse/touch injection. 
+Android's `adb shell input` APIs perform synchronous Binder IPC to `InputManagerService` for each event — approximately **7 ms per call**, which is too slow for real-time mouse/touch injection.
 
 Megingiard uses two native binaries for low-latency (< 1 ms) injection:
+
 1. **`mouseinjector_arm64`**: Used in **Mouse Mode**. It creates a virtual input device via `/dev/uinput` (Linux User-Space Input Subsystem) and accepts commands via stdin to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`), and scroll wheel events (`REL_WHEEL`).
 2. **`touchinjector_arm64`**: Used in **Touch Mode** (conceptual touchpad mode, active in Mirror Touch Projection). It opens the touchscreen device node `/dev/input/event6` directly and writes Linux `struct input_event` Multi-Touch Protocol Type B structures.
 
@@ -83,12 +84,12 @@ DisposableEffect(Unit) {
 
 Commands are sent as newline-terminated ASCII strings to `mouseinjector_arm64`'s stdin:
 
-| Command | Format        | Description                                                          |
-| ------- | ------------- | -------------------------------------------------------------------- |
-| MOVE    | `MM dx dy\n`  | Move cursor relatively by `dx` and `dy` pixels                       |
-| CLICK   | `MB btn D\n`  | Press mouse button `btn` down ('L' = Left, 'R' = Right, 'M' = Middle)|
-| RELEASE | `MB btn U\n`  | Release mouse button `btn` up                                        |
-| SCROLL  | `MW delta\n`  | Scroll relative wheel by `delta`                                     |
+| Command | Format       | Description                                                           |
+| ------- | ------------ | --------------------------------------------------------------------- |
+| MOVE    | `MM dx dy\n` | Move cursor relatively by `dx` and `dy` pixels                        |
+| CLICK   | `MB btn D\n` | Press mouse button `btn` down ('L' = Left, 'R' = Right, 'M' = Middle) |
+| RELEASE | `MB btn U\n` | Release mouse button `btn` up                                         |
+| SCROLL  | `MW delta\n` | Scroll relative wheel by `delta`                                      |
 
 ### Writer Thread & Event Coalescing
 
@@ -110,6 +111,7 @@ loop:
 `FullscreenMouseOverlay` tracks finger touches using `awaitPointerEvent()` in a Compose `pointerInput` block and dispatches them to a `TouchpadGestureProcessor` instance.
 
 In relative **Mouse Mode** (`useMouse = true`):
+
 - Touch coordinates are measured. Relative delta values (`change.positionChange()`) are retrieved, scaled by a baseline speed (`TP_MOUSE_SENSITIVITY = 2f`) and the user's `sensitivity` setting (clamped between `0.1f` and `10.0f`), and forwarded to `MouseInjector.moveMouse(dx, dy)`.
 - Tap detection tracks pointer down times (`pressTimes`) and positions (`downPositions`).
   - If a single finger is released within `TP_TAP_TIMEOUT_MS = 200L` without moving beyond `TP_TAP_SLOP_PX = 20f` pixels, a Left Click (LMB down + up) is simulated via a coroutine:
@@ -126,12 +128,14 @@ In relative **Mouse Mode** (`useMouse = true`):
     ```
 
 In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch Projection):
+
 - Normalised logical coordinates (`normalizedX`, `normalizedY` ∈ [0.0, 1.0]) are converted to the touchscreen's raw physical portrait space (`x ∈ [0, 1080]`, `y ∈ [0, 1920]`) with rotation-correction:
   ```kotlin
   sensorX = (1.0f - normalizedY) * 1080
   sensorY = normalizedX * 1920
   ```
 - These coordinates are sent to `TouchInjector.injectTouch(action, normX, normY)` which writes `D/M/U` commands to `touchinjector_arm64`.
+- When `TouchInjector.stop()` is called, it first sends slot-specific `UP` commands for all supported touch slots and waits briefly for the writer queue to flush before terminating `touchinjector_arm64`. This prevents Android from retaining a visible touch indicator if a final release command was still queued during teardown.
 
 ### Secondary Display Rendering (Background Display Mode)
 
@@ -143,16 +147,16 @@ Dismissal on the secondary display reuses the existing swipe-to-close path in `B
 
 ### Source Files
 
-| File | Layer | Responsibility |
-| --- | --- | --- |
-| `FullscreenMouseOverlay.kt` | `:app` UI | Fullscreen relative-mouse Compose overlay, exit hint, pointer event loop |
+| File                          | Layer           | Responsibility                                                                        |
+| ----------------------------- | --------------- | ------------------------------------------------------------------------------------- |
+| `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, exit hint, pointer event loop              |
 | `TouchpadGestureProcessor.kt` | `:domain` Logic | Compose-free gesture tracking; mouse (relative + taps) and touch (absolute) processor |
-| `TouchpadSettings.kt` | `:domain` Logic | Persistent settings for touchpad mode (tap-to-click, two-finger-tap, etc.) |
-| `MouseInjector.kt` | `:domain` Logic | Public relative mouse injection facade (LMB/RMB clicks, scroll, move deltas) |
-| `ShellMouseInjector.kt` | `:domain` Logic | Native mouse injector daemon process controller; stdin protocol; MOVE coalescing |
-| `TouchInjector.kt` | `:domain` Logic | Shared absolute touch injection facade with portrait rotation scaling |
-| `ShellInputInjector.kt` | `:domain` Logic | Native touch injector daemon process controller; MOVE coalescing |
-| `mouseinjector.c` | C Source | Virtual uinput mouse creation and relative input injection logic |
-| `mouseinjector_arm64` | Native Asset | Pre-built relative mouse injector binary asset (`app/src/main/assets/`) |
-| `touchinjector.c` | C Source | Direct `/dev/input/event6` raw event injection logic |
-| `touchinjector_arm64` | Native Asset | Pre-built absolute touch injector binary asset (`app/src/main/assets/`) |
+| `TouchpadSettings.kt`         | `:domain` Logic | Persistent settings for touchpad mode (tap-to-click, two-finger-tap, etc.)            |
+| `MouseInjector.kt`            | `:domain` Logic | Public relative mouse injection facade (LMB/RMB clicks, scroll, move deltas)          |
+| `ShellMouseInjector.kt`       | `:domain` Logic | Native mouse injector daemon process controller; stdin protocol; MOVE coalescing      |
+| `TouchInjector.kt`            | `:domain` Logic | Shared absolute touch injection facade with portrait rotation scaling                 |
+| `ShellInputInjector.kt`       | `:domain` Logic | Native touch injector daemon process controller; MOVE coalescing                      |
+| `mouseinjector.c`             | C Source        | Virtual uinput mouse creation and relative input injection logic                      |
+| `mouseinjector_arm64`         | Native Asset    | Pre-built relative mouse injector binary asset (`app/src/main/assets/`)               |
+| `touchinjector.c`             | C Source        | Direct `/dev/input/event6` raw event injection logic                                  |
+| `touchinjector_arm64`         | Native Asset    | Pre-built absolute touch injector binary asset (`app/src/main/assets/`)               |

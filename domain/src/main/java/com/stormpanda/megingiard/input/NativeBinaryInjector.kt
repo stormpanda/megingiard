@@ -9,6 +9,9 @@ import java.io.OutputStreamWriter
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+private const val NBI_FLUSH_POLL_INTERVAL_MS = 1L
 
 /**
  * Base class for shell-process-backed native injectors.
@@ -45,6 +48,7 @@ abstract class NativeBinaryInjector<T>(
     @Volatile private var running = false
 
     private val queue = LinkedBlockingQueue<T>()
+    private val inFlightWrites = AtomicInteger(0)
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -135,6 +139,20 @@ abstract class NativeBinaryInjector<T>(
         queue.offer(cmd)
     }
 
+    protected fun flushPendingCommands(timeoutMs: Long): Boolean {
+        val deadlineNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs)
+        while (System.nanoTime() < deadlineNs) {
+            if (queue.isEmpty() && inFlightWrites.get() == 0) return true
+            try {
+                Thread.sleep(NBI_FLUSH_POLL_INTERVAL_MS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                return false
+            }
+        }
+        return queue.isEmpty() && inFlightWrites.get() == 0
+    }
+
     // -------------------------------------------------------------------------
     // Writer thread
     // -------------------------------------------------------------------------
@@ -154,7 +172,12 @@ abstract class NativeBinaryInjector<T>(
                         cmd = next
                     }
                 }
-                send(cmd)
+                inFlightWrites.incrementAndGet()
+                try {
+                    send(cmd)
+                } finally {
+                    inFlightWrites.decrementAndGet()
+                }
             } catch (_: InterruptedException) {
                 break
             }

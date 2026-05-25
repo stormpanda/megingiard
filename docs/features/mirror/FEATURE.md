@@ -287,7 +287,7 @@ A fourth `pointerInput` block, placed last in the modifier chain (innermost = fi
    normalizedX = contentX / surfaceWidth
    ```
    If the result is outside [0, 1], `projectCoordinates()` returns `null` — the touch is inside a letterbox bar and is discarded (or an UP is sent if a gesture was in progress).
-3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command.
+3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop()` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
 
 **Shared injection infrastructure** (`input/` package):
 

@@ -191,10 +191,6 @@ object MacroExecutor {
                 GamepadInjector.hat(axis = 0, value = 0)
                 GamepadInjector.hat(axis = 1, value = 0)
             }
-            // Release all possible touch slots (0 to 9) to guarantee no stuck touch overlays
-            for (slot in 0..9) {
-                TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
-            }
             if (hasTouchEvents) {
                 AppLog.i(TAG, "macro done → stopping TouchInjector")
                 TouchInjector.stop()
