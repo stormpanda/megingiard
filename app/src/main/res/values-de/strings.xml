@@ -414,6 +414,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_step_type_touch_path">Touch-Geste</string>
     <string name="macropad_macro_step_touch_path_details">Gestenpfad: %1$d Punkte aufgezeichnet.</string>
     <string name="macropad_macro_step_touch_position">Aufgezeichnete Position (schreibgeschützt)</string>
+    <string name="macropad_macro_step_touch_path_readonly">Aufgezeichnete Touch-Geste (schreibgeschützt). Nur das Timing kann bearbeitet werden.</string>
     <string name="macropad_macro_step_path_readonly">Aufgezeichneter analoger Stick-Pfad (schreibgeschützt). Nur das Timing kann bearbeitet werden.</string>
     <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
     <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>

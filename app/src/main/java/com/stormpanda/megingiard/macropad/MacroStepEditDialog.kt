@@ -442,7 +442,7 @@ internal fun MacroStepEditDialog(
                 StepType.TOUCH_PATH -> {
                     val touchPathStep = step as? MacroStep.TouchPath
                     Text(
-                        stringResource(R.string.macropad_macro_step_path_readonly),
+                        stringResource(R.string.macropad_macro_step_touch_path_readonly),
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )

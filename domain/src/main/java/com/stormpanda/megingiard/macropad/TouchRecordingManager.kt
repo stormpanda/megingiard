@@ -111,7 +111,9 @@ object TouchRecordingManager {
             return
         }
         AppLog.i(TAG, "finishRecording steps=${recordedGestureSteps.size}")
-        _state.value = TouchRecordingState.Done(recordedGestureSteps.sortedBy { it.startTimeMs })
+        val sorted = recordedGestureSteps.sortedBy { it.startTimeMs }
+        val trimmed = trimLeadingIdle(sorted)
+        _state.value = TouchRecordingState.Done(trimmed)
         recordedGestureSteps.clear()
         _recordingRequested.value = false
     }
@@ -140,5 +142,13 @@ object TouchRecordingManager {
         AppLog.d(TAG, "resetState")
         recordedGestureSteps.clear()
         _state.value = TouchRecordingState.Idle
+    }
+
+    private fun trimLeadingIdle(steps: List<MacroStep.TouchPath>): List<MacroStep.TouchPath> {
+        if (steps.isEmpty()) return steps
+        val firstStartMs = steps.minOf { it.startTimeMs }
+        if (firstStartMs <= 0L) return steps
+        AppLog.d(TAG, "trimLeadingIdle offset=$firstStartMs")
+        return steps.map { it.copy(startTimeMs = it.startTimeMs - firstStartMs) }
     }
 }

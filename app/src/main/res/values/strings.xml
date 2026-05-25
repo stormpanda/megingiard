@@ -521,6 +521,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_type_touch_path">Touch Gesture</string>
     <string name="macropad_macro_step_touch_path_details">Gesture Path: %1$d points recorded.</string>
     <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>
+    <string name="macropad_macro_step_touch_path_readonly">Recorded touch gesture (read-only). Only timing can be edited.</string>
     <string name="macropad_macro_step_path_readonly">Recorded analog stick path (read-only). Only timing can be edited.</string>
     <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
     <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>

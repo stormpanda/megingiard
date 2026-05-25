@@ -77,6 +77,36 @@ class TouchRecordingManagerTest {
     }
 
     @Test
+    fun `leading idle time is trimmed on finish`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
+
+        // First gesture starts 500 ms into the session (user waited before touching)
+        TouchRecordingManager.recordGestureCompleted(
+            samples = listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
+            ),
+            startOffsetMs = 500L,
+        )
+        TouchRecordingManager.recordGestureCompleted(
+            samples = listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
+            ),
+            startOffsetMs = 800L,
+        )
+
+        TouchRecordingManager.finishRecording()
+
+        val done = TouchRecordingManager.state.value as TouchRecordingState.Done
+        val first = done.steps[0] as MacroStep.TouchPath
+        val second = done.steps[1] as MacroStep.TouchPath
+        // 500 ms leading idle should be trimmed: first step at 0, second step at 300
+        assertEquals(0L, first.startTimeMs)
+        assertEquals(300L, second.startTimeMs)
+    }
+
+    @Test
     fun `reset state returns done result to idle`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
         TouchRecordingManager.finishRecording()
