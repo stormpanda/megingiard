@@ -81,6 +81,7 @@ Each button supports one of the following actions:
 
 - The MacroPad MUST support **simultaneous presses** of multiple buttons via multi-touch.
 - Each finger is independently tracked by `PointerId`; down and up events are matched per pointer so no button is accidentally stuck in the pressed state.
+- The gesture detector scope incorporates a `try-finally` block that invokes `engine.releaseAll()` to ensure both visual highlighted states and virtual input injections are cleanly released if a gesture is cancelled by system interruptions (such as status bar pull-down, system back gestures, or the Pill Menu overlay taking focus).
 - Attempting to press a button whose required injector type is disabled MUST show a temporary inline feedback message in the MacroPad surface.
 
 ### FR-P6: No Special Permissions Required
