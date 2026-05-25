@@ -360,6 +360,7 @@ object GamepadRecordingManager {
                 is MacroStep.DPadTap -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
                 is MacroStep.TouchTap -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
                 is MacroStep.JoystickPath -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
+                is MacroStep.TouchPath -> step.copy(startTimeMs = step.startTimeMs - firstStartMs)
             }
         }
     }

@@ -17,7 +17,7 @@ package com.stormpanda.megingiard.input
  * Consecutive MOVE commands are coalesced (keep-latest) to prevent backlog.
  * DOWN and UP are never dropped.
  */
-internal data class TouchCommand(val action: TouchAction, val x: Int, val y: Int)
+internal data class TouchCommand(val slot: Int, val action: TouchAction, val x: Int, val y: Int)
 
 internal object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
     workerThreadName = "TouchInjectorWriter",
@@ -32,24 +32,34 @@ internal object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
 
     override fun isCoalescible(cmd: TouchCommand): Boolean = cmd.action == TouchAction.MOVE
 
+    override fun canCoalesce(cmd1: TouchCommand, cmd2: TouchCommand): Boolean = cmd1.slot == cmd2.slot
+
     override fun formatCommand(cmd: TouchCommand): String {
         val char = when (cmd.action) {
             TouchAction.DOWN -> "D"
             TouchAction.MOVE -> "M"
             TouchAction.UP   -> "U"
         }
-        return "$char ${cmd.x} ${cmd.y}\n"
+        return if (cmd.action == TouchAction.UP) {
+            "U ${cmd.slot}\n"
+        } else {
+            "$char ${cmd.slot} ${cmd.x} ${cmd.y}\n"
+        }
     }
 
     /**
-     * Enqueues a touch event. Never blocks — MOVE coalescing happens in the
-     * writer thread to eliminate any producer/consumer backlog.
-     *
-     * @param action DOWN / MOVE / UP
-     * @param px Physical X in the touchscreen's portrait space [0, 1080]
-     * @param py Physical Y in the touchscreen's portrait space [0, 1920]
+     * Enqueues a touch event for legacy single-touch.
      */
     fun injectTouch(action: TouchAction, px: Int, py: Int) {
-        enqueue(TouchCommand(action, px, py))
+        enqueue(TouchCommand(0, action, px, py))
     }
+
+    /**
+     * Enqueues a touch event for slot-aware multi-touch.
+     */
+    fun injectTouch(slot: Int, action: TouchAction, px: Int, py: Int) {
+        enqueue(TouchCommand(slot, action, px, py))
+    }
+
+    fun flushPendingTouches(timeoutMs: Long): Boolean = flushPendingCommands(timeoutMs)
 }

@@ -44,6 +44,7 @@ import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
+import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -535,6 +536,8 @@ class MirrorPresentation(
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
                 AppStateManager.isAmbientPreviewActive,
+                AppStateManager.isUserLeaving,
+                TouchRecordingManager.recordingRequested,
             ) { values ->
                 val isValid = values[0] as Boolean
                 val capturing = values[1] as Boolean
@@ -542,6 +545,8 @@ class MirrorPresentation(
                 val editorActive = values[3] as Boolean
                 val ambientSettingsActive = values[4] as Boolean
                 val ambientPreviewActive = values[5] as Boolean
+                val userLeaving = values[6] as Boolean
+                val recordingRequested = values[7] as Boolean
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
@@ -563,7 +568,9 @@ class MirrorPresentation(
                 // Presentation sits on the secondary display.
                 capturing && isValid &&
                     !filePickerOpen && !editorActive &&
-                    (!ambientSettingsActive || ambientPreviewActive)
+                    (!ambientSettingsActive || ambientPreviewActive) &&
+                    !userLeaving &&
+                    !recordingRequested
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()
             }

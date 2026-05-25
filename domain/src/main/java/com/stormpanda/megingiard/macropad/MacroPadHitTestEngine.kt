@@ -238,6 +238,23 @@ class MacroPadHitTestEngine(
         scrollStartY.clear()
     }
 
+    /** Reset all tracking state and cleanly release any active hardware injections. */
+    fun releaseAll(buttons: List<PadButton>) {
+        val activeIds = _pressedIds.value
+        _pressedIds.value = emptySet()
+        pointerMap.clear()
+        lastTpPos = null
+        scrollStartY.clear()
+
+        activeIds.forEach { buttonId ->
+            val btn = buttons.firstOrNull { it.id == buttonId }
+            if (btn != null) {
+                AppLog.d(TAG, "Releasing button due to gesture cancellation: $buttonId")
+                injectActionUp(btn.action)
+            }
+        }
+    }
+
     companion object {
         /** Raw dp value of MP_BUTTON_UNIT_DP (keep in sync with MacroPadButton). */
         const val MP_BUTTON_UNIT_DP_VALUE = 60f

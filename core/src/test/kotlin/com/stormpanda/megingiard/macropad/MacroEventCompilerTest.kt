@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.input.TouchAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -262,4 +263,116 @@ class MacroEventCompilerTest {
         val lastZeroIdx     = xAt100.indexOfLast  { it.value == 0 }
         assertTrue(lastZeroIdx < firstNonZeroIdx)
     }
+
+    // ── TouchPath ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `touch path compiles samples correctly with pointerId and action`() {
+        val step = MacroStep.TouchPath(
+            startTimeMs = 100L,
+            durationMs = 500L,
+            samples = listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 100L, pointerId = 1, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                TouchSample(offsetMs = 200L, pointerId = 0, action = TouchAction.MOVE, normX = 0.15f, normY = 0.25f),
+                TouchSample(offsetMs = 300L, pointerId = 0, action = TouchAction.UP, normX = 0.15f, normY = 0.25f),
+                TouchSample(offsetMs = 400L, pointerId = 1, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
+            )
+        )
+        val events = buildMacroEventList(macro(step))
+        assertEquals(5, events.size)
+
+        assertEquals(100L, events[0].timeMs)
+        assertEquals(MacroEventType.TOUCH_DOWN, events[0].type)
+        assertEquals(0, events[0].code) // code stores slot ID
+        assertEquals(0.1f, events[0].normX)
+        assertEquals(0.2f, events[0].normY)
+
+        assertEquals(200L, events[1].timeMs)
+        assertEquals(MacroEventType.TOUCH_DOWN, events[1].type)
+        assertEquals(1, events[1].code)
+
+        assertEquals(300L, events[2].timeMs)
+        assertEquals(MacroEventType.TOUCH_MOVE, events[2].type)
+        assertEquals(0, events[2].code)
+        assertEquals(0.15f, events[2].normX)
+        assertEquals(0.25f, events[2].normY)
+
+        assertEquals(400L, events[3].timeMs)
+        assertEquals(MacroEventType.TOUCH_UP, events[3].type)
+        assertEquals(0, events[3].code)
+
+        assertEquals(500L, events[4].timeMs)
+        assertEquals(MacroEventType.TOUCH_UP, events[4].type)
+        assertEquals(1, events[4].code)
+    }
+
+    @Test
+    fun `touch path sample beyond duration is filtered`() {
+        val step = MacroStep.TouchPath(
+            startTimeMs = 0L,
+            durationMs = 100L,
+            samples = listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // at boundary → kept
+                TouchSample(offsetMs = 150L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // beyond → filtered
+            )
+        )
+        val events = buildMacroEventList(macro(step))
+        assertEquals(2, events.size)
+        assertEquals(MacroEventType.TOUCH_DOWN, events[0].type)
+        assertEquals(MacroEventType.TOUCH_UP, events[1].type)
+        assertEquals(100L, events[1].timeMs)
+    }
+
+    @Test
+    fun `touch path emits synthetic UP for pointer still active when durationMs truncates stream`() {
+        // durationMs = 50 ms; UP is at offsetMs = 100 ms → filtered.
+        // The compiler must emit a synthetic TOUCH_UP at step end (t = 50) with the last known pos.
+        val step = MacroStep.TouchPath(
+            startTimeMs = 0L,
+            durationMs = 50L,
+            samples = listOf(
+                TouchSample(offsetMs = 0L,   pointerId = 0, action = TouchAction.DOWN, normX = 0.3f, normY = 0.4f),
+                TouchSample(offsetMs = 25L,  pointerId = 0, action = TouchAction.MOVE, normX = 0.35f, normY = 0.45f),
+                TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP,   normX = 0.35f, normY = 0.45f),
+            )
+        )
+        val events = buildMacroEventList(macro(step))
+        // DOWN at t=0, MOVE at t=25, synthetic UP at t=50
+        assertEquals(3, events.size)
+        assertEquals(MacroEventType.TOUCH_DOWN, events[0].type)
+        assertEquals(0L,   events[0].timeMs)
+        assertEquals(MacroEventType.TOUCH_MOVE, events[1].type)
+        assertEquals(25L,  events[1].timeMs)
+        assertEquals(MacroEventType.TOUCH_UP, events[2].type)
+        assertEquals(50L,  events[2].timeMs)
+        assertEquals(0,    events[2].code)   // pointerId stored in code field
+        assertEquals(0.35f, events[2].normX) // last known MOVE position
+        assertEquals(0.45f, events[2].normY)
+    }
+
+    @Test
+    fun `touch path emits synthetic UPs for all truncated pointers at step end`() {
+        // Two pointers; UP for both is beyond durationMs. Both must get synthetic releases.
+        val step = MacroStep.TouchPath(
+            startTimeMs = 100L,
+            durationMs = 30L,
+            samples = listOf(
+                TouchSample(offsetMs = 0L,  pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.1f),
+                TouchSample(offsetMs = 10L, pointerId = 1, action = TouchAction.DOWN, normX = 0.9f, normY = 0.9f),
+                TouchSample(offsetMs = 80L, pointerId = 0, action = TouchAction.UP,   normX = 0.1f, normY = 0.1f),
+                TouchSample(offsetMs = 90L, pointerId = 1, action = TouchAction.UP,   normX = 0.9f, normY = 0.9f),
+            )
+        )
+        val events = buildMacroEventList(macro(step))
+        // 2 DOWNs + 2 synthetic UPs at stepEndMs=130
+        assertEquals(4, events.size)
+        val ups = events.filter { it.type == MacroEventType.TOUCH_UP }
+        assertEquals(2, ups.size)
+        assertTrue(ups.all { it.timeMs == 130L })
+        assertTrue(ups.any { it.code == 0 })
+        assertTrue(ups.any { it.code == 1 })
+    }
 }
+

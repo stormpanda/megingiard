@@ -68,7 +68,9 @@ class ScreenCaptureService : Service() {
                     mirrorPresentation?.hide()
                     recordingPresentation?.hide()
                 } else {
-                    mirrorPresentation?.show()
+                    if (shouldShowMirrorPresentation()) {
+                        mirrorPresentation?.show()
+                    }
                     recordingPresentation?.show()
                 }
             }
@@ -145,7 +147,9 @@ class ScreenCaptureService : Service() {
                         recordingPrivdSession?.release()
                         recordingPrivdSession = null
                         
-                        mirrorPresentation?.show()
+                        if (shouldShowMirrorPresentation()) {
+                            mirrorPresentation?.show()
+                        }
                         val surface = mirrorPresentation?.getSurface()
                         if (surface != null && surface.isValid && directPrivdSession == null) {
                             AppLog.i(TAG, "surface is already valid in privileged mode → manually recreating directPrivdSession")
@@ -170,7 +174,9 @@ class ScreenCaptureService : Service() {
                         }
                     } else {
                         AppLog.i(TAG, "recording stopped in non-privileged mode → restoring main mirror")
-                        mirrorPresentation?.show()
+                        if (shouldShowMirrorPresentation()) {
+                            mirrorPresentation?.show()
+                        }
                         val surface = mirrorPresentation?.getSurface()
                         if (surface != null && surface.isValid && virtualDisplay == null) {
                             AppLog.i(TAG, "surface is already valid → manually recreating VirtualDisplay")
@@ -305,7 +311,9 @@ class ScreenCaptureService : Service() {
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
                 AppStateManager.setPromptInFlight(false)
-                presentation.show()
+                if (shouldShowMirrorPresentation()) {
+                    presentation.show()
+                }
             }
         }
         return START_NOT_STICKY
@@ -423,7 +431,9 @@ class ScreenCaptureService : Service() {
             AppLog.i(TAG, "privd session state restored → setCapturing(true)")
             ScreenCaptureManager.setCapturing(true)
             AppStateManager.setPromptInFlight(false)
-            presentation.show()
+            if (shouldShowMirrorPresentation()) {
+                presentation.show()
+            }
         }
         return START_NOT_STICKY
     }
@@ -449,6 +459,26 @@ class ScreenCaptureService : Service() {
         }
         startActivity(intent, options.toBundle())
         stopSelf()
+    }
+
+    private fun shouldShowMirrorPresentation(): Boolean {
+        val capturing = ScreenCaptureManager.isCapturing.value
+        val validScreen = AppStateManager.isOnValidScreen.value
+        val filePickerOpen = AppStateManager.isFilePickerOpen.value
+        val editorActive = AppStateManager.isEditorActive.value
+        val ambientActive = AppStateManager.isBackgroundSettingsActive.value
+        val ambientPreviewActive = AppStateManager.isAmbientPreviewActive.value
+        val userLeaving = AppStateManager.isUserLeaving.value
+        val recordingRequested = TouchRecordingManager.recordingRequested.value
+
+        val shouldShow = capturing && validScreen &&
+            !filePickerOpen && !editorActive &&
+            (!ambientActive || ambientPreviewActive) &&
+            !userLeaving &&
+            !recordingRequested
+
+        AppLog.d(TAG, "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested)")
+        return shouldShow
     }
 
     override fun onDestroy() {

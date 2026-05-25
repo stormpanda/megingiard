@@ -9,6 +9,9 @@ import java.io.OutputStreamWriter
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+private const val NBI_FLUSH_POLL_INTERVAL_MS = 1L
 
 /**
  * Base class for shell-process-backed native injectors.
@@ -45,6 +48,7 @@ abstract class NativeBinaryInjector<T>(
     @Volatile private var running = false
 
     private val queue = LinkedBlockingQueue<T>()
+    private val inFlightWrites = AtomicInteger(0)
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -118,6 +122,13 @@ abstract class NativeBinaryInjector<T>(
      */
     protected open fun isCoalescible(cmd: T): Boolean = false
 
+    /**
+     * Return `true` if [cmd1] and [cmd2] can be coalesced together.
+     * Only called when both commands are eligible for coalescing (i.e. [isCoalescible] is true).
+     * Default: true.
+     */
+    protected open fun canCoalesce(cmd1: T, cmd2: T): Boolean = true
+
     // -------------------------------------------------------------------------
     // Protected helper
     // -------------------------------------------------------------------------
@@ -126,6 +137,20 @@ abstract class NativeBinaryInjector<T>(
     protected fun enqueue(cmd: T) {
         if (!running) return
         queue.offer(cmd)
+    }
+
+    protected fun flushPendingCommands(timeoutMs: Long): Boolean {
+        val deadlineNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs)
+        while (System.nanoTime() < deadlineNs) {
+            if (queue.isEmpty() && inFlightWrites.get() == 0) return true
+            try {
+                Thread.sleep(NBI_FLUSH_POLL_INTERVAL_MS)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                return false
+            }
+        }
+        return queue.isEmpty() && inFlightWrites.get() == 0
     }
 
     // -------------------------------------------------------------------------
@@ -142,12 +167,17 @@ abstract class NativeBinaryInjector<T>(
                 if (isCoalescible(cmd)) {
                     while (true) {
                         val next = queue.peek() ?: break
-                        if (!isCoalescible(next)) break
+                        if (!isCoalescible(next) || !canCoalesce(cmd, next)) break
                         queue.poll()
                         cmd = next
                     }
                 }
-                send(cmd)
+                inFlightWrites.incrementAndGet()
+                try {
+                    send(cmd)
+                } finally {
+                    inFlightWrites.decrementAndGet()
+                }
             } catch (_: InterruptedException) {
                 break
             }

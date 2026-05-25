@@ -218,59 +218,63 @@ internal fun PadSurface(
                 .background(if (transparentBackground) Color.Transparent else colors.macroPadSurface)
                 .onSizeChanged { canvasSizeState.value = it }
                 .pointerInput(profile, layout, canvasSizeState.value) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event   = awaitPointerEvent(PointerEventPass.Main)
-                            val canvasSize = canvasSizeState.value
-                            val w       = canvasSize.width.toFloat().coerceAtLeast(1f)
-                            val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
+                    try {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event   = awaitPointerEvent(PointerEventPass.Main)
+                                val canvasSize = canvasSizeState.value
+                                val w       = canvasSize.width.toFloat().coerceAtLeast(1f)
+                                val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
 
-                            // Block input while pill menu overlay is open
-                            if (isPillMenuOpenState.value && event.type != PointerEventType.Release) {
-                                event.changes.forEach { it.consume() }
-                                continue
-                            }
+                                // Block input while pill menu overlay is open
+                                if (isPillMenuOpenState.value && event.type != PointerEventType.Release) {
+                                    event.changes.forEach { it.consume() }
+                                    continue
+                                }
 
-                            event.changes.forEach { change ->
-                                if (change.isConsumed) return@forEach
-                                val id = change.id.value
+                                event.changes.forEach { change ->
+                                    if (change.isConsumed) return@forEach
+                                    val id = change.id.value
 
-                                when (event.type) {
-                                    PointerEventType.Press -> {
-                                        if (!change.previousPressed) {
-                                            val disabledBtn = engine.onPress(
-                                                id, change.position.x, change.position.y,
-                                                w, h, layout.buttons, profile, isPeekActive
-                                            )
-                                            if (disabledBtn != null) {
-                                                val reason = MacroPadHitTestEngine.deviceDisabledReason(
-                                                    disabledBtn.action, profile
+                                    when (event.type) {
+                                        PointerEventType.Press -> {
+                                            if (!change.previousPressed) {
+                                                val disabledBtn = engine.onPress(
+                                                    id, change.position.x, change.position.y,
+                                                    w, h, layout.buttons, profile, isPeekActive
                                                 )
-                                                if (reason != null) {
-                                                    onDisabledActionFeedback(reason)
+                                                if (disabledBtn != null) {
+                                                    val reason = MacroPadHitTestEngine.deviceDisabledReason(
+                                                        disabledBtn.action, profile
+                                                    )
+                                                    if (reason != null) {
+                                                        onDisabledActionFeedback(reason)
+                                                    }
                                                 }
                                             }
+                                            change.consume()
                                         }
-                                        change.consume()
-                                    }
 
-                                    PointerEventType.Move -> {
-                                        val delta = change.positionChange()
-                                        engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, layout.buttons, profile)
-                                        change.consume()
-                                    }
-
-                                    PointerEventType.Release -> {
-                                        if (!change.pressed) {
-                                            engine.onRelease(id, layout.buttons, profile)
+                                        PointerEventType.Move -> {
+                                            val delta = change.positionChange()
+                                            engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, layout.buttons, profile)
+                                            change.consume()
                                         }
-                                        change.consume()
-                                    }
 
-                                    else -> Unit
+                                        PointerEventType.Release -> {
+                                            if (!change.pressed) {
+                                                engine.onRelease(id, layout.buttons, profile)
+                                            }
+                                            change.consume()
+                                        }
+
+                                        else -> Unit
+                                    }
                                 }
                             }
                         }
+                    } finally {
+                        engine.releaseAll(layout.buttons)
                     }
                 }
         ) {

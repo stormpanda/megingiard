@@ -235,7 +235,7 @@ Presentation visibility is driven by a combined `StateFlow` in `MirrorPresentati
 combine(
     isOnValidScreen, isCapturing,
     isFilePickerOpen, isEditorActive, isBackgroundSettingsActive,
-    isAmbientPreviewActive
+    isAmbientPreviewActive, isUserLeaving, recordingRequested
 ) { values ->
     val isValid = values[0] as Boolean
     val capturing = values[1] as Boolean
@@ -243,9 +243,13 @@ combine(
     val editorActive = values[3] as Boolean
     val ambientSettingsActive = values[4] as Boolean
     val ambientPreviewActive = values[5] as Boolean
+    val userLeaving = values[6] as Boolean
+    val recordingRequested = values[7] as Boolean
     capturing && isValid &&
         !filePickerOpen && !editorActive &&
-        (!ambientSettingsActive || ambientPreviewActive)
+        (!ambientSettingsActive || ambientPreviewActive) &&
+        !userLeaving &&
+        !recordingRequested
 }.collect { shouldShow -> if (shouldShow) show() else hide() }
 ```
 
@@ -283,7 +287,9 @@ A fourth `pointerInput` block, placed last in the modifier chain (innermost = fi
    normalizedX = contentX / surfaceWidth
    ```
    If the result is outside [0, 1], `projectCoordinates()` returns `null` — the touch is inside a letterbox bar and is discarded (or an UP is sent if a gesture was in progress).
-3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command.
+3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop()` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
+
+During MacroPad touch recording, `RecordingMirrorPresentation` keeps the mirrored 16:9 content centered in the 4:3 secondary display and renders the gesture-mode **Cancel** and **Stop & Save** controls in the lower black letterbox band. This keeps the control row outside the projected content geometry, so the touch-coordinate transform remains unchanged and button taps are not recorded as primary-screen touch samples.
 
 **Shared injection infrastructure** (`input/` package):
 

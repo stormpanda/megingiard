@@ -164,11 +164,15 @@ object MacroExecutor {
                         }
                         MacroEventType.TOUCH_DOWN -> {
                             liveTouchPos = Pair(event.normX, event.normY)
-                            TouchInjector.injectTouch(TouchAction.DOWN, event.normX, event.normY)
+                            TouchInjector.injectTouch(event.code, TouchAction.DOWN, event.normX, event.normY)
+                        }
+                        MacroEventType.TOUCH_MOVE -> {
+                            liveTouchPos = Pair(event.normX, event.normY)
+                            TouchInjector.injectTouch(event.code, TouchAction.MOVE, event.normX, event.normY)
                         }
                         MacroEventType.TOUCH_UP -> {
                             liveTouchPos = null
-                            TouchInjector.injectTouch(TouchAction.UP, event.normX, event.normY)
+                            TouchInjector.injectTouch(event.code, TouchAction.UP, event.normX, event.normY)
                         }
                     }
                 }
@@ -187,7 +191,6 @@ object MacroExecutor {
                 GamepadInjector.hat(axis = 0, value = 0)
                 GamepadInjector.hat(axis = 1, value = 0)
             }
-            liveTouchPos?.let { (x, y) -> TouchInjector.injectTouch(TouchAction.UP, x, y) }
             if (hasTouchEvents) {
                 AppLog.i(TAG, "macro done → stopping TouchInjector")
                 TouchInjector.stop()

@@ -75,7 +75,7 @@ internal fun GamepadRecordStartDialog(
                         onCheckedChange = { dontShowAgain = it },
                     )
                     Text(
-                        stringResource(R.string.macropad_macro_record_touch_dont_show_again),
+                        stringResource(R.string.macropad_macro_record_gamepad_dialog_dont_show_again),
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )

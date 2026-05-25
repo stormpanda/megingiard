@@ -485,14 +485,15 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_record_gamepad_dialog_confirm">Start</string>
     <string name="macropad_macro_record_gamepad_dialog_title">Start Gamepad Recording</string>
     <string name="macropad_macro_record_gamepad_dialog_message">A touch gamepad overlay will open on this screen. Your touches will be recorded as macro steps and forwarded live to the top screen via the virtual gamepad.</string>
+    <string name="macropad_macro_record_gamepad_dialog_dont_show_again">Don\'t show again</string>
     <string name="macropad_macro_record_gamepad_error_title">Gamepad Recording Unavailable</string>
     <string name="macropad_macro_record_gamepad_error_start">The virtual gamepad could not be started. Recording was not started.</string>
 
     <!-- Touch recording flow -->
-    <string name="macropad_macro_record_touch_dialog_title">Record Touch Step</string>
-    <string name="macropad_macro_record_touch_dialog_message">The screen mirror will start (if not already active). Tap anywhere on the mirror to record that position as a touch step.</string>
-    <string name="macropad_macro_record_touch_start">Start</string>
-    <string name="macropad_macro_record_touch_dont_show_again">Don\u2019t show again</string>
+    <string name="macropad_macro_record_touch_dialog_title">Record Touch</string>
+    <string name="macropad_macro_record_touch_dialog_message">A screen mirror will start. Choose whether you want to record a single tap or a continuous gesture (including multi-touch).</string>
+    <string name="macropad_macro_record_touch_option_tap">Tap</string>
+    <string name="macropad_macro_record_touch_option_gesture">Gesture</string>
     <string name="cd_record_gamepad">Record gamepad input</string>
     <string name="cd_record_touch">Record touch step</string>
     <string name="macropad_macro_test_run">Test Run</string>
@@ -517,7 +518,14 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_type_joystick_path">Joystick Path</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch Tap</string>
+    <string name="macropad_macro_step_type_touch_path">Touch Gesture</string>
+    <string name="macropad_macro_step_label_short_tap">Tap</string>
+    <string name="macropad_macro_step_label_short_gesture">Gesture</string>
+    <string name="macropad_macro_step_short_samples_count">(%1$d pts)</string>
+    <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d pts)</string>
+    <string name="macropad_macro_step_touch_path_details">Gesture Path: %1$d points recorded.</string>
     <string name="macropad_macro_step_touch_position">Recorded position (read-only)</string>
+    <string name="macropad_macro_step_touch_path_readonly">Recorded touch gesture (read-only). Only timing can be edited.</string>
     <string name="macropad_macro_step_path_readonly">Recorded analog stick path (read-only). Only timing can be edited.</string>
     <string name="macropad_macro_step_path_summary_stick">Stick: %1$s</string>
     <string name="macropad_macro_step_path_summary_samples">Samples: %1$d</string>
