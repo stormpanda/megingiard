@@ -106,6 +106,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val layout by MacroPadState.activeLayout.collectAsState()
     val followSmoothing by MirrorSettings.followSmoothing.collectAsState()
     val followAcceleration by MirrorSettings.followAcceleration.collectAsState()
+    val followZoom by MirrorSettings.followZoom.collectAsState()
 
     // Stop all uinput virtual devices while ambient settings are open.
     // MacroPadViewModel.watchInjectorLifecycle() detects isBackgroundSettingsActive=false
@@ -136,6 +137,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var vignetteOpacity by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteOpacity) }
     var vignetteColorInt by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteColor) }
     var localAcceleration by remember { mutableFloatStateOf(MirrorSettings.followAcceleration.value) }
+    var localZoom by remember { mutableFloatStateOf(MirrorSettings.followZoom.value) }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
@@ -147,6 +149,10 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
     LaunchedEffect(followAcceleration) {
         localAcceleration = followAcceleration
+    }
+
+    LaunchedEffect(followZoom) {
+        localZoom = followZoom
     }
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
@@ -162,6 +168,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val labelVignetteTransition = stringResource(R.string.settings_macropad_vignette_transition)
     val labelVignetteOpacity  = stringResource(R.string.settings_macropad_vignette_opacity)
     val labelAcceleration     = stringResource(R.string.settings_mirror_follow_acceleration)
+    val labelZoom             = stringResource(R.string.settings_mirror_follow_zoom)
 
     // Back: exit preview / color picker first; the system Back then closes ambient settings.
     BackHandler(enabled = isInPreview || showColorPicker) {
@@ -169,16 +176,22 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             isInPreview -> {
                 val config = previewConfig!!
                 AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
-                if (config.type == AmbientPreviewType.FOLLOW_ACCELERATION) {
-                    MirrorSettings.setFollowAcceleration(config.originalValue)
-                } else {
-                    commitLayout {
-                        when (config.type) {
-                            AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
-                            AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
-                            AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
-                            AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
-                            else -> this
+                when (config.type) {
+                    AmbientPreviewType.FOLLOW_ACCELERATION -> {
+                        MirrorSettings.setFollowAcceleration(config.originalValue)
+                    }
+                    AmbientPreviewType.FOLLOW_ZOOM -> {
+                        MirrorSettings.setFollowZoom(config.originalValue)
+                    }
+                    else -> {
+                        commitLayout {
+                            when (config.type) {
+                                AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
+                                AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
+                                AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
+                                AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
+                                else -> this
+                            }
                         }
                     }
                 }
@@ -198,6 +211,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             vignetteTransition = l.ambientVignetteTransition
             vignetteOpacity = l.ambientVignetteOpacity
             localAcceleration = MirrorSettings.followAcceleration.value
+            localZoom = MirrorSettings.followZoom.value
         }
     }
 
@@ -314,6 +328,27 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                     label = labelAcceleration,
                                     originalValue = localAcceleration,
                                     valueRange = 0f..0.10f,
+                                ))
+                            },
+                        )
+                        AppDivider()
+                        AsoSliderRow(
+                            label = labelZoom,
+                            value = localZoom,
+                            valueRange = 1.0f..5.0f,
+                            formatLabel = { String.format(Locale.ROOT, "%.1fx", it) },
+                            accentColor = colors.accent,
+                            onValueChange = { localZoom = it },
+                            onValueChangeFinished = {
+                                AppLog.d(TAG, "followZoom → $localZoom")
+                                MirrorSettings.setFollowZoom(localZoom)
+                            },
+                            onPreviewClick = {
+                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                    type = AmbientPreviewType.FOLLOW_ZOOM,
+                                    label = labelZoom,
+                                    originalValue = localZoom,
+                                    valueRange = 1.0f..5.0f,
                                 ))
                             },
                         )

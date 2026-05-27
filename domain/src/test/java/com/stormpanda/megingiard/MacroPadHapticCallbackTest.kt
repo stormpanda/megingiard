@@ -10,6 +10,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.sqrt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
+import org.junit.Before
+import org.junit.After
 
 /**
  * Verifies that [MacroPadHitTestEngine] invokes its `onHapticFeedback` callback
@@ -26,7 +33,20 @@ import kotlin.math.sqrt
  * because their internal `enqueue()` is a no-op when the binary is not running.
  * AppLog.d() is also a no-op at the default log level (WARN).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class MacroPadHapticCallbackTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Callback capture type

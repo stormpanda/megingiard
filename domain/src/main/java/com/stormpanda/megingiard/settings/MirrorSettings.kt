@@ -51,6 +51,9 @@ object MirrorSettings {
     private val _followAcceleration = MutableStateFlow(0.05f)
     val followAcceleration: StateFlow<Float> = _followAcceleration.asStateFlow()
 
+    private val _followZoom = MutableStateFlow(5.0f)
+    val followZoom: StateFlow<Float> = _followZoom.asStateFlow()
+
     internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
         this.dataStore = dataStore
         this.scope = scope
@@ -63,6 +66,7 @@ object MirrorSettings {
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
         _followSmoothing.value = prefs[KEY_MIRROR_FOLLOW_SMOOTHING] ?: false
         _followAcceleration.value = prefs[KEY_MIRROR_FOLLOW_ACCELERATION] ?: 0.05f
+        _followZoom.value = prefs[KEY_MIRROR_FOLLOW_ZOOM] ?: 5.0f
     }
 
     fun setPinchWhileProjecting(value: Boolean) {
@@ -99,6 +103,12 @@ object MirrorSettings {
         AppLog.d(TAG, "setFollowAcceleration($value)")
         _followAcceleration.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_MIRROR_FOLLOW_ACCELERATION] = value } }
+    }
+
+    fun setFollowZoom(value: Float) {
+        AppLog.d(TAG, "setFollowZoom($value)")
+        _followZoom.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MIRROR_FOLLOW_ZOOM] = value } }
     }
 
     /** Persists the current mirror session state for aspects the user opted to remember. */

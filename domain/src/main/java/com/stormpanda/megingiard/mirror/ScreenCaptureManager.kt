@@ -56,6 +56,24 @@ object ScreenCaptureManager {
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
 
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    init {
+        scope.launch {
+            MirrorSettings.followZoom.collect { zoom ->
+                if (_isFollowActive.value) {
+                    setScale(zoom)
+                    val srcW = _captureSourceWidth.value
+                    val srcH = _captureSourceHeight.value
+                    if (hasInitializedCursor && srcW > 0 && srcH > 0) {
+                        val nx = virtualCursorX / srcW.toFloat()
+                        val ny = virtualCursorY / srcH.toFloat()
+                        updateFollowCenter(nx, ny)
+                    }
+                }
+            }
+        }
+    }
+
     private var targetFollowX = 0f
     private var targetFollowY = 0f
     private var followAnimationJob: Job? = null
@@ -138,7 +156,7 @@ object ScreenCaptureManager {
         AppLog.i(TAG, "setFollowActive($active)")
         _isFollowActive.value = active
         if (active) {
-            setScale(5f)
+            setScale(MirrorSettings.followZoom.value)
             AppStateManager.setViewportEditActive(false)
         } else {
             followAnimationJob?.cancel()

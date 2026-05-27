@@ -29,6 +29,8 @@
     <string name="settings_section_cursor_following">Cursor following</string>
     <string name="settings_mirror_follow_acceleration">Follow Acceleration</string>
     <string name="settings_mirror_follow_acceleration_desc">Adjust tracking sensitivity to match OS pointer acceleration</string>
+    <string name="settings_mirror_follow_zoom">Follow Zoom Level</string>
+    <string name="settings_mirror_follow_zoom_desc">Adjust the scale factor for the follow mode viewport</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_auto_start_capture">Auto-start mirroring</string>
     <string name="settings_auto_start_capture_desc">Automatically request screen capture permission when the app opens</string>

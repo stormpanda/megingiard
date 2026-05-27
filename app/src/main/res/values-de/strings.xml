@@ -34,6 +34,8 @@
     <string name="settings_section_cursor_following">Mauszeiger-Verfolgung</string>
     <string name="settings_mirror_follow_acceleration">Verfolgungsbeschleunigung</string>
     <string name="settings_mirror_follow_acceleration_desc">Empfindlichkeit anpassen, um sie an die System-Mausbeschleunigung anzupassen</string>
+    <string name="settings_mirror_follow_zoom">Verfolgungszoomfaktor</string>
+    <string name="settings_mirror_follow_zoom_desc">Skalierungsfaktor für den Ausschnitt im Verfolgungsmodus anpassen</string>
     <string name="settings_section_appearance">Erscheinungsbild</string>
     <string name="settings_auto_start_capture">Spiegelung automatisch starten</string>
     <string name="settings_auto_start_capture_desc">Beim App-Start automatisch die Bildschirmaufnahme anfragen</string>

@@ -90,11 +90,12 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M10: Follow Mode
 
 - A **Follow** button MUST be available in the Mirror Control Card of the Pill Menu.
-- When active, the mirrored viewport MUST zoom to a fixed **5× scale** and automatically center on physical touchscreen interactions and injected mouse movements.
+- When active, the mirrored viewport MUST zoom to the configured **Follow Zoom Level** (default `5.0x`) and automatically center on physical touchscreen interactions and injected mouse movements.
 - Viewport panning MUST NOT be gallery-style clamped, allowing the target coordinates to remain perfectly centered on the mirrored display even if it displays empty black letterbox/pillarbox space.
 - A **Cursor following** settings section MUST be available in the **Background Settings** panel, grouping:
   - **Follow Smoothing** toggle: When activated, the viewport panning movement MUST be smoothed using a quadratic ease-in/ease-out time interpolation.
   - **Follow Acceleration** slider: Allows adjusting the relative mouse pointer acceleration coefficient (range: `0.0f` to `0.10f`, defaulting to `0.05f`) with a **Live Preview** option.
+  - **Follow Zoom Level** slider: Allows adjusting the viewport zoom factor in Follow Mode (range: `1.0x` to `5.0x`, defaulting to `5.0x`) with a **Live Preview** option.
 - Activating Follow Mode MUST automatically deactivate manual Viewport Edit Mode to prevent conflicting gesture controls, and vice versa.
 - Stopping the mirror session or activating Freeze Frame MUST reset Follow Mode to inactive and restore scale to 1.0× and offsets to (0,0).
 
@@ -413,7 +414,9 @@ Follow Mode centers the 5× zoomed viewport in real-time. It operates as follows
 5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
 6. **Follow Settings & Persistence:** 
    - **Follow Smoothing**: Persisted via `mirror_follow_smoothing` (`BooleanPreference`) in DataStore. Default: `false`.
-   - **Follow Acceleration**: Persisted via `mirror_follow_acceleration` (`FloatPreference`) in DataStore. Default: `0.05f`, user adjustable in range `0.0f` to `0.10f`. Both settings reside under the **"Cursor following"** settings section.
+   - **Follow Acceleration**: Persisted via `mirror_follow_acceleration` (`FloatPreference`) in DataStore. Default: `0.05f`, user adjustable in range `0.0f` to `0.10f`.
+   - **Follow Zoom Level**: Persisted via `mirror_follow_zoom` (`FloatPreference`) in DataStore. Default: `5.0f`, user adjustable in range `1.0f` to `5.0f`.
+   All settings reside under the **"Cursor following"** settings section.
 
 ### Source Files
 
