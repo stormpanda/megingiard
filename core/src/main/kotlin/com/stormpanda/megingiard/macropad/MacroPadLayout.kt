@@ -310,6 +310,9 @@ data class PadButton(
  * @param buttonColorMirror           Button color style used when screen mirroring is active
  *                                    (ambient overlay). Defaults to [ButtonColorStyle.NEUTRAL].
  */
+const val DEFAULT_MIRROR_ZOOM = 2.5f
+const val DEFAULT_MIRROR_ACCELERATION = 0f
+
 @Serializable
 data class PadLayout(
     val id: String,
@@ -329,8 +332,8 @@ data class PadLayout(
     val mirrorAutoStart: Boolean = false,
     val mirrorFollowActive: Boolean = false,
     val mirrorSmoothing: Boolean = true,
-    val mirrorAcceleration: Float = 0f,
-    val mirrorZoom: Float = 2.5f,
+    val mirrorAcceleration: Float = DEFAULT_MIRROR_ACCELERATION,
+    val mirrorZoom: Float = DEFAULT_MIRROR_ZOOM,
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
 )

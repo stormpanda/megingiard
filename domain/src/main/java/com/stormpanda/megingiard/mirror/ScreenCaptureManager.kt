@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.DEFAULT_MIRROR_ZOOM
+import com.stormpanda.megingiard.macropad.DEFAULT_MIRROR_ACCELERATION
 import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,7 +63,7 @@ object ScreenCaptureManager {
     init {
         scope.launch {
             MacroPadState.activeLayout.collect { layout ->
-                val zoom = layout?.mirrorZoom ?: 2.5f
+                val zoom = layout?.mirrorZoom ?: DEFAULT_MIRROR_ZOOM
                 if (_isFollowActive.value) {
                     setScale(zoom)
                     val srcW = _captureSourceWidth.value
@@ -165,7 +167,9 @@ object ScreenCaptureManager {
         }
         if (active) {
             val layout = MacroPadState.activeLayout.value
-            setScale(layout?.mirrorZoom ?: 2.5f)
+            val zoom = layout?.mirrorZoom ?: DEFAULT_MIRROR_ZOOM
+            setScale(zoom)
+            MirrorViewportController.setValues(zoom, 0f, 0f)
             AppStateManager.setViewportEditActive(false)
         } else {
             followAnimationJob?.cancel()
@@ -211,7 +215,7 @@ object ScreenCaptureManager {
         
         // Dynamic gain function mimicking AOSP's velocity-controlled pointer acceleration curve (with ceiling)
         val layout = MacroPadState.activeLayout.value
-        val accel = layout?.mirrorAcceleration ?: 0f
+        val accel = layout?.mirrorAcceleration ?: DEFAULT_MIRROR_ACCELERATION
         val gain = when {
             velocity <= FOLLOW_ACCEL_LOW_THRESHOLD -> 1f
             velocity >= FOLLOW_ACCEL_HIGH_THRESHOLD -> {
