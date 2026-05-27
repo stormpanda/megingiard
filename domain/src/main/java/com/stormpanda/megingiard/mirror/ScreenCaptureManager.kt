@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 private const val TAG = "ScreenCaptureManager"
 
@@ -161,8 +162,19 @@ object ScreenCaptureManager {
             hasInitializedCursor = true
         }
 
-        virtualCursorX = (virtualCursorX + dx).coerceIn(0f, srcW.toFloat())
-        virtualCursorY = (virtualCursorY + dy).coerceIn(0f, srcH.toFloat())
+        // Apply Android pointer acceleration approximation:
+        // Calculate instantaneous velocity (delta size)
+        val velocity = sqrt((dx * dx + dy * dy).toFloat())
+        
+        // Dynamic gain function mimicking the default OS pointer acceleration curve
+        val gain = if (velocity < 1f) {
+            1f
+        } else {
+            1f + 0.05f * velocity
+        }
+
+        virtualCursorX = (virtualCursorX + dx * gain).coerceIn(0f, srcW.toFloat())
+        virtualCursorY = (virtualCursorY + dy * gain).coerceIn(0f, srcH.toFloat())
 
         val nx = virtualCursorX / srcW
         val ny = virtualCursorY / srcH

@@ -95,12 +95,20 @@ class ScreenCaptureFollowTest {
         ScreenCaptureManager.setFollowActive(true)
 
         // Initial cursor starts at center (960, 540)
-        // Move mouse by (100, -50) -> cursor at (1060, 490)
+        // Move mouse by (100, -50)
         // dx = 100, dy = -50
-        ScreenCaptureManager.onMouseMoved(100, -50)
+        val dx = 100
+        val dy = -50
+        val velocity = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
+        val gain = 1f + 0.05f * velocity
         
-        val expectedNx = 1060f / 1920f
-        val expectedNy = 490f / 1080f
+        val expectedCursorX = (960f + dx * gain).coerceIn(0f, 1920f)
+        val expectedCursorY = (540f + dy * gain).coerceIn(0f, 1080f)
+
+        ScreenCaptureManager.onMouseMoved(dx, dy)
+        
+        val expectedNx = expectedCursorX / 1920f
+        val expectedNy = expectedCursorY / 1080f
         
         val sw = 1920f
         val sh = 1080f
