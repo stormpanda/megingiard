@@ -93,9 +93,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - When active, the mirrored viewport MUST zoom to the configured **Follow Zoom Level** (default `5.0x`) and automatically center on physical touchscreen interactions and injected mouse movements.
 - Viewport panning MUST NOT be gallery-style clamped, allowing the target coordinates to remain perfectly centered on the mirrored display even if it displays empty black letterbox/pillarbox space.
 - A **Cursor following** settings section MUST be available in the **Background Settings** panel, grouping:
-  - **Follow Smoothing** toggle: When activated, the viewport panning movement MUST be smoothed using a quadratic ease-in/ease-out time interpolation.
-  - **Follow Acceleration** slider: Allows adjusting the relative mouse pointer acceleration coefficient (range: `0.0f` to `0.10f`, defaulting to `0.05f`) with a **Live Preview** option.
-  - **Follow Zoom Level** slider: Allows adjusting the viewport zoom factor in Follow Mode (range: `1.0x` to `5.0x`, defaulting to `5.0x`) with a **Live Preview** option.
+  - **Smoothing** toggle: When activated, the viewport panning movement MUST be smoothed using a quadratic ease-in/ease-out time interpolation. Default: `true` (smoothing on).
+  - **Acceleration** slider: Allows adjusting the relative mouse pointer acceleration coefficient (range: `0%` to `100%`, internally mapped to `0.0f` to `0.10f`, defaulting to `0%` (`0f`)) with a **Live Preview** option.
+  - **Zoom Level** slider: Allows adjusting the viewport zoom factor in Follow Mode (range: `1.0x` to `5.0x`, defaulting to `2.5x`) with a **Live Preview** option.
 - Activating Follow Mode MUST automatically deactivate manual Viewport Edit Mode to prevent conflicting gesture controls, and vice versa.
 - Deactivating Follow Mode MUST restore the active layout's saved mirror viewport scale and offsets (if any exist) rather than unconditionally resetting scale to 1.0x and offsets to (0,0).
 - Stopping the mirror session or activating Freeze Frame MUST reset Follow Mode to inactive and restore scale to 1.0× and offsets to (0,0).
@@ -103,6 +103,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - `PadLayout.mirrorFollowActive = true` is recorded when the user explicitly enables Follow Mode on this layout.
   - `PadLayout.mirrorFollowActive = false` is recorded when the user explicitly disables Follow Mode or enters manual Viewport Edit Mode.
 - Starting a screen mirror capture session or switching layouts while capturing MUST automatically restore Follow Mode to the active layout's remembered `mirrorFollowActive` state.
+- **Control Bar Mutual Exclusions:**
+  - When Follow Mode is active, the Viewport Edit button and Touch Projection button MUST be disabled on the Mirror Control Card to prevent gesture conflicts.
+  - When Touch Projection is active, the Follow Mode button MUST be disabled on the Mirror Control Card.
 
 ---
 
@@ -414,9 +417,9 @@ Follow Mode centers the 5× zoomed viewport in real-time. It operates as follows
 3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from either touch or mouse, `ScreenCaptureManager` calculates the target panning offset to place the target coordinate perfectly in the center of the display, allowing the content to be panned into empty black space:
    $$targetOffsetX = -(nx - 0.5) \times sw \times scale$$
    $$targetOffsetY = -(ny - 0.5) \times sh \times scale$$
-4. **Follow Smoothing:** When Follow Smoothing is enabled in Background Settings, a coroutine-based loop running at 100fps smoothly interpolates the current viewport offsets towards the target offsets using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the camera glides by a percentage (15%) of the remaining distance to the target, ensuring tracking that naturally accelerates and decelerates:
+4. **Smoothing:** When Smoothing is enabled in Background Settings, a coroutine-based loop running at 100fps smoothly interpolates the current viewport offsets towards the target offsets using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the camera glides by a percentage (15%) of the remaining distance to the target, ensuring tracking that naturally accelerates and decelerates:
    $$current = current + (target - current) \times 0.15$$
-5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
+5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts. In addition, the Mirror Control panel strictly enforces mutual exclusion of actions by disabling Viewport Edit and Touch Projection buttons when Follow is active, and disabling the Follow button when Touch Projection is active.
 6. **Following Settings & Layout Persistence:** 
    - **Smoothing**: Persisted per layout in `PadLayout.mirrorSmoothing` (`Boolean`). Default: `true` (smoothing on).
    - **Acceleration**: Persisted per layout in `PadLayout.mirrorAcceleration` (`Float`). Default: `0.0f` (displayed as `0%` to `100%`, mapped internally to `0.0f` to `0.10f`).
