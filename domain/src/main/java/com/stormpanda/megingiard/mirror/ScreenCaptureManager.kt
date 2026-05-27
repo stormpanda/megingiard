@@ -153,9 +153,15 @@ object ScreenCaptureManager {
         setTouchProjectionActive(!_isTouchProjectionActive.value)
     }
 
-    fun setFollowActive(active: Boolean) {
-        AppLog.i(TAG, "setFollowActive($active)")
+    fun setFollowActive(active: Boolean, persist: Boolean = false) {
+        AppLog.i(TAG, "setFollowActive(active=$active, persist=$persist)")
         _isFollowActive.value = active
+        if (persist) {
+            val layout = MacroPadState.activeLayout.value
+            if (layout != null) {
+                MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
+            }
+        }
         if (active) {
             setScale(MirrorSettings.followZoom.value)
             AppStateManager.setViewportEditActive(false)
@@ -182,7 +188,7 @@ object ScreenCaptureManager {
     }
 
     fun toggleFollow() {
-        setFollowActive(!_isFollowActive.value)
+        setFollowActive(!_isFollowActive.value, persist = true)
     }
 
     fun onMouseMoved(dx: Int, dy: Int) {

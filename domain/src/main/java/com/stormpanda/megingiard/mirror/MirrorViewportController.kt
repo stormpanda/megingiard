@@ -105,14 +105,9 @@ object MirrorViewportController {
      */
     fun restoreFromLayout() {
         val layout = MacroPadState.activeLayout.value
-        val s = layout?.mirrorSavedScale ?: 1f
-        val ox = layout?.mirrorSavedOffsetX ?: 0f
-        val oy = layout?.mirrorSavedOffsetY ?: 0f
-        AppLog.d(TAG, "restoreFromLayout layoutId=${layout?.id} scale=$s offset=($ox,$oy)")
-        _scale.value = s
-        _offsetX.value = ox
-        _offsetY.value = oy
-        syncToManager()
+        val follow = layout?.mirrorFollowActive ?: false
+        AppLog.d(TAG, "restoreFromLayout layoutId=${layout?.id} follow=$follow")
+        ScreenCaptureManager.setFollowActive(follow)
     }
 
     /** Directly set scale/offset (used when syncing from Animatable). */

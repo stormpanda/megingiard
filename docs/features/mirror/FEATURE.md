@@ -99,6 +99,10 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Activating Follow Mode MUST automatically deactivate manual Viewport Edit Mode to prevent conflicting gesture controls, and vice versa.
 - Deactivating Follow Mode MUST restore the active layout's saved mirror viewport scale and offsets (if any exist) rather than unconditionally resetting scale to 1.0x and offsets to (0,0).
 - Stopping the mirror session or activating Freeze Frame MUST reset Follow Mode to inactive and restore scale to 1.0× and offsets to (0,0).
+- Each MacroPad layout MUST persist its Cursor Follow active state independently:
+  - `PadLayout.mirrorFollowActive = true` is recorded when the user explicitly enables Follow Mode on this layout.
+  - `PadLayout.mirrorFollowActive = false` is recorded when the user explicitly disables Follow Mode or enters manual Viewport Edit Mode.
+- Starting a screen mirror capture session or switching layouts while capturing MUST automatically restore Follow Mode to the active layout's remembered `mirrorFollowActive` state.
 
 ---
 

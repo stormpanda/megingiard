@@ -244,7 +244,7 @@ object AppStateManager {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isBackgroundSettingsActive.value = false
-            com.stormpanda.megingiard.mirror.ScreenCaptureManager.setFollowActive(false)
+            com.stormpanda.megingiard.mirror.ScreenCaptureManager.setFollowActive(false, persist = true)
         }
         _isViewportEditActive.value = active
     }

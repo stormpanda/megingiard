@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.mirror
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.stormpanda.megingiard.settings.MirrorSettings
+import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,7 @@ class ScreenCaptureFollowTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        MacroPadState.loadFrom(emptyList(), null)
         
         val dummyDataStore = object : DataStore<Preferences> {
             override val data: Flow<Preferences> = emptyFlow()
@@ -150,5 +152,33 @@ class ScreenCaptureFollowTest {
         // Wait another 500ms to allow Lerp to snap (requires ~540ms total)
         delay(500)
         assertEquals(2880f, ScreenCaptureManager.offsetX.value, 0.001f)
+    }
+
+    @Test
+    fun `toggleFollow persists follow state to active layout`() {
+        // Initially, follow mode should be false in the layout
+        val layout = MacroPadState.activeLayout.value!!
+        assertFalse(layout.mirrorFollowActive)
+
+        // Toggling follow on should persist true to the layout
+        ScreenCaptureManager.toggleFollow()
+        assertTrue(MacroPadState.activeLayout.value!!.mirrorFollowActive)
+
+        // Toggling follow off should persist false to the layout
+        ScreenCaptureManager.toggleFollow()
+        assertFalse(MacroPadState.activeLayout.value!!.mirrorFollowActive)
+    }
+
+    @Test
+    fun `restoreFromLayout restores follow active state`() {
+        // Setup layout with follow mode active
+        val layout = MacroPadState.activeLayout.value!!
+        MacroPadState.setLayoutMirrorFollowActive(layout.id, true)
+        assertTrue(MacroPadState.activeLayout.value!!.mirrorFollowActive)
+
+        // restoreFromLayout should activate follow in ScreenCaptureManager
+        assertFalse(ScreenCaptureManager.isFollowActive.value)
+        MirrorViewportController.restoreFromLayout()
+        assertTrue(ScreenCaptureManager.isFollowActive.value)
     }
 }
