@@ -105,6 +105,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
     val followSmoothing by MirrorSettings.followSmoothing.collectAsState()
+    val followAcceleration by MirrorSettings.followAcceleration.collectAsState()
 
     // Stop all uinput virtual devices while ambient settings are open.
     // MacroPadViewModel.watchInjectorLifecycle() detects isBackgroundSettingsActive=false
@@ -134,6 +135,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var vignetteTransition by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteTransition) }
     var vignetteOpacity by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteOpacity) }
     var vignetteColorInt by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteColor) }
+    var localAcceleration by remember { mutableFloatStateOf(MirrorSettings.followAcceleration.value) }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
@@ -142,6 +144,10 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     // Color picker state hoisted to top level so ColorWheelPicker renders as a
     // full-screen sibling of the main settings Box (not nested inside the scroll column).
     var showColorPicker by remember { mutableStateOf(false) }
+
+    LaunchedEffect(followAcceleration) {
+        localAcceleration = followAcceleration
+    }
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
         val updated = MacroPadState.activeLayout.value ?: return
@@ -155,6 +161,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val labelVignetteArea     = stringResource(R.string.settings_macropad_vignette_visible_area)
     val labelVignetteTransition = stringResource(R.string.settings_macropad_vignette_transition)
     val labelVignetteOpacity  = stringResource(R.string.settings_macropad_vignette_opacity)
+    val labelAcceleration     = stringResource(R.string.settings_mirror_follow_acceleration)
 
     // Back: exit preview / color picker first; the system Back then closes ambient settings.
     BackHandler(enabled = isInPreview || showColorPicker) {
@@ -162,12 +169,17 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             isInPreview -> {
                 val config = previewConfig!!
                 AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
-                commitLayout {
-                    when (config.type) {
-                        AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
+                if (config.type == AmbientPreviewType.FOLLOW_ACCELERATION) {
+                    MirrorSettings.setFollowAcceleration(config.originalValue)
+                } else {
+                    commitLayout {
+                        when (config.type) {
+                            AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
+                            AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
+                            AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
+                            AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
+                            else -> this
+                        }
                     }
                 }
                 AppStateManager.setAmbientPreviewConfig(null)
@@ -185,6 +197,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             vignetteVisibleArea = l.ambientVignetteVisibleArea
             vignetteTransition = l.ambientVignetteTransition
             vignetteOpacity = l.ambientVignetteOpacity
+            localAcceleration = MirrorSettings.followAcceleration.value
         }
     }
 
@@ -259,7 +272,12 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 ))
                             },
                         )
-                        AppDivider()
+                    }
+
+                    AsoSectionHeader(text = stringResource(R.string.settings_section_cursor_following))
+
+                    // ── Follow smoothing & acceleration ───────────────────────
+                    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
                         AppSettingsRow {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -278,6 +296,27 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 onCheckedChange = { MirrorSettings.setFollowSmoothing(it) }
                             )
                         }
+                        AppDivider()
+                        AsoSliderRow(
+                            label = labelAcceleration,
+                            value = localAcceleration,
+                            valueRange = 0f..0.10f,
+                            formatLabel = { String.format(Locale.ROOT, "%.3f", it) },
+                            accentColor = colors.accent,
+                            onValueChange = { localAcceleration = it },
+                            onValueChangeFinished = {
+                                AppLog.d(TAG, "followAcceleration → $localAcceleration")
+                                MirrorSettings.setFollowAcceleration(localAcceleration)
+                            },
+                            onPreviewClick = {
+                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                    type = AmbientPreviewType.FOLLOW_ACCELERATION,
+                                    label = labelAcceleration,
+                                    originalValue = localAcceleration,
+                                    valueRange = 0f..0.10f,
+                                ))
+                            },
+                        )
                     }
 
                     AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))

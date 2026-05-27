@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -170,7 +171,7 @@ object ScreenCaptureManager {
         val gain = if (velocity < 1f) {
             1f
         } else {
-            1f + 0.05f * velocity
+            1f + MirrorSettings.followAcceleration.value * velocity
         }
 
         virtualCursorX = (virtualCursorX + dx * gain).coerceIn(0f, srcW.toFloat())
@@ -195,7 +196,7 @@ object ScreenCaptureManager {
         val targetOffsetX = -(nx - 0.5f) * sw * currentScale
         val targetOffsetY = -(ny - 0.5f) * sh * currentScale
 
-        if (!com.stormpanda.megingiard.settings.MirrorSettings.followSmoothing.value) {
+        if (!MirrorSettings.followSmoothing.value) {
             followAnimationJob?.cancel()
             followAnimationJob = null
             _offsetX.value = targetOffsetX

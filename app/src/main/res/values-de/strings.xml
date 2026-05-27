@@ -31,6 +31,9 @@
     <string name="settings_section_general">Allgemein</string>
     <string name="settings_mirror_follow_smoothing">Verfolgungsglättung</string>
     <string name="settings_mirror_follow_smoothing_desc">Sanftes Verschieben des Ausschnitts mittels quadratischer Dämpfung im Verfolgungsmodus</string>
+    <string name="settings_section_cursor_following">Mauszeiger-Verfolgung</string>
+    <string name="settings_mirror_follow_acceleration">Verfolgungsbeschleunigung</string>
+    <string name="settings_mirror_follow_acceleration_desc">Empfindlichkeit anpassen, um sie an die System-Mausbeschleunigung anzupassen</string>
     <string name="settings_section_appearance">Erscheinungsbild</string>
     <string name="settings_auto_start_capture">Spiegelung automatisch starten</string>
     <string name="settings_auto_start_capture_desc">Beim App-Start automatisch die Bildschirmaufnahme anfragen</string>

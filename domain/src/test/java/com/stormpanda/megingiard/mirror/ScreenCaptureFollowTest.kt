@@ -100,7 +100,7 @@ class ScreenCaptureFollowTest {
         val dx = 100
         val dy = -50
         val velocity = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
-        val gain = 1f + 0.05f * velocity
+        val gain = 1f + MirrorSettings.followAcceleration.value * velocity
         
         val expectedCursorX = (960f + dx * gain).coerceIn(0f, 1920f)
         val expectedCursorY = (540f + dy * gain).coerceIn(0f, 1080f)

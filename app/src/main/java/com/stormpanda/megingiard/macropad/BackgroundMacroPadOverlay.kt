@@ -38,6 +38,8 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.MirrorSettings
+import java.util.Locale
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
@@ -303,6 +305,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                 AmbientPreviewType.VIGNETTE_AREA       -> pl.ambientVignetteVisibleArea
                 AmbientPreviewType.VIGNETTE_TRANSITION -> pl.ambientVignetteTransition
                 AmbientPreviewType.VIGNETTE_OPACITY    -> pl.ambientVignetteOpacity
+                AmbientPreviewType.FOLLOW_ACCELERATION -> MirrorSettings.followAcceleration.collectAsState().value
             }
             val formatPreviewLabel: (Float) -> String = when (pc.type) {
                 AmbientPreviewType.VIGNETTE_TRANSITION -> { v ->
@@ -312,6 +315,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                         else    -> "${(v * AM_PERCENT_DIVISOR).toInt()}%"
                     }
                 }
+                AmbientPreviewType.FOLLOW_ACCELERATION -> { v -> String.format(Locale.ROOT, "%.3f", v) }
                 else -> { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
             }
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -322,23 +326,33 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                     formatLabel = formatPreviewLabel,
                     accentColor = colors.accent,
                     onValueChange = { v ->
-                        val updated = when (pc.type) {
-                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = v)
-                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = v)
-                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = v)
-                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = v)
+                        if (pc.type == AmbientPreviewType.FOLLOW_ACCELERATION) {
+                            MirrorSettings.setFollowAcceleration(v)
+                        } else {
+                            val updated = when (pc.type) {
+                                AmbientPreviewType.DIM                 -> pl.copy(ambientDim = v)
+                                AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = v)
+                                AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = v)
+                                AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = v)
+                                else -> pl
+                            }
+                            MacroPadState.updateLayout(updated)
                         }
-                        MacroPadState.updateLayout(updated)
                     },
                     onCancel = {
                         AppLog.d(TAG, "ambient preview ${pc.type} cancelled")
-                        val restored = when (pc.type) {
-                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = pc.originalValue)
-                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = pc.originalValue)
-                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = pc.originalValue)
-                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = pc.originalValue)
+                        if (pc.type == AmbientPreviewType.FOLLOW_ACCELERATION) {
+                            MirrorSettings.setFollowAcceleration(pc.originalValue)
+                        } else {
+                            val restored = when (pc.type) {
+                                AmbientPreviewType.DIM                 -> pl.copy(ambientDim = pc.originalValue)
+                                AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = pc.originalValue)
+                                AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = pc.originalValue)
+                                AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = pc.originalValue)
+                                else -> pl
+                            }
+                            MacroPadState.updateLayout(restored)
                         }
-                        MacroPadState.updateLayout(restored)
                         AppStateManager.setAmbientPreviewConfig(null)
                     },
                     onConfirm = {
