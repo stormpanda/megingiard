@@ -39,7 +39,8 @@ class ScreenCaptureFollowTest {
             }
         }
         MirrorSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
-        MirrorSettings.setFollowSmoothing(false)
+        val layout = MacroPadState.activeLayout.value!!
+        MacroPadState.updateLayout(layout.copy(mirrorSmoothing = false, mirrorZoom = 5f, mirrorAcceleration = 0.05f))
 
         ScreenCaptureManager.scope = CoroutineScope(SupervisorJob() + testDispatcher)
         ScreenCaptureManager.resetMirrorSessionState()
@@ -105,7 +106,7 @@ class ScreenCaptureFollowTest {
         
         val lowThreshold = 2f
         val highThreshold = 15f
-        val accel = MirrorSettings.followAcceleration.value
+        val accel = MacroPadState.activeLayout.value!!.mirrorAcceleration
         val gain = when {
             velocity <= lowThreshold -> 1f
             velocity >= highThreshold -> 1f + accel * (highThreshold - lowThreshold)
@@ -135,7 +136,8 @@ class ScreenCaptureFollowTest {
     fun `onTouchReceived with smoothing enabled performs exponential decay interpolation`() = runTest(testDispatcher) {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFollowActive(true)
-        MirrorSettings.setFollowSmoothing(true)
+        val layout = MacroPadState.activeLayout.value!!
+        MacroPadState.updateLayout(layout.copy(mirrorSmoothing = true))
 
         // Initial position is at (0, 0)
         assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)

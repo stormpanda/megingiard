@@ -30,9 +30,6 @@ internal val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_wh
 internal val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
 internal val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
 internal val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_projection")
-internal val KEY_MIRROR_FOLLOW_SMOOTHING = booleanPreferencesKey("mirror_follow_smoothing")
-internal val KEY_MIRROR_FOLLOW_ACCELERATION = floatPreferencesKey("mirror_follow_acceleration")
-internal val KEY_MIRROR_FOLLOW_ZOOM = floatPreferencesKey("mirror_follow_zoom")
 // Mirror session state persistence — saved values (viewport moved to PadLayout.mirrorSaved*)
 
 // Appearance
@@ -109,7 +106,6 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,
     KEY_REMEMBER_VIEWPORT, KEY_REMEMBER_LOCK, KEY_REMEMBER_PROJECTION,
-    KEY_MIRROR_FOLLOW_SMOOTHING, KEY_MIRROR_FOLLOW_ACCELERATION, KEY_MIRROR_FOLLOW_ZOOM,
 )
 private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_TOUCHPAD_USE_MOUSE, KEY_TOUCHPAD_TAP_TO_CLICK, KEY_TOUCHPAD_TWO_FINGER_TAP,

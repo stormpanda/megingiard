@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 private const val TAG = "AppStateManager"
 
 /** Type of value being live-previewed in ambient settings preview mode. */
-enum class AmbientPreviewType { DIM, VIGNETTE_AREA, VIGNETTE_TRANSITION, VIGNETTE_OPACITY, FOLLOW_ACCELERATION, FOLLOW_ZOOM }
+enum class AmbientPreviewType { DIM, VIGNETTE_AREA, VIGNETTE_TRANSITION, VIGNETTE_OPACITY, ACCELERATION, ZOOM }
 
 /**
  * Shared between [BackgroundSettingsOverlay] (primary screen) and [BackgroundMacroPadOverlay]

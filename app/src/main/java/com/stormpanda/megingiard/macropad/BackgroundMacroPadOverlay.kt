@@ -305,8 +305,8 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                 AmbientPreviewType.VIGNETTE_AREA       -> pl.ambientVignetteVisibleArea
                 AmbientPreviewType.VIGNETTE_TRANSITION -> pl.ambientVignetteTransition
                 AmbientPreviewType.VIGNETTE_OPACITY    -> pl.ambientVignetteOpacity
-                AmbientPreviewType.FOLLOW_ACCELERATION -> MirrorSettings.followAcceleration.collectAsState().value
-                AmbientPreviewType.FOLLOW_ZOOM         -> MirrorSettings.followZoom.collectAsState().value
+                AmbientPreviewType.ACCELERATION        -> pl.mirrorAcceleration * 1000f
+                AmbientPreviewType.ZOOM                -> pl.mirrorZoom
             }
             val formatPreviewLabel: (Float) -> String = when (pc.type) {
                 AmbientPreviewType.VIGNETTE_TRANSITION -> { v ->
@@ -316,8 +316,8 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                         else    -> "${(v * AM_PERCENT_DIVISOR).toInt()}%"
                     }
                 }
-                AmbientPreviewType.FOLLOW_ACCELERATION -> { v -> String.format(Locale.ROOT, "%.3f", v) }
-                AmbientPreviewType.FOLLOW_ZOOM         -> { v -> String.format(Locale.ROOT, "%.1fx", v) }
+                AmbientPreviewType.ACCELERATION -> { v -> "${v.toInt()}%" }
+                AmbientPreviewType.ZOOM         -> { v -> String.format(Locale.ROOT, "%.1fx", v) }
                 else -> { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
             }
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -328,45 +328,27 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                     formatLabel = formatPreviewLabel,
                     accentColor = colors.accent,
                     onValueChange = { v ->
-                        when (pc.type) {
-                            AmbientPreviewType.FOLLOW_ACCELERATION -> {
-                                MirrorSettings.setFollowAcceleration(v)
-                            }
-                            AmbientPreviewType.FOLLOW_ZOOM -> {
-                                MirrorSettings.setFollowZoom(v)
-                            }
-                            else -> {
-                                val updated = when (pc.type) {
-                                    AmbientPreviewType.DIM                 -> pl.copy(ambientDim = v)
-                                    AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = v)
-                                    AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = v)
-                                    AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = v)
-                                    else -> pl
-                                }
-                                MacroPadState.updateLayout(updated)
-                            }
+                        val updated = when (pc.type) {
+                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = v)
+                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = v)
+                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = v)
+                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = v)
+                            AmbientPreviewType.ACCELERATION        -> pl.copy(mirrorAcceleration = v / 1000f)
+                            AmbientPreviewType.ZOOM                -> pl.copy(mirrorZoom = v)
                         }
+                        MacroPadState.updateLayout(updated)
                     },
                     onCancel = {
                         AppLog.d(TAG, "ambient preview ${pc.type} cancelled")
-                        when (pc.type) {
-                            AmbientPreviewType.FOLLOW_ACCELERATION -> {
-                                MirrorSettings.setFollowAcceleration(pc.originalValue)
-                            }
-                            AmbientPreviewType.FOLLOW_ZOOM -> {
-                                MirrorSettings.setFollowZoom(pc.originalValue)
-                            }
-                            else -> {
-                                val restored = when (pc.type) {
-                                    AmbientPreviewType.DIM                 -> pl.copy(ambientDim = pc.originalValue)
-                                    AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = pc.originalValue)
-                                    AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = pc.originalValue)
-                                    AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = pc.originalValue)
-                                    else -> pl
-                                }
-                                MacroPadState.updateLayout(restored)
-                            }
+                        val restored = when (pc.type) {
+                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = pc.originalValue)
+                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = pc.originalValue)
+                            AmbientPreviewType.ACCELERATION        -> pl.copy(mirrorAcceleration = pc.originalValue / 1000f)
+                            AmbientPreviewType.ZOOM                -> pl.copy(mirrorZoom = pc.originalValue)
                         }
+                        MacroPadState.updateLayout(restored)
                         AppStateManager.setAmbientPreviewConfig(null)
                     },
                     onConfirm = {

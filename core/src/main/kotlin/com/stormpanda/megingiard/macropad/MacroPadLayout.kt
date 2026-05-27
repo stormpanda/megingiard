@@ -328,6 +328,9 @@ data class PadLayout(
     val mirrorSavedOffsetY: Float = 0f,
     val mirrorAutoStart: Boolean = false,
     val mirrorFollowActive: Boolean = false,
+    val mirrorSmoothing: Boolean = true,
+    val mirrorAcceleration: Float = 0f,
+    val mirrorZoom: Float = 2.5f,
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
 )

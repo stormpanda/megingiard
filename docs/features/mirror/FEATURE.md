@@ -409,7 +409,7 @@ Follow Mode centers the 5× zoomed viewport in real-time. It operates as follows
    $$normalizedX = \frac{sensorY}{1920}$$
    $$normalizedY = 1.0 - \frac{sensorX}{1080}$$
 2. **Relative Mouse Tracking:** When mouse injection is active, the app intercepts all relative mouse movement updates (`dx`, `dy`) and accumulates them into an absolute virtual cursor position coerced within display boundaries. Pointer movement accumulates using a dynamic pointer acceleration gain mimicking AOSP's velocity-controlled pointer acceleration curve (with a high-speed ceiling):
-   $$\text{gain} = \begin{cases} 1 & \text{if velocity} \le 2 \\ 1 + \text{followAcceleration} \times (\text{velocity} - 2) & \text{if } 2 < \text{velocity} < 15 \\ 1 + \text{followAcceleration} \times 13 & \text{if velocity} \ge 15 \end{cases}$$
+   $$\text{gain} = \begin{cases} 1 & \text{if velocity} \le 2 \\ 1 + \text{mirrorAcceleration} \times (\text{velocity} - 2) & \text{if } 2 < \text{velocity} < 15 \\ 1 + \text{mirrorAcceleration} \times 13 & \text{if velocity} \ge 15 \end{cases}$$
    Where $\text{velocity} = \sqrt{dx^2 + dy^2}$. This piecewise linear scaling curve caps the maximum acceleration factor to prevent virtual pointer drift and runaway de-sync under high-velocity flick movements.
 3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from either touch or mouse, `ScreenCaptureManager` calculates the target panning offset to place the target coordinate perfectly in the center of the display, allowing the content to be panned into empty black space:
    $$targetOffsetX = -(nx - 0.5) \times sw \times scale$$
@@ -417,11 +417,11 @@ Follow Mode centers the 5× zoomed viewport in real-time. It operates as follows
 4. **Follow Smoothing:** When Follow Smoothing is enabled in Background Settings, a coroutine-based loop running at 100fps smoothly interpolates the current viewport offsets towards the target offsets using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the camera glides by a percentage (15%) of the remaining distance to the target, ensuring tracking that naturally accelerates and decelerates:
    $$current = current + (target - current) \times 0.15$$
 5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
-6. **Follow Settings & Persistence:** 
-   - **Follow Smoothing**: Persisted via `mirror_follow_smoothing` (`BooleanPreference`) in DataStore. Default: `false`.
-   - **Follow Acceleration**: Persisted via `mirror_follow_acceleration` (`FloatPreference`) in DataStore. Default: `0.05f`, user adjustable in range `0.0f` to `0.10f`.
-   - **Follow Zoom Level**: Persisted via `mirror_follow_zoom` (`FloatPreference`) in DataStore. Default: `5.0f`, user adjustable in range `1.0f` to `5.0f`.
-   All settings reside under the **"Cursor following"** settings section.
+6. **Following Settings & Layout Persistence:** 
+   - **Smoothing**: Persisted per layout in `PadLayout.mirrorSmoothing` (`Boolean`). Default: `true` (smoothing on).
+   - **Acceleration**: Persisted per layout in `PadLayout.mirrorAcceleration` (`Float`). Default: `0.0f` (displayed as `0%` to `100%`, mapped internally to `0.0f` to `0.10f`).
+   - **Zoom Level**: Persisted per layout in `PadLayout.mirrorZoom` (`Float`). Default: `2.5f`, user adjustable in range `1.0f` to `5.0f`.
+   All settings reside under the **"Cursor following"** settings section and have the "follow" wording removed from their labels since it is redundant.
 
 ### Source Files
 

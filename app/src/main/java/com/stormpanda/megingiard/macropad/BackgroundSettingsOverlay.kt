@@ -104,9 +104,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
-    val followSmoothing by MirrorSettings.followSmoothing.collectAsState()
-    val followAcceleration by MirrorSettings.followAcceleration.collectAsState()
-    val followZoom by MirrorSettings.followZoom.collectAsState()
 
     // Stop all uinput virtual devices while ambient settings are open.
     // MacroPadViewModel.watchInjectorLifecycle() detects isBackgroundSettingsActive=false
@@ -136,8 +133,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var vignetteTransition by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteTransition) }
     var vignetteOpacity by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteOpacity) }
     var vignetteColorInt by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteColor) }
-    var localAcceleration by remember { mutableFloatStateOf(MirrorSettings.followAcceleration.value) }
-    var localZoom by remember { mutableFloatStateOf(MirrorSettings.followZoom.value) }
+    var localAcceleration by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorAcceleration * 1000f) }
+    var localZoom by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorZoom) }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
@@ -146,14 +143,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     // Color picker state hoisted to top level so ColorWheelPicker renders as a
     // full-screen sibling of the main settings Box (not nested inside the scroll column).
     var showColorPicker by remember { mutableStateOf(false) }
-
-    LaunchedEffect(followAcceleration) {
-        localAcceleration = followAcceleration
-    }
-
-    LaunchedEffect(followZoom) {
-        localZoom = followZoom
-    }
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
         val updated = MacroPadState.activeLayout.value ?: return
@@ -176,23 +165,14 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             isInPreview -> {
                 val config = previewConfig!!
                 AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
-                when (config.type) {
-                    AmbientPreviewType.FOLLOW_ACCELERATION -> {
-                        MirrorSettings.setFollowAcceleration(config.originalValue)
-                    }
-                    AmbientPreviewType.FOLLOW_ZOOM -> {
-                        MirrorSettings.setFollowZoom(config.originalValue)
-                    }
-                    else -> {
-                        commitLayout {
-                            when (config.type) {
-                                AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
-                                AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
-                                AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
-                                AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
-                                else -> this
-                            }
-                        }
+                commitLayout {
+                    when (config.type) {
+                        AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
+                        AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
+                        AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
+                        AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
+                        AmbientPreviewType.ACCELERATION        -> copy(mirrorAcceleration = config.originalValue / 1000f)
+                        AmbientPreviewType.ZOOM                -> copy(mirrorZoom = config.originalValue)
                     }
                 }
                 AppStateManager.setAmbientPreviewConfig(null)
@@ -210,8 +190,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             vignetteVisibleArea = l.ambientVignetteVisibleArea
             vignetteTransition = l.ambientVignetteTransition
             vignetteOpacity = l.ambientVignetteOpacity
-            localAcceleration = MirrorSettings.followAcceleration.value
-            localZoom = MirrorSettings.followZoom.value
+            localAcceleration = l.mirrorAcceleration * 1000f
+            localZoom = l.mirrorZoom
         }
     }
 
@@ -306,28 +286,31 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 )
                             }
                             Switch(
-                                checked = followSmoothing,
-                                onCheckedChange = { MirrorSettings.setFollowSmoothing(it) }
+                                checked = currentLayout.mirrorSmoothing,
+                                onCheckedChange = {
+                                    AppLog.d(TAG, "mirrorSmoothing → $it")
+                                    commitLayout { copy(mirrorSmoothing = it) }
+                                }
                             )
                         }
                         AppDivider()
                         AsoSliderRow(
                             label = labelAcceleration,
                             value = localAcceleration,
-                            valueRange = 0f..0.10f,
-                            formatLabel = { String.format(Locale.ROOT, "%.3f", it) },
+                            valueRange = 0f..100f,
+                            formatLabel = { "${it.toInt()}%" },
                             accentColor = colors.accent,
                             onValueChange = { localAcceleration = it },
                             onValueChangeFinished = {
-                                AppLog.d(TAG, "followAcceleration → $localAcceleration")
-                                MirrorSettings.setFollowAcceleration(localAcceleration)
+                                AppLog.d(TAG, "mirrorAcceleration → ${localAcceleration / 1000f}")
+                                commitLayout { copy(mirrorAcceleration = localAcceleration / 1000f) }
                             },
                             onPreviewClick = {
                                 AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                    type = AmbientPreviewType.FOLLOW_ACCELERATION,
+                                    type = AmbientPreviewType.ACCELERATION,
                                     label = labelAcceleration,
                                     originalValue = localAcceleration,
-                                    valueRange = 0f..0.10f,
+                                    valueRange = 0f..100f,
                                 ))
                             },
                         )
@@ -340,12 +323,12 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                             accentColor = colors.accent,
                             onValueChange = { localZoom = it },
                             onValueChangeFinished = {
-                                AppLog.d(TAG, "followZoom → $localZoom")
-                                MirrorSettings.setFollowZoom(localZoom)
+                                AppLog.d(TAG, "mirrorZoom → $localZoom")
+                                commitLayout { copy(mirrorZoom = localZoom) }
                             },
                             onPreviewClick = {
                                 AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                    type = AmbientPreviewType.FOLLOW_ZOOM,
+                                    type = AmbientPreviewType.ZOOM,
                                     label = labelZoom,
                                     originalValue = localZoom,
                                     valueRange = 1.0f..5.0f,

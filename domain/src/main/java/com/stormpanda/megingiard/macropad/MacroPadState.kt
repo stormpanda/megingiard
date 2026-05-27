@@ -470,6 +470,60 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
+    fun setLayoutMirrorSmoothing(layoutId: String, value: Boolean) {
+        var changed = false
+        val updatedProfiles = _profiles.value.map { profile ->
+            var profileChanged = false
+            val updatedLayouts = profile.layouts.map { layout ->
+                if (layout.id != layoutId || layout.mirrorSmoothing == value) return@map layout
+                changed = true
+                profileChanged = true
+                layout.copy(mirrorSmoothing = value)
+            }
+            if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        }
+        if (!changed) return
+        AppLog.d(TAG, "setLayoutMirrorSmoothing layoutId=$layoutId value=$value")
+        _profiles.value = updatedProfiles
+        MacroPadSettings.saveMacroPadData()
+    }
+
+    fun setLayoutMirrorAcceleration(layoutId: String, value: Float) {
+        var changed = false
+        val updatedProfiles = _profiles.value.map { profile ->
+            var profileChanged = false
+            val updatedLayouts = profile.layouts.map { layout ->
+                if (layout.id != layoutId || layout.mirrorAcceleration == value) return@map layout
+                changed = true
+                profileChanged = true
+                layout.copy(mirrorAcceleration = value)
+            }
+            if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        }
+        if (!changed) return
+        AppLog.d(TAG, "setLayoutMirrorAcceleration layoutId=$layoutId value=$value")
+        _profiles.value = updatedProfiles
+        MacroPadSettings.saveMacroPadData()
+    }
+
+    fun setLayoutMirrorZoom(layoutId: String, value: Float) {
+        var changed = false
+        val updatedProfiles = _profiles.value.map { profile ->
+            var profileChanged = false
+            val updatedLayouts = profile.layouts.map { layout ->
+                if (layout.id != layoutId || layout.mirrorZoom == value) return@map layout
+                changed = true
+                profileChanged = true
+                layout.copy(mirrorZoom = value)
+            }
+            if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        }
+        if (!changed) return
+        AppLog.d(TAG, "setLayoutMirrorZoom layoutId=$layoutId value=$value")
+        _profiles.value = updatedProfiles
+        MacroPadSettings.saveMacroPadData()
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Ambient Peek state
     // ─────────────────────────────────────────────────────────────────────────

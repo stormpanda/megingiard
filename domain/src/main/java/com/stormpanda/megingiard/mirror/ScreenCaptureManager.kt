@@ -60,7 +60,8 @@ object ScreenCaptureManager {
 
     init {
         scope.launch {
-            MirrorSettings.followZoom.collect { zoom ->
+            MacroPadState.activeLayout.collect { layout ->
+                val zoom = layout?.mirrorZoom ?: 2.5f
                 if (_isFollowActive.value) {
                     setScale(zoom)
                     val srcW = _captureSourceWidth.value
@@ -163,7 +164,8 @@ object ScreenCaptureManager {
             }
         }
         if (active) {
-            setScale(MirrorSettings.followZoom.value)
+            val layout = MacroPadState.activeLayout.value
+            setScale(layout?.mirrorZoom ?: 2.5f)
             AppStateManager.setViewportEditActive(false)
         } else {
             followAnimationJob?.cancel()
@@ -208,7 +210,8 @@ object ScreenCaptureManager {
         val velocity = sqrt((dx * dx + dy * dy).toFloat())
         
         // Dynamic gain function mimicking AOSP's velocity-controlled pointer acceleration curve (with ceiling)
-        val accel = MirrorSettings.followAcceleration.value
+        val layout = MacroPadState.activeLayout.value
+        val accel = layout?.mirrorAcceleration ?: 0f
         val gain = when {
             velocity <= FOLLOW_ACCEL_LOW_THRESHOLD -> 1f
             velocity >= FOLLOW_ACCEL_HIGH_THRESHOLD -> {
@@ -239,7 +242,9 @@ object ScreenCaptureManager {
         val targetOffsetX = -(nx - 0.5f) * sw * currentScale
         val targetOffsetY = -(ny - 0.5f) * sh * currentScale
 
-        if (!MirrorSettings.followSmoothing.value) {
+        val layout = MacroPadState.activeLayout.value
+        val smoothing = layout?.mirrorSmoothing ?: true
+        if (!smoothing) {
             followAnimationJob?.cancel()
             followAnimationJob = null
             _offsetX.value = targetOffsetX
