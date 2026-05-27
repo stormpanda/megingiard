@@ -18,6 +18,8 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 private const val TAG = "ScreenCaptureManager"
+private const val FOLLOW_ACCEL_LOW_THRESHOLD = 2f
+private const val FOLLOW_ACCEL_HIGH_THRESHOLD = 15f
 
 object ScreenCaptureManager {
     private val _isCapturing = MutableStateFlow(false)
@@ -167,11 +169,14 @@ object ScreenCaptureManager {
         // Calculate instantaneous velocity (delta size)
         val velocity = sqrt((dx * dx + dy * dy).toFloat())
         
-        // Dynamic gain function mimicking the default OS pointer acceleration curve
-        val gain = if (velocity < 1f) {
-            1f
-        } else {
-            1f + MirrorSettings.followAcceleration.value * velocity
+        // Dynamic gain function mimicking AOSP's velocity-controlled pointer acceleration curve (with ceiling)
+        val accel = MirrorSettings.followAcceleration.value
+        val gain = when {
+            velocity <= FOLLOW_ACCEL_LOW_THRESHOLD -> 1f
+            velocity >= FOLLOW_ACCEL_HIGH_THRESHOLD -> {
+                1f + accel * (FOLLOW_ACCEL_HIGH_THRESHOLD - FOLLOW_ACCEL_LOW_THRESHOLD)
+            }
+            else -> 1f + accel * (velocity - FOLLOW_ACCEL_LOW_THRESHOLD)
         }
 
         virtualCursorX = (virtualCursorX + dx * gain).coerceIn(0f, srcW.toFloat())

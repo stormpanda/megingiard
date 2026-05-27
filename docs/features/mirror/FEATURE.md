@@ -402,9 +402,9 @@ Follow Mode centers the 5× zoomed viewport in real-time. It operates as follows
 1. **Touchscreen Events Listening:** A background thread manages `TouchScreenObserver`, which directly opens the world-readable `/dev/input/event6` touchscreen node, parses raw Linux `input_event` structs, and maps absolute sensor coordinates to logical landscape positions:
    $$normalizedX = \frac{sensorY}{1920}$$
    $$normalizedY = 1.0 - \frac{sensorX}{1080}$$
-2. **Relative Mouse Tracking:** When mouse injection is active, the app intercepts all relative mouse movement updates (`dx`, `dy`) and accumulates them into an absolute virtual cursor position coerced within display boundaries. Pointer movement accumulates using a dynamic pointer acceleration gain:
-   $$\text{gain} = \begin{cases} 1 & \text{if velocity } < 1 \\ 1 + \text{followAcceleration} \times \text{velocity} & \text{otherwise} \end{cases}$$
-   Where $\text{velocity} = \sqrt{dx^2 + dy^2}$.
+2. **Relative Mouse Tracking:** When mouse injection is active, the app intercepts all relative mouse movement updates (`dx`, `dy`) and accumulates them into an absolute virtual cursor position coerced within display boundaries. Pointer movement accumulates using a dynamic pointer acceleration gain mimicking AOSP's velocity-controlled pointer acceleration curve (with a high-speed ceiling):
+   $$\text{gain} = \begin{cases} 1 & \text{if velocity} \le 2 \\ 1 + \text{followAcceleration} \times (\text{velocity} - 2) & \text{if } 2 < \text{velocity} < 15 \\ 1 + \text{followAcceleration} \times 13 & \text{if velocity} \ge 15 \end{cases}$$
+   Where $\text{velocity} = \sqrt{dx^2 + dy^2}$. This piecewise linear scaling curve caps the maximum acceleration factor to prevent virtual pointer drift and runaway de-sync under high-velocity flick movements.
 3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from either touch or mouse, `ScreenCaptureManager` calculates the target panning offset to place the target coordinate perfectly in the center of the display, allowing the content to be panned into empty black space:
    $$targetOffsetX = -(nx - 0.5) \times sw \times scale$$
    $$targetOffsetY = -(ny - 0.5) \times sh \times scale$$
