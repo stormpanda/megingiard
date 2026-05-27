@@ -478,6 +478,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_control_label_unfreeze">Auftauen</string>
     <string name="mirror_control_label_viewport">Viewport</string>
     <string name="mirror_control_label_projection">Projektion</string>
+    <string name="cd_mirror_follow_on">Verfolgungsmodus aktiv</string>
+    <string name="cd_mirror_follow_off">Verfolgungsmodus inaktiv</string>
+    <string name="mirror_control_label_follow">Folgen</string>
     <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
     <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
     <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>

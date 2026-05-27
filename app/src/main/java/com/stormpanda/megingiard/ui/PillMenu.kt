@@ -95,6 +95,7 @@ fun PillMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     val defaultProfileName = stringResource(R.string.pill_menu_new_profile)
     val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
@@ -126,6 +127,7 @@ fun PillMenu(
                 isFrozen = isFrozen,
                 isViewportEditActive = isViewportEditActive,
                 isTouchProjectionActive = isTouchProjectionActive,
+                isFollowActive = isFollowActive,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .animateEnterExit(
@@ -150,6 +152,7 @@ fun PillMenu(
                     onDismiss()
                 },
                 onToggleTouchProjection = { ScreenCaptureManager.toggleTouchProjection() },
+                onToggleFollow = { ScreenCaptureManager.toggleFollow() },
                 showLabels = showMirrorControlLabels,
             )
 

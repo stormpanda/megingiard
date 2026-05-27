@@ -87,6 +87,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
 - When the per-feature flag is off, or the daemon is not `RUNNING`, the standard MediaProjection path MUST remain in use unchanged.
 
+### FR-M10: Follow Mode
+
+- A **Follow** button MUST be available in the Mirror Control Card of the Pill Menu.
+- When active, the mirrored viewport MUST zoom to a fixed **5× scale** and automatically center on physical touchscreen interactions and injected mouse movements.
+- Viewport panning MUST remain gallery-style constrained (clamped to the exact content edges, preventing panning into empty/black space).
+- Activating Follow Mode MUST automatically deactivate manual Viewport Edit Mode to prevent conflicting gesture controls, and vice versa.
+- Stopping the mirror session or activating Freeze Frame MUST reset Follow Mode to inactive and restore scale to 1.0× and offsets to (0,0).
+
 ---
 
 ## Technical Implementation
@@ -384,6 +392,19 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 
 **Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the global setting is off.
 
+### Follow Mode Implementation
+
+Follow Mode centers the 5× zoomed viewport in real-time. It operates as follows:
+
+1. **Touchscreen Events Listening:** A background thread manages `TouchScreenObserver`, which directly opens the world-readable `/dev/input/event6` touchscreen node, parses raw Linux `input_event` structs, and maps absolute sensor coordinates to logical landscape positions:
+   $$normalizedX = \frac{sensorY}{1920}$$
+   $$normalizedY = 1.0 - \frac{sensorX}{1080}$$
+2. **Relative Mouse Tracking:** When mouse injection is active, the app intercepts all relative mouse movement updates (`dx`, `dy`) and accumulates them into an absolute virtual cursor position coerced within display boundaries.
+3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from either touch or mouse, `ScreenCaptureManager` calculates the target panning offset and clamps it to standard viewport boundary constraints (`maxX`, `maxY`):
+   $$targetOffsetX = (-(nx - 0.5) \times sw \times scale).coerceIn(-maxX, maxX)$$
+   $$targetOffsetY = (-(ny - 0.5) \times sh \times scale).coerceIn(-maxY, maxY)$$
+4. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
+
 ### Source Files
 
 | File                                  | Responsibility                                                                                             |
@@ -391,7 +412,7 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 | `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                                    |
 | `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic                    |
 | `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` + `ViewModelStoreOwner` for Compose-in-Presentation |
-| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap                        |
-| `MirrorScreen.kt`                     | Compose UI: gesture handling, control buttons, touch projection                                            |
+| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
+| `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
 | `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

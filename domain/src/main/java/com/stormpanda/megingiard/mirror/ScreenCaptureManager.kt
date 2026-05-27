@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,13 @@ object ScreenCaptureManager {
 
     private val _isTouchProjectionActive = MutableStateFlow(false)
     val isTouchProjectionActive: StateFlow<Boolean> = _isTouchProjectionActive.asStateFlow()
+
+    private val _isFollowActive = MutableStateFlow(false)
+    val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
+
+    private var virtualCursorX = 0f
+    private var virtualCursorY = 0f
+    private var hasInitializedCursor = false
 
     private val _captureSourceWidth = MutableStateFlow(0)
     val captureSourceWidth: StateFlow<Int> = _captureSourceWidth.asStateFlow()
@@ -109,13 +117,72 @@ object ScreenCaptureManager {
         setTouchProjectionActive(!_isTouchProjectionActive.value)
     }
 
-    /** Resets all transient mirror session state (lock, projection, freeze). */
+    fun setFollowActive(active: Boolean) {
+        AppLog.i(TAG, "setFollowActive($active)")
+        _isFollowActive.value = active
+        if (active) {
+            setScale(5f)
+            AppStateManager.setViewportEditActive(false)
+        } else {
+            setScale(1f)
+            setOffsetX(0f)
+            setOffsetY(0f)
+        }
+    }
+
+    fun toggleFollow() {
+        setFollowActive(!_isFollowActive.value)
+    }
+
+    fun onMouseMoved(dx: Int, dy: Int) {
+        if (!_isCapturing.value || !_isFollowActive.value) return
+        val srcW = _captureSourceWidth.value
+        val srcH = _captureSourceHeight.value
+        if (srcW <= 0 || srcH <= 0) return
+
+        if (!hasInitializedCursor) {
+            virtualCursorX = srcW / 2f
+            virtualCursorY = srcH / 2f
+            hasInitializedCursor = true
+        }
+
+        virtualCursorX = (virtualCursorX + dx).coerceIn(0f, srcW.toFloat())
+        virtualCursorY = (virtualCursorY + dy).coerceIn(0f, srcH.toFloat())
+
+        val nx = virtualCursorX / srcW
+        val ny = virtualCursorY / srcH
+        updateFollowCenter(nx, ny)
+    }
+
+    fun onTouchReceived(nx: Float, ny: Float) {
+        if (!_isCapturing.value || !_isFollowActive.value) return
+        updateFollowCenter(nx, ny)
+    }
+
+    private fun updateFollowCenter(nx: Float, ny: Float) {
+        val sw = _surfaceWidth.value
+        val sh = _surfaceHeight.value
+        if (sw <= 0f || sh <= 0f) return
+
+        val currentScale = _scale.value
+        val maxX = (sw * (currentScale - 1f)) / 2f
+        val maxY = (sh * (currentScale - 1f)) / 2f
+
+        val targetOffsetX = (-(nx - 0.5f) * sw * currentScale).coerceIn(-maxX, maxX)
+        val targetOffsetY = (-(ny - 0.5f) * sh * currentScale).coerceIn(-maxY, maxY)
+
+        _offsetX.value = targetOffsetX
+        _offsetY.value = targetOffsetY
+    }
+
+    /** Resets all transient mirror session state (lock, projection, freeze, follow). */
     fun resetMirrorSessionState() {
         AppLog.i(TAG, "resetMirrorSessionState")
         _isTouchProjectionActive.value = false
         _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)
+        setFollowActive(false)
     }
 
 

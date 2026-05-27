@@ -249,6 +249,7 @@ class MirrorPresentation(
                         val offsetX by ScreenCaptureManager.offsetX.collectAsState()
                         val offsetY by ScreenCaptureManager.offsetY.collectAsState()
                         val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+                        val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsState()
                         val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
                         val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
                         val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
@@ -269,8 +270,22 @@ class MirrorPresentation(
                                 TouchInjector.stop()
                             }
                         }
+                        LaunchedEffect(isFollowActive, capturing) {
+                            if (isFollowActive && capturing) {
+                                TouchScreenObserver.onTouchNormalized = { nx, ny ->
+                                    ScreenCaptureManager.onTouchReceived(nx, ny)
+                                }
+                                TouchScreenObserver.start()
+                            } else {
+                                TouchScreenObserver.stop()
+                                TouchScreenObserver.onTouchNormalized = null
+                            }
+                        }
                         DisposableEffect(Unit) {
-                            onDispose { TouchInjector.stop() }
+                            onDispose {
+                                TouchInjector.stop()
+                                TouchScreenObserver.stop()
+                            }
                         }
 
                         var gestureBoxSize by remember { mutableStateOf(IntSize.Zero) }

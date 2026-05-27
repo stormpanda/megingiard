@@ -410,6 +410,9 @@ Open Settings to create a layout.</string>
     <string name="mirror_control_label_unfreeze">Unfreeze</string>
     <string name="mirror_control_label_viewport">Viewport</string>
     <string name="mirror_control_label_projection">Project</string>
+    <string name="cd_mirror_follow_on">Follow Mode on</string>
+    <string name="cd_mirror_follow_off">Follow Mode off</string>
+    <string name="mirror_control_label_follow">Follow</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Exit Megingiard</string>

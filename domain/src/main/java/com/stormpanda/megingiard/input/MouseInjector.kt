@@ -42,7 +42,10 @@ object MouseInjector {
      * Consecutive calls are coalesced in the writer thread — only the latest
      * delta in a burst is sent to reduce latency backlog.
      */
-    fun moveMouse(dx: Int, dy: Int) = ShellMouseInjector.moveMouse(dx, dy)
+    fun moveMouse(dx: Int, dy: Int) {
+        ShellMouseInjector.moveMouse(dx, dy)
+        com.stormpanda.megingiard.mirror.ScreenCaptureManager.onMouseMoved(dx, dy)
+    }
 
     fun scrollWheel(delta: Int) = ShellMouseInjector.scrollWheel(delta)
 }
