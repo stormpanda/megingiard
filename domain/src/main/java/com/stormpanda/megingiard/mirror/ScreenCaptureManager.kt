@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -161,9 +162,22 @@ object ScreenCaptureManager {
         } else {
             followAnimationJob?.cancel()
             followAnimationJob = null
-            setScale(1f)
-            setOffsetX(0f)
-            setOffsetY(0f)
+            val layout = MacroPadState.activeLayout.value
+            if (layout != null) {
+                setScale(layout.mirrorSavedScale)
+                setOffsetX(layout.mirrorSavedOffsetX)
+                setOffsetY(layout.mirrorSavedOffsetY)
+                MirrorViewportController.setValues(
+                    layout.mirrorSavedScale,
+                    layout.mirrorSavedOffsetX,
+                    layout.mirrorSavedOffsetY
+                )
+            } else {
+                setScale(1f)
+                setOffsetX(0f)
+                setOffsetY(0f)
+                MirrorViewportController.resetViewport()
+            }
         }
     }
 

@@ -97,6 +97,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - **Follow Acceleration** slider: Allows adjusting the relative mouse pointer acceleration coefficient (range: `0.0f` to `0.10f`, defaulting to `0.05f`) with a **Live Preview** option.
   - **Follow Zoom Level** slider: Allows adjusting the viewport zoom factor in Follow Mode (range: `1.0x` to `5.0x`, defaulting to `5.0x`) with a **Live Preview** option.
 - Activating Follow Mode MUST automatically deactivate manual Viewport Edit Mode to prevent conflicting gesture controls, and vice versa.
+- Deactivating Follow Mode MUST restore the active layout's saved mirror viewport scale and offsets (if any exist) rather than unconditionally resetting scale to 1.0x and offsets to (0,0).
 - Stopping the mirror session or activating Freeze Frame MUST reset Follow Mode to inactive and restore scale to 1.0× and offsets to (0,0).
 
 ---
