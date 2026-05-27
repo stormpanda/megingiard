@@ -6,6 +6,14 @@ import com.stormpanda.megingiard.AppStateManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlin.math.abs
 
 private const val TAG = "ScreenCaptureManager"
 
@@ -42,6 +50,11 @@ object ScreenCaptureManager {
 
     private val _isFollowActive = MutableStateFlow(false)
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
+
+    internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var targetFollowX = 0f
+    private var targetFollowY = 0f
+    private var followAnimationJob: Job? = null
 
     private var virtualCursorX = 0f
     private var virtualCursorY = 0f
@@ -124,6 +137,8 @@ object ScreenCaptureManager {
             setScale(5f)
             AppStateManager.setViewportEditActive(false)
         } else {
+            followAnimationJob?.cancel()
+            followAnimationJob = null
             setScale(1f)
             setOffsetX(0f)
             setOffsetY(0f)
@@ -165,14 +180,48 @@ object ScreenCaptureManager {
         if (sw <= 0f || sh <= 0f) return
 
         val currentScale = _scale.value
-        val maxX = (sw * (currentScale - 1f)) / 2f
-        val maxY = (sh * (currentScale - 1f)) / 2f
+        val targetOffsetX = -(nx - 0.5f) * sw * currentScale
+        val targetOffsetY = -(ny - 0.5f) * sh * currentScale
 
-        val targetOffsetX = (-(nx - 0.5f) * sw * currentScale).coerceIn(-maxX, maxX)
-        val targetOffsetY = (-(ny - 0.5f) * sh * currentScale).coerceIn(-maxY, maxY)
+        if (!com.stormpanda.megingiard.settings.MirrorSettings.followSmoothing.value) {
+            followAnimationJob?.cancel()
+            followAnimationJob = null
+            _offsetX.value = targetOffsetX
+            _offsetY.value = targetOffsetY
+        } else {
+            targetFollowX = targetOffsetX
+            targetFollowY = targetOffsetY
+            ensureFollowAnimationRunning()
+        }
+    }
 
-        _offsetX.value = targetOffsetX
-        _offsetY.value = targetOffsetY
+    private fun ensureFollowAnimationRunning() {
+        if (followAnimationJob?.isActive == true) return
+        followAnimationJob = scope.launch {
+            val lerpFactor = 0.15f
+            val epsilon = 0.5f // Stop loop when within 0.5 pixels to prevent endless calculations
+
+            while (isActive) {
+                val currTargetX = targetFollowX
+                val currTargetY = targetFollowY
+
+                val curX = _offsetX.value
+                val curY = _offsetY.value
+
+                val dx = currTargetX - curX
+                val dy = currTargetY - curY
+
+                if (abs(dx) < epsilon && abs(dy) < epsilon) {
+                    _offsetX.value = currTargetX
+                    _offsetY.value = currTargetY
+                    break
+                } else {
+                    _offsetX.value = curX + dx * lerpFactor
+                    _offsetY.value = curY + dy * lerpFactor
+                }
+                delay(10)
+            }
+        }
     }
 
     /** Resets all transient mirror session state (lock, projection, freeze, follow). */

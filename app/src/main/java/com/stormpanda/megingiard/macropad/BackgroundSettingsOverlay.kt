@@ -58,6 +58,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.settings.ColorWheelPicker
+import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppDivider
@@ -103,6 +104,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
+    val followSmoothing by MirrorSettings.followSmoothing.collectAsState()
 
     // Stop all uinput virtual devices while ambient settings are open.
     // MacroPadViewModel.watchInjectorLifecycle() detects isBackgroundSettingsActive=false
@@ -257,6 +259,25 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 ))
                             },
                         )
+                        AppDivider()
+                        AppSettingsRow {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_smoothing),
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_smoothing_desc),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            Switch(
+                                checked = followSmoothing,
+                                onCheckedChange = { MirrorSettings.setFollowSmoothing(it) }
+                            )
+                        }
                     }
 
                     AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))

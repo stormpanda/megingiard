@@ -91,7 +91,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - A **Follow** button MUST be available in the Mirror Control Card of the Pill Menu.
 - When active, the mirrored viewport MUST zoom to a fixed **5× scale** and automatically center on physical touchscreen interactions and injected mouse movements.
-- Viewport panning MUST remain gallery-style constrained (clamped to the exact content edges, preventing panning into empty/black space).
+- Viewport panning MUST NOT be gallery-style clamped, allowing the target coordinates to remain perfectly centered on the mirrored display even if it displays empty black letterbox/pillarbox space.
+- A **Follow Smoothing** option MUST be available in the **Background Settings** panel. When activated, the viewport panning movement MUST be smoothed using a quadratic ease-in/ease-out time interpolation.
 - Activating Follow Mode MUST automatically deactivate manual Viewport Edit Mode to prevent conflicting gesture controls, and vice versa.
 - Stopping the mirror session or activating Freeze Frame MUST reset Follow Mode to inactive and restore scale to 1.0× and offsets to (0,0).
 
@@ -400,10 +401,12 @@ Follow Mode centers the 5× zoomed viewport in real-time. It operates as follows
    $$normalizedX = \frac{sensorY}{1920}$$
    $$normalizedY = 1.0 - \frac{sensorX}{1080}$$
 2. **Relative Mouse Tracking:** When mouse injection is active, the app intercepts all relative mouse movement updates (`dx`, `dy`) and accumulates them into an absolute virtual cursor position coerced within display boundaries.
-3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from either touch or mouse, `ScreenCaptureManager` calculates the target panning offset and clamps it to standard viewport boundary constraints (`maxX`, `maxY`):
-   $$targetOffsetX = (-(nx - 0.5) \times sw \times scale).coerceIn(-maxX, maxX)$$
-   $$targetOffsetY = (-(ny - 0.5) \times sh \times scale).coerceIn(-maxY, maxY)$$
-4. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
+3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from either touch or mouse, `ScreenCaptureManager` calculates the target panning offset to place the target coordinate perfectly in the center of the display, allowing the content to be panned into empty black space:
+   $$targetOffsetX = -(nx - 0.5) \times sw \times scale$$
+   $$targetOffsetY = -(ny - 0.5) \times sh \times scale$$
+4. **Follow Smoothing:** When Follow Smoothing is enabled in Background Settings, a coroutine-based loop running at 100fps smoothly interpolates the current viewport offsets towards the target offsets using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the camera glides by a percentage (15%) of the remaining distance to the target, ensuring buttery-smooth tracking that naturally accelerates and decelerates:
+   $$current = current + (target - current) \times 0.15$$
+5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
 
 ### Source Files
 
