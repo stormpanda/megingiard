@@ -402,6 +402,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="cd_edit_macro">Makro bearbeiten</string>
     <string name="macropad_macro_loop_toggle">Makro wiederholen</string>
     <string name="macropad_macro_loop_pause_label">Pause zwischen Wiederholungen</string>
+    <string name="macropad_macro_randomize_toggle">Timing randomisieren</string>
+    <string name="macropad_macro_randomize_range_label">Maximaler Zeitversatz</string>
+    <string name="macropad_macro_randomize_desc">Fügt der konfigurierten Startzeit jedes Schritts bei jeder Ausführung einen zufälligen Millisekunden-Wert (bis zum Maximum) hinzu.</string>
     <string name="cd_record_touch">Touch-Schritt aufzeichnen</string>
 
     <!-- Makro-Schritte -->

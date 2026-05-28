@@ -211,4 +211,6 @@ data class Macro(
     val steps: List<MacroStep> = emptyList(),
     val loopEnabled: Boolean = false,
     val loopPauseMs: Int = 0,
+    val randomizeTimingEnabled: Boolean = false,
+    val randomizeTimingRangeMs: Int = 10,
 )

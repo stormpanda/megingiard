@@ -507,6 +507,9 @@ Open Settings to create a layout.</string>
     <string name="cd_edit_macro">Edit macro</string>
     <string name="macropad_macro_loop_toggle">Loop macro</string>
     <string name="macropad_macro_loop_pause_label">Pause between repetitions</string>
+    <string name="macropad_macro_randomize_toggle">Randomize timing</string>
+    <string name="macropad_macro_randomize_range_label">Timing offset maximum</string>
+    <string name="macropad_macro_randomize_desc">Adds a random amount of milliseconds (up to the maximum) to the configured start time of each step on every execution.</string>
     <string name="macropad_macro_editor_undo">Undo</string>
     <string name="macropad_macro_editor_redo">Redo</string>
     <string name="macropad_macro_editor_view_label">View</string>
