@@ -165,7 +165,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Profile settings -->
     <string name="profile_settings_title">Profil-Einstellungen</string>
     <string name="profile_settings_name">Profilname</string>
-    <string name="profile_settings_app_mapping">Verknüpfte App</string>
+    <string name="profile_settings_app_mapping">App zuweisen</string>
     <string name="profile_settings_select_app">App wählen…</string>
     <string name="profile_settings_clear_app">Verknüpfung aufheben</string>
     <string name="profile_settings_search_apps">Apps suchen…</string>
