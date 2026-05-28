@@ -57,6 +57,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
@@ -257,6 +258,57 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 ))
                             },
                         )
+                    }
+
+                    AsoSectionHeader(text = stringResource(R.string.settings_section_background_following))
+
+                    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
+                        AppSettingsRow {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_touch),
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_touch_desc),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            Switch(
+                                checked = currentLayout.mirrorFollowActive,
+                                onCheckedChange = {
+                                    AppLog.d(TAG, "mirrorFollowActive → $it")
+                                    commitLayout { copy(mirrorFollowActive = it) }
+                                    ScreenCaptureManager.setFollowActive(it, persist = false)
+                                }
+                            )
+                        }
+                        if (currentLayout.mirrorFollowActive) {
+                            AppDivider()
+                            AppSettingsRow {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_mirror_follow_smoothing),
+                                        color = colors.onSurface,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_mirror_follow_smoothing_desc),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                                Switch(
+                                    checked = currentLayout.mirrorSmoothing,
+                                    onCheckedChange = {
+                                        AppLog.d(TAG, "mirrorSmoothing → $it")
+                                        commitLayout { copy(mirrorSmoothing = it) }
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))

@@ -251,6 +251,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_layout_template_blank">Blank</string>
 
     <!-- MacroPad ambient display settings -->
+    <string name="settings_section_background_following">Background following</string>
+    <string name="settings_mirror_follow_touch">Background mirror follows touch</string>
+    <string name="settings_mirror_follow_touch_desc">Centers the mirrored viewport on the spot you last touched on the primary screen.</string>
+    <string name="settings_mirror_follow_smoothing">Smoothing</string>
+    <string name="settings_mirror_follow_smoothing_desc">Smooth viewport panning using quadratic easing</string>
+
     <string name="settings_macropad_ambient">Background Display</string>
     <string name="settings_macropad_ambient_hint">Starts Screen Mirror automatically (permission required on first use)</string>
     <string name="settings_macropad_ambient_preview">Preview for display</string>

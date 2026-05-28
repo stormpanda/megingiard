@@ -2,6 +2,7 @@ package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -244,6 +245,7 @@ object AppStateManager {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isBackgroundSettingsActive.value = false
+            ScreenCaptureManager.setFollowActive(false, persist = true)
         }
         _isViewportEditActive.value = active
     }

@@ -2,9 +2,19 @@ package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.MacroPadState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.abs
 
 private const val TAG = "ScreenCaptureManager"
 
@@ -38,6 +48,15 @@ object ScreenCaptureManager {
 
     private val _isTouchProjectionActive = MutableStateFlow(false)
     val isTouchProjectionActive: StateFlow<Boolean> = _isTouchProjectionActive.asStateFlow()
+
+    private val _isFollowActive = MutableStateFlow(false)
+    val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
+
+    internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private var targetFollowX = 0f
+    private var targetFollowY = 0f
+    private var followAnimationJob: Job? = null
 
     private val _captureSourceWidth = MutableStateFlow(0)
     val captureSourceWidth: StateFlow<Int> = _captureSourceWidth.asStateFlow()
@@ -109,14 +128,115 @@ object ScreenCaptureManager {
         setTouchProjectionActive(!_isTouchProjectionActive.value)
     }
 
-    /** Resets all transient mirror session state (lock, projection, freeze). */
+    fun setFollowActive(active: Boolean, persist: Boolean = false) {
+        AppLog.i(TAG, "setFollowActive(active=$active, persist=$persist)")
+        _isFollowActive.value = active
+        if (persist) {
+            val layout = MacroPadState.activeLayout.value
+            if (layout != null) {
+                MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
+            }
+        }
+        if (active) {
+            val layout = MacroPadState.activeLayout.value
+            val s = layout?.mirrorSavedScale ?: 1f
+            val ox = layout?.mirrorSavedOffsetX ?: 0f
+            val oy = layout?.mirrorSavedOffsetY ?: 0f
+            setScale(s)
+            setOffsetX(ox)
+            setOffsetY(oy)
+            MirrorViewportController.setValues(s, ox, oy)
+            AppStateManager.setViewportEditActive(false)
+        } else {
+            followAnimationJob?.cancel()
+            followAnimationJob = null
+            val layout = MacroPadState.activeLayout.value
+            if (layout != null) {
+                setScale(layout.mirrorSavedScale)
+                setOffsetX(layout.mirrorSavedOffsetX)
+                setOffsetY(layout.mirrorSavedOffsetY)
+                MirrorViewportController.setValues(
+                    layout.mirrorSavedScale,
+                    layout.mirrorSavedOffsetX,
+                    layout.mirrorSavedOffsetY
+                )
+            } else {
+                setScale(1f)
+                setOffsetX(0f)
+                setOffsetY(0f)
+                MirrorViewportController.resetViewport()
+            }
+        }
+    }
+
+    fun toggleFollow() {
+        setFollowActive(!_isFollowActive.value, persist = true)
+    }
+
+    fun onTouchReceived(nx: Float, ny: Float) {
+        if (!_isCapturing.value || !_isFollowActive.value) return
+        updateFollowCenter(nx, ny)
+    }
+
+    private fun updateFollowCenter(nx: Float, ny: Float) {
+        val sw = _surfaceWidth.value
+        val sh = _surfaceHeight.value
+        if (sw <= 0f || sh <= 0f) return
+
+        val currentScale = _scale.value
+        val targetOffsetX = -(nx - 0.5f) * sw * currentScale
+        val targetOffsetY = -(ny - 0.5f) * sh * currentScale
+
+        val layout = MacroPadState.activeLayout.value
+        val smoothing = layout?.mirrorSmoothing ?: true
+        if (!smoothing) {
+            followAnimationJob?.cancel()
+            followAnimationJob = null
+            _offsetX.value = targetOffsetX
+            _offsetY.value = targetOffsetY
+        } else {
+            targetFollowX = targetOffsetX
+            targetFollowY = targetOffsetY
+            ensureFollowAnimationRunning()
+        }
+    }
+
+    private fun ensureFollowAnimationRunning() {
+        if (followAnimationJob?.isActive == true) return
+        followAnimationJob = scope.launch {
+            val lerpFactor = 0.15f
+            val epsilon = 0.5f // Stop loop when within 0.5 pixels to prevent endless calculations
+
+            while (isActive) {
+                val currTargetX = targetFollowX
+                val currTargetY = targetFollowY
+
+                val curX = _offsetX.value
+                val curY = _offsetY.value
+
+                val dx = currTargetX - curX
+                val dy = currTargetY - curY
+
+                if (abs(dx) < epsilon && abs(dy) < epsilon) {
+                    _offsetX.value = currTargetX
+                    _offsetY.value = currTargetY
+                    break
+                } else {
+                    _offsetX.value = curX + dx * lerpFactor
+                    _offsetY.value = curY + dy * lerpFactor
+                }
+                delay(10)
+            }
+        }
+    }
+
+    /** Resets all transient mirror session state (lock, projection, freeze, follow). */
     fun resetMirrorSessionState() {
         AppLog.i(TAG, "resetMirrorSessionState")
         _isTouchProjectionActive.value = false
         _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)
+        setFollowActive(false)
     }
-
-
 }
