@@ -286,7 +286,7 @@ internal fun InlineProfileSettingsOverlay(
                             AppIcon(
                                 packageName = selectedPackage!!,
                                 modifier = Modifier
-                                    .size(24.dp)
+                                    .size(36.dp)
                                     .padding(end = 8.dp)
                             )
                             Text(
