@@ -107,21 +107,9 @@ object MacroExecutor {
         var liveTouchPos: Pair<Float, Float>? = null
 
         _runningMacroIds.update { it + macro.id }
-        val randomizedMacro = if (macro.randomizeTimingEnabled) {
-            val random = kotlin.random.Random
-            val maxOffset = macro.randomizeTimingRangeMs.toLong()
-            val randomizedSteps = macro.steps.map { step ->
-                val offsetStart = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
-                val offsetDuration = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
-                step.withTiming(
-                    newStartTimeMs = step.startTimeMs + offsetStart,
-                    newDurationMs = step.durationMs + offsetDuration
-                )
-            }
+        val randomizedMacro = macro.randomized()
+        if (macro.randomizeTimingEnabled) {
             AppLog.d(TAG, "executeSuspend: applied timing and duration randomization to ${macro.steps.size} steps with max offset ${macro.randomizeTimingRangeMs}ms")
-            macro.copy(steps = randomizedSteps)
-        } else {
-            macro
         }
         val events = buildMacroEventList(randomizedMacro)
         val hasTouchEvents = events.any { it.type == MacroEventType.TOUCH_DOWN || it.type == MacroEventType.TOUCH_UP }

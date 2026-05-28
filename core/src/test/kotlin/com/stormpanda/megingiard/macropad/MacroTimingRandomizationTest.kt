@@ -65,17 +65,7 @@ class MacroTimingRandomizationTest {
             randomizeTimingRangeMs = 50
         )
 
-        // Simulate our mapping logic inside MacroExecutor
-        val random = Random(seed = 42) // Constant seed for deterministic execution test
-        val maxOffset = macro.randomizeTimingRangeMs.toLong()
-        val randomizedSteps = macro.steps.map { step ->
-            val offsetStart = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
-            val offsetDuration = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
-            step.withTiming(
-                newStartTimeMs = step.startTimeMs + offsetStart,
-                newDurationMs = step.durationMs + offsetDuration
-            )
-        }
+        val randomizedSteps = macro.randomized(Random(seed = 42)).steps
 
         assertEquals(2, randomizedSteps.size)
         // Verify start offsets are mapped and in range [0, 50]

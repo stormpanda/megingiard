@@ -224,3 +224,21 @@ data class Macro(
     val randomizeTimingEnabled: Boolean = false,
     val randomizeTimingRangeMs: Int = 20,
 )
+
+/**
+ * Returns a copy of this macro where every step has been randomized by timing and duration
+ * using [random], if timing randomization is enabled.
+ */
+fun Macro.randomized(random: kotlin.random.Random = kotlin.random.Random): Macro {
+    if (!randomizeTimingEnabled) return this
+    val maxOffset = randomizeTimingRangeMs.toLong()
+    val randomizedSteps = steps.map { step ->
+        val offsetStart = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
+        val offsetDuration = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
+        step.withTiming(
+            newStartTimeMs = step.startTimeMs + offsetStart,
+            newDurationMs = step.durationMs + offsetDuration
+        )
+    }
+    return copy(steps = randomizedSteps)
+}

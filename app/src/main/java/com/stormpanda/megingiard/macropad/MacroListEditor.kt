@@ -309,10 +309,13 @@ private fun MacroRow(
     val stepCount    = macro.steps.size
     val totalMs      = macro.steps.totalDurationMs()
     val durationText = if (macro.randomizeTimingEnabled) {
-        val randomizedSuffix = stringResource(R.string.macropad_macro_list_randomized_suffix, macro.randomizeTimingRangeMs)
-        "$totalMs ms $randomizedSuffix"
+        stringResource(
+            R.string.macropad_macro_duration_randomized,
+            totalMs,
+            macro.randomizeTimingRangeMs
+        )
     } else {
-        "$totalMs ms"
+        stringResource(R.string.macropad_macro_duration, totalMs)
     }
     val summaryLabel = stringResource(R.string.macropad_macro_list_steps, stepCount, durationText)
     var menuExpanded by remember { mutableStateOf(false) }
