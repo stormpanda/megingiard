@@ -197,7 +197,7 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
-    fun renameProfile(profileId: String, newName: String) {
+    fun renameProfile(profileId: String, newName: String, associatedPackage: String? = null) {
         val existingNames = _profiles.value
             .filter { it.id != profileId }
             .map { it.name }
@@ -206,9 +206,9 @@ object MacroPadState {
         if (uniqueName != desiredName) {
             AppLog.w(TAG, "renameProfile: duplicate profile name '$desiredName' adjusted to '$uniqueName'")
         }
-        AppLog.d(TAG, "renameProfile id=$profileId name='$uniqueName'")
+        AppLog.d(TAG, "renameProfile id=$profileId name='$uniqueName' package='$associatedPackage'")
         _profiles.value = _profiles.value.map {
-            if (it.id == profileId) it.copy(name = uniqueName) else it
+            if (it.id == profileId) it.copy(name = uniqueName, associatedPackage = associatedPackage) else it
         }
         MacroPadSettings.saveMacroPadData()
     }

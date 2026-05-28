@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 
 import com.stormpanda.megingiard.config.InternalBackup
 
@@ -148,7 +149,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun checkAccessibilityActive(context: Context): Boolean {
         val expectedComponentName = ComponentName(
             context.applicationContext,
-            "com.stormpanda.megingiard.services.MegingiardAccessibilityService"
+            MegingiardAccessibilityService::class.java
         )
         val enabledServices = Settings.Secure.getString(
             context.contentResolver,

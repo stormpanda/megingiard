@@ -325,7 +325,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 accentColor  = colors.accent,
                 existingNames = profiles.filter { it.id != profile.id }.map { it.name },
                 onConfirm    = { name, pkg ->
-                    MacroPadState.updateProfile(profile.copy(name = name, associatedPackage = pkg))
+                    MacroPadState.renameProfile(profile.id, name, pkg)
                     showRenameProfileDialog = false
                 },
                 onDismiss = { showRenameProfileDialog = false },
