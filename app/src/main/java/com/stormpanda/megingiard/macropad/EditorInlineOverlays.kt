@@ -38,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -171,6 +173,13 @@ internal fun InlineProfileSettingsOverlay(
     var showAppList by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
+
+    val assignedPackages = remember {
+        MacroPadState.profiles.value
+            .filter { it.associatedPackage != null && it.associatedPackage != initialPackage }
+            .mapNotNull { it.associatedPackage?.trim()?.lowercase() }
+            .toSet()
+    }
     
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
@@ -387,10 +396,11 @@ internal fun InlineProfileSettingsOverlay(
                                 .height(200.dp)
                         ) {
                             items(filtered) { (label, pkg) ->
+                                val isAssigned = assignedPackages.contains(pkg.trim().lowercase())
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
+                                        .clickable(enabled = !isAssigned) {
                                             selectedPackage = pkg
                                             showAppList = false
                                         }
@@ -401,18 +411,31 @@ internal fun InlineProfileSettingsOverlay(
                                         packageName = pkg,
                                         modifier = Modifier
                                             .size(36.dp)
+                                            .alpha(if (isAssigned) 0.38f else 1f)
                                             .padding(end = 12.dp)
                                     )
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = label,
-                                            color = colors.onSurface,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.5f) else colors.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            if (isAssigned) {
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    text = stringResource(R.string.profile_settings_app_assigned),
+                                                    color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                        }
                                         Text(
                                             text = pkg,
-                                            color = colors.onSurfaceSecondary,
+                                            color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.38f) else colors.onSurfaceSecondary,
                                             style = MaterialTheme.typography.bodySmall
                                         )
                                     }
