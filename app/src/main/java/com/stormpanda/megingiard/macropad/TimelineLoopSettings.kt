@@ -225,7 +225,7 @@ internal fun MtRandomizationSection(
                 MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -10)  { applyRangeDelta(-10) }
                 MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -1)   { applyRangeDelta(-1) }
                 Slider(
-                    value = randomizeRangeMs.toFloat(),
+                    value = randomizeRangeMs.coerceIn(10, 100).toFloat(),
                     onValueChange = { onRandomizeRangeMsChange(it.roundToInt().coerceIn(10, 100)) },
                     valueRange = 10f..100f,
                     colors = SliderDefaults.colors(

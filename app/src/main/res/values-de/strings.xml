@@ -384,7 +384,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- %1$d = Anzahl Schritte, %2$s = Gesamtdauer-Text -->
     <string name="macropad_macro_list_steps">%1$d Schritte • %2$s</string>
     <string name="macropad_macro_duration">%1$d ms</string>
-    <string name="macropad_macro_duration_randomized">%1$d ms (randomisiert %2$dms)</string>
+    <string name="macropad_macro_duration_randomized">%1$d ms (randomisiert %2$d ms)</string>
     <string name="macropad_macro_default_name">Neues Makro</string>
     <string name="macropad_macro_delete_title">Makro löschen</string>
     <string name="macropad_macro_delete_confirm">Dieses Makro löschen? Pad-Tasten, die es verwenden, funktionieren danach nicht mehr.</string>

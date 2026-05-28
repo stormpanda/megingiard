@@ -461,9 +461,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_list_title">Macros</string>
     <string name="macropad_macro_list_new">New Macro</string>
     <string name="macropad_macro_list_empty">No macros yet. Tap + to create one.</string>
+    <!-- %1$d = step count, %2$s = total duration text -->
     <string name="macropad_macro_list_steps">%1$d steps • %2$s</string>
     <string name="macropad_macro_duration">%1$d ms</string>
-    <string name="macropad_macro_duration_randomized">%1$d ms (randomized %2$dms)</string>
+    <string name="macropad_macro_duration_randomized">%1$d ms (randomized %2$d ms)</string>
     <string name="macropad_macro_default_name">New Macro</string>
     <string name="macropad_macro_delete_title">Delete Macro</string>
     <string name="macropad_macro_delete_confirm">Delete this macro? Pad buttons that reference it will stop working.</string>
