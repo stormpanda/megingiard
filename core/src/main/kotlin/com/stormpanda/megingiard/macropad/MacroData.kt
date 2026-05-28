@@ -186,6 +186,16 @@ fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
     is MacroStep.TouchPath        -> copy(startTimeMs = newStartTimeMs)
 }
 
+/** Returns a copy of this step with [startTimeMs] and [durationMs] replaced by [newStartTimeMs] and [newDurationMs]. */
+fun MacroStep.withTiming(newStartTimeMs: Long, newDurationMs: Long): MacroStep = when (this) {
+    is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.JoystickMove     -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.DPadTap          -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.TouchTap         -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.JoystickPath     -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.TouchPath        -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+}
+
 /** Returns a new list where every step's start time is shifted by [offsetMs]. */
 fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
     map { step -> step.withStartTime(step.startTimeMs + offsetMs) }

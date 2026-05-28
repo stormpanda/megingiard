@@ -111,10 +111,14 @@ object MacroExecutor {
             val random = kotlin.random.Random
             val maxOffset = macro.randomizeTimingRangeMs.toLong()
             val randomizedSteps = macro.steps.map { step ->
-                val offset = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
-                step.withStartTime(step.startTimeMs + offset)
+                val offsetStart = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
+                val offsetDuration = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
+                step.withTiming(
+                    newStartTimeMs = step.startTimeMs + offsetStart,
+                    newDurationMs = step.durationMs + offsetDuration
+                )
             }
-            AppLog.d(TAG, "executeSuspend: applied timing randomization to ${macro.steps.size} steps with max offset ${macro.randomizeTimingRangeMs}ms")
+            AppLog.d(TAG, "executeSuspend: applied timing and duration randomization to ${macro.steps.size} steps with max offset ${macro.randomizeTimingRangeMs}ms")
             macro.copy(steps = randomizedSteps)
         } else {
             macro
