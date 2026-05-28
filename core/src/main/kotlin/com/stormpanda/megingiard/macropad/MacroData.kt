@@ -186,6 +186,16 @@ fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
     is MacroStep.TouchPath        -> copy(startTimeMs = newStartTimeMs)
 }
 
+/** Returns a copy of this step with [startTimeMs] and [durationMs] replaced by [newStartTimeMs] and [newDurationMs]. */
+fun MacroStep.withTiming(newStartTimeMs: Long, newDurationMs: Long): MacroStep = when (this) {
+    is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.JoystickMove     -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.DPadTap          -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.TouchTap         -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.JoystickPath     -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    is MacroStep.TouchPath        -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+}
+
 /** Returns a new list where every step's start time is shifted by [offsetMs]. */
 fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
     map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
@@ -211,4 +221,24 @@ data class Macro(
     val steps: List<MacroStep> = emptyList(),
     val loopEnabled: Boolean = false,
     val loopPauseMs: Int = 0,
+    val randomizeTimingEnabled: Boolean = false,
+    val randomizeTimingRangeMs: Int = 20,
 )
+
+/**
+ * Returns a copy of this macro where every step has been randomized by timing and duration
+ * using [random], if timing randomization is enabled.
+ */
+fun Macro.randomized(random: kotlin.random.Random = kotlin.random.Random): Macro {
+    if (!randomizeTimingEnabled) return this
+    val maxOffset = randomizeTimingRangeMs.toLong()
+    val randomizedSteps = steps.map { step ->
+        val offsetStart = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
+        val offsetDuration = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
+        step.withTiming(
+            newStartTimeMs = step.startTimeMs + offsetStart,
+            newDurationMs = step.durationMs + offsetDuration
+        )
+    }
+    return copy(steps = randomizedSteps)
+}

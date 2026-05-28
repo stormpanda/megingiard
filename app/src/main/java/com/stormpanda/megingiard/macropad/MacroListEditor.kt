@@ -308,7 +308,16 @@ private fun MacroRow(
     val colors       = LocalAppColors.current
     val stepCount    = macro.steps.size
     val totalMs      = macro.steps.totalDurationMs()
-    val summaryLabel = stringResource(R.string.macropad_macro_list_steps, stepCount, totalMs)
+    val durationText = if (macro.randomizeTimingEnabled) {
+        stringResource(
+            R.string.macropad_macro_duration_randomized,
+            totalMs,
+            macro.randomizeTimingRangeMs
+        )
+    } else {
+        stringResource(R.string.macropad_macro_duration, totalMs)
+    }
+    val summaryLabel = stringResource(R.string.macropad_macro_list_steps, stepCount, durationText)
     var menuExpanded by remember { mutableStateOf(false) }
 
     Row(

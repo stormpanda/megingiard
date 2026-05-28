@@ -98,6 +98,8 @@ internal fun MacroTimelineEditor(
     var loopEnabled by remember { mutableStateOf(macro.loopEnabled) }
     var loopPauseMs by remember { mutableIntStateOf(macro.loopPauseMs) }
     var loopPauseMaxMs by remember { mutableIntStateOf(mtExpandLoopScale(MTE_LOOP_PAUSE_INIT_MAX_MS, macro.loopPauseMs).coerceAtLeast(MTE_LOOP_PAUSE_INIT_MAX_MS)) }
+    var randomizeTimingEnabled by remember { mutableStateOf(macro.randomizeTimingEnabled) }
+    var randomizeTimingRangeMs by remember { mutableIntStateOf(macro.randomizeTimingRangeMs.coerceIn(10, 100)) }
     // Tracks whether the recording session started GamepadInjector; guards the matching stop() call.
     var recordingStartedGamepad by remember { mutableStateOf(false) }
     // True when the physical recorder path was taken for the current session.
@@ -281,7 +283,16 @@ internal fun MacroTimelineEditor(
                 }
                 TextButton(
                     onClick = {
-                        onSave(macro.copy(name = localName.trim().ifBlank { macro.name }, steps = steps, loopEnabled = loopEnabled, loopPauseMs = loopPauseMs))
+                        onSave(
+                            macro.copy(
+                                name = localName.trim().ifBlank { macro.name },
+                                steps = steps,
+                                loopEnabled = loopEnabled,
+                                loopPauseMs = loopPauseMs,
+                                randomizeTimingEnabled = randomizeTimingEnabled,
+                                randomizeTimingRangeMs = randomizeTimingRangeMs,
+                            )
+                        )
                     },
                     enabled = localName.isNotBlank(),
                 ) {
@@ -461,6 +472,8 @@ internal fun MacroTimelineEditor(
                                     steps = steps,
                                     loopEnabled = false,
                                     loopPauseMs = 0,
+                                    randomizeTimingEnabled = randomizeTimingEnabled,
+                                    randomizeTimingRangeMs = randomizeTimingRangeMs,
                                 ),
                             )
                         },
@@ -475,6 +488,13 @@ internal fun MacroTimelineEditor(
                         onLoopEnabledChange = { loopEnabled = it },
                         onLoopPauseMsChange = { loopPauseMs = it },
                         onLoopPauseMaxMsChange = { loopPauseMaxMs = it },
+                    )
+                    MtRandomizationSection(
+                        randomizeEnabled = randomizeTimingEnabled,
+                        randomizeRangeMs = randomizeTimingRangeMs,
+                        accentColor = accentColor,
+                        onRandomizeEnabledChange = { randomizeTimingEnabled = it },
+                        onRandomizeRangeMsChange = { randomizeTimingRangeMs = it },
                     )
                 }
             } else {

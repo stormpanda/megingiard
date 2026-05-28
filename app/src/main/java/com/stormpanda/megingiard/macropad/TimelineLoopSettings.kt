@@ -140,3 +140,104 @@ internal fun MtLoopSection(
         }
     }
 }
+
+@Composable
+private fun MtRandomizeRangeDeltaButton(
+    accentColor: Color,
+    deltaMs: Int,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+        modifier = Modifier.defaultMinSize(minWidth = 30.dp, minHeight = 28.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.macropad_macro_step_timing_delta, deltaMs),
+            color = accentColor,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
+internal fun MtRandomizationSection(
+    randomizeEnabled: Boolean,
+    randomizeRangeMs: Int,
+    accentColor: Color,
+    onRandomizeEnabledChange: (Boolean) -> Unit,
+    onRandomizeRangeMsChange: (Int) -> Unit,
+) {
+    val colors = LocalAppColors.current
+
+    fun applyRangeDelta(deltaMs: Int) {
+        val next = (randomizeRangeMs + deltaMs).coerceIn(10, 100)
+        onRandomizeRangeMsChange(next)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = MTE_PADDING.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.macropad_macro_randomize_toggle),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = randomizeEnabled,
+                onCheckedChange = onRandomizeEnabledChange,
+            )
+        }
+
+        if (randomizeEnabled) {
+            Text(
+                text = stringResource(R.string.macropad_macro_randomize_desc),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.macropad_macro_randomize_range_label),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
+                    text = "$randomizeRangeMs ms",
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -10)  { applyRangeDelta(-10) }
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -1)   { applyRangeDelta(-1) }
+                Slider(
+                    value = randomizeRangeMs.coerceIn(10, 100).toFloat(),
+                    onValueChange = { onRandomizeRangeMsChange(it.roundToInt().coerceIn(10, 100)) },
+                    valueRange = 10f..100f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = accentColor,
+                        activeTrackColor = accentColor,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = 1)    { applyRangeDelta(1) }
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = 10)   { applyRangeDelta(10) }
+            }
+        }
+    }
+}
+
