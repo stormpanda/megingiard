@@ -15,6 +15,12 @@ import java.util.concurrent.Executors
 private const val TAG = "TouchScreenObserver"
 private const val EVENT_NODE = "/dev/input/event6"
 private const val INPUT_EVENT_SIZE = 24
+// Physical sensor dimensions of the AYN Thor primary touchscreen (fts_ts, event6).
+// Canonical source: TouchInjector.PHYS_W / PHYS_H (domain/input/TouchInjector.kt).
+// Duplicated here because those constants are private; extract to a shared geometry
+// object if a third caller appears.
+private const val SENSOR_W = 1080f
+private const val SENSOR_H = 1920f
 
 object TouchScreenObserver {
     private var job: Job? = null
@@ -79,10 +85,10 @@ object TouchScreenObserver {
                             val y = currentY
                             if (x != null && y != null) {
                                 // Map to normalized landscape coordinates:
-                                // normalizedX = sensor_y / 1920f
-                                // normalizedY = 1.0f - (sensor_x / 1080f)
-                                val nx = y.toFloat() / 1920f
-                                val ny = 1.0f - (x.toFloat() / 1080f)
+                                // normalizedX = sensor_y / SENSOR_H
+                                // normalizedY = 1.0f - (sensor_x / SENSOR_W)
+                                val nx = y.toFloat() / SENSOR_H
+                                val ny = 1.0f - (x.toFloat() / SENSOR_W)
                                 // Coerce to [0, 1]
                                 val coercedNx = nx.coerceIn(0f, 1f)
                                 val coercedNy = ny.coerceIn(0f, 1f)

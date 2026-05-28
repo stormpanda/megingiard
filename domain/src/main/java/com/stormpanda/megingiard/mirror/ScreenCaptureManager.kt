@@ -237,6 +237,6 @@ object ScreenCaptureManager {
         _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)
-        setFollowActive(false)
+        if (_isFollowActive.value) setFollowActive(false)
     }
 }
