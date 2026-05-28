@@ -470,24 +470,6 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
-    fun setLayoutMirrorSmoothing(layoutId: String, value: Boolean) {
-        var changed = false
-        val updatedProfiles = _profiles.value.map { profile ->
-            var profileChanged = false
-            val updatedLayouts = profile.layouts.map { layout ->
-                if (layout.id != layoutId || layout.mirrorSmoothing == value) return@map layout
-                changed = true
-                profileChanged = true
-                layout.copy(mirrorSmoothing = value)
-            }
-            if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
-        }
-        if (!changed) return
-        AppLog.d(TAG, "setLayoutMirrorSmoothing layoutId=$layoutId value=$value")
-        _profiles.value = updatedProfiles
-        MacroPadSettings.saveMacroPadData()
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // Ambient Peek state
     // ─────────────────────────────────────────────────────────────────────────

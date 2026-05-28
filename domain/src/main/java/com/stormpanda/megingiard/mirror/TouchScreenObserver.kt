@@ -54,7 +54,7 @@ object TouchScreenObserver {
                     var currentX: Int? = null
                     var currentY: Int? = null
 
-                    while (job?.isActive == true) {
+                    while (coroutineContext[Job]?.isActive == true) {
                         var bytesRead = 0
                         while (bytesRead < INPUT_EVENT_SIZE) {
                             val r = fis.read(buffer, bytesRead, INPUT_EVENT_SIZE - bytesRead)
