@@ -15,7 +15,7 @@ class MacroTimingRandomizationTest {
     fun `default values are correct`() {
         val macro = Macro(id = "test", name = "test")
         assertEquals(false, macro.randomizeTimingEnabled)
-        assertEquals(10, macro.randomizeTimingRangeMs)
+        assertEquals(20, macro.randomizeTimingRangeMs)
     }
 
     @Test
@@ -48,7 +48,7 @@ class MacroTimingRandomizationTest {
         val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; encodeDefaults = true }
         val decoded = json.decodeFromString(Macro.serializer(), olderJson)
         assertEquals(false, decoded.randomizeTimingEnabled)
-        assertEquals(10, decoded.randomizeTimingRangeMs)
+        assertEquals(20, decoded.randomizeTimingRangeMs)
     }
 
     @Test

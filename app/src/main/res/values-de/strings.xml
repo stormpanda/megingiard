@@ -382,7 +382,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_list_new">Neues Makro</string>
     <string name="macropad_macro_list_empty">Noch keine Makros. Tippe auf +, um eines zu erstellen.</string>
     <!-- %1$d = Anzahl Schritte, %2$d = Gesamtdauer ms -->
-    <string name="macropad_macro_list_steps">%1$d Schritte • %2$d ms</string>
+    <string name="macropad_macro_list_steps">%1$d Schritte • %2$s</string>
+    <string name="macropad_macro_list_randomized_suffix">(randomisiert %1$dms)</string>
     <string name="macropad_macro_default_name">Neues Makro</string>
     <string name="macropad_macro_delete_title">Makro löschen</string>
     <string name="macropad_macro_delete_confirm">Dieses Makro löschen? Pad-Tasten, die es verwenden, funktionieren danach nicht mehr.</string>
