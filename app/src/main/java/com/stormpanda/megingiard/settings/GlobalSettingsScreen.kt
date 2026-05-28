@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import android.content.Intent
+import android.provider.Settings
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
@@ -66,6 +68,7 @@ fun GlobalSettingsScreen(
     val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
+    val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
     val colors = LocalAppColors.current
@@ -88,9 +91,17 @@ fun GlobalSettingsScreen(
     var profileImportSuccess by rememberSaveable { mutableStateOf(false) }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
     val coroutineScope = rememberCoroutineScope()
-
+ 
     var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
     var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
+    
+    var isAccessibilityActive by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            isAccessibilityActive = viewModel.checkAccessibilityActive(context)
+            delay(1000L)
+        }
+    }
     LaunchedEffect(showRestoreDefaultsConfirm) {
         if (showRestoreDefaultsConfirm) {
             restoreCountdown = GS_RESTORE_COUNTDOWN_SECONDS
@@ -177,6 +188,28 @@ fun GlobalSettingsScreen(
                             description = stringResource(R.string.settings_mirror_auto_start_desc),
                             checked = mirrorAutoStart,
                             onCheckedChange = { viewModel.setMirrorAutoStart(it) },
+                        )
+                        AppDivider()
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_auto_switch_profiles),
+                            description = stringResource(R.string.settings_auto_switch_profiles_desc),
+                            checked = autoSwitchProfiles,
+                            onCheckedChange = { viewModel.setAutoSwitchProfiles(it) },
+                        )
+                        AppDivider()
+                        ConfigActionRow(
+                            label = stringResource(R.string.settings_accessibility_status),
+                            description = stringResource(
+                                if (isAccessibilityActive) R.string.settings_accessibility_status_active
+                                else R.string.settings_accessibility_status_inactive
+                            ),
+                            accentColor = if (isAccessibilityActive) Color(0xFF4CAF50) else colors.error,
+                            onClick = {
+                                if (!isAccessibilityActive) {
+                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                    context.startActivity(intent)
+                                }
+                            }
                         )
                         AppDivider()
                         LanguagePickerRow(

@@ -41,6 +41,12 @@
     <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
     <string name="settings_mirror_auto_start">Auto-start mirroring</string>
     <string name="settings_mirror_auto_start_desc">When enabled, mirroring resumes on app launch and on layout switch for layouts that were last running with mirror on</string>
+    <string name="settings_auto_switch_profiles">Auto-switch profiles</string>
+    <string name="settings_auto_switch_profiles_desc">Automatically switch the MacroPad profile when a mapped app is launched on the primary screen</string>
+    <string name="settings_accessibility_status">Accessibility Service</string>
+    <string name="settings_accessibility_status_active">Active</string>
+    <string name="settings_accessibility_status_inactive">Inactive (Tap to enable)</string>
+    <string name="settings_accessibility_status_desc">Required to detect the foreground application and switch profiles automatically</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
@@ -150,6 +156,15 @@ Open Settings to create a layout.</string>
     <string name="cd_layout_enable_toggle">Toggle layout enabled</string>
     <string name="macropad_editor_cancel">Cancel</string>
     <string name="macropad_editor_confirm">Delete</string>
+
+    <!-- Profile settings -->
+    <string name="profile_settings_title">Profile Settings</string>
+    <string name="profile_settings_name">Profile Name</string>
+    <string name="profile_settings_app_mapping">Trigger Application</string>
+    <string name="profile_settings_select_app">Select App…</string>
+    <string name="profile_settings_clear_app">Clear Mapping</string>
+    <string name="profile_settings_search_apps">Search apps…</string>
+    <string name="profile_settings_no_apps">No applications found</string>
 
     <!-- MacroPad icon picker -->
     <string name="macropad_icon_picker_title">Select Icon</string>

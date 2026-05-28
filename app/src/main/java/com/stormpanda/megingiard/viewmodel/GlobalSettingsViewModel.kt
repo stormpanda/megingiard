@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.viewmodel
 
+import android.content.ComponentName
 import android.content.Context
+import android.provider.Settings
+import android.text.TextUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
@@ -45,6 +48,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val showMirrorControlLabels: StateFlow<Boolean> = SettingsManager.showMirrorControlLabels
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
+    val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
 
     // Privileged Mode
@@ -67,6 +71,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
     fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)
+    fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
 
     // Privileged Mode actions
@@ -135,5 +140,29 @@ class GlobalSettingsViewModel : ViewModel() {
             if (ok) MacroPadSettings.setPrivdAutoConnect(true)
             onResult(ok)
         }
+    }
+
+    /**
+     * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
+     */
+    fun checkAccessibilityActive(context: Context): Boolean {
+        val expectedComponentName = ComponentName(
+            context.applicationContext,
+            "com.stormpanda.megingiard.services.MegingiardAccessibilityService"
+        )
+        val enabledServices = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        val splitter = TextUtils.SimpleStringSplitter(':')
+        splitter.setString(enabledServices)
+        while (splitter.hasNext()) {
+            val enabledService = splitter.next()
+            val component = ComponentName.unflattenFromString(enabledService)
+            if (component != null && component == expectedComponentName) {
+                return true
+            }
+        }
+        return false
     }
 }
