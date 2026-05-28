@@ -448,6 +448,28 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
+    /**
+     * Persists the current mirror follow preference for the specified layout.
+     * A no-op if the value is unchanged.
+     */
+    fun setLayoutMirrorFollowActive(layoutId: String, value: Boolean) {
+        var changed = false
+        val updatedProfiles = _profiles.value.map { profile ->
+            var profileChanged = false
+            val updatedLayouts = profile.layouts.map { layout ->
+                if (layout.id != layoutId || layout.mirrorFollowActive == value) return@map layout
+                changed = true
+                profileChanged = true
+                layout.copy(mirrorFollowActive = value)
+            }
+            if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        }
+        if (!changed) return
+        AppLog.d(TAG, "setLayoutMirrorFollowActive layoutId=$layoutId value=$value")
+        _profiles.value = updatedProfiles
+        MacroPadSettings.saveMacroPadData()
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Ambient Peek state
     // ─────────────────────────────────────────────────────────────────────────

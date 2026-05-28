@@ -87,6 +87,15 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
 - When the per-feature flag is off, or the daemon is not `RUNNING`, the standard MediaProjection path MUST remain in use unchanged.
 
+### FR-M10: Follow Touch Mode
+
+- A **Background mirror follows touch** switch MUST be available in the dedicated **Background following** section of the background settings overlay.
+- When Follow Touch Mode is enabled, the screen mirror viewport MUST automatically center on the spot last touched on the primary screen, using the zoom level that is already saved in the layout's viewport configuration.
+- Activating Follow Touch Mode MUST restore the saved viewport (scale + offset) as the starting position. Deactivating it MUST restore the same saved viewport, discarding any panning drift accumulated during tracking. Follow Touch Mode MUST never write to the saved viewport.
+- A **Smoothing** switch (ON by default) MUST be dynamically displayed directly below the primary toggle only when Follow Touch Mode is active.
+- When Smoothing is enabled, the viewport panning MUST glide smoothly to target coordinates using exponential easing. When disabled, the panning MUST snap instantly.
+- Activating Viewport Edit Mode MUST automatically turn off Follow Touch Mode to prevent pan/zoom gesture and coordinate conflicts (mutual exclusion).
+
 ---
 
 ## Technical Implementation
@@ -220,6 +229,22 @@ Overlay controls are rendered separately from the gesture surface so gesture det
 **Freeze OFF:** `SurfaceView.visibility = VISIBLE`, `setFrozenBitmap(null)` (recycles frozen bitmap), `virtualDisplay.surface` is restored to the active surface.
 
 **PixelCopy failure:** If `PixelCopy` returns a non-SUCCESS result, the caller MUST call `bitmap.recycle()` immediately — the manager never received ownership (see AGENTS.md §4.3).
+
+### Follow Touch Mode
+
+Follow Touch Mode centers the viewport in real-time on the spot last touched on the primary screen, using the zoom level already saved in the layout's viewport configuration. It operates as follows:
+
+1. **Viewport Restore on Toggle:** When Follow Touch Mode is activated, `ScreenCaptureManager.setFollowActive(true)` restores the layout's saved viewport (`mirrorSavedScale`, `mirrorSavedOffsetX`, `mirrorSavedOffsetY`) as the initial display state. When deactivated, the same saved viewport is restored — discarding any panning drift accumulated during tracking. Follow mode never writes to the saved viewport.
+2. **Touchscreen Events Listening:** A background thread manages `TouchScreenObserver`, which directly opens the world-readable `/dev/input/event6` touchscreen node, parses raw Linux `input_event` structs, and maps absolute sensor coordinates to logical landscape positions:
+   $$normalizedX = \frac{sensorY}{1920}$$
+   $$normalizedY = 1.0 - \frac{sensorX}{1080}$$
+3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from touch, `ScreenCaptureManager` calculates the target panning offset to place the target coordinate perfectly in the center of the display, allowing the content to be panned into empty black space:
+   $$targetOffsetX = -(nx - 0.5) \times sw \times scale$$
+   $$targetOffsetY = -(ny - 0.5) \times sh \times scale$$
+4. **Smoothing:** When Smoothing is enabled in Background Settings, a coroutine-based loop running at 100fps smoothly interpolates the current viewport offsets towards the target offsets using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the camera glides by a percentage (15%) of the remaining distance to the target, ensuring tracking that naturally accelerates and decelerates:
+   $$current = current + (target - current) \times 0.15$$
+   If Smoothing is disabled, the viewport snaps instantly to the target coordinates.
+5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
 
 ### Mode Switching: `show()` / `hide()` vs. `dismiss()`
 
@@ -391,7 +416,8 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 | `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                                    |
 | `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic                    |
 | `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` + `ViewModelStoreOwner` for Compose-in-Presentation |
-| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap                        |
+| `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
+| `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `MirrorScreen.kt`                     | Compose UI: gesture handling, control buttons, touch projection                                            |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
 | `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

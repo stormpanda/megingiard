@@ -204,6 +204,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_layout_template_blank">Leer</string>
 
     <!-- MacroPad-Ambient-Display-Einstellungen -->
+    <string name="settings_section_background_following">Hintergrund-Verfolgung</string>
+    <string name="settings_mirror_follow_touch">Hintergrund-Spiegelung folgt Berührung</string>
+    <string name="settings_mirror_follow_touch_desc">Zentriert den gespiegelten Bildausschnitt auf der zuletzt berührten Stelle des Hauptbildschirms.</string>
+    <string name="settings_mirror_follow_smoothing">Glättung</string>
+    <string name="settings_mirror_follow_smoothing_desc">Sanftes Verschieben des Ausschnitts mit exponentieller Glättung</string>
+
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
     <string name="settings_macropad_ambient_hint">Startet Bildschirmspiegelung automatisch (einmalige Berechtigung erforderlich)</string>
     <string name="settings_macropad_ambient_preview">Vorschau für Darstellung</string>
