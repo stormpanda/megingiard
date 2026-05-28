@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "AutoSwitchCoordinator"
 private const val APP_PACKAGE_SELF = "com.stormpanda.megingiard"
+private val IGNORED_PACKAGES = setOf("com.android.systemui", "android")
 
 /**
  * Coordinates automatic profile switching when foreground application changes are detected.
@@ -25,6 +26,11 @@ object AutoSwitchCoordinator {
 
         if (normalized == APP_PACKAGE_SELF) {
             AppLog.d(TAG, "onPackageChanged: Ignoring self-package ($normalized)")
+            return
+        }
+
+        if (normalized in IGNORED_PACKAGES) {
+            AppLog.d(TAG, "onPackageChanged: Ignoring system/transient package ($normalized)")
             return
         }
 
@@ -56,4 +62,9 @@ object AutoSwitchCoordinator {
             AppLog.d(TAG, "onPackageChanged: no profile mapped to package '$normalized'")
         }
     }
+
+    internal fun resetForTesting() {
+        _foregroundApp.value = null
+    }
 }
+

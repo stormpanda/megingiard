@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -174,8 +175,9 @@ internal fun InlineProfileSettingsOverlay(
     var searchQuery by remember { mutableStateOf("") }
     var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
 
-    val assignedPackages = remember {
-        MacroPadState.profiles.value
+    val profiles by MacroPadState.profiles.collectAsState()
+    val assignedPackages = remember(profiles) {
+        profiles
             .filter { it.associatedPackage != null && it.associatedPackage != initialPackage }
             .mapNotNull { it.associatedPackage?.trim()?.lowercase() }
             .toSet()
@@ -374,7 +376,7 @@ internal fun InlineProfileSettingsOverlay(
 
                 if (isLoadingApps) {
                     Text(
-                        text = "Loading...",
+                        text = stringResource(R.string.profile_settings_loading_apps),
                         color = colors.onSurfaceSecondary,
                         modifier = Modifier.padding(vertical = 16.dp)
                     )

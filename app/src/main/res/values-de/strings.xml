@@ -171,6 +171,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="profile_settings_search_apps">Apps suchen…</string>
     <string name="profile_settings_no_apps">Keine Apps gefunden</string>
     <string name="profile_settings_app_assigned">(zugewiesen)</string>
+    <string name="profile_settings_loading_apps">Lade Apps…</string>
 
     <!-- MacroPad icon picker -->
     <string name="macropad_icon_picker_title">Icon auswählen</string>

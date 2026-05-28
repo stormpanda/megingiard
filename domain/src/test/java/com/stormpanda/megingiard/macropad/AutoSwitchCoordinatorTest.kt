@@ -27,6 +27,7 @@ class AutoSwitchCoordinatorTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        AutoSwitchCoordinator.resetForTesting()
 
         // Setup mock profiles with app mappings
         val p1Id = UUID.randomUUID().toString()
@@ -57,6 +58,7 @@ class AutoSwitchCoordinatorTest {
 
     @After
     fun tearDown() {
+        AutoSwitchCoordinator.resetForTesting()
         Dispatchers.resetMain()
     }
 
@@ -98,6 +100,25 @@ class AutoSwitchCoordinatorTest {
         AutoSwitchCoordinator.onPackageChanged("com.stormpanda.megingiard")
 
         // Then it is ignored and foreground app state does not record it
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged ignores system and transient packages`() {
+        // Given we are currently on profile1
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+
+        // When a system UI focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.android.systemui")
+
+        // Then it is ignored and foreground app state remains null
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When android core system focus occurs
+        AutoSwitchCoordinator.onPackageChanged("android")
+
+        // Then it is ignored and foreground app state remains null
         assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
     }

@@ -33,6 +33,10 @@ import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.provider.Settings
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.DisposableEffect
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 
@@ -96,10 +100,16 @@ fun GlobalSettingsScreen(
     var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
     
     var isAccessibilityActive by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            isAccessibilityActive = viewModel.checkAccessibilityActive(context)
-            delay(1000L)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isAccessibilityActive = viewModel.checkAccessibilityActive(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
     LaunchedEffect(showRestoreDefaultsConfirm) {
