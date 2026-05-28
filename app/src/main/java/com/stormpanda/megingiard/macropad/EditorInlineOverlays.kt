@@ -170,6 +170,7 @@ internal fun InlineProfileSettingsOverlay(
     var selectedPackage by remember { mutableStateOf(initialPackage) }
     var showAppList by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
     
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
@@ -195,6 +196,21 @@ internal fun InlineProfileSettingsOverlay(
                 }.distinctBy { it.second }.sortedBy { it.first }
             }
             isLoadingApps = false
+        }
+    }
+
+    LaunchedEffect(selectedPackage) {
+        val pkg = selectedPackage
+        if (pkg != null) {
+            selectedAppName = withContext(Dispatchers.IO) {
+                try {
+                    val pm = context.packageManager
+                    val info = pm.getApplicationInfo(pkg, 0)
+                    pm.getApplicationLabel(info).toString()
+                } catch (e: Exception) {
+                    pkg
+                }
+            }
         }
     }
 
@@ -274,10 +290,10 @@ internal fun InlineProfileSettingsOverlay(
                                     .padding(end = 8.dp)
                             )
                             Text(
-                                text = selectedPackage!!,
+                                text = selectedAppName,
                                 color = accentColor,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                         TextButton(onClick = { selectedPackage = null }) {
