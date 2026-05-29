@@ -76,7 +76,7 @@ object SettingsManager {
     private val _autoStartCapture = MutableStateFlow(false)
     val autoStartCapture: StateFlow<Boolean> = _autoStartCapture.asStateFlow()
 
-    private val _autoSwitchProfiles = MutableStateFlow(false)
+    private val _autoSwitchProfiles = MutableStateFlow(true)
     val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
 
     private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
@@ -154,7 +154,7 @@ object SettingsManager {
                     AppLog.i(TAG, "settings loaded from DataStore")
 
                     _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
-                    _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: false
+                    _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
