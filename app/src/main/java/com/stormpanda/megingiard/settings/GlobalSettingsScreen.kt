@@ -41,6 +41,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import android.app.ActivityOptions
+import android.view.Display
 import android.content.Intent
 import android.provider.Settings
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -222,8 +224,12 @@ fun GlobalSettingsScreen(
                         AppDivider()
                         AppSettingsRow(
                             onClick = {
-                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                context.startActivity(intent)
+                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                val options = ActivityOptions.makeBasic()
+                                options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                context.startActivity(intent, options.toBundle())
                             }
                         ) {
                             Row(
