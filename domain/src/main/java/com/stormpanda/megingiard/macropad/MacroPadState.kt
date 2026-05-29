@@ -197,7 +197,13 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
-    fun renameProfile(profileId: String, newName: String, associatedPackage: String? = null) {
+    fun renameProfile(profileId: String, newName: String) {
+        val existing = _profiles.value.firstOrNull { it.id == profileId }
+        val associatedPackage = existing?.associatedPackage
+        renameProfile(profileId, newName, associatedPackage)
+    }
+
+    fun renameProfile(profileId: String, newName: String, associatedPackage: String?) {
         val existingNames = _profiles.value
             .filter { it.id != profileId }
             .map { it.name }

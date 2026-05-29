@@ -297,8 +297,8 @@ internal fun InlineProfileSettingsOverlay(
                             AppIcon(
                                 packageName = selectedPackage!!,
                                 modifier = Modifier
-                                    .size(36.dp)
                                     .padding(end = 8.dp)
+                                    .size(36.dp)
                             )
                             Text(
                                 text = selectedAppName,
@@ -412,9 +412,9 @@ internal fun InlineProfileSettingsOverlay(
                                     AppIcon(
                                         packageName = pkg,
                                         modifier = Modifier
+                                            .padding(end = 12.dp)
                                             .size(36.dp)
                                             .alpha(if (isAssigned) 0.38f else 1f)
-                                            .padding(end = 12.dp)
                                     )
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(

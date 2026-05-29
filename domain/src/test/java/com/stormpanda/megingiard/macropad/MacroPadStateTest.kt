@@ -133,15 +133,28 @@ class MacroPadStateTest {
     fun `renameProfile normalizes blank names and resolves duplicates`() {
         val p1Id = UUID.randomUUID().toString()
         val p2Id = UUID.randomUUID().toString()
-        val p1 = PadProfile(id = p1Id, name = "Retro", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
-        val p2 = PadProfile(id = p2Id, name = "Citra", layouts = listOf(PadLayout(id = "l2", name = "L2")), activeLayoutId = "l2")
+        val p1 = PadProfile(
+            id = p1Id,
+            name = "Retro",
+            layouts = listOf(PadLayout(id = "l1", name = "L1")),
+            activeLayoutId = "l1",
+            associatedPackage = "com.retroarch"
+        )
+        val p2 = PadProfile(
+            id = p2Id,
+            name = "Citra",
+            layouts = listOf(PadLayout(id = "l2", name = "L2")),
+            activeLayoutId = "l2"
+        )
         MacroPadState.loadFrom(listOf(p1, p2), p1Id)
 
-        // Try to rename Retro to blank string -> should fallback to 'Profile'
+        // Try to rename Retro to blank string -> should fallback to 'Profile' and preserve package
         MacroPadState.renameProfile(p1Id, "   ")
-        assertEquals("Profile", MacroPadState.profiles.value.first { it.id == p1Id }.name)
+        val p1Profile = MacroPadState.profiles.value.first { it.id == p1Id }
+        assertEquals("Profile", p1Profile.name)
+        assertEquals("com.retroarch", p1Profile.associatedPackage)
 
-        // Try to rename Retro (now Default) to "Citra" (which already exists) -> should resolve to "Citra (2)"
+        // Try to rename Retro (now Profile) to "Citra" (which already exists) -> should resolve to "Citra (2)"
         MacroPadState.renameProfile(p1Id, "Citra")
         assertEquals("Citra (2)", MacroPadState.profiles.value.first { it.id == p1Id }.name)
     }
