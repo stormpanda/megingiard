@@ -71,7 +71,7 @@ Follow these sequential steps precisely:
 
 ---
 
-## Mandatory Completion Checklist (from `AGENTS.md §15`)
+## Mandatory Completion Checklist (from `AGENTS.md §3`)
 
 Before marking the task done, verify:
 

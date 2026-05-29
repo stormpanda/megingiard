@@ -64,7 +64,7 @@ Identify the affected feature area and read the relevant documentation in full:
 Also read:
 
 - `docs/REQUIREMENTS.md` — non-functional requirements
-- The relevant section of `AGENTS.md` (e.g. §6 for Compose, §4 for state, §9 for resources)
+- The relevant section of `AGENTS.md` (e.g. §9 for Compose, §7 for state, §12 for resources)
 
 Goal: a complete picture of what already exists in this area and how it works.
 
@@ -74,7 +74,7 @@ Goal: a complete picture of what already exists in this area and how it works.
 
 Explore the affected code area:
 
-- Read the relevant files from the module tree (`AGENTS.md §3`)
+- Read the relevant files from the module tree (`AGENTS.md §6`)
 - Identify:
   - Which **state singletons** (`object` in `:domain`) are involved?
   - Which **ViewModels** (`/viewmodel/`) coordinate this area?
@@ -129,16 +129,16 @@ Implement according to plan. Follow `AGENTS.md` strictly:
 
 **State & architecture:**
 
-- State singletons (`object`) — only `private MutableStateFlow`, public `StateFlow` (§4.1)
-- Use `combine()` for dependent flows, never nested `collect {}` calls (§7.4)
-- `SupervisorJob()` for new class-level scopes (§7.1)
+- State singletons (`object`) — only `private MutableStateFlow`, public `StateFlow` (§7.1)
+- Use `combine()` for dependent flows, never nested `collect {}` calls (§10.4)
+- `SupervisorJob()` for new class-level scopes (§10.1)
 
 **Compose:**
 
-- Never use rapidly-changing values as a `LaunchedEffect` key (§6.1)
-- Use `snapshotFlow {}` from `androidx.compose.runtime` for reactive state observation (§6.1)
-- All user-visible strings in `strings.xml` (§6.2)
-- Icons always have `contentDescription` (§6.3)
+- Never use rapidly-changing values as a `LaunchedEffect` key (§9.1)
+- Use `snapshotFlow {}` from `androidx.compose.runtime` for reactive state observation (§9.1)
+- All user-visible strings in `strings.xml` (§9.2)
+- Icons always have `contentDescription` (§9.3)
 
 **Design system (§16):**
 
@@ -150,7 +150,7 @@ Implement according to plan. Follow `AGENTS.md` strictly:
 
 - No magic numbers — `private const val` at file scope
 - No `android.util.Log` — all logging via `AppLog`
-- Every new file needs `private const val TAG = "ClassName"` and full AppLog coverage (§5.4)
+- Every new file needs `private const val TAG = "ClassName"` and full AppLog coverage (§8.4)
 - No FQN references in the function body — everything in imports
 
 **Module ownership:**
@@ -188,7 +188,7 @@ Perform a static review — no build command:
 - [ ] All new references as imports — no FQN in function bodies
 - [ ] No magic numbers — `private const val` used
 - [ ] No `android.util.Log` — all logging via `AppLog`
-- [ ] Every new file has `private const val TAG` + `AppLog` usage per §5.4
+- [ ] Every new file has `private const val TAG` + `AppLog` usage per §8.4
 - [ ] All user-visible strings in `strings.xml`
 - [ ] Icons have `contentDescription`
 - [ ] `SupervisorJob()` for new class-level scopes

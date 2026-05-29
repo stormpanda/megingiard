@@ -213,7 +213,7 @@ animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
 animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
 ```
 
-**State sync via `snapshotFlow`:** A single `LaunchedEffect(Unit)` uses `snapshotFlow { Triple(scale, offsetX, offsetY) }.collectLatest { }` to sync animated values to `ScreenCaptureManager` — avoiding a `LaunchedEffect` that restarts on every animation frame (see AGENTS.md §6.1).
+**State sync via `snapshotFlow`:** A single `LaunchedEffect(Unit)` uses `snapshotFlow { Triple(scale, offsetX, offsetY) }.collectLatest { }` to sync animated values to `ScreenCaptureManager` — avoiding a `LaunchedEffect` that restarts on every animation frame (see AGENTS.md §9.1).
 
 Overlay controls are rendered separately from the gesture surface so gesture detectors do not intercept menu interactions.
 
@@ -228,7 +228,7 @@ Overlay controls are rendered separately from the gesture surface so gesture det
 
 **Freeze OFF:** `SurfaceView.visibility = VISIBLE`, `setFrozenBitmap(null)` (recycles frozen bitmap), `virtualDisplay.surface` is restored to the active surface.
 
-**PixelCopy failure:** If `PixelCopy` returns a non-SUCCESS result, the caller MUST call `bitmap.recycle()` immediately — the manager never received ownership (see AGENTS.md §4.3).
+**PixelCopy failure:** If `PixelCopy` returns a non-SUCCESS result, the caller MUST call `bitmap.recycle()` immediately — the manager never received ownership (see AGENTS.md §7.3).
 
 ### Follow Touch Mode
 

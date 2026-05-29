@@ -28,9 +28,10 @@
 | `LICENSE`                                  | Megingiard Source-Available License (Version 1.0)                                        |
 | `CONTRIBUTING.md`                          | Contribution guidelines, codebase standards, and licensing compliance                    |
 | `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
-| `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
-| `docs/MANUAL_VERIFICATION.md`               | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
+| `docs/BUILD_NATIVE.md`                     | Build setup, instructions, and protocol specifications for native C binaries             |
+| `docs/MANUAL_VERIFICATION.md`              | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
+| `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
@@ -46,8 +47,8 @@
 > **Documentation language: English only.**
 >
 > All documentation files in this repository (`*.md` under `docs/`, `AGENTS.md`,
-> `README.md`, `FEATURE.md` files, `BACKLOG.md`, etc.) MUST be written in **English**.
-> Every file — including new `FEATURE.md` files, architecture notes, and the feature backlog — must be written and maintained in
+> `README.md`, `FEATURE.md` files, etc.) MUST be written in **English**.
+> Every file — including new `FEATURE.md` files, and architecture notes — must be written and maintained in
 > English so that all AI agents can process them without ambiguity.
 
 > [!IMPORTANT]
@@ -80,189 +81,157 @@
 
 ---
 
-## 3 Package Structure
+## 3 Checklist for Every Change
 
-The project is split into three Gradle modules:
+> **Compilation policy:** The agent is encouraged to run `./gradlew compileDebugKotlin` or `./gradlew :app:assembleDebug` to verify compile safety before presenting changes to the human operator.
 
-- **`:app`** — Android UI layer (Activities, Composables, ViewModels, Service)
-- **`:domain`** — Business logic & state management (no Android UI dependencies)
-- **`:core`** — Pure data models, serializable types, constants (no Android dependencies)
+> **Native binary rebuild policy:** Whenever a native C source file is modified, the
+> agent **must** immediately run the corresponding build script to rebuild the bundled
+> binary. The scripts are at the workspace root:
+>
+> | Source file                           | Build script                                                             |
+> | ------------------------------------- | ------------------------------------------------------------------------ |
+> | `app/src/main/cpp/megingiard_privd.c` | `./build_megingiard_privd.sh`                                            |
+> | `app/src/main/cpp/touchinjector.c`    | Manual compile in `docs/BUILD_NATIVE.md` until a dedicated script exists |
+> | `app/src/main/cpp/keyinjector.c`      | `./build_keyinjector.sh`                                                 |
+> | `app/src/main/cpp/mouseinjector.c`    | `./build_mouseinjector.sh`                                               |
+> | `app/src/main/cpp/gamepadinjector.c`  | `./build_gamepadinjector.sh`                                             |
+>
+> Run the script **before** proposing the commit message. If the build fails, fix the
+> source error before proceeding. The scripts must be run from the workspace root.
 
-### app module (`app/src/main/java/com/stormpanda/megingiard`)
+> **Unit test policy:** After every implementation — feature, bug fix, or refactor —
+> the agent **must**:
+>
+> 1. **Write new tests** for any new pure logic in `:core` or `:domain` (pure functions,
+>    data compilers, state machines, serialization round-trips).
+> 2. **Update existing tests** if the change modifies the behaviour or signature of
+>    already-tested code.
+> 3. **Run all tests** via `./gradlew :core:test :domain:test` and report the result.
+>    This, along with sandbox compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
+>
+> Tests must be placed in the correct source set:
+>
+> - `:core` pure-JVM tests → `core/src/test/kotlin/`
+> - `:domain` local tests → `domain/src/test/java/`
+>
+> If logic cannot be unit-tested without significant refactoring, state that explicitly
+> as a follow-up task rather than skipping silently.
 
-```
-com.stormpanda.megingiard [app module]
-├── AppStateManager.kt # Stub — migrated to :domain module
-├── CaptureRequestActivity.kt # MediaProjection consent dialog (transparent Activity)
-├── MainActivity.kt # Entry point: permission checks, display detection, file pickers
-├── MainAppScreen.kt # Top-level Composable (MacroPad content + fullscreen overlays)
-├── security/
-│   └── SignatureGuard.kt # APK signing signature validation check
-├── privd/
-│   ├── PrivdSetupWizard.kt # Multi-step wizard UI for privileged daemon setup and HMAC provisioning
-│   └── PrivdSettingsCard.kt # Privileged Mode settings and connection status overlay
-├── mirror/
-│   ├── MirrorPresentation.kt # android.app.Presentation on secondary display
-│   ├── MirrorPresentationLifecycleOwner.kt # Synthetic LifecycleOwner for Compose-in-Presentation
-│   ├── RecordingMirrorPresentation.kt # Dedicated Presentation window for touch-recording mirror taps
-│   ├── DirectMirrorSurfaceBridge.kt # Surface routing bridge for direct privd rendering
-│   └── ScreenCaptureService.kt # Foreground Service managing MediaProjection + VirtualDisplay
-├── keyboard/
-│   ├── KeyboardScreen.kt # Full keyboard Composable (QWERTZ/QWERTY/AZERTY + trackpoint)
-│   ├── KeyboardKeyCap.kt # KeyCap Composable, key bounds tracking
-│   └── KeyboardMouseOverlay.kt # Mouse button overlay (LMB/MMB/RMB/scroll)
-├── settings/
-│   ├── ColorWheelPicker.kt        # HSV color picker (hue wheel + brightness slider)
-│   ├── GlobalSettingsComponents.kt # Extracted setting row and section Composables for GlobalSettingsScreen
-│   ├── GlobalSettingsDialogs.kt   # Extracted in-tree overlay dialogs and filename builders
-│   ├── GlobalSettingsScreen.kt    # Full-screen settings Composable (scaffold + state hoists only)
-│   └── ToolSettingsComponents.kt  # Reusable row Composables (SliderSettingRow, dropdowns, etc.)
-├── macropad/
-│   ├── BackgroundMacroPadOverlay.kt # Background overlay (dim + vignette + buttons on secondary display)
-│   ├── BackgroundSettingsOverlay.kt # Per-layout background settings editor
-│   ├── ButtonListItem.kt          # Editor component rendering a single button list item
-│   ├── EditorBaseComponents.kt    # Reusable UI pieces for layout editor (headers, grid snaps, etc.)
-│   ├── EditorInlineOverlays.kt    # Full-screen dialogs and template pickers within editor tree
-│   ├── EditorLayoutComponents.kt  # Tab bars and drag-reorder lists for profile layouts
-│   ├── GamepadRecordingOverlay.kt # Gamepad touch recording UI overlay
-│   ├── IconPickerDialog.kt        # Material Symbols icon grid picker
-│   ├── MacroListEditor.kt         # In-editor macro list (add/edit/delete/reorder)
-│   ├── MacroPadButton.kt          # PadButton, ScrollWheelFace, BackgroundPeekFace Composables
-│   ├── MacroPadEditor.kt          # Full-screen layout editor (retains core body, orchestrator, and top bar)
-│   ├── MacroPadScreen.kt          # Main pad Composable (button grid, multi-touch, injector lifecycle)
-│   ├── MacroStepEditDialog.kt     # Macro step timing/action editor dialog
-│   ├── MacroStepListItem.kt       # Editor step list item component with quick timing controls
-│   ├── MacroTimelineEditor.kt     # Visual macro timeline editor (orchestrates list/timeline views)
-│   ├── MacroVerticalTimeline.kt   # Canvas-rendered vertical timeline visualization of steps
-│   ├── MaterialIconRegistry.kt    # Icon name → Material Symbols lookup
-│   ├── MaterialSymbols.kt         # Material Symbols typeface integration
-│   ├── PadActionDisplay.kt        # Category/group enums and localized string/label formatting
-│   ├── PadActionPicker.kt         # Base dropdown container for action selection categories
-│   ├── PadActionSubPickers.kt     # Modular sub-pickers for configuring action details
-│   ├── PadButtonEditDialog.kt     # Button create/edit dialog
-│   ├── PadCanvas.kt               # Draggable editor canvas (DraggableButton, PadCanvas)
-│   ├── RoundedIconNames.kt        # Rounded variant icon name list
-│   ├── TimelineBaseComponents.kt  # Action buttons and structural headers for the timeline editor
-│   └── TimelineLoopSettings.kt    # Looping toggle switch and pause delay slider
-├── touchpad/
-│   └── FullscreenMouseOverlay.kt  # Fullscreen relative-mouse overlay (triggered by FullScreenMouse action)
-├── viewmodel/
-│   ├── GlobalSettingsViewModel.kt # Settings VM facade (reads/writes SettingsManager + MacroPadSettings)
-│   ├── MirrorViewModel.kt         # Mirror state exposure, viewport/touch-injector lifecycle
-│   ├── MacroPadViewModel.kt       # Multi-injector lifecycle, MacroPadHitTestEngine factory
-│   └── KeyboardViewModel.kt       # Key/mouse injector lifecycle, KeyRepeatController
-└── ui/
-    ├── AppTheme.kt                # AppColors token system, palette factory (Dark/Light/Cyberpunk)
-    ├── IdlePill.kt                # Always-visible edge pill (swipe affordance + close label)
-    ├── PillMenu.kt                # Pill overlay (retains only main state collection and overlays)
-    ├── PillMenuComponents.kt      # ProfileRow, LayoutRow, SectionLabel, and PillActionChip
-    ├── PillMenuDialogs.kt         # InTreeNameInputDialog helper dialog
-    └── PillMirrorCard.kt          # MirrorControlCard and MirrorControlIconButton
-```
+Before marking a task as done, verify:
 
-### domain module (`domain/src/main/java/com/stormpanda/megingiard`)
-
-```
-com.stormpanda.megingiard [domain module]
-├── AppLog.kt # Unified logging facade (level-gated, tag-prefixed)
-├── AppStateManager.kt # Global app-level state (lifecycle + modal overlay flags)
-├── SwipeGestureProcessor.kt # Edge-swipe gesture detection (shared by pill + mirror)
-├── security/
-│   ├── BinaryIntegrity.kt # SHA-256 asset hash verification before execution
-│   └── HmacUtil.kt # HMAC-SHA256 signature utility for daemon auth
-├── privd/
-│   ├── PrivdBootstrapper.kt # Handles daemon deploy, wireless pairing, and port discovery
-│   ├── PrivdManager.kt # Main coordinator for Privileged Mode service status and execution
-│   ├── PrivdClient.kt # Manages the LocalSocket IPC communication with the daemon
-│   └── EvdevEvent.kt # evdev structure parsing for raw event streams
-├── mirror/
-│   ├── ScreenCaptureManager.kt # Mirror state flows (scale, offset, freeze, lock, projection, bitmap)
-│   ├── MirrorViewportController.kt # Zoom/pan business logic + debounced DataStore persistence
-│   ├── DirectPrivdMirrorSession.kt # Setup and teardown of direct shell virtual display mirror path
-│   ├── TouchProjectionController.kt # Gesture state machine for touch-projection (DOWN→MOVE*→UP)
-│   └── DisplayDetector.kt # Multi-display detection via DisplayManager
-├── input/
-│   ├── TouchInjector.kt # Normalised → physical coordinate transform facade
-│   ├── ShellInputInjector.kt # Native touchinjector_arm64 lifecycle + MOVE coalescing
-│   ├── MouseInjector.kt # Public facade over ShellMouseInjector
-│   ├── ShellMouseInjector.kt # Native mouseinjector_arm64 lifecycle + MOVE coalescing
-│   └── NativeBinaryInjector.kt # Base helper class for deploying and validating native assets
-├── keyboard/
-│   ├── KeyInjector.kt # Key injection facade (delegates to ShellKeyInjector)
-│   ├── ShellKeyInjector.kt # Native keyinjector_arm64 lifecycle (1–255 keycodes only)
-│   ├── KeyboardState.kt # Modifier state machine (INACTIVE↔STICKY↔HELD)
-│   └── KeyRepeatController.kt # Key repeat + trackpoint tracking per keyboard session
-├── settings/
-│   ├── SettingsManager.kt # App-wide settings persistence via DataStore
-│   └── SettingsKeys.kt # Hardcoded keys for settings storage
-├── config/
-│   └── ConfigManager.kt # Export/import coordinator: SAF I/O, UUID remap, checksum
-├── log/
-│   └── LogReportManager.kt # Packages logcat output into ZIP/TXT format for bug reporting
-├── touchpad/
-│   └── TouchpadGestureProcessor.kt # Mouse/touch mode gesture processing (tap-to-click, two-finger-tap)
-└── macropad/
-    ├── MacroPadState.kt # Singleton: profiles + layouts + macros CRUD, persistence
-    ├── MacroPadActionDispatch.kt # injectActionDown/Up — routes PadAction types to injectors
-    ├── MacroPadHitTestEngine.kt # Button lookup, per-pointer tracking, scroll/trackpoint dispatch
-    ├── TouchRecordingManager.kt # Buffers and stores screen taps as macro steps
-    ├── GamepadRecordingManager.kt # Captures touch-gamepad events for macro steps
-    ├── PhysicalGamepadRecordingManager.kt # Listens to physical USB/BT controller input for recording
-    ├── MacroExecutor.kt # Timed macro playback (compiles steps → flat event list)
-    ├── GamepadInjector.kt # Public facade over ShellGamepadInjector
-    └── ShellGamepadInjector.kt # Native gamepadinjector_arm64 lifecycle + writer thread
-```
-
-### core module (`core/src/main/kotlin/com/stormpanda/megingiard`)
-
-\`\`\`
-com.stormpanda.megingiard [core module]
-├── mirror/
-│ ├── MirrorCoordinateTransform.kt # Pure projectCoordinates() geometry helper
-│ └── ViewportMath.kt # fitAspectRatio() helper
-├── input/
-│ └── TouchAction.kt # DOWN/MOVE/UP enum
-├── keyboard/
-│ ├── KeyboardLayout.kt # KeyDef, KbLayout enum, KbMouseBtnPos, layout factories
-│ ├── KeyAction.kt # DOWN/UP enum
-│ └── LinuxKeycodes.kt # Linux input-event-codes constants (KEY*\*)
-├── settings/
-│ └── ThemeMode.kt # DARK/LIGHT/CYBERPUNK enum
-├── config/
-│ └── ConfigSchema.kt # MegingiardExport, ExportMetadata, SCHEMA_VERSION (v3)
-└── macropad/
-├── MacroPadLayout.kt # PadProfile, PadLayout, PadButton, PadAction (sealed)
-├── MacroData.kt # Macro, MacroStep (sealed), JoystickStick
-└── GamepadKeycodes.kt # Linux BTN*\* constants + preset list
-\`\`\`
-
-**Rule:** New feature modules get their own sub-package. Shared UI components belong in `ui/`. Business logic with no Android UI dependency belongs in `:domain`. Pure data types and constants belong in `:core`.
+- [ ] No `MutableStateFlow` exposed outside its owning singleton
+- [ ] No FQN references inline — all moved to imports
+- [ ] No magic numbers — all extracted to named constants
+- [ ] No `android.util.Log` calls outside `AppLog.kt` — all logging via `AppLog`
+- [ ] Every new file has `private const val TAG = "ClassName"` and uses `AppLog` per §8.4 Coverage Requirements
+- [ ] All user-visible strings in `strings.xml`
+- [ ] All Icons have `contentDescription` (string resource or `null`)
+- [ ] `SupervisorJob()` used (not `Job()`) for class-level scopes
+- [ ] Scope cancelled in `onDestroy()`
+- [ ] Bitmap recycling handled by the manager, not call sites (see §7.3 for the PixelCopy exception)
+- [ ] `snapshotFlow` imported from `androidx.compose.runtime`
+- [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
+- [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
+- [ ] `Presentation` mode switching uses `hide()`/`show()`, not `dismiss()` (except in `onDestroy()`)
+- [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
+- [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
+- [ ] Service `onStartCommand` returns `START_NOT_STICKY`
+- [ ] `MirrorPresentation` show/hide reacts to presentation visibility conditions
+- [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
+- [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
+- [ ] No suspected compile errors (verified via static analysis or build compiles)
+- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
+- [ ] Existing tests updated if the change modifies previously-tested behaviour
+- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)
+- [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
 
 ---
 
-## 4 State Management
+## 4 Commit Message Proposal
 
-### 4.1 Singleton State Holders
+After completing every set of changes, you MUST propose a ready-to-use commit message. Use Conventional Commits format:
+
+```
+<type>: <short imperative summary>
+
+- bullet describing change 1
+- bullet describing change 2
+```
+
+**Scope of the commit message:**
+The message MUST cover **every uncommitted change currently visible in `git status`** — across the entire active working copy. If the session involved multiple rounds of edits without commits, all of them must appear as bullets in the final proposal. However, never include files that have already been committed in previous steps of the conversation and are no longer present in `git status`.
+
+**Determining which files changed:** Before writing the commit message, run `git status` to get the definitive list of modified files. Include **all** files shown — both staged and unstaged — without distinguishing between the two states. Do not rely solely on memory of what was edited during the conversation; the `git status` output is the authoritative source.
+
+The proposal must be copy-paste ready — no placeholders. You must present it as a separate code block so the user can copy it directly.
+
+---
+
+## 5 Documentation Sync After Changes
+
+After implementing any change that affects a feature’s behaviour, interface, or architecture:
+
+1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code
+   (consult the Documentation Map in §2).
+2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change
+   invalidates any Functional Requirements or Technical Implementation section.
+3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation:
+   - Correct or remove outdated requirements or technical descriptions.
+   - Add documentation for new behaviour introduced by the change.
+4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant,
+   also review `docs/ARCHITECTURE.md`.
+5. **New features** — create a new `docs/features/<feature>/FEATURE.md` using
+   [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
+   point, then **add a row to the Documentation Map table in §2**.
+
+This rule applies to all changes, including bug fixes, refactors, and dependency updates that
+affect runtime behaviour.
+
+---
+
+## 6 Package Structure
+
+The project is split into three Gradle modules:
+
+* **`:app`** — Android UI layer (Activities, viewmodels, custom Compose views, and secondary screen presentations).
+* **`:domain`** — Platform-free business logic, device managers, input injection facades, and singleton state holders. Must **never** import Android UI or Composable dependencies.
+* **`:core`** — Pure JVM/Kotlin data models, serializable schemas, constants, and math helpers. Must **never** have Android dependencies.
+
+### Core Architectural Directories
+Across all modules, files are organized into feature-centric packages. Keep these structural rules in mind:
+* `macropad/` — Profiles, layout configurations, macro engines, and injection coordinator flows.
+* `mirror/` — Screen mirroring presentation views, viewport math, and capture-session managers.
+* `keyboard/` — Virtual keyboard Composable layouts, key caps, and key injector services.
+* `input/` / `privd/` — Local socket IPC clients, ADB-Wireless wizards, and evdev/uinput wrappers.
+* `ui/` — Design system constants, AppTheme palette factories, and reusable edge overlay pill menus.
+
+**Rule:** New feature modules get their own sub-package. Shared UI components belong in `:app/.../ui/`. Business logic with no Android UI dependency belongs in `:domain`. Pure data types and constants belong in `:core`.
+
+---
+
+## 7 State Management
+
+### 7.1 Singleton State Holders
 
 State is managed by **`object` singletons** (`AppStateManager`, `ScreenCaptureManager`) that expose **read-only `StateFlow`** and keep all `MutableStateFlow` backing fields **`private`**.
 
-\`\`\`kotlin
+```kotlin
 // ✅ Correct pattern
 object FooManager {
-private val \_bar = MutableStateFlow(0)
-val bar: StateFlow<Int> = \_bar.asStateFlow()
+    private val _bar = MutableStateFlow(0)
+    val bar: StateFlow<Int> = _bar.asStateFlow()
 
     fun setBar(value: Int) { _bar.value = value }
-
 }
 
 // ❌ Never expose MutableStateFlow
 object FooManager {
-val bar = MutableStateFlow(0) // WRONG
+    val bar = MutableStateFlow(0) // WRONG
 }
-\`\`\`
+```
 
-### 4.2 Visibility Rules
+### 7.2 Visibility Rules
 
 | Layer                           | Access to `MutableStateFlow` |
 | ------------------------------- | ---------------------------- |
@@ -270,7 +239,7 @@ val bar = MutableStateFlow(0) // WRONG
 | Same module (Service, Listener) | `internal` update functions  |
 | Composable / UI                 | Read-only `StateFlow` only   |
 
-### 4.3 Bitmap Lifecycle
+### 7.3 Bitmap Lifecycle
 
 `ScreenCaptureManager.setFrozenBitmap(bitmap)` **always calls `recycle()` on the
 previous bitmap** before assigning the new one. Never call `recycle()` at call
@@ -280,21 +249,21 @@ sites — the manager owns the lifecycle.
 hand it to the manager fails (e.g. `PixelCopy` returns a non-SUCCESS result), the
 local call site **must** recycle it immediately, since the manager never received it.
 
-\`\`\`kotlin
+```kotlin
 PixelCopy.request(sv, bitmap, { result ->
-if (result == PixelCopy.SUCCESS) {
-ScreenCaptureManager.setFrozenBitmap(bitmap) // manager takes ownership
-} else {
-bitmap.recycle() // manager never got it, local cleanup required
-}
+    if (result == PixelCopy.SUCCESS) {
+        ScreenCaptureManager.setFrozenBitmap(bitmap) // manager takes ownership
+    } else {
+        bitmap.recycle() // manager never got it, local cleanup required
+    }
 }, Handler(Looper.getMainLooper()))
-\`\`\`
+```
 
 ---
 
-## 5 Kotlin Conventions
+## 8 Kotlin Conventions
 
-### 5.1 Language Level
+### 8.1 Language Level
 
 - Use `enum.entries` (Kotlin 1.9+), never `enum.values()`.
 - Use `kotlin.math.min` / `kotlin.math.max`, never `java.lang.Math.*`.
@@ -304,14 +273,14 @@ bitmap.recycle() // manager never got it, local cleanup required
 - String templates: `"$variable"`, not `"${variable}"` unless accessing a
   property (e.g. `"${obj.name}"`).
 
-### 5.2 Imports
+### 8.2 Imports
 
 - **Always use explicit imports.** No star imports (`import foo.*`).
 - **Never use fully-qualified names inline** in function bodies.
   Move every reference to a top-level `import` statement.
 - Sort imports alphabetically; Android Studio / ktlint default ordering.
 
-### 5.3 Constants
+### 8.3 Constants
 
 - Extract **all magic numbers** to `private const val` (primitives) or
   `private val` (Compose `Dp`, `Color`, etc.) at file scope.
@@ -323,7 +292,7 @@ bitmap.recycle() // manager never got it, local cleanup required
   private val GS_SURFACE = Color(0xFF1C1C1E)
   ```
 
-### 5.4 Logging
+### 8.4 Logging
 
 > **Logging mandate: be generous.** The goal is that a single logcat capture at DEBUG level is sufficient to diagnose any bug — without needing a second run. When in doubt, log it.
 
@@ -354,44 +323,44 @@ Every file must declare `private const val TAG = "ClassName"` at file scope (or 
 - Pan/zoom velocity
 - `SettingsManager.updateXxxLive()` methods (called on every drag frame)
 
-### 5.5 API-Level Branching
+### 8.5 API-Level Branching
 
 - When calling APIs that changed signature across SDK versions, use
   `if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.XYZ)` branching with
   `@Suppress("DEPRECATION")` on the legacy branch — never silently call the
   deprecated path without the annotation.
 
-\`\`\`kotlin
+```kotlin
 @Suppress("DEPRECATION")
 val data: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-intent?.getParcelableExtra("DATA", Intent::class.java)
+    intent?.getParcelableExtra("DATA", Intent::class.java)
 } else {
-intent?.getParcelableExtra("DATA")
+    intent?.getParcelableExtra("DATA")
 }
-\`\`\`
+```
 
 ---
 
-## 6 Jetpack Compose Rules
+## 9 Jetpack Compose Rules
 
-### 6.1 Side Effects & LaunchedEffect
+### 9.1 Side Effects & LaunchedEffect
 
 - **Never use rapidly-changing Compose state as a `LaunchedEffect` key.**
   If you need to react to animation values or frequently-updating state,
   use `snapshotFlow { ... }.collectLatest { }` inside a `LaunchedEffect(Unit)`.
 
-\`\`\`kotlin
+```kotlin
 // ✅ Correct – single launch, reactive collection
 LaunchedEffect(Unit) {
-snapshotFlow { animScale.value }
-.collectLatest { scale -> manager.setScale(scale) }
+    snapshotFlow { animScale.value }
+        .collectLatest { scale -> manager.setScale(scale) }
 }
 
 // ❌ Wrong – restarts coroutine on every animation frame
 LaunchedEffect(animScale.value) {
-manager.setScale(animScale.value)
+    manager.setScale(animScale.value)
 }
-\`\`\`
+```
 
 - `snapshotFlow` is in `androidx.compose.runtime`, **not** `kotlinx.coroutines`.
 
@@ -412,7 +381,7 @@ LaunchedEffect(isActive) {
 
 The coroutine is automatically cancelled when the key (`isActive`) changes to `false`.
 
-### 6.2 String Resources
+### 9.2 String Resources
 
 - **All user-visible strings** must live in `res/values/strings.xml`.
 - Composables: `stringResource(R.string.key)`.
@@ -422,18 +391,18 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
   callbacks may remain as literals.
 - All strings must be translated to all supported languages.
 
-### 6.3 Accessibility
+### 9.3 Accessibility
 
 - Every `Icon` and `Image` must have a meaningful `contentDescription`
   backed by a string resource, or `null` if purely decorative.
 
-### 6.4 Shared UI Components
+### 9.4 Shared UI Components
 
 - Reusable Composables (overlay controls, auto-hide timers) belong in `ui/`.
 - Do not duplicate overlay code across screens. Use
   shared overlay tools and `AppStateManager.overlayVisible` / `triggerOverlay()`.
 
-### 6.5 Collecting StateFlows
+### 9.5 Collecting StateFlows
 
 | Context                                                | Pattern                                                                   |
 | ------------------------------------------------------ | ------------------------------------------------------------------------- |
@@ -444,36 +413,36 @@ Never call `.collectAsState()` outside a Composable; never call raw `.collect {}
 
 ---
 
-## 7 Coroutines & Lifecycle
+## 10 Coroutines & Lifecycle
 
-### 7.1 CoroutineScope in Services / Presentation
+### 10.1 CoroutineScope in Services / Presentation
 
 - Use **`SupervisorJob()`**, never bare `Job()`, for class-level
   `CoroutineScope` instances in `Service` or `Presentation` subclasses.
   This prevents a single child failure from cancelling unrelated siblings.
 - **Cancel the scope** in `onDestroy()` / teardown:
 
-\`\`\`kotlin
+```kotlin
 private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 override fun onDestroy() {
-scope.cancel()
-super.onDestroy()
+    scope.cancel()
+    super.onDestroy()
 }
-\`\`\`
+```
 
-### 7.2 No Duplicate Scopes
+### 10.2 No Duplicate Scopes
 
 - Never create a local `CoroutineScope` inside `onStartCommand()` or
   similar lifecycle methods. Reuse the class-level scope.
 
-### 7.3 Naming
+### 10.3 Naming
 
 - Avoid naming your own methods identically to framework methods.
   Example: rename a helper `startForegroundNotification()` instead of
   `startForegroundService()` to prevent shadowing `Context.startForegroundService()`.
 
-### 7.4 Combining Multiple StateFlows
+### 10.4 Combining Multiple StateFlows
 
 When logic depends on **two or more independent `StateFlow`s**, use `combine()` rather than nesting `collect {}` calls:
 
@@ -500,7 +469,7 @@ scope.launch {
 
 ---
 
-## 8 Android Manifest & Permissions
+## 11 Android Manifest & Permissions
 
 - Only declare components that **actually exist** as classes. A missing
   class behind a `<service>` or `<receiver>` declaration causes a runtime
@@ -512,150 +481,45 @@ scope.launch {
 
 ---
 
-## 9 Resource Management
+## 12 Resource & Hardware Lifecycle
 
-### 9.1 Bitmap Handling
-
-- Always recycle Bitmaps when they are no longer needed.
-- Centralize recycle logic in the owning manager (see §4.3).
-
-### 9.2 VirtualDisplay / MediaProjection
-
-- Detach `VirtualDisplay.surface = null` to freeze; reassign to resume.
-  Never recreate the VirtualDisplay to toggle freeze.
-- Use `Presentation.hide()` / `Presentation.show()` for mode switching;
-  never `dismiss()`, which destroys the window permanently.
-- **Exception:** In `Service.onDestroy()` (full teardown), calling `dismiss()`
-  is correct — the process is being destroyed anyway. The `hide()` vs `dismiss()`
-  rule only applies to in-session mode switching.
-- **Teardown order in `onDestroy()`:** Cancel the coroutine scope _before_ releasing hardware resources and calling `dismiss()`. This prevents in-flight coroutines from racing against resource deallocation:
+### 12.1 Teardown Order in Services & Presentations
+- **Cancel Scopes First:** In `onDestroy()` or cleanup callbacks, always cancel the coroutine scope _before_ releasing hardware handles or dismissing windows. This ensures in-flight async tasks do not race against resource deallocation or throw illegal state exceptions.
+- **Teardown Sequence:**
   ```kotlin
   override fun onDestroy() {
       super.onDestroy()
-      scope.cancel()          // 1. stop all coroutines
-      virtualDisplay?.release() // 2. release hardware
+      scope.cancel()          // 1. Stop all async tasks first
+      virtualDisplay?.release() // 2. Release hardware handles
       mediaProjection?.stop()
-      mirrorPresentation?.dismiss() // 3. destroy window
+      mirrorPresentation?.dismiss() // 3. Tear down presentation windows
   }
   ```
 
-### 9.3 SurfaceView Layer Order
+### 12.2 Multi-Display Activity Launching
+- When starting any `Activity` intended for the primary handheld screen (e.g., global settings, Privileged Mode setup, or media consent prompts) from a secondary-screen context, you **must** explicitly configure `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`. 
+- By default, Android activity launches inherit the display ID of the invoking context, which would cause primary-screen activities to open incorrectly on the secondary display.
+  ```kotlin
+  val options = ActivityOptions.makeBasic().apply {
+      launchDisplayId = Display.DEFAULT_DISPLAY
+  }
+  startActivity(intent, options.toBundle())
+  ```
 
-- The `SurfaceView` that receives the `VirtualDisplay` output **must** call
-  `setZOrderMediaOverlay(true)`. Without it, the hardware buffer renders behind
-  the window background, producing a black screen.
-- The `ComposeView` overlay is then layered on top of the `SurfaceView` by
-  standard `FrameLayout` z-ordering.
+### 12.3 Window Presentation Lifecycle
+- **Toggle Visibility, Preserve Resources:** Use `Presentation.hide()` and `Presentation.show()` for mode switching during an active session to temporarily hide overlay windows without destroying their backing resources.
+- Only invoke `Presentation.dismiss()` in `onDestroy()` or deep service teardowns, as it permanently destroys the window context and backing lifecycle.
+- **Z-Order Layering:** Any `SurfaceView` receiving hardware rendering streams (e.g., `VirtualDisplay` outputs) **must** call `setZOrderMediaOverlay(true)` to ensure that Android's Hardware Composer layers it correctly on top of window backgrounds instead of rendering it behind them.
 
-### 9.4 Foreground Service
-
-- Use `START_NOT_STICKY` as the return value in `onStartCommand()`.
-  The service must not be auto-restarted by the system after being killed —
-  re-acquiring `MediaProjection` requires a fresh user consent.
-- Always call `startForeground()` / `startForegroundNotification()` before any
-  `MediaProjection` work starts to avoid ANR on API 29+.
-
-### 9.5 Multi-Display Activity Launching
-
-- When launching an `Activity` that must appear on the primary screen
-  (e.g. `CaptureRequestActivity`), use `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`.
-  Without this, the activity inherits the display of the calling context,
-  which on the AYN Thor is the secondary display.
-
-\`\`\`kotlin
-val options = ActivityOptions.makeBasic()
-options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-startActivity(intent, options.toBundle())
-\`\`\`
-
-### 9.5a CaptureRequestActivity — mandatory `configChanges`
-
-`CaptureRequestActivity` **must** declare `android:configChanges` for keyboard-related
-events in `AndroidManifest.xml`:
-
-```xml
-android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
-```
-
-**Why:** `MacroPadViewModel.watchInjectorLifecycle()` stops all injectors (including
-`KeyInjector`) when any modal screen opens, and restarts them when all modals are
-closed. `KeyInjector` registers and unregisters a virtual keyboard device via
-`/dev/uinput`. Adding or removing this device triggers a `keyboard`/`keyboardHidden`
-configuration change in Android. Without `configChanges`, `CaptureRequestActivity`
-would be **recreated** by this config change while the MediaProjection system dialog
-is open — which breaks the `ActivityResult` contract and delivers an immediate
-`RESULT_CANCELED`, closing the consent dialog before the user can interact with it.
-On AYN Thor OEM firmware the same config change also causes the app window to lose
-focus (visible as the app being minimized).
-
-### 9.6 MirrorPresentationLifecycleOwner — Setup & Teardown
-
-**Setup:** After creating the `MirrorPresentationLifecycleOwner`, inject it into the Presentation's DecorView _before_ setting any `ComposeView` content:
-
-```kotlin
-window?.decorView?.apply {
-    setViewTreeLifecycleOwner(lifecycleOwner)
-    setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-    setViewTreeViewModelStoreOwner(lifecycleOwner)
-}
-```
-
-Without this, Compose cannot find a lifecycle owner / ViewModel store and throws at runtime.
-
-**Teardown:** `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
-Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
-event that cleans up all Compose state registered against the owner and clears the `ViewModelStore`.
-
-```kotlin
-setOnDismissListener {
-    scope.cancel()
-    lifecycleOwner.destroy()
-}
-```
-
-### 9.7 Native Touch Injection (Touchpad & Mirror Touch Projection)
-
-- `ShellInputInjector` manages the lifecycle of the `touchinjector_arm64`
-  native helper binary (bundled in `assets/`). On `start()`, the binary is
-  copied to `filesDir`, made executable, and launched via `ProcessBuilder`.
-  It opens `/dev/input/event6` once and stays alive for the session.
-- The binary is driven via **stdin** (`"D x y\n"` / `"M x y\n"` / `"U x y\n"`)
-  and signals readiness with `"R\n"` on stdout. A dedicated writer thread
-  coalesces pending MOVE events (keep-latest) to prevent backlog.
-- `TouchInjector.injectTouch()` converts normalised Compose coordinates to
-  the sensor's physical portrait space:
-  `sensor_x = (1 − normalizedY) * 1080`, `sensor_y = normalizedX * 1920`.
-- `ShellInputInjector.stop()` **must** be called when leaving fullscreen mouse mode.
-  In `FullscreenMouseOverlay` this is done via `DisposableEffect(Unit) { onDispose { TouchInjector.stop() } }`.
-- The device node `/dev/input/event6` is `crw-rw-rw-` on the AYN Thor —
-  no root or special permission required beyond the standard shell UID (2000).
-  See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
-
-### 9.8 Native Key Injection (Keyboard)
-
-- `ShellKeyInjector` manages the lifecycle of the `keyinjector_arm64`
-  native helper binary (bundled in `assets/`). On `start()`, the binary is
-  copied to `filesDir`, made executable, and launched via `ProcessBuilder`.
-  It opens `/dev/uinput` once and stays alive for the keyboard session.
-- The binary is driven via **stdin** (`"KD <keycode>\n"` / `"KU <keycode>\n"`)
-  and signals readiness with `"R\n"` on stdout. A dedicated writer thread
-  delivers all events **in order** — unlike touch injection, no MOVE coalescing
-  is applied (every key-down and key-up must be preserved).
-- `KeyInjector.stop()` **must** be called when leaving `KEYBOARD` mode.
-  In `KeyboardScreen` this is done via `DisposableEffect(Unit) { onDispose { KeyInjector.stop() } }`.
-- The device node `/dev/uinput` is accessible under the standard shell UID (2000) on the AYN Thor —
-  no root or special permission required.
-  See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
-- **Keycode registration range: 1–255 only.** The binary registers `UI_SET_KEYBIT` for codes 1–255.
-  Codes 256+ are BTN\_ device buttons (mouse, gamepad, stylus). Registering `BTN_TOOL_PEN` (0x140 = 320)
-  causes Android's `EventHub` to classify the device as `EXTERNAL_STYLUS` instead of `KEYBOARD`;
-  an `EXTERNAL_STYLUS` device has no `KeyboardInputMapper`, so EV_KEY events are silently ignored by
-  Android's input pipeline. All keyboard keycodes used by the app are ≤ 125. `ShellKeyInjector.injectKey()`
-  enforces the matching 1..255 guard.
+### 12.4 Feature-Specific Architectures & Protocols
+For feature-specific, low-level technical configurations, do **not** add ad-hoc rules to this document. Instead, consult the dedicated `FEATURE.md` files which serve as the canonical technical specifications:
+- **Screen Capture & Mirroring Server:** See [docs/features/mirror/FEATURE.md](docs/features/mirror/FEATURE.md) for detail on privileged socket controls, `app_process` dex servers, and generation race-guards.
+- **Native Key Injection & uinput:** See [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md) for the stdin commands (`KD`/`KU`), event classification filters, and the `1..255` keyboard keycode limits.
+- **Native Touch Injection & evdev:** See [docs/features/touchpad/FEATURE.md](docs/features/touchpad/FEATURE.md) for touchscreen event nodes (`/dev/input/event6`), absolute coordinate landscape-inversion math, and relative touch-move coalescing queues.
 
 ---
 
-## 10 Build & Dependencies
+## 13 Build & Dependencies
 
 - All dependency versions live in `gradle/libs.versions.toml`.
   Never hardcode version strings in `build.gradle.kts`.
@@ -666,7 +530,7 @@ setOnDismissListener {
 
 ---
 
-## 11 Git Conventions
+## 14 Git Conventions
 
 - **Commit messages** follow [Conventional Commits](https://www.conventionalcommits.org/):
   `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`.
@@ -676,7 +540,7 @@ setOnDismissListener {
 
 ---
 
-## 12 What NOT to Change
+## 15 What NOT to Change
 
 These constraints are non-negotiable:
 
@@ -689,52 +553,6 @@ These constraints are non-negotiable:
    that achieves zero-latency DRM-free mirroring on the AYN Thor.
 5. **Synthetic LifecycleOwner in Presentation** — required for Compose
    inside the background-service window.
-
----
-
-## 13 Commit Message Proposal
-
-After completing every set of changes, you MUST propose a ready-to-use commit message. Use Conventional Commits format:
-
-```
-<type>: <short imperative summary>
-
-- bullet describing change 1
-- bullet describing change 2
-```
-
-**Scope of the commit message:**
-The message MUST cover **every change made since the last commit** — across the entire conversation, not only the most recent editing step. This means: if the session involved multiple rounds of edits (e.g. first a refactor, then a bug fix, then a follow-up tweak), all of them must appear as bullets in the final proposal. Never limit the message to just the last reply or last file touched.
-
-**Determining which files changed:** Before writing the commit message, run `git status` to get the definitive list of modified files. Include **all** files shown — both staged and unstaged — without distinguishing between the two states. Do not rely solely on memory of what was edited during the conversation; the `git status` output is the authoritative source.
-
-The proposal must be copy-paste ready — no placeholders. You must present it as a separate code block so the user can copy it directly.
-
----
-
-## 14 Documentation Sync After Changes
-
-> [!IMPORTANT]
-> This rule is **mandatory** and restates the requirement already announced in §2.
-> It is duplicated here for visibility during code-review checklists.
-
-After implementing any change that affects a feature’s behaviour, interface, or architecture:
-
-1. **Identify affected features** — determine which `FEATURE.md` file(s) cover the changed code
-   (consult the Documentation Map in §2).
-2. **Review the documentation** — read the relevant `FEATURE.md` and check whether the change
-   invalidates any Functional Requirements or Technical Implementation section.
-3. **Update `FEATURE.md` if needed** — keep the documentation in sync with the implementation:
-   - Correct or remove outdated requirements or technical descriptions.
-   - Add documentation for new behaviour introduced by the change.
-4. **Propagate to higher-level docs if necessary** — if the change is architecturally significant,
-   also review `docs/ARCHITECTURE.md`.
-5. **New features** — create a new `docs/features/<feature>/FEATURE.md` using
-   [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
-   point, then **add a row to the Documentation Map table in §2**.
-
-This rule applies to all changes, including bug fixes, refactors, and dependency updates that
-affect runtime behaviour.
 
 ---
 
@@ -812,74 +630,3 @@ This applies to: `Switch`, `Slider`, `Checkbox`, `RadioButton`, `OutlinedTextFie
 Do **not** add `accentColor: Color` as a new Composable parameter.
 Read accent from `LocalAppColors.current.accent` or `MaterialTheme.colorScheme.primary` directly.
 Existing `accentColor` parameters in older Composables may remain until a future refactor.
-
----
-
-## 15 Checklist for Every Change
-
-> **Compilation policy:** The human operator always compiles the project themselves.
-> The agent must **never** run `./gradlew compileDebugKotlin` or any other build
-> command to verify a change. Instead, perform **static analysis only**: check imports,
-> symbol references, type compatibility, and API usage by reading the relevant source
-> files. Flag any suspected compile error as a comment to the operator.
-
-> **Native binary rebuild policy:** Whenever a native C source file is modified, the
-> agent **must** immediately run the corresponding build script to rebuild the bundled
-> binary. The scripts are at the workspace root:
->
-> | Source file                           | Build script                                                             |
-> | ------------------------------------- | ------------------------------------------------------------------------ |
-> | `app/src/main/cpp/megingiard_privd.c` | `./build_megingiard_privd.sh`                                            |
-> | `app/src/main/cpp/touchinjector.c`    | Manual compile in `docs/BUILD_NATIVE.md` until a dedicated script exists |
-> | `app/src/main/cpp/keyinjector.c`      | `./build_keyinjector.sh`                                                 |
-> | `app/src/main/cpp/mouseinjector.c`    | `./build_mouseinjector.sh`                                               |
-> | `app/src/main/cpp/gamepadinjector.c`  | `./build_gamepadinjector.sh`                                             |
->
-> Run the script **before** proposing the commit message. If the build fails, fix the
-> source error before proceeding. The scripts must be run from the workspace root.
-
-> **Unit test policy:** After every implementation — feature, bug fix, or refactor —
-> the agent **must**:
->
-> 1. **Write new tests** for any new pure logic in `:core` or `:domain` (pure functions,
->    data compilers, state machines, serialization round-trips).
-> 2. **Update existing tests** if the change modifies the behaviour or signature of
->    already-tested code.
-> 3. **Run all tests** via `./gradlew :core:test :domain:test` and report the result.
->    This is the **only** Gradle command the agent is permitted to run.
->
-> Tests must be placed in the correct source set:
->
-> - `:core` pure-JVM tests → `core/src/test/kotlin/`
-> - `:domain` local tests → `domain/src/test/java/`
->
-> If logic cannot be unit-tested without significant refactoring, state that explicitly
-> as a follow-up task rather than skipping silently.
-
-Before marking a task as done, verify:
-
-- [ ] No `MutableStateFlow` exposed outside its owning singleton
-- [ ] No FQN references inline — all moved to imports
-- [ ] No magic numbers — all extracted to named constants
-- [ ] No `android.util.Log` calls outside `AppLog.kt` — all logging via `AppLog`
-- [ ] Every new file has `private const val TAG = "ClassName"` and uses `AppLog` per §5.4 Coverage Requirements
-- [ ] All user-visible strings in `strings.xml`
-- [ ] All Icons have `contentDescription` (string resource or `null`)
-- [ ] `SupervisorJob()` used (not `Job()`) for class-level scopes
-- [ ] Scope cancelled in `onDestroy()`
-- [ ] Bitmap recycling handled by the manager, not call sites (see §4.3 for the PixelCopy exception)
-- [ ] `snapshotFlow` imported from `androidx.compose.runtime`
-- [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
-- [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] `Presentation` mode switching uses `hide()`/`show()`, not `dismiss()` (except in `onDestroy()`)
-- [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
-- [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
-- [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] `MirrorPresentation` show/hide reacts to presentation visibility conditions
-- [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
-- [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
-- [ ] No suspected compile errors (verified via static analysis — imports, symbols, types)
-- [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
-- [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (only permitted Gradle command)
-- [ ] If any native C source was modified, the corresponding build script was run and produced a new binary

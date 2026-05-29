@@ -61,7 +61,7 @@ Example: "The user provides a free-form description of …"
 ## Output Requirements
 
 - _What must the agent produce at the end of the skill._
-- Always conclude with a **Conventional Commits** message proposal (see `AGENTS.md §13`).
+- Always conclude with a **Conventional Commits** message proposal (see `AGENTS.md §4`).
   Format: `<type>: <short summary>\n\n- bullet 1\n- bullet 2`
 
 ---
@@ -74,7 +74,7 @@ Example: "The user provides a free-form description of …"
 
 ---
 
-## Mandatory Completion Checklist (from `AGENTS.md §15`)
+## Mandatory Completion Checklist (from `AGENTS.md §3`)
 
 Before marking the task done, verify:
 
