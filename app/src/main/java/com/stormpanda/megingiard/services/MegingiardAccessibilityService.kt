@@ -1,22 +1,28 @@
 package com.stormpanda.megingiard.services
 
 import android.accessibilityservice.AccessibilityService
+import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
-import android.provider.Settings
-import android.text.TextUtils
-import android.view.accessibility.AccessibilityEvent
-import android.view.KeyEvent
+import android.content.Intent
+import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
+import android.text.TextUtils
+import android.view.Display
+import android.view.KeyEvent
+import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.R
 
 private const val TAG = "MegingiardAccessService"
+private const val SCAN_CODE_HOME = 102
+private const val HOME_PRESS_TIMEOUT_MS = 5000L
 
 /**
  * Event-driven Accessibility Service that monitors foreground window changes
@@ -35,27 +41,58 @@ class MegingiardAccessibilityService : AccessibilityService() {
             return super.onKeyEvent(event)
         }
 
-        val isActualHomeButton = event.scanCode == 102
+        val isActualHomeButton = event.scanCode == SCAN_CODE_HOME
         if (event.keyCode == KeyEvent.KEYCODE_HOME && isActualHomeButton) {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 val currentTime = System.currentTimeMillis()
-                if (currentTime - lastHomePressTime > 5000) {
+                if (currentTime - lastHomePressTime > HOME_PRESS_TIMEOUT_MS) {
                     lastHomePressTime = currentTime
                     shouldConsumeCurrentPress = true
-                    AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected, consuming event")
+                    AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected: sending primary screen to Home, keeping secondary screen open")
 
-                    // Show Toast reminder (run on main looper)
+                    // Send ONLY the primary display to Home
+                    try {
+                        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_HOME)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        val options = ActivityOptions.makeBasic().apply {
+                            launchDisplayId = Display.DEFAULT_DISPLAY
+                        }
+                        startActivity(homeIntent, options.toBundle())
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "onKeyEvent → failed to launch home intent on primary screen", e)
+                    }
+
+                    // Show Toast reminder specifically on the secondary display (run on main looper)
                     Handler(Looper.getMainLooper()).post {
-                        Toast.makeText(
-                            applicationContext,
-                            applicationContext.getString(R.string.home_press_again_to_exit),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        try {
+                            val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                            // The secondary screen is any screen that is NOT the default display
+                            val secondaryDisplay = displayManager.displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+                            val contextForToast = if (secondaryDisplay != null) {
+                                createDisplayContext(secondaryDisplay)
+                            } else {
+                                applicationContext
+                            }
+                            Toast.makeText(
+                                contextForToast,
+                                contextForToast.getString(R.string.home_press_again_to_exit),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "onKeyEvent → failed to show Toast on secondary screen, falling back", e)
+                            Toast.makeText(
+                                applicationContext,
+                                applicationContext.getString(R.string.home_press_again_to_exit),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 } else {
                     lastHomePressTime = 0L
                     shouldConsumeCurrentPress = false
-                    AppLog.i(TAG, "onKeyEvent → hardware Home button second press within 5s, passing to system")
+                    AppLog.i(TAG, "onKeyEvent → hardware Home button second press within 5s: minimizing secondary screen")
 
                     // Set user leaving to true so presentations can hide
                     AppStateManager.setUserLeaving(true)

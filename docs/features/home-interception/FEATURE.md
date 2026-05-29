@@ -17,20 +17,21 @@ The Home Interception feature prevents the Megingiard app from minimizing when t
 - This setting MUST default to `false` (disabled) so that standard Android Home key behavior remains active until configured.
 - The setting MUST be persisted in the DataStore under the key `block_home_minimization` and included in configuration exports/backups.
 
-### FR-HI2: Flicker-Free Key Interception
+### FR-HI2: Flicker-Free Key Interception & Targeted Home Dispatch
 
 - When the feature is enabled and `MegingiardAccessibilityService` is active, the physical Home button press (`scanCode == 102`) MUST be intercepted at the hardware level.
-- On the first press, the Accessibility Service MUST consume the key event by returning `true` in `onKeyEvent`. This prevents the Android OS from receiving the event, completely blocking the home transition and eliminating any visual flicker or layout sliding.
-- The app MUST remain fully open and static on the screen.
+- On the first press, the Accessibility Service MUST send ONLY the primary display (`Display.DEFAULT_DISPLAY`) to the Home launcher by launching a targeted main home intent.
+- The service MUST consume the key event by returning `true` in `onKeyEvent` to block standard minimization of the secondary display, ensuring the secondary screen (where Megingiard is running) remains fully open and static with absolutely zero visual transition or flicker.
 
-### FR-HI3: Double-Press Confirmation
+### FR-HI3: Secondary-Screen Toast & Double-Press Confirmation
 
 - On the first Home button press, the app MUST display a brief Toast notification: *"Press Home again within 5 seconds to exit"*.
+- The Toast notification MUST be displayed specifically on the secondary (bottom) display by using a targeted display context derived from `DisplayManager` (filtering for non-default displays), falling back to the standard application context if no secondary display is found.
 - If the user presses the physical Home button a second time within 5 seconds:
   - The Accessibility Service MUST NOT consume the key event (returns `false` in `onKeyEvent`).
-  - The Android system MUST receive the key press and minimize the app normally.
+  - The Android system MUST receive the key press and minimize/exit the secondary screen as well, sending the whole app to the background.
   - The app MUST set the `isUserLeaving` state to `true` to hide any active secondary screen presentations cleanly.
-- If the user does not press the Home button again within 5 seconds, the countdown resets, keeping the app open. Any future Home press is treated as a new first press.
+- If the user does not press the Home button again within 5 seconds, the countdown resets. Any subsequent Home press is treated as a new first press.
 
 ---
 
@@ -50,9 +51,11 @@ Physical Home Press (AYN Thor scanCode 102)
           └── YES ──► Check double-press timing
                        │
              Time difference > 5s?
-              ├── YES ──► show Toast, return true (Consume, zero flicker)
+              ├── YES ──► Launch Home Intent on Display.DEFAULT_DISPLAY,
+              │           Show Toast on secondary display context,
+              │           return true (Consume bottom screen event)
               └── NO  ──► AppStateManager.setUserLeaving(true),
-                          return false (System minimizes app)
+                          return false (System minimizes bottom screen)
 ```
 
 ### Key Event Interception Details
