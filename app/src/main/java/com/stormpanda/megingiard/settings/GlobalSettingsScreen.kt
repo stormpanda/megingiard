@@ -232,40 +232,39 @@ fun GlobalSettingsScreen(
                                 context.startActivity(intent, options.toBundle())
                             }
                         ) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .background(
-                                            if (isAccessibilityActive) colors.actionColorSystem else colors.onSurfaceSecondary,
-                                            CircleShape
-                                        )
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = stringResource(R.string.settings_accessibility_status),
                                         color = colors.onSurface,
                                         style = MaterialTheme.typography.titleMedium,
                                     )
-                                    Text(
-                                        text = stringResource(
-                                            if (isAccessibilityActive) R.string.privd_status_running
-                                            else R.string.privd_status_off
-                                        ),
-                                        color = colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = stringResource(R.string.settings_accessibility_status_desc),
-                                        color = colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
+                                    Spacer(Modifier.width(8.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .background(
+                                                if (isAccessibilityActive) colors.actionColorSystem else colors.onSurfaceSecondary,
+                                                CircleShape
+                                            )
                                     )
                                 }
+                                Text(
+                                    text = stringResource(
+                                        if (isAccessibilityActive) R.string.privd_status_running
+                                        else R.string.privd_status_off
+                                    ),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.settings_accessibility_status_desc),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                             }
                             if (!isAccessibilityActive) {
                                 IconButton(
