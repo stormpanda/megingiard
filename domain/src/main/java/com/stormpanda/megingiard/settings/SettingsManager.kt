@@ -108,6 +108,9 @@ object SettingsManager {
     private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
     val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
 
+    private val _blockHomeMinimization = MutableStateFlow(false)
+    val blockHomeMinimization: StateFlow<Boolean> = _blockHomeMinimization.asStateFlow()
+
     fun init(context: Context) {
         if (initialized) return
         initialized = true
@@ -166,6 +169,7 @@ object SettingsManager {
                     _appLanguage.value = AppLanguage.entries.firstOrNull { it.name == prefs[KEY_APP_LANGUAGE] } ?: AppLanguage.SYSTEM
                     _logLevel.value = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] } ?: AppLog.Level.WARN
                     AppLog.level = _logLevel.value
+                    _blockHomeMinimization.value = prefs[KEY_BLOCK_HOME_MINIMIZATION] ?: false
                     BackgroundSettings.loadFrom(prefs)
                     MacroPadSettings.loadFrom(prefs)
 
@@ -273,6 +277,16 @@ object SettingsManager {
         _logLevel.value = value
         AppLog.level = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_LOG_LEVEL] = value.name } }
+    }
+
+    fun setBlockHomeMinimization(value: Boolean) {
+        AppLog.d(TAG, "setBlockHomeMinimization($value)")
+        _blockHomeMinimization.value = value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_BLOCK_HOME_MINIMIZATION] = value
+            }
+        }
     }
 
     // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].

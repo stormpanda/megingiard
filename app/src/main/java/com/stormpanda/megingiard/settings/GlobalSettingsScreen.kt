@@ -89,6 +89,7 @@ fun GlobalSettingsScreen(
     val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
+    val blockHomeMinimization by viewModel.blockHomeMinimization.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
@@ -220,6 +221,13 @@ fun GlobalSettingsScreen(
                             description = stringResource(R.string.settings_auto_switch_profiles_desc),
                             checked = autoSwitchProfiles,
                             onCheckedChange = { viewModel.setAutoSwitchProfiles(it) },
+                        )
+                        AppDivider()
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_block_home_minimization),
+                            description = stringResource(R.string.settings_block_home_minimization_desc),
+                            checked = blockHomeMinimization,
+                            onCheckedChange = { viewModel.setBlockHomeMinimization(it) },
                         )
                         AppDivider()
                         AppSettingsRow(

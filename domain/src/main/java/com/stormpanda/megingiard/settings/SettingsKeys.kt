@@ -24,6 +24,7 @@ internal val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
 internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 internal val KEY_SHOW_MIRROR_CONTROL_LABELS = booleanPreferencesKey("show_mirror_control_labels")
 internal val KEY_SHOW_FULLSCREEN_EXIT_HINTS = booleanPreferencesKey("show_fullscreen_exit_hints")
+internal val KEY_BLOCK_HOME_MINIMIZATION = booleanPreferencesKey("block_home_minimization")
 
 // Mirror touch projection settings
 internal val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
@@ -103,7 +104,7 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_THEME_MODE,
     KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
     KEY_SHOW_MIRROR_CONTROL_LABELS, KEY_SHOW_FULLSCREEN_EXIT_HINTS,
-    KEY_AUTO_SWITCH_PROFILES,
+    KEY_AUTO_SWITCH_PROFILES, KEY_BLOCK_HOME_MINIMIZATION,
 )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,

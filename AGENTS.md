@@ -34,6 +34,7 @@
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
+| `docs/features/home-interception/FEATURE.md` | Home Interception — physical Home button double-press block to stay open                 |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
 | `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
 | `docs/features/macropad/FEATURE.md`        | MacroPad — profiles, layouts, and custom macro triggers & execution                      |

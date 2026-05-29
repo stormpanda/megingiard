@@ -48,6 +48,9 @@
     <string name="settings_mirror_auto_start_desc">Wenn aktiviert, wird die Spiegelung beim App-Start und beim Layout-Wechsel automatisch fortgesetzt für Layouts, in denen sie zuletzt aktiv war</string>
     <string name="settings_auto_switch_profiles">Profile autom. wechseln</string>
     <string name="settings_auto_switch_profiles_desc">Automatisches Wechseln des MacroPad-Profils, wenn eine verknüpfte App auf dem Hauptbildschirm gestartet wird</string>
+    <string name="settings_block_home_minimization">Minimierung per Home-Taste blockieren</string>
+    <string name="settings_block_home_minimization_desc">Erfordert zweimaliges Drücken der Home-Taste innerhalb von 5 Sekunden zum Verlassen der App</string>
+    <string name="home_press_again_to_exit">Drücke die Home-Taste erneut innerhalb von 5 Sekunden zum Beenden</string>
     <string name="settings_accessibility_status">Bedienungshilfen-Dienst</string>
     <string name="settings_accessibility_status_active">Aktiv</string>
     <string name="settings_accessibility_status_inactive">Inaktiv (Tippen zum Aktivieren)</string>

@@ -51,6 +51,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
+    val blockHomeMinimization: StateFlow<Boolean> = SettingsManager.blockHomeMinimization
 
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
@@ -74,6 +75,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)
     fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
+    fun setBlockHomeMinimization(value: Boolean) = SettingsManager.setBlockHomeMinimization(value)
 
     // Privileged Mode actions
     /**
