@@ -81,7 +81,7 @@
 
 ---
 
-## 3 Checklist for Every Change (Elevated for AI Attention)
+## 3 Checklist for Every Change
 
 > **Compilation policy:** The agent is encouraged to run `./gradlew compileDebugKotlin` or `./gradlew :app:assembleDebug` to verify compile safety before presenting changes to the human operator.
 
@@ -148,7 +148,7 @@ Before marking a task as done, verify:
 
 ---
 
-## 4 Commit Message Proposal (Elevated for AI Attention)
+## 4 Commit Message Proposal
 
 After completing every set of changes, you MUST propose a ready-to-use commit message. Use Conventional Commits format:
 
@@ -168,7 +168,7 @@ The proposal must be copy-paste ready — no placeholders. You must present it a
 
 ---
 
-## 5 Documentation Sync After Changes (Elevated for AI Attention)
+## 5 Documentation Sync After Changes
 
 After implementing any change that affects a feature’s behaviour, interface, or architecture:
 
