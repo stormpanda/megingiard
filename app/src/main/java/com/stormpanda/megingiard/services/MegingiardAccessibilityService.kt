@@ -1,10 +1,8 @@
 package com.stormpanda.megingiard.services
 
 import android.accessibilityservice.AccessibilityService
-import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
@@ -17,6 +15,7 @@ import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.dispatch.DisplayActionDispatcher
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
 
@@ -50,18 +49,13 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     shouldConsumeCurrentPress = true
                     AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected: sending primary screen to Home, keeping secondary screen open")
 
-                    // Send ONLY the primary display to Home
+                    // Send ONLY the primary display to Home using targeted display dispatch
                     try {
-                        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                            addCategory(Intent.CATEGORY_HOME)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        val options = ActivityOptions.makeBasic().apply {
-                            launchDisplayId = Display.DEFAULT_DISPLAY
-                        }
-                        startActivity(homeIntent, options.toBundle())
+                        DisplayActionDispatcher.dispatchActionOnDisplay(this, Display.DEFAULT_DISPLAY, action = {
+                            performGlobalAction(GLOBAL_ACTION_HOME)
+                        })
                     } catch (e: Exception) {
-                        AppLog.e(TAG, "onKeyEvent → failed to launch home intent on primary screen", e)
+                        AppLog.e(TAG, "onKeyEvent → failed to launch home intent on primary screen via DisplayActionDispatcher", e)
                     }
 
                     // Show Toast reminder specifically on the secondary display (run on main looper)

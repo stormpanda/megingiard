@@ -47,6 +47,12 @@
             android:excludeFromRecents="true"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
+        <activity
+            android:name=".dispatch.DisplayActionDispatcherActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
+
         <service
             android:name=".mirror.ScreenCaptureService"
             android:foregroundServiceType="mediaProjection|connectedDevice"

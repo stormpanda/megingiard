@@ -71,6 +71,8 @@ When these flags are present, the AOSP framework forwards hardware button presse
 | File | Responsibility |
 | --- | --- |
 | `MegingiardAccessibilityService.kt` | Intercepts hardware scan code 102, implements double-press timing logic, displays Toast, and controls event consumption. |
+| `DisplayActionDispatcherActivity.kt` | Translucent, non-recents Activity that temporarily launches on a target display, acquires input focus, executes a callback task, and closes. |
+| `DisplayActionDispatcher.kt` | Coordinator utility that queues display-targeted action task callbacks and triggers `DisplayActionDispatcherActivity`. |
 | `SettingsKeys.kt` | Declares the DataStore preference key `KEY_BLOCK_HOME_MINIMIZATION` and adds it to `GLOBAL_KEYS`. |
 | `SettingsManager.kt` | Manages the StateFlow pipeline and persistence of the setting. |
 | `GlobalSettingsViewModel.kt` | Decouples the UI layer by exposing the setting state and setter. |
