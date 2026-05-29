@@ -46,7 +46,7 @@
     <string name="settings_accessibility_status">Accessibility Service</string>
     <string name="settings_accessibility_status_active">Active</string>
     <string name="settings_accessibility_status_inactive">Inactive (Tap to enable)</string>
-    <string name="settings_accessibility_status_desc">Required to detect the foreground application and switch profiles automatically</string>
+    <string name="settings_accessibility_status_desc">Lets Megingiard for example know which app is currently running so that it can automatically switch the profile.</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
@@ -167,6 +167,7 @@ Open Settings to create a layout.</string>
     <string name="profile_settings_no_apps">No applications found</string>
     <string name="profile_settings_app_assigned">(assigned)</string>
     <string name="profile_settings_loading_apps">Loading apps…</string>
+    <string name="profile_settings_accessibility_required">Accessibility service must be activated in Global Settings</string>
 
     <!-- MacroPad icon picker -->
     <string name="macropad_icon_picker_title">Select Icon</string>

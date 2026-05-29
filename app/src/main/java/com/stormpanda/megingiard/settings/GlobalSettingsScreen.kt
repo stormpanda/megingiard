@@ -5,13 +5,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -30,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import android.content.Intent
 import android.provider.Settings
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.DisposableEffect
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 
@@ -47,6 +59,7 @@ import com.stormpanda.megingiard.privd.DeadzoneDialog
 import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
@@ -207,20 +220,70 @@ fun GlobalSettingsScreen(
                             onCheckedChange = { viewModel.setAutoSwitchProfiles(it) },
                         )
                         AppDivider()
-                        ConfigActionRow(
-                            label = stringResource(R.string.settings_accessibility_status),
-                            description = stringResource(
-                                if (isAccessibilityActive) R.string.settings_accessibility_status_active
-                                else R.string.settings_accessibility_status_inactive
-                            ),
-                            accentColor = if (isAccessibilityActive) Color(0xFF4CAF50) else colors.error,
+                        AppSettingsRow(
                             onClick = {
-                                if (!isAccessibilityActive) {
-                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                    context.startActivity(intent)
+                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                context.startActivity(intent)
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .background(
+                                            if (isAccessibilityActive) colors.actionColorSystem else colors.onSurfaceSecondary,
+                                            CircleShape
+                                        )
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.settings_accessibility_status),
+                                        color = colors.onSurface,
+                                        style = MaterialTheme.typography.titleMedium,
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            if (isAccessibilityActive) R.string.privd_status_running
+                                            else R.string.privd_status_off
+                                        ),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.settings_accessibility_status_desc),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
                                 }
                             }
-                        )
+                            if (!isAccessibilityActive) {
+                                IconButton(
+                                    onClick = {
+                                        isAccessibilityActive = viewModel.checkAccessibilityActive(context)
+                                        AppLog.d(TAG, "Manual refresh: Accessibility active = $isAccessibilityActive")
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Refresh,
+                                        contentDescription = "Refresh status",
+                                        tint = colors.onSurfaceSecondary
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                contentDescription = null,
+                                tint = effectiveAccent,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                         AppDivider()
                         LanguagePickerRow(
                             language = appLanguage,

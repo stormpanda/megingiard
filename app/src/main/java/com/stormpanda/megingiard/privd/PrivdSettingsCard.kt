@@ -342,7 +342,7 @@ internal fun PrivdSettingsCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                 contentDescription = null,
-                tint = colors.onSurfaceSecondary,
+                tint = colors.accent,
                 modifier = Modifier.size(PR_ARROW_ICON_SIZE),
             )
         }

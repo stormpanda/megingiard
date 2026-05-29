@@ -147,23 +147,6 @@ class GlobalSettingsViewModel : ViewModel() {
      * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
      */
     fun checkAccessibilityActive(context: Context): Boolean {
-        val expectedComponentName = ComponentName(
-            context.applicationContext,
-            MegingiardAccessibilityService::class.java
-        )
-        val enabledServices = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        val splitter = TextUtils.SimpleStringSplitter(':')
-        splitter.setString(enabledServices)
-        while (splitter.hasNext()) {
-            val enabledService = splitter.next()
-            val component = ComponentName.unflattenFromString(enabledService)
-            if (component != null && component == expectedComponentName) {
-                return true
-            }
-        }
-        return false
+        return MegingiardAccessibilityService.isEnabled(context)
     }
 }

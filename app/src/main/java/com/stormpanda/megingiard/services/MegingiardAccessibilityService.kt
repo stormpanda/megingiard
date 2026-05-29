@@ -1,6 +1,10 @@
 package com.stormpanda.megingiard.services
 
 import android.accessibilityservice.AccessibilityService
+import android.content.ComponentName
+import android.content.Context
+import android.provider.Settings
+import android.text.TextUtils
 import android.view.accessibility.AccessibilityEvent
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
@@ -38,5 +42,31 @@ class MegingiardAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: Accessibility Service destroyed")
+    }
+
+    companion object {
+        /**
+         * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
+         */
+        fun isEnabled(context: Context): Boolean {
+            val expectedComponentName = ComponentName(
+                context.applicationContext,
+                MegingiardAccessibilityService::class.java
+            )
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+            val splitter = TextUtils.SimpleStringSplitter(':')
+            splitter.setString(enabledServices)
+            while (splitter.hasNext()) {
+                val enabledService = splitter.next()
+                val component = ComponentName.unflattenFromString(enabledService)
+                if (component != null && component == expectedComponentName) {
+                    return true
+                }
+            }
+            return false
+        }
     }
 }

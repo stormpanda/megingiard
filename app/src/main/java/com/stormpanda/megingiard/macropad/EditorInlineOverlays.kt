@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -188,6 +189,7 @@ internal fun InlineProfileSettingsOverlay(
     val hasError = normalizedName.isEmpty() || isDuplicate
     val colors = LocalAppColors.current
     val context = LocalContext.current
+    val isAccessibilityActive = remember(context) { MegingiardAccessibilityService.isEnabled(context) }
 
     var appsList by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var isLoadingApps by remember { mutableStateOf(false) }
@@ -284,47 +286,56 @@ internal fun InlineProfileSettingsOverlay(
                 )
                 Spacer(Modifier.height(4.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (selectedPackage != null) {
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AppIcon(
-                                packageName = selectedPackage!!,
-                                modifier = Modifier
-                                    .padding(end = 8.dp)
-                                    .size(36.dp)
-                            )
+                if (!isAccessibilityActive) {
+                    Text(
+                        text = stringResource(R.string.profile_settings_accessibility_required),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (selectedPackage != null) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppIcon(
+                                    packageName = selectedPackage!!,
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(36.dp)
+                                )
+                                Text(
+                                    text = selectedAppName,
+                                    color = accentColor,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            TextButton(onClick = { selectedPackage = null }) {
+                                Text(
+                                    text = stringResource(R.string.profile_settings_clear_app),
+                                    color = colors.error
+                                )
+                            }
+                        } else {
                             Text(
-                                text = selectedAppName,
-                                color = accentColor,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
+                                text = stringResource(R.string.macropad_modifier_none),
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
                             )
-                        }
-                        TextButton(onClick = { selectedPackage = null }) {
-                            Text(
-                                text = stringResource(R.string.profile_settings_clear_app),
-                                color = colors.error
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = stringResource(R.string.macropad_modifier_none),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TextButton(onClick = { showAppList = true }) {
-                            Text(
-                                text = stringResource(R.string.profile_settings_select_app),
-                                color = accentColor
-                            )
+                            TextButton(onClick = { showAppList = true }) {
+                                Text(
+                                    text = stringResource(R.string.profile_settings_select_app),
+                                    color = accentColor
+                                )
+                            }
                         }
                     }
                 }
