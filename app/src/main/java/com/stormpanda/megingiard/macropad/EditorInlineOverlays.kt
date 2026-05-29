@@ -51,7 +51,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val TAG = "EditorInlineOverlays"
-private val appIconCache = java.util.concurrent.ConcurrentHashMap<String, ImageBitmap>()
 
 @Composable
 internal fun InlineConfirmDeleteOverlay(
@@ -465,23 +464,17 @@ internal fun AppIcon(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val iconSizePx = remember(density) { with(density) { 36.dp.roundToPx() } }
-    var imageBitmap by remember(packageName) { mutableStateOf<ImageBitmap?>(appIconCache[packageName]) }
+    var imageBitmap by remember(packageName) { mutableStateOf<ImageBitmap?>(null) }
 
     LaunchedEffect(packageName) {
-        if (imageBitmap == null) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val pm = context.packageManager
-                    val iconDrawable = pm.getApplicationIcon(packageName)
-                    val bitmap = getDrawableBitmap(iconDrawable, iconSizePx)
-                    val imgBitmap = bitmap.asImageBitmap()
-                    appIconCache[packageName] = imgBitmap
-                    imageBitmap = imgBitmap
-                } catch (e: Exception) {
-                    // Ignore and fallback
-                }
+        withContext(Dispatchers.IO) {
+            try {
+                val pm = context.packageManager
+                val iconDrawable = pm.getApplicationIcon(packageName)
+                val bitmap = getDrawableBitmap(iconDrawable)
+                imageBitmap = bitmap.asImageBitmap()
+            } catch (e: Exception) {
+                // Ignore and fallback
             }
         }
     }
@@ -502,23 +495,19 @@ internal fun AppIcon(
     }
 }
 
-private fun getDrawableBitmap(drawable: Drawable, targetSizePx: Int): Bitmap {
-    if (drawable is BitmapDrawable && drawable.bitmap != null) {
-        val bmp = drawable.bitmap
-        if (bmp.width <= targetSizePx && bmp.height <= targetSizePx) {
-            return bmp
+private fun getDrawableBitmap(drawable: Drawable): Bitmap {
+    if (drawable is BitmapDrawable) {
+        if (drawable.bitmap != null) {
+            return drawable.bitmap
         }
-        return Bitmap.createScaledBitmap(bmp, targetSizePx, targetSizePx, true)
     }
-    val w = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else targetSizePx
-    val h = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else targetSizePx
-    val scale = kotlin.math.min(targetSizePx.toFloat() / w, targetSizePx.toFloat() / h).coerceAtMost(1.0f)
-    val width = (w * scale).toInt().coerceAtLeast(1)
-    val height = (h * scale).toInt().coerceAtLeast(1)
-
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val bitmap = if (drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
+        Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+    } else {
+        Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+    }
     val canvas = Canvas(bitmap)
-    drawable.setBounds(0, 0, width, height)
+    drawable.setBounds(0, 0, canvas.width, canvas.height)
     drawable.draw(canvas)
     return bitmap
 }
