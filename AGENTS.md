@@ -480,146 +480,41 @@ scope.launch {
 
 ---
 
-## 12 Resource Management
+## 12 Resource & Hardware Lifecycle
 
-### 12.1 Bitmap Handling
-
-- Always recycle Bitmaps when they are no longer needed.
-- Centralize recycle logic in the owning manager (see §7.3).
-
-### 12.2 VirtualDisplay / MediaProjection
-
-- Detach `VirtualDisplay.surface = null` to freeze; reassign to resume.
-  Never recreate the VirtualDisplay to toggle freeze.
-- Use `Presentation.hide()` / `Presentation.show()` for mode switching;
-  never `dismiss()`, which destroys the window permanently.
-- **Exception:** In `Service.onDestroy()` (full teardown), calling `dismiss()`
-  is correct — the process is being destroyed anyway. The `hide()` vs `dismiss()`
-  rule only applies to in-session mode switching.
-- **Teardown order in `onDestroy()`:** Cancel the coroutine scope _before_ releasing hardware resources and calling `dismiss()`. This prevents in-flight coroutines from racing against resource deallocation:
+### 12.1 Teardown Order in Services & Presentations
+- **Cancel Scopes First:** In `onDestroy()` or cleanup callbacks, always cancel the coroutine scope _before_ releasing hardware handles or dismissing windows. This ensures in-flight async tasks do not race against resource deallocation or throw illegal state exceptions.
+- **Teardown Sequence:**
   ```kotlin
   override fun onDestroy() {
       super.onDestroy()
-      scope.cancel()          // 1. stop all coroutines
-      virtualDisplay?.release() // 2. release hardware
+      scope.cancel()          // 1. Stop all async tasks first
+      virtualDisplay?.release() // 2. Release hardware handles
       mediaProjection?.stop()
-      mirrorPresentation?.dismiss() // 3. destroy window
+      mirrorPresentation?.dismiss() // 3. Tear down presentation windows
   }
   ```
 
-### 12.3 SurfaceView Layer Order
+### 12.2 Multi-Display Activity Launching
+- When starting any `Activity` intended for the primary handheld screen (e.g., global settings, Privileged Mode setup, or media consent prompts) from a secondary-screen context, you **must** explicitly configure `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`. 
+- By default, Android activity launches inherit the display ID of the invoking context, which would cause primary-screen activities to open incorrectly on the secondary display.
+  ```kotlin
+  val options = ActivityOptions.makeBasic().apply {
+      launchDisplayId = Display.DEFAULT_DISPLAY
+  }
+  startActivity(intent, options.toBundle())
+  ```
 
-- The `SurfaceView` that receives the `VirtualDisplay` output **must** call
-  `setZOrderMediaOverlay(true)`. Without it, the hardware buffer renders behind
-  the window background, producing a black screen.
-- The `ComposeView` overlay is then layered on top of the `SurfaceView` by
-  standard `FrameLayout` z-ordering.
+### 12.3 Window Presentation Lifecycle
+- **Toggle Visibility, Preserve Resources:** Use `Presentation.hide()` and `Presentation.show()` for mode switching during an active session to temporarily hide overlay windows without destroying their backing resources.
+- Only invoke `Presentation.dismiss()` in `onDestroy()` or deep service teardowns, as it permanently destroys the window context and backing lifecycle.
+- **Z-Order Layering:** Any `SurfaceView` receiving hardware rendering streams (e.g., `VirtualDisplay` outputs) **must** call `setZOrderMediaOverlay(true)` to ensure that Android's Hardware Composer layers it correctly on top of window backgrounds instead of rendering it behind them.
 
-### 12.4 Foreground Service
-
-- Use `START_NOT_STICKY` as the return value in `onStartCommand()`.
-  The service must not be auto-restarted by the system after being killed —
-  re-acquiring `MediaProjection` requires a fresh user consent.
-- Always call `startForeground()` / `startForegroundNotification()` before any
-  `MediaProjection` work starts to avoid ANR on API 29+.
-
-### 12.5 Multi-Display Activity Launching
-
-- When launching an `Activity` that must appear on the primary screen
-  (e.g. `CaptureRequestActivity`), use `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`.
-  Without this, the activity inherits the display of the calling context,
-  which on the AYN Thor is the secondary display.
-
-```kotlin
-val options = ActivityOptions.makeBasic()
-options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-startActivity(intent, options.toBundle())
-```
-
-### 12.5a CaptureRequestActivity — mandatory `configChanges`
-
-`CaptureRequestActivity` **must** declare `android:configChanges` for keyboard-related
-events in `AndroidManifest.xml`:
-
-```xml
-android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
-```
-
-**Why:** `MacroPadViewModel.watchInjectorLifecycle()` stops all injectors (including
-`KeyInjector`) when any modal screen opens, and restarts them when all modals are
-closed. `KeyInjector` registers and unregisters a virtual keyboard device via
-`/dev/uinput`. Adding or removing this device triggers a `keyboard`/`keyboardHidden`
-configuration change in Android. Without `configChanges`, `CaptureRequestActivity`
-would be **recreated** by this config change while the MediaProjection system dialog
-is open — which breaks the `ActivityResult` contract and delivers an immediate
-`RESULT_CANCELED`, closing the consent dialog before the user can interact with it.
-On AYN Thor OEM firmware the same config change also causes the app window to lose
-focus (visible as the app being minimized).
-
-### 12.6 MirrorPresentationLifecycleOwner — Setup & Teardown
-
-**Setup:** After creating the `MirrorPresentationLifecycleOwner`, inject it into the Presentation's DecorView _before_ setting any `ComposeView` content:
-
-```kotlin
-window?.decorView?.apply {
-    setViewTreeLifecycleOwner(lifecycleOwner)
-    setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-    setViewTreeViewModelStoreOwner(lifecycleOwner)
-}
-```
-
-Without this, Compose cannot find a lifecycle owner / ViewModel store and throws at runtime.
-
-**Teardown:** `MirrorPresentationLifecycleOwner.destroy()` **must** be called in the
-Presentation's `setOnDismissListener`. It fires the `ON_DESTROY` lifecycle
-event that cleans up all Compose state registered against the owner and clears the `ViewModelStore`.
-
-```kotlin
-setOnDismissListener {
-    scope.cancel()
-    lifecycleOwner.destroy()
-}
-```
-
-### 12.7 Native Touch Injection (Touchpad & Mirror Touch Projection)
-
-- `ShellInputInjector` manages the lifecycle of the `touchinjector_arm64`
-  native helper binary (bundled in `assets/`). On `start()`, the binary is
-  copied to `filesDir`, made executable, and launched via `ProcessBuilder`.
-  It opens `/dev/input/event6` once and stays alive for the session.
-- The binary is driven via **stdin** (`"D x y\n"` / `"M x y\n"` / `"U x y\n"`)
-  and signals readiness with `"R\n"` on stdout. A dedicated writer thread
-  coalesces pending MOVE events (keep-latest) to prevent backlog.
-- `TouchInjector.injectTouch()` converts normalised Compose coordinates to
-  the sensor's physical portrait space:
-  `sensor_x = (1 − normalizedY) * 1080`, `sensor_y = normalizedX * 1920`.
-- `ShellInputInjector.stop()` **must** be called when leaving fullscreen mouse mode.
-  In `FullscreenMouseOverlay` this is done via `DisposableEffect(Unit) { onDispose { TouchInjector.stop() } }`.
-- The device node `/dev/input/event6` is `crw-rw-rw-` on the AYN Thor —
-  no root or special permission required beyond the standard shell UID (2000).
-  See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
-
-### 12.8 Native Key Injection (Keyboard)
-
-- `ShellKeyInjector` manages the lifecycle of the `keyinjector_arm64`
-  native helper binary (bundled in `assets/`). On `start()`, the binary is
-  copied to `filesDir`, made executable, and launched via `ProcessBuilder`.
-  It opens `/dev/uinput` once and stays alive for the keyboard session.
-- The binary is driven via **stdin** (`"KD <keycode>\n"` / `"KU <keycode>\n"`)
-  and signals readiness with `"R\n"` on stdout. A dedicated writer thread
-  delivers all events **in order** — unlike touch injection, no MOVE coalescing
-  is applied (every key-down and key-up must be preserved).
-- `KeyInjector.stop()` **must** be called when leaving `KEYBOARD` mode.
-  In `KeyboardScreen` this is done via `DisposableEffect(Unit) { onDispose { KeyInjector.stop() } }`.
-- The device node `/dev/uinput` is accessible under the standard shell UID (2000) on the AYN Thor —
-  no root or special permission required.
-  See `docs/BUILD_NATIVE.md` for the full build and protocol specification.
-- **Keycode registration range: 1–255 only.** The binary registers `UI_SET_KEYBIT` for codes 1–255.
-  Codes 256+ are BTN\_ device buttons (mouse, gamepad, stylus). Registering `BTN_TOOL_PEN` (0x140 = 320)
-  causes Android's `EventHub` to classify the device as `EXTERNAL_STYLUS` instead of `KEYBOARD`;
-  an `EXTERNAL_STYLUS` device has no `KeyboardInputMapper`, so EV_KEY events are silently ignored by
-  Android's input pipeline. All keyboard keycodes used by the app are ≤ 125. `ShellKeyInjector.injectKey()`
-  enforces the matching 1..255 guard.
+### 12.4 Feature-Specific Architectures & Protocols
+For feature-specific, low-level technical configurations, do **not** add ad-hoc rules to this document. Instead, consult the dedicated `FEATURE.md` files which serve as the canonical technical specifications:
+- **Screen Capture & Mirroring Server:** See [docs/features/mirror/FEATURE.md](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/docs/features/mirror/FEATURE.md) for detail on privileged socket controls, `app_process` dex servers, and generation race-guards.
+- **Native Key Injection & uinput:** See [docs/features/keyboard/FEATURE.md](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/docs/features/keyboard/FEATURE.md) for the stdin commands (`KD`/`KU`), event classification filters, and the `1..255` keyboard keycode limits.
+- **Native Touch Injection & evdev:** See [docs/features/touchpad/FEATURE.md](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/docs/features/touchpad/FEATURE.md) for touchscreen event nodes (`/dev/input/event6`), absolute coordinate landscape-inversion math, and relative touch-move coalescing queues.
 
 ---
 
