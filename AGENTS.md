@@ -108,7 +108,7 @@
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
 > 3. **Run all tests** via `./gradlew :core:test :domain:test` and report the result.
->    This is the **only** Gradle command the agent is permitted to run.
+>    This, along with sandbox compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
 >
@@ -143,7 +143,7 @@ Before marking a task as done, verify:
 - [ ] No suspected compile errors (verified via static analysis or build compiles)
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (only permitted Gradle command)
+- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
 
 ---
@@ -513,9 +513,9 @@ scope.launch {
 
 ### 12.4 Feature-Specific Architectures & Protocols
 For feature-specific, low-level technical configurations, do **not** add ad-hoc rules to this document. Instead, consult the dedicated `FEATURE.md` files which serve as the canonical technical specifications:
-- **Screen Capture & Mirroring Server:** See [docs/features/mirror/FEATURE.md](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/docs/features/mirror/FEATURE.md) for detail on privileged socket controls, `app_process` dex servers, and generation race-guards.
-- **Native Key Injection & uinput:** See [docs/features/keyboard/FEATURE.md](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/docs/features/keyboard/FEATURE.md) for the stdin commands (`KD`/`KU`), event classification filters, and the `1..255` keyboard keycode limits.
-- **Native Touch Injection & evdev:** See [docs/features/touchpad/FEATURE.md](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/docs/features/touchpad/FEATURE.md) for touchscreen event nodes (`/dev/input/event6`), absolute coordinate landscape-inversion math, and relative touch-move coalescing queues.
+- **Screen Capture & Mirroring Server:** See [docs/features/mirror/FEATURE.md](docs/features/mirror/FEATURE.md) for detail on privileged socket controls, `app_process` dex servers, and generation race-guards.
+- **Native Key Injection & uinput:** See [docs/features/keyboard/FEATURE.md](docs/features/keyboard/FEATURE.md) for the stdin commands (`KD`/`KU`), event classification filters, and the `1..255` keyboard keycode limits.
+- **Native Touch Injection & evdev:** See [docs/features/touchpad/FEATURE.md](docs/features/touchpad/FEATURE.md) for touchscreen event nodes (`/dev/input/event6`), absolute coordinate landscape-inversion math, and relative touch-move coalescing queues.
 
 ---
 

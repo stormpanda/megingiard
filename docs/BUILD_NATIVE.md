@@ -24,7 +24,7 @@ The checked-in asset binaries are part of the trusted runtime surface. Whenever 
 | `app/src/main/cpp/gamepadinjector.c`  | `app/src/main/assets/gamepadinjector_arm64`  | `./build_gamepadinjector.sh`                                                                                                                          |
 | `app/src/main/cpp/megingiard_privd.c` | `app/src/main/assets/megingiard_privd_arm64` | `./build_megingiard_privd.sh`                                                                                                                         |
 
-The agent workflow in [AGENTS.md](../AGENTS.md#15-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding. If a source file has no dedicated script yet, use the manual compile command documented in that binary's section and record the gap as follow-up work.
+The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding. If a source file has no dedicated script yet, use the manual compile command documented in that binary's section and record the gap as follow-up work.
 
 ---
 
