@@ -28,9 +28,10 @@
 | `LICENSE`                                  | Megingiard Source-Available License (Version 1.0)                                        |
 | `CONTRIBUTING.md`                          | Contribution guidelines, codebase standards, and licensing compliance                    |
 | `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
-| `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
-| `docs/MANUAL_VERIFICATION.md`               | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
+| `docs/BUILD_NATIVE.md`                     | Build setup, instructions, and protocol specifications for native C binaries             |
+| `docs/MANUAL_VERIFICATION.md`              | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
+| `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
@@ -46,8 +47,8 @@
 > **Documentation language: English only.**
 >
 > All documentation files in this repository (`*.md` under `docs/`, `AGENTS.md`,
-> `README.md`, `FEATURE.md` files, `BACKLOG.md`, etc.) MUST be written in **English**.
-> Every file — including new `FEATURE.md` files, architecture notes, and the feature backlog — must be written and maintained in
+> `README.md`, `FEATURE.md` files, etc.) MUST be written in **English**.
+> Every file — including new `FEATURE.md` files, and architecture notes — must be written and maintained in
 > English so that all AI agents can process them without ambiguity.
 
 > [!IMPORTANT]
