@@ -111,7 +111,7 @@ gh api graphql \
 - Keep changes minimal and targeted to requested review items; avoid unrelated refactors.
 - End by proposing a commit message only; do not auto-commit.
 
-## Mandatory Completion Checklist (from `AGENTS.md §15`)
+## Mandatory Completion Checklist (from `AGENTS.md §3`)
 
 Before marking the task done, verify:
 
@@ -127,4 +127,4 @@ Before marking the task done, verify:
 - [ ] No suspected compile errors (verified by static analysis)
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (only permitted Gradle command)
+- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)

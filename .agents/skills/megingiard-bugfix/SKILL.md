@@ -91,7 +91,7 @@ Navigate from the hypothesis to the relevant files:
 
 - Search for the affected class/function using semantic search or grep
 - Read the relevant source files (ViewModel, Manager, Composable, Service)
-- Respect the module structure from `AGENTS.md §3`:
+- Respect the module structure from `AGENTS.md §6`:
   - State singletons → `:domain`
   - Composables / ViewModels → `:app`
   - Data models → `:core`
@@ -120,7 +120,7 @@ Apply the correction directly in the code. Follow `AGENTS.md` strictly:
 - Only the necessary change — no opportunistic refactoring
 - No new magic numbers — extract to `private const val`
 - Logging via `AppLog` (never `android.util.Log`)
-- No new code without a `TAG` constant and the mandatory log coverage (§5.4)
+- No new code without a `TAG` constant and the mandatory log coverage (§8.4)
 - Correct import statements — no FQN references in the function body
 
 ---
