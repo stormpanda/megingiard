@@ -115,4 +115,47 @@ class MacroPadStateTest {
         // Then it resolves active ID to the first profile's ID
         assertEquals(profileId1, MacroPadState.activeProfileId.value)
     }
+
+    @Test
+    fun `renameProfile updates name and package mapping`() {
+        val p1Id = UUID.randomUUID().toString()
+        val p1 = PadProfile(id = p1Id, name = "P1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        MacroPadState.renameProfile(p1Id, "New Name", "com.example.app")
+
+        val profile = MacroPadState.profiles.value.first()
+        assertEquals("New Name", profile.name)
+        assertEquals("com.example.app", profile.associatedPackage)
+    }
+
+    @Test
+    fun `renameProfile normalizes blank names and resolves duplicates`() {
+        val p1Id = UUID.randomUUID().toString()
+        val p2Id = UUID.randomUUID().toString()
+        val p1 = PadProfile(
+            id = p1Id,
+            name = "Retro",
+            layouts = listOf(PadLayout(id = "l1", name = "L1")),
+            activeLayoutId = "l1",
+            associatedPackage = "com.retroarch"
+        )
+        val p2 = PadProfile(
+            id = p2Id,
+            name = "Citra",
+            layouts = listOf(PadLayout(id = "l2", name = "L2")),
+            activeLayoutId = "l2"
+        )
+        MacroPadState.loadFrom(listOf(p1, p2), p1Id)
+
+        // Try to rename Retro to blank string -> should fallback to 'Profile' and preserve package
+        MacroPadState.renameProfile(p1Id, "   ")
+        val p1Profile = MacroPadState.profiles.value.first { it.id == p1Id }
+        assertEquals("Profile", p1Profile.name)
+        assertEquals("com.retroarch", p1Profile.associatedPackage)
+
+        // Try to rename Retro (now Profile) to "Citra" (which already exists) -> should resolve to "Citra (2)"
+        MacroPadState.renameProfile(p1Id, "Citra")
+        assertEquals("Citra (2)", MacroPadState.profiles.value.first { it.id == p1Id }.name)
+    }
 }

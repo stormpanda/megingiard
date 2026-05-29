@@ -105,7 +105,7 @@ internal fun PrivdSettingsCard(
             .padding(PR_CARD_PADDING),
     ) {
         // ── Status row ──────────────────────────────────────────────────────
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column {
             val (dotColor, label) = when (state) {
                 PrivdState.OFF           -> colors.onSurfaceSecondary to stringResource(R.string.privd_status_off)
                 PrivdState.BOOTSTRAPPING -> colors.accent             to stringResource(R.string.privd_status_bootstrapping)
@@ -113,24 +113,24 @@ internal fun PrivdSettingsCard(
                 PrivdState.RUNNING       -> colors.actionColorSystem  to stringResource(R.string.privd_status_running)
                 PrivdState.FAILED        -> colors.error              to stringResource(R.string.privd_status_failed)
             }
-            Box(
-                modifier = Modifier
-                    .size(PR_STATUS_DOT_SIZE)
-                    .background(dotColor, CircleShape),
-            )
-            Spacer(Modifier.size(PR_STATUS_DOT_GAP))
-            Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.privd_title),
                     color = colors.onSurface,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Text(
-                    text = label,
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
+                Spacer(Modifier.width(PR_STATUS_DOT_GAP))
+                Box(
+                    modifier = Modifier
+                        .size(PR_STATUS_DOT_SIZE)
+                        .background(dotColor, CircleShape),
                 )
             }
+            Text(
+                text = label,
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
         Spacer(Modifier.height(PR_BUTTON_GAP))
         Text(
@@ -342,7 +342,7 @@ internal fun PrivdSettingsCard(
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
                 contentDescription = null,
-                tint = colors.onSurfaceSecondary,
+                tint = colors.accent,
                 modifier = Modifier.size(PR_ARROW_ICON_SIZE),
             )
         }

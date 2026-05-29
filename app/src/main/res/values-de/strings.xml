@@ -46,6 +46,12 @@
     <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
     <string name="settings_mirror_auto_start">Spiegelung automatisch starten</string>
     <string name="settings_mirror_auto_start_desc">Wenn aktiviert, wird die Spiegelung beim App-Start und beim Layout-Wechsel automatisch fortgesetzt für Layouts, in denen sie zuletzt aktiv war</string>
+    <string name="settings_auto_switch_profiles">Profile autom. wechseln</string>
+    <string name="settings_auto_switch_profiles_desc">Automatisches Wechseln des MacroPad-Profils, wenn eine verknüpfte App auf dem Hauptbildschirm gestartet wird</string>
+    <string name="settings_accessibility_status">Bedienungshilfen-Dienst</string>
+    <string name="settings_accessibility_status_active">Aktiv</string>
+    <string name="settings_accessibility_status_inactive">Inaktiv (Tippen zum Aktivieren)</string>
+    <string name="settings_accessibility_status_desc">Ermöglicht es Megingiard beispielsweise zu erkennen, welche App gerade läuft, um das Profil automatisch zu wechseln.</string>
     <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>
@@ -155,6 +161,18 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="cd_layout_enable_toggle">Layout aktivieren/deaktivieren</string>
     <string name="macropad_editor_cancel">Abbrechen</string>
     <string name="macropad_editor_confirm">Löschen</string>
+ 
+    <!-- Profile settings -->
+    <string name="profile_settings_title">Profil-Einstellungen</string>
+    <string name="profile_settings_name">Profilname</string>
+    <string name="profile_settings_app_mapping">App zuweisen</string>
+    <string name="profile_settings_select_app">App wählen…</string>
+    <string name="profile_settings_clear_app">Verknüpfung aufheben</string>
+    <string name="profile_settings_search_apps">Apps suchen…</string>
+    <string name="profile_settings_no_apps">Keine Apps gefunden</string>
+    <string name="profile_settings_app_assigned">(zugewiesen)</string>
+    <string name="profile_settings_loading_apps">Lade Apps…</string>
+    <string name="profile_settings_accessibility_required">Der Bedienungshilfen-Dienst muss in den globalen Einstellungen aktiviert werden</string>
 
     <!-- MacroPad icon picker -->
     <string name="macropad_icon_picker_title">Icon auswählen</string>

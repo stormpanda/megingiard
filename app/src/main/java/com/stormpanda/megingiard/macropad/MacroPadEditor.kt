@@ -301,13 +301,14 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
         // New profile (in-tree input overlay — no Dialog window)
         if (showNewProfileDialog) {
-            InlineNameInputOverlay(
+            InlineProfileSettingsOverlay(
                 title        = stringResource(R.string.settings_macropad_new_profile),
-                initialValue = "",
+                initialName  = "",
+                initialPackage = null,
                 accentColor  = colors.accent,
                 existingNames = profiles.map { it.name },
-                onConfirm    = { name ->
-                    val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name)
+                onConfirm    = { name, pkg ->
+                    val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name, associatedPackage = pkg)
                     MacroPadState.addProfile(newProfile)
                     showNewProfileDialog = false
                 },
@@ -317,13 +318,14 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
         // Rename profile (in-tree input overlay — no Dialog window)
         if (showRenameProfileDialog && profile != null) {
-            InlineNameInputOverlay(
-                title        = stringResource(R.string.macropad_editor_rename),
-                initialValue = profile.name,
+            InlineProfileSettingsOverlay(
+                title        = stringResource(R.string.profile_settings_title),
+                initialName  = profile.name,
+                initialPackage = profile.associatedPackage,
                 accentColor  = colors.accent,
                 existingNames = profiles.filter { it.id != profile.id }.map { it.name },
-                onConfirm    = { name ->
-                    MacroPadState.renameProfile(profile.id, name)
+                onConfirm    = { name, pkg ->
+                    MacroPadState.renameProfile(profile.id, name, pkg)
                     showRenameProfileDialog = false
                 },
                 onDismiss = { showRenameProfileDialog = false },

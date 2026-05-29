@@ -359,4 +359,5 @@ data class PadProfile(
     val enableGamepad: Boolean = false,
     val enableMouse: Boolean = false,
     val isDefault: Boolean = false,
+    val associatedPackage: String? = null,
 )

@@ -19,6 +19,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  */
 
 internal val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
+internal val KEY_AUTO_SWITCH_PROFILES = booleanPreferencesKey("auto_switch_profiles")
 internal val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
 internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 internal val KEY_SHOW_MIRROR_CONTROL_LABELS = booleanPreferencesKey("show_mirror_control_labels")
@@ -102,6 +103,7 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_THEME_MODE,
     KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
     KEY_SHOW_MIRROR_CONTROL_LABELS, KEY_SHOW_FULLSCREEN_EXIT_HINTS,
+    KEY_AUTO_SWITCH_PROFILES,
 )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,

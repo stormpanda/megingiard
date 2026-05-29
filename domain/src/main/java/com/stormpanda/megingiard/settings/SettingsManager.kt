@@ -76,6 +76,9 @@ object SettingsManager {
     private val _autoStartCapture = MutableStateFlow(false)
     val autoStartCapture: StateFlow<Boolean> = _autoStartCapture.asStateFlow()
 
+    private val _autoSwitchProfiles = MutableStateFlow(true)
+    val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
+
     private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
     val accentColor: StateFlow<Int> = _accentColor.asStateFlow()
 
@@ -151,6 +154,7 @@ object SettingsManager {
                     AppLog.i(TAG, "settings loaded from DataStore")
 
                     _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
+                    _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
@@ -194,6 +198,18 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs ->
                 prefs[KEY_AUTO_START_CAPTURE] = value
+            }
+        }
+    }
+
+    fun setAutoSwitchProfiles(value: Boolean) {
+        AppLog.d(TAG, "setAutoSwitchProfiles($value)")
+        _autoSwitchProfiles.value = value
+        scope.launch {
+            if (::dataStore.isInitialized) {
+                dataStore.edit { prefs ->
+                    prefs[KEY_AUTO_SWITCH_PROFILES] = value
+                }
             }
         }
     }

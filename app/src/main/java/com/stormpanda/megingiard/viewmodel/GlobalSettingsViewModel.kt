@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.viewmodel
 
+import android.content.ComponentName
 import android.content.Context
+import android.provider.Settings
+import android.text.TextUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
@@ -18,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 
 import com.stormpanda.megingiard.config.InternalBackup
 
@@ -45,6 +49,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val showMirrorControlLabels: StateFlow<Boolean> = SettingsManager.showMirrorControlLabels
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
+    val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
 
     // Privileged Mode
@@ -67,6 +72,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
     fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)
+    fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
 
     // Privileged Mode actions
@@ -135,5 +141,12 @@ class GlobalSettingsViewModel : ViewModel() {
             if (ok) MacroPadSettings.setPrivdAutoConnect(true)
             onResult(ok)
         }
+    }
+
+    /**
+     * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
+     */
+    fun checkAccessibilityActive(context: Context): Boolean {
+        return MegingiardAccessibilityService.isEnabled(context)
     }
 }
