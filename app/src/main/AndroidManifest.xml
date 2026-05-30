@@ -51,6 +51,8 @@
             android:name=".dispatch.DisplayActionDispatcherActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
         <service
