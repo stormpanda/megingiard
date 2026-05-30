@@ -3,18 +3,20 @@ package com.stormpanda.megingiard.services
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.Context
-import android.provider.Settings
-import android.text.TextUtils
-import android.view.accessibility.AccessibilityEvent
-import android.view.KeyEvent
+import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
+import android.text.TextUtils
+import android.view.Display
+import android.view.KeyEvent
+import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.R
 
 private const val TAG = "MegingiardAccessService"
 
@@ -42,20 +44,47 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 if (currentTime - lastHomePressTime > 5000) {
                     lastHomePressTime = currentTime
                     shouldConsumeCurrentPress = true
-                    AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected, consuming event")
+                    AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected: sending primary screen to Home, keeping secondary screen open")
 
-                    // Show Toast reminder (run on main looper)
+                    // Shift focus to the default display to trigger GLOBAL_ACTION_HOME exclusively on the default display
+                    try {
+                        DisplayFocusActivity.launch(this, Display.DEFAULT_DISPLAY) {
+                            AppLog.i(TAG, "onKeyEvent → focus acquired on default display: triggering GLOBAL_ACTION_HOME")
+                            performGlobalAction(GLOBAL_ACTION_HOME)
+                        }
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "onKeyEvent → failed to launch focus activity on primary screen", e)
+                    }
+
+                    // Show Toast reminder specifically on the secondary display (run on main looper)
                     Handler(Looper.getMainLooper()).post {
-                        Toast.makeText(
-                            applicationContext,
-                            applicationContext.getString(R.string.home_press_again_to_exit),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        try {
+                            val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                            // The secondary screen is any screen that is NOT the default display
+                            val secondaryDisplay = displayManager.displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+                            val contextForToast = if (secondaryDisplay != null) {
+                                createDisplayContext(secondaryDisplay)
+                            } else {
+                                applicationContext
+                            }
+                            Toast.makeText(
+                                contextForToast,
+                                contextForToast.getString(R.string.home_press_again_to_exit),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "onKeyEvent → failed to show Toast on secondary screen, falling back", e)
+                            Toast.makeText(
+                                applicationContext,
+                                applicationContext.getString(R.string.home_press_again_to_exit),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 } else {
                     lastHomePressTime = 0L
                     shouldConsumeCurrentPress = false
-                    AppLog.i(TAG, "onKeyEvent → hardware Home button second press within 5s, passing to system")
+                    AppLog.i(TAG, "onKeyEvent → hardware Home button second press within 5s: minimizing secondary screen")
 
                     // Set user leaving to true so presentations can hide
                     AppStateManager.setUserLeaving(true)
