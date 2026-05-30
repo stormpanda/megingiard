@@ -1,9 +1,13 @@
 package com.stormpanda.megingiard.services
 
 import android.accessibilityservice.AccessibilityService
+import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -15,7 +19,6 @@ import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.dispatch.DisplayActionDispatcher
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
 
@@ -49,13 +52,33 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     shouldConsumeCurrentPress = true
                     AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected: sending primary screen to Home, keeping secondary screen open")
 
-                    // Send ONLY the primary display to Home using targeted display dispatch
+                    // Send ONLY the primary display to Home using an explicit package-targeted Home intent
                     try {
-                        DisplayActionDispatcher.dispatchActionOnDisplay(this, Display.DEFAULT_DISPLAY, action = {
-                            performGlobalAction(GLOBAL_ACTION_HOME)
-                        })
+                        val pm = packageManager
+                        val baseIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                        val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            pm.resolveActivity(baseIntent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
+                        } else {
+                            @Suppress("DEPRECATION")
+                            pm.resolveActivity(baseIntent, PackageManager.MATCH_DEFAULT_ONLY)
+                        }
+                        val launcherPkg = resolveInfo?.activityInfo?.packageName
+                        
+                        if (!launcherPkg.isNullOrBlank()) {
+                            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                                addCategory(Intent.CATEGORY_HOME)
+                                setPackage(launcherPkg)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            val options = ActivityOptions.makeBasic().apply {
+                                launchDisplayId = Display.DEFAULT_DISPLAY
+                            }
+                            startActivity(homeIntent, options.toBundle())
+                        } else {
+                            AppLog.w(TAG, "onKeyEvent → could not resolve default launcher package")
+                        }
                     } catch (e: Exception) {
-                        AppLog.e(TAG, "onKeyEvent → failed to launch home intent on primary screen via DisplayActionDispatcher", e)
+                        AppLog.e(TAG, "onKeyEvent → failed to launch home intent on primary screen", e)
                     }
 
                     // Show Toast reminder specifically on the secondary display (run on main looper)
