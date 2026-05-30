@@ -20,7 +20,7 @@ The Home Interception feature prevents the Megingiard app from minimizing when t
 ### FR-HI2: Flicker-Free Key Interception & Targeted Home Dispatch
 
 - When the feature is enabled and `MegingiardAccessibilityService` is active, the physical Home button press (`scanCode == 102`) MUST be intercepted at the hardware level.
-- On the first press, the Accessibility Service MUST send ONLY the primary display (`Display.DEFAULT_DISPLAY`) to the Home launcher by launching a targeted main home intent.
+- On the first press, the Accessibility Service MUST send ONLY the primary display (`Display.DEFAULT_DISPLAY`) to the Home launcher by briefly launching a transparent `DisplayFocusActivity` to shift focus to the default display and triggering `GLOBAL_ACTION_HOME`.
 - The service MUST consume the key event by returning `true` in `onKeyEvent` to block standard minimization of the secondary display, ensuring the secondary screen (where Megingiard is running) remains fully open and static with absolutely zero visual transition or flicker.
 
 ### FR-HI3: Secondary-Screen Toast & Double-Press Confirmation
@@ -51,7 +51,7 @@ Physical Home Press (AYN Thor scanCode 102)
           └── YES ──► Check double-press timing
                        │
              Time difference > 5s?
-              ├── YES ──► Launch Home Intent on Display.DEFAULT_DISPLAY,
+              ├── YES ──► Launch DisplayFocusActivity on Display.DEFAULT_DISPLAY to trigger GLOBAL_ACTION_HOME,
               │           Show Toast on secondary display context,
               │           return true (Consume bottom screen event)
               └── NO  ──► AppStateManager.setUserLeaving(true),
@@ -70,6 +70,7 @@ When these flags are present, the AOSP framework forwards hardware button presse
 
 | File | Responsibility |
 | --- | --- |
+| `DisplayFocusActivity.kt` | Lightweight transparent activity launched on display 0 to shift focus before triggering the Home action. |
 | `MegingiardAccessibilityService.kt` | Intercepts hardware scan code 102, implements double-press timing logic, displays Toast, and controls event consumption. |
 | `SettingsKeys.kt` | Declares the DataStore preference key `KEY_BLOCK_HOME_MINIMIZATION` and adds it to `GLOBAL_KEYS`. |
 | `SettingsManager.kt` | Manages the StateFlow pipeline and persistence of the setting. |

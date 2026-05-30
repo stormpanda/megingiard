@@ -1,13 +1,9 @@
 package com.stormpanda.megingiard.services
 
 import android.accessibilityservice.AccessibilityService
-import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -38,6 +34,16 @@ class MegingiardAccessibilityService : AccessibilityService() {
     private var lastHomePressTime = 0L
     private var shouldConsumeCurrentPress = false
 
+    override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val packageName = event.packageName?.toString()
+            if (!packageName.isNullOrBlank()) {
+                AppLog.d(TAG, "onAccessibilityEvent: Window state changed, package=$packageName")
+                AutoSwitchCoordinator.onPackageChanged(packageName)
+            }
+        }
+    }
+
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (!SettingsManager.blockHomeMinimization.value) {
             return super.onKeyEvent(event)
@@ -52,33 +58,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     shouldConsumeCurrentPress = true
                     AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected: sending primary screen to Home, keeping secondary screen open")
 
-                    // Send ONLY the primary display to Home using an explicit package-targeted Home intent
+                    // Shift focus to the default display to trigger GLOBAL_ACTION_HOME exclusively on the default display
                     try {
-                        val pm = packageManager
-                        val baseIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-                        val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            pm.resolveActivity(baseIntent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
-                        } else {
-                            @Suppress("DEPRECATION")
-                            pm.resolveActivity(baseIntent, PackageManager.MATCH_DEFAULT_ONLY)
-                        }
-                        val launcherPkg = resolveInfo?.activityInfo?.packageName
-                        
-                        if (!launcherPkg.isNullOrBlank()) {
-                            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                                addCategory(Intent.CATEGORY_HOME)
-                                setPackage(launcherPkg)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            val options = ActivityOptions.makeBasic().apply {
-                                launchDisplayId = Display.DEFAULT_DISPLAY
-                            }
-                            startActivity(homeIntent, options.toBundle())
-                        } else {
-                            AppLog.w(TAG, "onKeyEvent → could not resolve default launcher package")
+                        DisplayFocusActivity.launch(this, Display.DEFAULT_DISPLAY) {
+                            AppLog.i(TAG, "onKeyEvent → focus acquired on default display: triggering GLOBAL_ACTION_HOME")
+                            performGlobalAction(GLOBAL_ACTION_HOME)
                         }
                     } catch (e: Exception) {
-                        AppLog.e(TAG, "onKeyEvent → failed to launch home intent on primary screen", e)
+                        AppLog.e(TAG, "onKeyEvent → failed to launch focus activity on primary screen", e)
                     }
 
                     // Show Toast reminder specifically on the secondary display (run on main looper)
@@ -126,15 +113,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString()
-            if (!packageName.isNullOrBlank()) {
-                AppLog.d(TAG, "onAccessibilityEvent: Window state changed, package=$packageName")
-                AutoSwitchCoordinator.onPackageChanged(packageName)
-            }
-        }
-    }
+
 
     override fun onInterrupt() {
         AppLog.w(TAG, "onInterrupt: Accessibility Service interrupted")

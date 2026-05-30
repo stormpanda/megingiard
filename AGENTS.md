@@ -86,6 +86,8 @@
 
 > **Compilation policy:** The agent is encouraged to run `./gradlew compileDebugKotlin` or `./gradlew :app:assembleDebug` to verify compile safety before presenting changes to the human operator.
 
+> **On-Device Installation policy:** The agent is STRICTLY FORBIDDEN from deploying or installing the application package (e.g., via `./gradlew installDebug`, `adb install`, or other packaging installation methods) directly onto the AYN Thor console device without the user's explicit prior approval.
+
 > **Native binary rebuild policy:** Whenever a native C source file is modified, the
 > agent **must** immediately run the corresponding build script to rebuild the bundled
 > binary. The scripts are at the workspace root:
