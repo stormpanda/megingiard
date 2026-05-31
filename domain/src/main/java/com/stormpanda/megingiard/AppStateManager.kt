@@ -57,6 +57,9 @@ object AppStateManager {
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
+    private val _isHomeInterceptionInFlight = MutableStateFlow(false)
+    val isHomeInterceptionInFlight: StateFlow<Boolean> = _isHomeInterceptionInFlight.asStateFlow()
+
     private val _mirrorAutoStartSuppressedLayoutId = MutableStateFlow<String?>(null)
     val mirrorAutoStartSuppressedLayoutId: StateFlow<String?> = _mirrorAutoStartSuppressedLayoutId.asStateFlow()
 
@@ -108,6 +111,10 @@ object AppStateManager {
     fun setPromptInFlight(inFlight: Boolean) {
         AppLog.d(TAG, "setPromptInFlight($inFlight)")
         _promptInFlight.value = inFlight
+    }
+    fun setHomeInterceptionInFlight(inFlight: Boolean) {
+        AppLog.d(TAG, "setHomeInterceptionInFlight($inFlight)")
+        _isHomeInterceptionInFlight.value = inFlight
     }
 
     fun suppressMirrorAutoStart(layoutId: String) {

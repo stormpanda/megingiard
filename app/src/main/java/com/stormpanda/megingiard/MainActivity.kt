@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.LocaleList
 import android.os.Process
 import android.view.Display
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -51,6 +52,7 @@ import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.security.SignatureGuard
+import com.stormpanda.megingiard.services.TransitionOverlayManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -176,6 +178,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TransitionOverlayManager.registerActivity(this)
 
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
@@ -347,6 +350,25 @@ class MainActivity : ComponentActivity() {
                             AppStateManager.setActivityResumed(true)
                             // Clear the user-leaving flag: the user has returned to the app.
                             AppStateManager.setUserLeaving(false)
+                            // Clear the home interception in-flight state as relaunch is complete
+                            AppStateManager.setHomeInterceptionInFlight(false)
+
+                            // Defer overlay dismissal until the activity's window has fully drawn its first post-resume frame.
+                            // This ensures the transition is completely seamless and zero launcher is visible.
+                            val decorView = window.decorView
+                            val observer = decorView.viewTreeObserver
+                            observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                                override fun onPreDraw(): Boolean {
+                                    if (decorView.viewTreeObserver.isAlive) {
+                                        decorView.viewTreeObserver.removeOnPreDrawListener(this)
+                                    }
+                                    AppLog.i(TAG, "ON_RESUME → first draw frame completed! Dismissing transition overlay.")
+                                    decorView.post {
+                                        TransitionOverlayManager.dismissOverlay()
+                                    }
+                                    return true
+                                }
+                            })
                         }
                         Lifecycle.Event.ON_STOP -> {
                             AppLog.i(TAG, "ON_STOP")
@@ -596,5 +618,10 @@ class MainActivity : ComponentActivity() {
                 ConfigManager.setPendingUri(uri)
             }
         }
+    }
+
+    override fun onDestroy() {
+        TransitionOverlayManager.unregisterActivity()
+        super.onDestroy()
     }
 }

@@ -1,8 +1,10 @@
 package com.stormpanda.megingiard.services
 
 import android.accessibilityservice.AccessibilityService
+import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
@@ -14,11 +16,15 @@ import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.MainActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.settings.SettingsManager
 
 private const val TAG = "MegingiardAccessService"
+private const val HOME_BUTTON_SCAN_CODE = 102
+private const val DOUBLE_PRESS_TIMEOUT_MS = 1000L
+private const val RELAUNCH_DELAY_MS = 200L
 
 /**
  * Event-driven Accessibility Service that monitors foreground window changes
@@ -37,30 +43,66 @@ class MegingiardAccessibilityService : AccessibilityService() {
             return super.onKeyEvent(event)
         }
 
-        val isActualHomeButton = event.scanCode == 102
+        // Intercept home only if Megingiard is active (resumed) AND on the secondary display (valid screen)
+        if (!AppStateManager.isOnValidScreen.value || !AppStateManager.isActivityResumed.value) {
+            return super.onKeyEvent(event)
+        }
+
+        val isActualHomeButton = event.scanCode == HOME_BUTTON_SCAN_CODE
         if (event.keyCode == KeyEvent.KEYCODE_HOME && isActualHomeButton) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val currentTime = System.currentTimeMillis()
-                if (currentTime - lastHomePressTime > 5000) {
+                if (currentTime - lastHomePressTime > DOUBLE_PRESS_TIMEOUT_MS) {
                     lastHomePressTime = currentTime
                     shouldConsumeCurrentPress = true
                     AppLog.i(TAG, "onKeyEvent → hardware Home button first press detected: sending primary screen to Home, keeping secondary screen open")
 
-                    // Shift focus to the default display to trigger GLOBAL_ACTION_HOME exclusively on the default display
-                    try {
-                        DisplayFocusActivity.launch(this, Display.DEFAULT_DISPLAY) {
-                            AppLog.i(TAG, "onKeyEvent → focus acquired on default display: triggering GLOBAL_ACTION_HOME")
-                            performGlobalAction(GLOBAL_ACTION_HOME)
-                        }
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "onKeyEvent → failed to launch focus activity on primary screen", e)
+                    // Capture a snapshot overlay before dispatching Home (if mirroring is NOT active)
+                    TransitionOverlayManager.captureAndShowOverlay(this) {
+                        // Set home interception in flight to prevent presentation overlays from pausing/hiding
+                        AppStateManager.setHomeInterceptionInFlight(true)
+
+                        // Send both screens to Home
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+
+                        // Relaunch Megingiard's MainActivity on the secondary display after a brief settling delay
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            try {
+                                val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                                // The secondary display is any display that is NOT the default display
+                                val secondaryDisplay = displayManager.displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+                                val targetDisplayId = secondaryDisplay?.displayId ?: 4
+
+                                val intent = Intent(this, MainActivity::class.java).apply {
+                                    addFlags(
+                                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                        Intent.FLAG_ACTIVITY_NO_ANIMATION
+                                    )
+                                }
+                                val options = ActivityOptions.makeCustomAnimation(this, 0, 0).apply {
+                                    launchDisplayId = targetDisplayId
+                                }
+                                startActivity(intent, options.toBundle())
+                                AppLog.i(TAG, "onKeyEvent → successfully relaunched Megingiard on display $targetDisplayId")
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "onKeyEvent → failed to relaunch Megingiard on secondary display", e)
+                                AppStateManager.setHomeInterceptionInFlight(false)
+                                TransitionOverlayManager.dismissOverlay()
+                            }
+                        }, RELAUNCH_DELAY_MS)
+
+                        // Safety timeout reset: in case relaunch gets cancelled or MainActivity never resumes
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            AppStateManager.setHomeInterceptionInFlight(false)
+                            TransitionOverlayManager.dismissOverlay()
+                        }, 1000L)
                     }
 
                     // Show Toast reminder specifically on the secondary display (run on main looper)
                     Handler(Looper.getMainLooper()).post {
                         try {
                             val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-                            // The secondary screen is any screen that is NOT the default display
                             val secondaryDisplay = displayManager.displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
                             val contextForToast = if (secondaryDisplay != null) {
                                 createDisplayContext(secondaryDisplay)
@@ -96,6 +138,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return super.onKeyEvent(event)
     }
 
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
@@ -125,7 +168,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
          * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
          */
         fun isEnabled(context: Context): Boolean {
-            val expectedComponentName = ComponentName(
+            val expectedComponentName =
+                ComponentName(
                 context.applicationContext,
                 MegingiardAccessibilityService::class.java
             )

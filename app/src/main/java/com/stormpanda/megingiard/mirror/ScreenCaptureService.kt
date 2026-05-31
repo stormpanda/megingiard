@@ -26,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenCaptureService"
@@ -62,9 +63,14 @@ class ScreenCaptureService : Service() {
         // trigger an indefinite cycle. onUserLeaveHint is NOT called for Presentation
         // coverage, only for genuine user navigation.
         scope.launch {
-            AppStateManager.isUserLeaving.collect { leaving ->
-                AppLog.d(TAG, "isUserLeaving=$leaving → ${if (leaving) "hide" else "show"} presentations")
-                if (leaving) {
+            combine(
+                AppStateManager.isUserLeaving,
+                AppStateManager.isHomeInterceptionInFlight
+            ) { leaving, inFlight ->
+                leaving && !inFlight
+            }.collect { userLeaving ->
+                AppLog.d(TAG, "userLeaving=$userLeaving (leaving=${AppStateManager.isUserLeaving.value}, inFlight=${AppStateManager.isHomeInterceptionInFlight.value}) → ${if (userLeaving) "hide" else "show"} presentations")
+                if (userLeaving) {
                     mirrorPresentation?.hide()
                     recordingPresentation?.hide()
                 } else {
@@ -468,7 +474,7 @@ class ScreenCaptureService : Service() {
         val editorActive = AppStateManager.isEditorActive.value
         val ambientActive = AppStateManager.isBackgroundSettingsActive.value
         val ambientPreviewActive = AppStateManager.isAmbientPreviewActive.value
-        val userLeaving = AppStateManager.isUserLeaving.value
+        val userLeaving = AppStateManager.isUserLeaving.value && !AppStateManager.isHomeInterceptionInFlight.value
         val recordingRequested = TouchRecordingManager.recordingRequested.value
 
         val shouldShow = capturing && validScreen &&

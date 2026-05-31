@@ -553,6 +553,7 @@ class MirrorPresentation(
                 AppStateManager.isAmbientPreviewActive,
                 AppStateManager.isUserLeaving,
                 TouchRecordingManager.recordingRequested,
+                AppStateManager.isHomeInterceptionInFlight,
             ) { values ->
                 val isValid = values[0] as Boolean
                 val capturing = values[1] as Boolean
@@ -560,8 +561,11 @@ class MirrorPresentation(
                 val editorActive = values[3] as Boolean
                 val ambientSettingsActive = values[4] as Boolean
                 val ambientPreviewActive = values[5] as Boolean
-                val userLeaving = values[6] as Boolean
+                val userLeavingReal = values[6] as Boolean
                 val recordingRequested = values[7] as Boolean
+                val interceptionInFlight = values[8] as Boolean
+
+                val userLeaving = userLeavingReal && !interceptionInFlight
                 // Show based on capturing state, not on whether MainActivity is in the
                 // foreground. Using isActivityResumed here caused a feedback loop: each
                 // time the user opened the app while mirroring, show() covered the screen,
