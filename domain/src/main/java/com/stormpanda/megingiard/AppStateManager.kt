@@ -60,6 +60,9 @@ object AppStateManager {
     private val _mirrorAutoStartSuppressedLayoutId = MutableStateFlow<String?>(null)
     val mirrorAutoStartSuppressedLayoutId: StateFlow<String?> = _mirrorAutoStartSuppressedLayoutId.asStateFlow()
 
+    private val _forceFocusable = MutableStateFlow(false)
+    val forceFocusable: StateFlow<Boolean> = _forceFocusable.asStateFlow()
+
     // ── Mirror control signals ────────────────────────────────────────────────
     // One-shot fire-and-forget flags: MainActivity resets them after handling.
 
@@ -108,6 +111,10 @@ object AppStateManager {
     fun setPromptInFlight(inFlight: Boolean) {
         AppLog.d(TAG, "setPromptInFlight($inFlight)")
         _promptInFlight.value = inFlight
+    }
+    fun setForceFocusable(force: Boolean) {
+        AppLog.d(TAG, "setForceFocusable($force)")
+        _forceFocusable.value = force
     }
 
     fun suppressMirrorAutoStart(layoutId: String) {

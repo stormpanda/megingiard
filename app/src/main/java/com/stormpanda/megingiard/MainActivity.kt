@@ -62,6 +62,7 @@ import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -279,6 +280,7 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
+                AppStateManager.forceFocusable,
             ) { values ->
                 val fullscreenKeyboard = values[0] as Boolean
                 val onValidScreen = values[1] as Boolean
@@ -286,7 +288,8 @@ class MainActivity : ComponentActivity() {
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
-                shouldKeepPrimaryGameFocus(
+                val forceFocusable = values[6] as Boolean
+                val keepPrimaryFocus = shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = onValidScreen,
                         isFullscreenKeyboardActive = fullscreenKeyboard,
@@ -296,6 +299,7 @@ class MainActivity : ComponentActivity() {
                         isBackgroundSettingsActive = ambientSettingsActive,
                     )
                 )
+                if (forceFocusable) false else keepPrimaryFocus
             }
                 .distinctUntilChanged()
                 .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
@@ -594,6 +598,9 @@ class MainActivity : ComponentActivity() {
     private suspend fun stopMirrorWithForegroundCheck() {
         AppLog.i(TAG, "stopMirror: starting stop sequence. currentState=${lifecycle.currentState}")
 
+        // Temporarily force focusability to prevent focus-loss minimization during dismissal
+        AppStateManager.setForceFocusable(true)
+
         // 1. If not currently in foreground, bring to front first before stopping
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             AppLog.i(TAG, "stopMirror: MainActivity not in foreground, bringing to front first")
@@ -615,6 +622,12 @@ class MainActivity : ComponentActivity() {
         withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
             AppStateManager.isActivityResumed.first { it }
         }
+
+        // Wait a short delay to allow the focus change to fully settle in the system
+        delay(1000)
+
+        // Restore normal focus policy
+        AppStateManager.setForceFocusable(false)
     }
 
     private fun stopMirrorService() {
