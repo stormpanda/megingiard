@@ -44,7 +44,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
         }
 
         // Intercept home only if Megingiard is active (resumed) AND on the secondary display (valid screen)
-        if (!AppStateManager.isOnValidScreen.value || !AppStateManager.isActivityResumed.value) {
+        // Or if home interception is currently in flight (to handle rapid double presses correctly)
+        val inFlight = AppStateManager.isHomeInterceptionInFlight.value
+        if (!AppStateManager.isOnValidScreen.value || (!AppStateManager.isActivityResumed.value && !inFlight)) {
             return super.onKeyEvent(event)
         }
 
@@ -71,7 +73,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
                                 // The secondary display is any display that is NOT the default display
                                 val secondaryDisplay = displayManager.displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
-                                val targetDisplayId = secondaryDisplay?.displayId ?: 4
+                                val targetDisplayId = secondaryDisplay?.displayId ?: Display.DEFAULT_DISPLAY
 
                                 val intent = Intent(this, MainActivity::class.java).apply {
                                     addFlags(
@@ -126,7 +128,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 } else {
                     lastHomePressTime = 0L
                     shouldConsumeCurrentPress = false
-                    AppLog.i(TAG, "onKeyEvent → hardware Home button second press within 5s: minimizing secondary screen")
+                    AppLog.i(TAG, "onKeyEvent → hardware Home button second press within ${DOUBLE_PRESS_TIMEOUT_MS / 1000}s: minimizing secondary screen")
 
                     // Set user leaving to true so presentations can hide
                     AppStateManager.setUserLeaving(true)

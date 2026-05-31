@@ -39,6 +39,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.services.TransitionOverlayManager
 import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
@@ -123,6 +124,7 @@ class MirrorPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TransitionOverlayManager.registerMirrorPresentation(this)
         AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x${srcHeight}")
         setPresentationFocusMode(
             keepPrimaryFocus = shouldKeepPrimaryGameFocus(
@@ -142,6 +144,7 @@ class MirrorPresentation(
 
         setOnDismissListener {
             AppLog.i(TAG, "dismissed → scope cancelled, lifecycle destroyed")
+            TransitionOverlayManager.unregisterMirrorPresentation()
             scope.cancel()
             lifecycleOwner.destroy()
         }

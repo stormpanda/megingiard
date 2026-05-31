@@ -18,6 +18,7 @@ import android.view.WindowManager
 import android.widget.ImageView
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.MainActivity
+import com.stormpanda.megingiard.mirror.MirrorPresentation
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import java.lang.ref.WeakReference
 
@@ -31,6 +32,7 @@ private const val BACKUP_TIMEOUT_MS = 200L
 object TransitionOverlayManager {
 
     private var mainActivityRef: WeakReference<MainActivity>? = null
+    private var mirrorPresentationRef: WeakReference<MirrorPresentation>? = null
     private var activeViewRef: WeakReference<ImageView>? = null
     private var activeBitmap: Bitmap? = null
 
@@ -51,6 +53,22 @@ object TransitionOverlayManager {
     }
 
     /**
+     * Registers the active [MirrorPresentation] reference.
+     */
+    fun registerMirrorPresentation(presentation: MirrorPresentation) {
+        AppLog.d(TAG, "registerMirrorPresentation")
+        mirrorPresentationRef = WeakReference(presentation)
+    }
+
+    /**
+     * Unregisters the [MirrorPresentation] reference to avoid memory leaks.
+     */
+    fun unregisterMirrorPresentation() {
+        AppLog.d(TAG, "unregisterMirrorPresentation")
+        mirrorPresentationRef = null
+    }
+
+    /**
      * Captures a pixel-perfect screenshot of the active [MainActivity] window and
      * displays it on the secondary display inside a non-interactive accessibility overlay.
      * Executes the [onCompleted] callback once the overlay is successfully
@@ -64,15 +82,19 @@ object TransitionOverlayManager {
             return
         }
 
-        // Only capture and show if screen mirror is NOT already capturing.
-        // If mirroring is active, the MirrorPresentation stays visible and flicker-free.
-        if (ScreenCaptureManager.isCapturing.value) {
-            AppLog.i(TAG, "captureAndShowOverlay → screen mirror is active; skipping transition overlay")
+        val mirrorPresentation = mirrorPresentationRef?.get()
+        val window = if (ScreenCaptureManager.isCapturing.value && mirrorPresentation != null) {
+            mirrorPresentation.window
+        } else {
+            activity.window
+        }
+
+        if (window == null) {
+            AppLog.w(TAG, "captureAndShowOverlay → cannot capture: target window is null")
             onCompleted()
             return
         }
 
-        val window = activity.window
         val view = window.decorView
         val width = view.width
         val height = view.height
@@ -93,16 +115,13 @@ object TransitionOverlayManager {
 
         try {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            AppLog.i(TAG, "captureAndShowOverlay → requesting PixelCopy on MainActivity window")
+            AppLog.i(TAG, "captureAndShowOverlay → requesting PixelCopy on target window")
             PixelCopy.request(window, bitmap, { result ->
                 if (result == PixelCopy.SUCCESS) {
                     AppLog.i(TAG, "captureAndShowOverlay → PixelCopy succeeded, displaying transition overlay view")
                     
-                    // Temporary color inversion for diagnostics
-                    val invertedBitmap = invertBitmapColors(bitmap)
-                    
                     // Show overlay view using accessibility service context to enable TYPE_ACCESSIBILITY_OVERLAY
-                    val overlayView = showOverlay(serviceContext, invertedBitmap)
+                    val overlayView = showOverlay(serviceContext, bitmap)
                     if (overlayView != null) {
                         val setupPreDrawListener = { v: View ->
                             AppLog.i(TAG, "captureAndShowOverlay → overlayView attached/attaching! Registering OnPreDrawListener")
@@ -237,23 +256,4 @@ object TransitionOverlayManager {
         }
     }
 
-    /**
-     * Helper function to temporarily invert the colors of the captured bitmap to aid in diagnostics.
-     */
-    private fun invertBitmapColors(src: Bitmap): Bitmap {
-        val config = src.config ?: Bitmap.Config.ARGB_8888
-        val dest = Bitmap.createBitmap(src.width, src.height, config)
-        val canvas = Canvas(dest)
-        val paint = Paint().apply {
-            colorFilter = ColorMatrixColorFilter(ColorMatrix(floatArrayOf(
-                -1.0f,  0.0f,  0.0f,  0.0f, 255.0f,
-                 0.0f, -1.0f,  0.0f,  0.0f, 255.0f,
-                 0.0f,  0.0f, -1.0f,  0.0f, 255.0f,
-                 0.0f,  0.0f,  0.0f,  1.0f,   0.0f
-            )))
-        }
-        canvas.drawBitmap(src, 0f, 0f, paint)
-        src.recycle() // Recycle the original captured bitmap
-        return dest
-    }
 }
