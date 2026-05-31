@@ -24,6 +24,7 @@ import android.view.ViewGroup
 import android.view.ViewPropertyAnimator
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedDispatcher
@@ -63,6 +64,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -102,7 +104,8 @@ class MirrorPresentation(
     var onSurfaceReady: ((Surface) -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
     private var surfaceView: SurfaceView? = null
-    private var fadeOverlayView: View? = null
+    private var container: FrameLayout? = null
+    private var fadeOverlayView: ImageView? = null
     private var fadeAnimator: ViewPropertyAnimator? = null
     private var isHiding = false
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -182,6 +185,7 @@ class MirrorPresentation(
             )
             setBackgroundColor(Color.BLACK)
         }
+        this.container = container
 
         val sv = SurfaceView(context).apply {
             layoutParams = FrameLayout.LayoutParams(finalWidth, finalHeight, Gravity.CENTER)
@@ -510,13 +514,18 @@ class MirrorPresentation(
             ViewGroup.LayoutParams.MATCH_PARENT
         ))
 
-        val overlay = View(context).apply {
+        val overlay = ImageView(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setBackgroundColor(Color.BLACK)
-            alpha = 1f // Start fully black
+            val preBitmap = ScreenCaptureManager.preMirrorBitmap.value
+            if (preBitmap != null) {
+                setImageBitmap(preBitmap)
+            } else {
+                setBackgroundColor(Color.BLACK)
+            }
+            alpha = 1f // Start fully opaque
         }
         fadeOverlayView = overlay
         container.addView(overlay)
@@ -664,9 +673,34 @@ class MirrorPresentation(
         AppLog.i(TAG, "show() with fade-in initiated")
         isHiding = false
         fadeAnimator?.cancel()
+        
+        // Ensure container starts at full opacity for the fade-in overlay
+        container?.alpha = 1f
         super.show()
-        fadeOverlayView?.let { view ->
-            view.visibility = View.VISIBLE
+        
+        val view = fadeOverlayView ?: return
+        view.visibility = View.VISIBLE
+        view.alpha = 1f
+        
+        scope.launch {
+            // Wait for preMirrorBitmap to be captured by MainActivity (up to 80ms)
+            var count = 0
+            while (ScreenCaptureManager.preMirrorBitmap.value == null && count < 8 && !isHiding) {
+                delay(10)
+                count++
+            }
+            
+            if (isHiding) return@launch
+            
+            val preBitmap = ScreenCaptureManager.preMirrorBitmap.value
+            if (preBitmap != null) {
+                AppLog.d(TAG, "show: pre-mirror snapshot applied successfully")
+                view.setImageBitmap(preBitmap)
+            } else {
+                AppLog.w(TAG, "show: no pre-mirror snapshot found, using solid black fallback")
+                view.setBackgroundColor(Color.BLACK)
+            }
+            
             fadeAnimator = view.animate()
                 .alpha(0f)
                 .setDuration(PRESENTATION_FADE_DURATION_MS)
@@ -674,6 +708,9 @@ class MirrorPresentation(
                     override fun onAnimationEnd(animation: Animator) {
                         if (!isHiding) {
                             view.visibility = View.GONE
+                            view.setImageBitmap(null)
+                            // Free pre-mirror snapshot resources
+                            ScreenCaptureManager.setPreMirrorBitmap(null)
                         }
                     }
                 })
@@ -684,27 +721,74 @@ class MirrorPresentation(
     override fun hide() {
         AppLog.i(TAG, "hide() with fade-out initiated")
         if (isHiding) return
-        val view = fadeOverlayView
-        if (view == null) {
+        val overlayView = fadeOverlayView ?: run {
+            super.hide()
+            return
+        }
+        val rootContainer = container ?: run {
+            super.hide()
+            return
+        }
+        val sv = surfaceView
+        if (sv == null || sv.width <= 0 || sv.height <= 0) {
             super.hide()
             return
         }
         isHiding = true
         fadeAnimator?.cancel()
-        view.visibility = View.VISIBLE
-        fadeAnimator = view.animate()
-            .alpha(1f)
-            .setDuration(PRESENTATION_FADE_DURATION_MS)
-            .setListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    if (isHiding) {
-                        AppLog.i(TAG, "fade-out completed → calling super.hide()")
+
+        try {
+            val bitmap = Bitmap.createBitmap(sv.width, sv.height, Bitmap.Config.ARGB_8888)
+            PixelCopy.request(
+                sv,
+                bitmap,
+                { result ->
+                    if (result == PixelCopy.SUCCESS) {
+                        AppLog.d(TAG, "hide: mirror snapshot captured successfully")
+                        overlayView.setImageBitmap(bitmap)
+                        overlayView.alpha = 1f
+                        overlayView.visibility = View.VISIBLE
+                        
+                        // Hide SurfaceView so video frames stop updating instantly
+                        sv.visibility = View.INVISIBLE
+
+                        // Fade the entire root container (mirror snapshot + Compose overlays)
+                        // to transparent to perfectly reveal MainActivity underneath
+                        fadeAnimator = rootContainer.animate()
+                            .alpha(0f)
+                            .setDuration(PRESENTATION_FADE_DURATION_MS)
+                            .setListener(object : AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: Animator) {
+                                    if (isHiding) {
+                                        AppLog.i(TAG, "fade-out completed → calling super.hide()")
+                                        super@MirrorPresentation.hide()
+                                        
+                                        // Reset state for the next session
+                                        rootContainer.alpha = 1f
+                                        sv.visibility = View.VISIBLE
+                                        overlayView.setImageBitmap(null)
+                                        overlayView.visibility = View.GONE
+                                        bitmap.recycle()
+                                        
+                                        isHiding = false
+                                    }
+                                }
+                            })
+                        fadeAnimator?.start()
+                    } else {
+                        AppLog.w(TAG, "hide: PixelCopy failed ($result), falling back to instant hide")
+                        bitmap.recycle()
                         super@MirrorPresentation.hide()
                         isHiding = false
                     }
-                }
-            })
-        fadeAnimator?.start()
+                },
+                Handler(Looper.getMainLooper())
+            )
+        } catch (e: Exception) {
+            AppLog.e(TAG, "hide: PixelCopy exception", e)
+            super.hide()
+            isHiding = false
+        }
     }
 
     fun getSurface(): Surface? = surfaceView?.holder?.surface

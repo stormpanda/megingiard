@@ -43,6 +43,9 @@ object ScreenCaptureManager {
     private val _frozenBitmap = MutableStateFlow<Bitmap?>(null)
     val frozenBitmap: StateFlow<Bitmap?> = _frozenBitmap.asStateFlow()
 
+    private val _preMirrorBitmap = MutableStateFlow<Bitmap?>(null)
+    val preMirrorBitmap: StateFlow<Bitmap?> = _preMirrorBitmap.asStateFlow()
+
     private val _isLocked = MutableStateFlow(false)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
@@ -89,6 +92,11 @@ object ScreenCaptureManager {
         AppLog.d(TAG, "setFrozenBitmap(${if (bitmap != null) "${bitmap.width}x${bitmap.height}" else "null"})")
         _frozenBitmap.value?.recycle()
         _frozenBitmap.value = bitmap
+    }
+    fun setPreMirrorBitmap(bitmap: Bitmap?) {
+        AppLog.d(TAG, "setPreMirrorBitmap(${if (bitmap != null) "${bitmap.width}x${bitmap.height}" else "null"})")
+        _preMirrorBitmap.value?.recycle()
+        _preMirrorBitmap.value = bitmap
     }
     fun toggleFrozen() {
         val next = !_isFrozen.value

@@ -4,11 +4,13 @@ import android.app.ActivityOptions
 import android.app.LocaleManager
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Build
 import android.os.LocaleList
 import android.os.Process
 import android.view.Display
+import android.view.PixelCopy
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -538,6 +540,7 @@ class MainActivity : ComponentActivity() {
         val privdEnabled = MacroPadSettings.privdMirrorEnabled.value
         val privdRunning = PrivdManager.state.value == PrivdState.RUNNING
         val strategy = selectMirrorStrategy(privdEnabled, privdRunning)
+        captureDisplaySnapshot()
         when (strategy) {
             MirrorStrategy.PRIVILEGED -> {
                 AppLog.i(TAG, "startMirrorByPolicy: privd path")
@@ -582,6 +585,32 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         AppLog.i(TAG, "onNewIntent")
         handleIncomingIntent(intent)
+    }
+
+    private fun captureDisplaySnapshot() {
+        try {
+            val window = this.window
+            val view = window.decorView
+            if (view.width > 0 && view.height > 0) {
+                val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+                PixelCopy.request(
+                    window,
+                    bitmap,
+                    { result ->
+                        if (result == PixelCopy.SUCCESS) {
+                            AppLog.i(TAG, "captureDisplaySnapshot: success")
+                            ScreenCaptureManager.setPreMirrorBitmap(bitmap)
+                        } else {
+                            AppLog.e(TAG, "captureDisplaySnapshot: failed with $result")
+                            bitmap.recycle()
+                        }
+                    },
+                    android.os.Handler(android.os.Looper.getMainLooper())
+                )
+            }
+        } catch (e: Exception) {
+            AppLog.e(TAG, "captureDisplaySnapshot exception", e)
+        }
     }
 
     /**
