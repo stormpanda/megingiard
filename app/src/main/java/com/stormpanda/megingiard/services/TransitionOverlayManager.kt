@@ -31,7 +31,7 @@ private const val BACKUP_TIMEOUT_MS = 200L
 object TransitionOverlayManager {
 
     private var mainActivityRef: WeakReference<MainActivity>? = null
-    private var activeView: ImageView? = null
+    private var activeViewRef: WeakReference<ImageView>? = null
     private var activeBitmap: Bitmap? = null
 
     /**
@@ -202,7 +202,7 @@ object TransitionOverlayManager {
             }
             
             windowManager.addView(imageView, lp)
-            activeView = imageView
+            activeViewRef = WeakReference(imageView)
             AppLog.i(TAG, "showOverlay → successfully showed transition overlay view on display ${secondaryDisplay.displayId}")
             return imageView
         } catch (e: Exception) {
@@ -216,7 +216,7 @@ object TransitionOverlayManager {
      * Dismisses the transition overlay and recycles its captured bitmap.
      */
     fun dismissOverlay() {
-        activeView?.let { view ->
+        activeViewRef?.get()?.let { view ->
             AppLog.i(TAG, "dismissOverlay → removing active transition overlay view")
             try {
                 val wm = view.context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -224,8 +224,8 @@ object TransitionOverlayManager {
             } catch (e: Exception) {
                 AppLog.e(TAG, "dismissOverlay → error removing view", e)
             }
-            activeView = null
         }
+        activeViewRef = null
         activeBitmap?.let {
             AppLog.d(TAG, "dismissOverlay → recycling transition bitmap")
             try {
