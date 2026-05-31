@@ -74,6 +74,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "MainActivity"
 private const val FOREGROUND_CHECK_TIMEOUT_MS = 2000L
+private const val SYSTEM_TRANSITION_DELAY_MS = 600L
+private const val FOCUS_SETTLE_DELAY_MS = 1000L
 
 class MainActivity : ComponentActivity() {
 
@@ -616,15 +618,19 @@ class MainActivity : ComponentActivity() {
         // 3. Wait for the capture session to end
         ScreenCaptureManager.isCapturing.first { !it }
 
-        // 4. Bring MainActivity to front again to counteract any post-dismiss focus loss
-        AppLog.i(TAG, "stopMirror: capture stopped, bringing MainActivity to front to prevent minimization")
-        bringMainActivityToFront()
-        withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
-            AppStateManager.isActivityResumed.first { it }
-        }
+        // Let the system's Home transition run (which might minimize the app if primary is showing the launcher)
+        delay(SYSTEM_TRANSITION_DELAY_MS)
 
-        // Wait a short delay to allow the focus change to fully settle in the system
-        delay(1000)
+        // 4. If we were minimized or paused during the transition, force MainActivity back to front!
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            AppLog.i(TAG, "stopMirror: MainActivity was minimized by system Home transition, forcing to front")
+            bringMainActivityToFront()
+            withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+                AppStateManager.isActivityResumed.first { it }
+            }
+            // Allow the new bring-to-front focus to settle before making it non-focusable again
+            delay(FOCUS_SETTLE_DELAY_MS)
+        }
 
         // Restore normal focus policy
         AppStateManager.setForceFocusable(false)
