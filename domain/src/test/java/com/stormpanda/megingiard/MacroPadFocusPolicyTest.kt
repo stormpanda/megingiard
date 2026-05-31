@@ -124,4 +124,16 @@ class MacroPadFocusPolicyTest {
             )
         )
     }
+
+    @Test
+    fun `capturing clears primary game focus so hosting activity stays focusable and in foreground`() {
+        assertFalse(
+            shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(
+                    isMacroPadSurfaceActive = true,
+                    isCapturing = true,
+                )
+            )
+        )
+    }
 }

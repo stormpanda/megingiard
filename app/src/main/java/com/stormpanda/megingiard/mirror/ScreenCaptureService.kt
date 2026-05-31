@@ -19,6 +19,7 @@ import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CaptureRequestActivity
+import com.stormpanda.megingiard.MainActivity
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.MirrorSettings
@@ -504,5 +505,30 @@ class ScreenCaptureService : Service() {
         directPrivdSession = null
         recordingPrivdSession?.release()
         recordingPrivdSession = null
+
+        // Relaunch MainActivity on the secondary display if we are stopping mirror
+        // and MainActivity is not currently resumed.
+        if (AppStateManager.isOnValidScreen.value && !AppStateManager.isActivityResumed.value) {
+            AppLog.i(TAG, "onDestroy → MainActivity is stopped, relaunching on secondary display to restore UI")
+            try {
+                val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                val secondaryDisplay = displayManager.displays.firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+                val targetDisplayId = secondaryDisplay?.displayId ?: Display.DEFAULT_DISPLAY
+
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                        Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    )
+                }
+                val options = ActivityOptions.makeCustomAnimation(this, 0, 0).apply {
+                    launchDisplayId = targetDisplayId
+                }
+                startActivity(intent, options.toBundle())
+            } catch (e: Exception) {
+                AppLog.e(TAG, "onDestroy → failed to relaunch MainActivity", e)
+            }
+        }
     }
 }

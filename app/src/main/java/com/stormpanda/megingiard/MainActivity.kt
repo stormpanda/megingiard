@@ -172,8 +172,10 @@ class MainActivity : ComponentActivity() {
      */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (AppStateManager.promptInFlight.value || AppStateManager.isFocusOverrideActive.value) {
-            AppLog.d(TAG, "onUserLeaveHint → prompt/focus transition in flight, ignoring")
+        if (AppStateManager.promptInFlight.value ||
+            AppStateManager.isFocusOverrideActive.value ||
+            AppStateManager.isHomeInterceptionInFlight.value) {
+            AppLog.d(TAG, "onUserLeaveHint → prompt/focus/home transition in flight, ignoring")
             return
         }
         AppLog.i(TAG, "onUserLeaveHint → user navigating away, hiding presentations")
@@ -285,6 +287,7 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
                 AppStateManager.isFocusOverrideActive,
+                ScreenCaptureManager.isCapturing,
             ) { values ->
                 val fullscreenKeyboard = values[0] as Boolean
                 val onValidScreen = values[1] as Boolean
@@ -293,6 +296,7 @@ class MainActivity : ComponentActivity() {
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
                 val focusOverrideActive = values[6] as Boolean
+                val capturing = values[7] as Boolean
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = onValidScreen,
@@ -302,6 +306,7 @@ class MainActivity : ComponentActivity() {
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
                         isFocusOverrideActive = focusOverrideActive,
+                        isCapturing = capturing,
                     )
                 )
             }
@@ -357,13 +362,9 @@ class MainActivity : ComponentActivity() {
                             AppStateManager.setActivityResumed(true)
                             // Clear the user-leaving flag: the user has returned to the app.
                             AppStateManager.setUserLeaving(false)
-                            // Clear the focus override upon returning to the app
-                            AppStateManager.setFocusOverrideActive(false, durationMs = 0L)
-                            // Clear the home interception in-flight state as relaunch is complete
-                            AppStateManager.setHomeInterceptionInFlight(false)
 
-                            // Defer overlay dismissal until the activity's window has fully drawn its first post-resume frame.
-                            // This ensures the transition is completely seamless and zero launcher is visible.
+                            // Defer overlay dismissal and state clearing until the activity's window has fully drawn its first post-resume frame.
+                            // This ensures the transition is completely seamless, keeping MainActivity focusable until fully rendered.
                             val decorView = window.decorView
                             val observer = decorView.viewTreeObserver
                             observer.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
@@ -371,9 +372,11 @@ class MainActivity : ComponentActivity() {
                                     if (decorView.viewTreeObserver.isAlive) {
                                         decorView.viewTreeObserver.removeOnPreDrawListener(this)
                                     }
-                                    AppLog.i(TAG, "ON_RESUME → first draw frame completed! Dismissing transition overlay.")
+                                    AppLog.i(TAG, "ON_RESUME → first draw frame completed! Dismissing transition overlay and clearing transit states.")
                                     decorView.post {
                                         TransitionOverlayManager.dismissOverlay()
+                                        AppStateManager.setFocusOverrideActive(false, durationMs = 0L)
+                                        AppStateManager.setHomeInterceptionInFlight(false)
                                     }
                                     return true
                                 }
@@ -516,13 +519,17 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 AppStateManager.mirrorStopRequested.collect { requested ->
                     if (!requested) return@collect
-                    AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
+                    AppLog.i(TAG, "mirrorStopRequested → capturing transition overlay and sending STOP to ScreenCaptureService")
                     AppStateManager.consumeMirrorStopRequest()
                     activeLayout?.id?.let { layoutId ->
                         AppStateManager.suppressMirrorAutoStart(layoutId)
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
-                    if (isCapturing) stopMirrorService()
+                    if (isCapturing) {
+                        TransitionOverlayManager.captureAndShowOverlay(this@MainActivity) {
+                            stopMirrorService()
+                        }
+                    }
                 }
             }
 
