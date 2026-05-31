@@ -99,9 +99,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M11: Transition Animations
 
 - The screen mirroring presentation MUST seamlessly fade between the mirror and non-mirror UI when starting and stopping.
-- **Fade-in (Start)**: The app MUST capture a snapshot of the lower screen (the non-mirror UI) using `PixelCopy` right before the presentation window appears, displaying it as a temporary overlay and fading it out (300 ms) to smoothly reveal the live mirror.
-- **Fade-out (Stop)**: The app MUST capture a snapshot of the active mirror view using `PixelCopy` right when the presentation is hidden, freezing it on the screen while stopping the live video immediately, and fading the snapshot overlay out (300 ms) to reveal the non-mirror UI underneath.
-- Transition animations MUST be fully hardware accelerated, robust against quick-toggle races, and release captured bitmap memory immediately upon completion.
+- **Fade-in (Start)**: The presentation window MUST start completely transparent (`alpha = 0f`) and smoothly fade in to fully opaque (`alpha = 1f`) over `300 ms` using hardware-composited window alpha rendering, creating a premium crossfade from the `MainActivity` underneath into the mirror presentation.
+- **Fade-out (Stop)**: The presentation window MUST smoothly fade from opaque (`alpha = 1f`) to transparent (`alpha = 0f`) over `300 ms` to reveal the `MainActivity` underneath before detaching.
+- Transition animations MUST be fully hardware accelerated, robust against quick-toggle races, and managed directly via the `WindowManager` composition plane.
 
 ---
 
@@ -291,26 +291,20 @@ the Presentation ensures touch input reaches the Activity-level modals.
 
 ### Transition Animations Implementation
 
-To deliver an incredibly premium and seamless transition, the app uses hardware-accelerated **PixelCopy snapshot fading** that bridges the mirror and non-mirror UI states:
+To deliver an incredibly premium and seamless transition, the app uses hardware-accelerated **Window-Level Alpha Transitions** managed directly via `WindowManager.LayoutParams.alpha` to crossfade the mirror presentation and the non-mirror `MainActivity` UI:
 
-1. **Pre-Mirror Snapshot Capture**:
-   - Inside `MainActivity.startMirrorByPolicy()`, before starting the capture service or launching the consent activity, `captureDisplaySnapshot()` initiates a `PixelCopy` of the active `MainActivity` window on the secondary physical display.
-   - The captured `Bitmap` is stored in the `ScreenCaptureManager.preMirrorBitmap` StateFlow.
+1. **Window Transparency Initialization**:
+   - Inside `MirrorPresentation.onCreate()`, the presentation window is configured with a fully transparent background (`ColorDrawable(Color.TRANSPARENT)`) and has its initial window attributes `alpha` set to `0f`. This guarantees that the window can render transparently over `MainActivity`.
 
 2. **Fade-in Transition (`show()`)**:
-   - Inside `MirrorPresentation.show()`, the Presentation window is attached and shown.
-   - If `preMirrorBitmap` is present, it is set as the source of a full-screen `ImageView` (`fadeOverlayView`) placed on top of all children (including both the `SurfaceView` and `ComposeView`). If not present, a black background is used as a fallback.
-   - `fadeOverlayView.alpha` is animated from `1f` (fully opaque snapshot) to `0f` (fully transparent) over `PRESENTATION_FADE_DURATION_MS` (300 ms).
-   - Upon animation end, `fadeOverlayView` visibility is set to `View.GONE` (excluding it from touch targeting so it never intercepts clicks), its bitmap is cleared, and `ScreenCaptureManager.setPreMirrorBitmap(null)` is called to immediately recycle the bitmap resources.
+   - Inside `MirrorPresentation.show()`, before calling `super.show()`, the window attributes `alpha` is explicitly set to `0f` to guarantee the window manager mounts it completely transparently, avoiding any single-frame black flashes or sudden solid color pops.
+   - After `super.show()` mounts the window, a `ValueAnimator` animates the window attributes `alpha` from `0f` to `1f` over `PRESENTATION_FADE_DURATION_MS` (300 ms).
+   - This smoothly blends the live `SurfaceView` video and the Compose UI overlay layer into view, directly on top of the underlying `MainActivity`.
 
 3. **Fade-out Transition (`hide()`)**:
-   - Inside `MirrorPresentation.hide()`, the active mirror video is captured asynchronously.
-   - A `PixelCopy` is requested from the live `SurfaceView` (`surfaceView`).
-   - On success, the captured bitmap is set on `fadeOverlayView`, which is made visible (`alpha = 1f`, `visibility = View.VISIBLE`), instantly covering the live stream.
-   - `SurfaceView` visibility is set to `View.INVISIBLE` to stop video frames and HWC rendering immediately, preventing any flickering or video updates behind the fade.
-   - `fadeOverlayView.alpha` is animated from `1f` (mirror frame snapshot) to `0f` (transparent) over `PRESENTATION_FADE_DURATION_MS` (300 ms).
-   - On animation end, calls `super.hide()` to detach the window, restores `SurfaceView` visibility to `View.VISIBLE` (ready for the next show), clears the image view, recycles the temp bitmap, and resets the hiding flag.
-   - If the `PixelCopy` fails, the transition falls back gracefully to an instant hide to prevent freezing. All transitions are guarded against quick-toggle races.
+   - Inside `MirrorPresentation.hide()`, the window attributes `alpha` is smoothly animated from its current value (nominally `1f`) to `0f` over `PRESENTATION_FADE_DURATION_MS` (300 ms).
+   - Upon animation end, `super@MirrorPresentation.hide()` is called to detach the window from the display manager.
+   - This approach ensures a flawless transition with zero rendering latency, fully composited by the system's SurfaceFlinger/HWC.
 
 ### Service Lifecycle
 
