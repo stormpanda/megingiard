@@ -5,7 +5,10 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +63,24 @@ object AppStateManager {
     private val _isHomeInterceptionInFlight = MutableStateFlow(false)
     val isHomeInterceptionInFlight: StateFlow<Boolean> = _isHomeInterceptionInFlight.asStateFlow()
 
+    private val _isFocusOverrideActive = MutableStateFlow(false)
+    val isFocusOverrideActive: StateFlow<Boolean> = _isFocusOverrideActive.asStateFlow()
+
+    private var focusOverrideJob: Job? = null
+
+    fun setFocusOverrideActive(active: Boolean, durationMs: Long = 1000L) {
+        AppLog.d(TAG, "setFocusOverrideActive($active, duration=$durationMs)")
+        _isFocusOverrideActive.value = active
+        focusOverrideJob?.cancel()
+        if (active && durationMs > 0) {
+            focusOverrideJob = scope.launch {
+                delay(durationMs)
+                AppLog.d(TAG, "Focus override auto-clear timer fired")
+                _isFocusOverrideActive.value = false
+            }
+        }
+    }
+
     private val _mirrorAutoStartSuppressedLayoutId = MutableStateFlow<String?>(null)
     val mirrorAutoStartSuppressedLayoutId: StateFlow<String?> = _mirrorAutoStartSuppressedLayoutId.asStateFlow()
 
@@ -79,11 +100,13 @@ object AppStateManager {
     fun requestMirrorStart() {
         AppLog.i(TAG, "requestMirrorStart")
         _mirrorStartRequested.value = true
+        setFocusOverrideActive(true)
     }
 
     fun requestMirrorStop() {
         AppLog.i(TAG, "requestMirrorStop")
         _mirrorStopRequested.value = true
+        setFocusOverrideActive(true)
     }
 
     fun consumeMirrorStartRequest() {

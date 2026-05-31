@@ -172,6 +172,10 @@ class MainActivity : ComponentActivity() {
      */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        if (AppStateManager.promptInFlight.value || AppStateManager.isFocusOverrideActive.value) {
+            AppLog.d(TAG, "onUserLeaveHint → prompt/focus transition in flight, ignoring")
+            return
+        }
         AppLog.i(TAG, "onUserLeaveHint → user navigating away, hiding presentations")
         AppStateManager.setUserLeaving(true)
     }
@@ -280,6 +284,7 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
+                AppStateManager.isFocusOverrideActive,
             ) { values ->
                 val fullscreenKeyboard = values[0] as Boolean
                 val onValidScreen = values[1] as Boolean
@@ -287,6 +292,7 @@ class MainActivity : ComponentActivity() {
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
+                val focusOverrideActive = values[6] as Boolean
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = onValidScreen,
@@ -295,6 +301,7 @@ class MainActivity : ComponentActivity() {
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
+                        isFocusOverrideActive = focusOverrideActive,
                     )
                 )
             }
@@ -350,6 +357,8 @@ class MainActivity : ComponentActivity() {
                             AppStateManager.setActivityResumed(true)
                             // Clear the user-leaving flag: the user has returned to the app.
                             AppStateManager.setUserLeaving(false)
+                            // Clear the focus override upon returning to the app
+                            AppStateManager.setFocusOverrideActive(false, durationMs = 0L)
                             // Clear the home interception in-flight state as relaunch is complete
                             AppStateManager.setHomeInterceptionInFlight(false)
 
@@ -560,6 +569,8 @@ class MainActivity : ComponentActivity() {
         val privdEnabled = MacroPadSettings.privdMirrorEnabled.value
         val privdRunning = PrivdManager.state.value == PrivdState.RUNNING
         val strategy = selectMirrorStrategy(privdEnabled, privdRunning)
+        // Enable focus override during start mirroring transition
+        AppStateManager.setFocusOverrideActive(true)
         when (strategy) {
             MirrorStrategy.PRIVILEGED -> {
                 AppLog.i(TAG, "startMirrorByPolicy: privd path")
@@ -584,6 +595,8 @@ class MainActivity : ComponentActivity() {
      */
     private fun launchCaptureRequest() {
         AppStateManager.setPromptInFlight(true)
+        // Enable focus override during MediaProjection permission prompt transition
+        AppStateManager.setFocusOverrideActive(true)
         val options = ActivityOptions.makeBasic()
         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
         val intent = Intent(this, CaptureRequestActivity::class.java).apply {

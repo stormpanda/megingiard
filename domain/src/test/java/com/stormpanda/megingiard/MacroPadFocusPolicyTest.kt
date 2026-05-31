@@ -111,4 +111,17 @@ class MacroPadFocusPolicyTest {
             )
         )
     }
+
+    @Test
+    fun `focus override clears primary game focus even if surface and keyboard are active`() {
+        assertFalse(
+            shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(
+                    isMacroPadSurfaceActive = true,
+                    isFullscreenKeyboardActive = true,
+                    isFocusOverrideActive = true,
+                )
+            )
+        )
+    }
 }

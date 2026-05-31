@@ -531,7 +531,14 @@ class MirrorPresentation(
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
-            ) { fullscreenKeyboard, pillMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
+                AppStateManager.isFocusOverrideActive,
+            ) { values ->
+                val fullscreenKeyboard = values[0] as Boolean
+                val pillMenuOpen = values[1] as Boolean
+                val filePickerOpen = values[2] as Boolean
+                val editorActive = values[3] as Boolean
+                val ambientSettingsActive = values[4] as Boolean
+                val focusOverrideActive = values[5] as Boolean
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = true,
@@ -540,6 +547,7 @@ class MirrorPresentation(
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
+                        isFocusOverrideActive = focusOverrideActive,
                     )
                 )
             }
