@@ -69,8 +69,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "MainActivity"
+private const val FOREGROUND_CHECK_TIMEOUT_MS = 2000L
 
 class MainActivity : ComponentActivity() {
 
@@ -442,7 +444,7 @@ class MainActivity : ComponentActivity() {
                             }
                             MirrorRuntimeAction.STOP -> {
                                 AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
-                                stopMirrorService()
+                                stopMirrorWithForegroundCheck()
                             }
                             MirrorRuntimeAction.NONE -> Unit
                         }
@@ -491,7 +493,7 @@ class MainActivity : ComponentActivity() {
                         AppStateManager.suppressMirrorAutoStart(layoutId)
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
-                    if (isCapturing) stopMirrorService()
+                    if (isCapturing) stopMirrorWithForegroundCheck()
                 }
             }
 
@@ -568,6 +570,33 @@ class MainActivity : ComponentActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
         }
         startActivity(intent, options.toBundle())
+    }
+
+    private suspend fun stopMirrorWithForegroundCheck() {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            AppLog.i(TAG, "stopMirror: MainActivity is not in foreground, bringing it to front first")
+            val secondaryDisplay = DisplayDetector.findSecondaryDisplay(this)
+            val options = if (secondaryDisplay != null) {
+                ActivityOptions.makeBasic().apply {
+                    setLaunchDisplayId(secondaryDisplay.displayId)
+                }
+            } else {
+                null
+            }
+            val intent = Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            try {
+                startActivity(intent, options?.toBundle())
+                withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+                    AppStateManager.isActivityResumed.first { it }
+                }
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Error bringing MainActivity to foreground", e)
+            }
+            AppLog.i(TAG, "stopMirror: proceeding to stop mirroring")
+        }
+        stopMirrorService()
     }
 
     private fun stopMirrorService() {

@@ -49,6 +49,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - A **Stop** button MUST be available inside the Mirror Control Card of the Pill Menu.
 - Stopping MUST release the `MediaProjection` (or privileged binder session) and cease all capture activity.
 - After stopping, the Pill Menu control card updates to show a "Play" button to re-initiate capture with a new consent/direct flow.
+- **Foreground Recovery Gating:** Before stopping the mirroring service, the app MUST check whether the main activity (`MainActivity`) is currently in the foreground. If it is in the background or minimized, the app MUST first launch `MainActivity` with `FLAG_ACTIVITY_REORDER_TO_FRONT` targeting the secondary display (the bottom screen), wait for the activity's lifecycle to transition to the resumed state (with a 2-second timeout), and then execute the actual capture stop. This ensures the app is not left minimized or in a stuck state.
 
 ### FR-M6: View Lock
 
@@ -287,6 +288,7 @@ the Presentation ensures touch input reaches the Activity-level modals.
 - `onStartCommand()` returns `START_NOT_STICKY`: the system MUST NOT auto-restart the service after being killed, since re-acquiring `MediaProjection` requires fresh user consent.
 - Class-level scope: `CoroutineScope(SupervisorJob() + Dispatchers.Main)`.
 - `onDestroy()` cancels the scope, calls `virtualDisplay?.release()`, `mediaProjection?.stop()`, and `mirrorPresentation?.dismiss()`.
+- **Foreground stop sequence**: Stopping capture via policy or manual triggers calls `MainActivity.stopMirrorWithForegroundCheck()`. If `MainActivity` is not at least `RESUMED`, the app starts `MainActivity` with `FLAG_ACTIVITY_REORDER_TO_FRONT` and `FLAG_ACTIVITY_NEW_TASK` using options configured with the resolved secondary display ID from `DisplayDetector`. The stop sequence suspends and waits for up to 2 seconds (`FOREGROUND_CHECK_TIMEOUT_MS`) for `AppStateManager.isActivityResumed` to emit `true` before proceeding to stop the service.
 
 ### View Lock & Touch Projection
 
