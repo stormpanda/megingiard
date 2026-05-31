@@ -466,9 +466,7 @@ class MirrorPresentation(
                             // so IdlePill remains visible in all modes. Internally hides
                             // buttons/dim/vignette during touch projection, freeze, and
                             // viewport edit.
-                            if (capturing) {
-                                BackgroundMacroPadOverlay(showIdlePill = false)
-                            }
+                            BackgroundMacroPadOverlay(showIdlePill = false)
 
                             // Layer 3: Viewport edit gesture overlay — transparent fullscreen
                             // pinch/pan surface for adjusting the mirror viewport.
@@ -521,9 +519,7 @@ class MirrorPresentation(
                             // overlays (keyboard / mouse). Suppressed inside
                             // BackgroundMacroPadOverlay (showIdlePill = false) to ensure
                             // only one IdlePill instance exists at a time.
-                            if (capturing) {
-                                IdlePill()
-                            }
+                            IdlePill()
                         }
                     }
                 }
