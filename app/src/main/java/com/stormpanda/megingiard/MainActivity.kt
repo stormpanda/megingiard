@@ -572,31 +572,49 @@ class MainActivity : ComponentActivity() {
         startActivity(intent, options.toBundle())
     }
 
-    private suspend fun stopMirrorWithForegroundCheck() {
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            AppLog.i(TAG, "stopMirror: MainActivity is not in foreground, bringing it to front first")
-            val secondaryDisplay = DisplayDetector.findSecondaryDisplay(this)
-            val options = if (secondaryDisplay != null) {
-                ActivityOptions.makeBasic().apply {
-                    setLaunchDisplayId(secondaryDisplay.displayId)
-                }
-            } else {
-                null
+    private fun bringMainActivityToFront() {
+        val secondaryDisplay = DisplayDetector.findSecondaryDisplay(this)
+        val options = if (secondaryDisplay != null) {
+            ActivityOptions.makeBasic().apply {
+                setLaunchDisplayId(secondaryDisplay.displayId)
             }
-            val intent = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            try {
-                startActivity(intent, options?.toBundle())
-                withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
-                    AppStateManager.isActivityResumed.first { it }
-                }
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Error bringing MainActivity to foreground", e)
-            }
-            AppLog.i(TAG, "stopMirror: proceeding to stop mirroring")
+        } else {
+            null
         }
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            startActivity(intent, options?.toBundle())
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Error bringing MainActivity to foreground", e)
+        }
+    }
+
+    private suspend fun stopMirrorWithForegroundCheck() {
+        AppLog.i(TAG, "stopMirror: starting stop sequence. currentState=${lifecycle.currentState}")
+
+        // 1. If not currently in foreground, bring to front first before stopping
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            AppLog.i(TAG, "stopMirror: MainActivity not in foreground, bringing to front first")
+            bringMainActivityToFront()
+            withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+                AppStateManager.isActivityResumed.first { it }
+            }
+        }
+
+        // 2. Stop the capture service
         stopMirrorService()
+
+        // 3. Wait for the capture session to end
+        ScreenCaptureManager.isCapturing.first { !it }
+
+        // 4. Bring MainActivity to front again to counteract any post-dismiss focus loss
+        AppLog.i(TAG, "stopMirror: capture stopped, bringing MainActivity to front to prevent minimization")
+        bringMainActivityToFront()
+        withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+            AppStateManager.isActivityResumed.first { it }
+        }
     }
 
     private fun stopMirrorService() {
