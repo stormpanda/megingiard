@@ -94,7 +94,7 @@ private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
-private const val PRESENTATION_FADE_DURATION_MS = 300L
+private const val PRESENTATION_FADE_DURATION_MS = 1000L
 
 class MirrorPresentation(
     context: Context, 
