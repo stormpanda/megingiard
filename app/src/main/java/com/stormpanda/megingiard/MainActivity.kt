@@ -445,7 +445,7 @@ class MainActivity : ComponentActivity() {
                                     AppLog.d(TAG, "mirror policy: layout=${policy.layoutId} wants ON but prompt already in flight — skipping")
                                 } else {
                                     AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
-                                    startMirrorByPolicy()
+                                    startMirrorWithForegroundCheck()
                                 }
                             }
                             MirrorRuntimeAction.STOP -> {
@@ -483,7 +483,7 @@ class MainActivity : ComponentActivity() {
                         !ScreenCaptureManager.isCapturing.value &&
                         !alreadyPrompting
                     ) {
-                        startMirrorByPolicy()
+                        startMirrorWithForegroundCheck()
                     } else if (!alreadyPrompting) {
                         AppStateManager.setPromptInFlight(false)
                     }
@@ -629,6 +629,40 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.isActivityResumed.first { it }
             }
             // Allow the new bring-to-front focus to settle before making it non-focusable again
+            delay(FOCUS_SETTLE_DELAY_MS)
+        }
+
+        // Restore normal focus policy
+        AppStateManager.setForceFocusable(false)
+    }
+
+    private suspend fun startMirrorWithForegroundCheck() {
+        AppLog.i(TAG, "startMirror: starting start sequence. currentState=${lifecycle.currentState}")
+
+        // Temporarily force focusability to prevent focus-loss minimization during starting transitions
+        AppStateManager.setForceFocusable(true)
+
+        // Start the mirror session using the standard policy strategy
+        startMirrorByPolicy()
+
+        // Wait for capture to successfully start or for prompt to end if cancelled
+        combine(
+            ScreenCaptureManager.isCapturing,
+            AppStateManager.promptInFlight
+        ) { capturing, prompting -> capturing || !prompting }
+            .first { it }
+
+        // Let the system's focus/task transitions run (which might minimize the app)
+        delay(SYSTEM_TRANSITION_DELAY_MS)
+
+        // If we were minimized or paused during the starting transitions, force MainActivity back to front!
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            AppLog.i(TAG, "startMirror: MainActivity was minimized by system starting transition, forcing to front")
+            bringMainActivityToFront()
+            withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+                AppStateManager.isActivityResumed.first { it }
+            }
+            // Allow the focus to settle before restoring focus policy
             delay(FOCUS_SETTLE_DELAY_MS)
         }
 
