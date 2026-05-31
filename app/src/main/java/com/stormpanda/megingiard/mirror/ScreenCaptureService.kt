@@ -41,6 +41,7 @@ class ScreenCaptureService : Service() {
     private var directPrivdSession: DirectPrivdMirrorSession? = null
     private var recordingPrivdSession: DirectPrivdMirrorSession? = null
     private var isPrivilegedMode = false
+    private var isStopping = false
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private var capturedSecondaryDisplay: Display? = null
@@ -201,8 +202,8 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            AppLog.i(TAG, "onStartCommand STOP → stopping self")
-            stopSelf()
+            AppLog.i(TAG, "onStartCommand ACTION_STOP → initiating fade-out stop")
+            initiateFadeOutAndStop()
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_START_PRIVD) {
@@ -481,10 +482,33 @@ class ScreenCaptureService : Service() {
         return shouldShow
     }
 
+    private fun initiateFadeOutAndStop() {
+        if (isStopping) {
+            AppLog.i(TAG, "initiateFadeOutAndStop: already stopping/fading out — ignoring duplicate stop request")
+            return
+        }
+        isStopping = true
+
+        val presentation = mirrorPresentation
+        if (presentation != null && ScreenCaptureManager.isCapturing.value && shouldShowMirrorPresentation()) {
+            AppLog.i(TAG, "initiateFadeOutAndStop: presentation is visible → starting fade-out before stop")
+            presentation.onHideCompleted = {
+                AppLog.i(TAG, "fade-out completed → stopping self")
+                stopSelf()
+            }
+            ScreenCaptureManager.setCapturing(false)
+        } else {
+            AppLog.i(TAG, "initiateFadeOutAndStop: presentation not visible → stopping self immediately")
+            ScreenCaptureManager.setCapturing(false)
+            stopSelf()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
         scope.cancel()
+        isStopping = false
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.

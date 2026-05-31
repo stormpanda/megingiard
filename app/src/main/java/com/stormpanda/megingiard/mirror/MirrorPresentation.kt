@@ -104,6 +104,7 @@ class MirrorPresentation(
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
     var onSurfaceReady: ((Surface) -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
+    var onHideCompleted: (() -> Unit)? = null
     private var textureView: TextureView? = null
     private var surface: Surface? = null
     private var fadeAnimator: ValueAnimator? = null
@@ -699,6 +700,9 @@ class MirrorPresentation(
                         AppLog.i(TAG, "fade-out completed → calling super.hide()")
                         super@MirrorPresentation.hide()
                         isHiding = false
+                        val callback = onHideCompleted
+                        onHideCompleted = null
+                        callback?.invoke()
                     }
                 }
             })

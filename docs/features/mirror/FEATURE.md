@@ -307,6 +307,7 @@ To deliver an incredibly premium and seamless transition, the app uses hardware-
 ### Service Lifecycle
 
 - `onStartCommand()` returns `START_NOT_STICKY`: the system MUST NOT auto-restart the service after being killed, since re-acquiring `MediaProjection` requires fresh user consent.
+- **Graceful Stop Coordination**: Receiving `ACTION_STOP` triggers a graceful shutdown sequence. If the mirror presentation window is visible, the service registers a listener on `onHideCompleted`, switches `isCapturing` to `false` (triggering the `300 ms` window fade-out), and calls `stopSelf()` only after the window has faded out and detached. If the presentation is not currently visible, it shuts down instantly.
 - Class-level scope: `CoroutineScope(SupervisorJob() + Dispatchers.Main)`.
 - `onDestroy()` cancels the scope, calls `virtualDisplay?.release()`, `mediaProjection?.stop()`, and `mirrorPresentation?.dismiss()`.
 
