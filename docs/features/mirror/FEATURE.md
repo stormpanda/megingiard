@@ -83,7 +83,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - When **Global Settings → Privileged Mode → Privileged Mirror** is enabled **and** the privileged daemon is `RUNNING`, the mirror MUST start without showing the system MediaProjection consent dialog.
 - The privileged path MUST be transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
-- The privileged path MUST use direct SurfaceControl output by passing the app-owned `SurfaceView` `Surface` to the shell `app_process` mirror server. If direct setup fails, it MUST fall back to the normal MediaProjection consent flow.
+- The privileged path MUST use direct SurfaceControl output by passing the app-owned `TextureView` `Surface` to the shell `app_process` mirror server. If direct setup fails, it MUST fall back to the normal MediaProjection consent flow.
 - DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
 - When the per-feature flag is off, or the daemon is not `RUNNING`, the standard MediaProjection path MUST remain in use unchanged.
 
@@ -118,14 +118,14 @@ Primary Display
                                                             └── MirrorPresentation
                                                                  (android.app.Presentation)
                                                                  └── FrameLayout
-                                                                      ├── SurfaceView  ← hardware buffer
+                                                                      ├── TextureView  ← video display surface
                                                                       └── ComposeView  ← MirrorScreen UI
 ```
 
-- **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the `SurfaceView` — bypassing CPU composition entirely (the Android Hardware Composer routes the signal via DRM kernel buffers).
-- **`MirrorPresentation`** is an `android.app.Presentation` instance anchored to the secondary physical display (`displayId != DEFAULT_DISPLAY`, auto-discovered via `DisplayManager`). It contains both the `SurfaceView` (hardware buffer recipient) and a `ComposeView` (UI overlay with `MirrorScreen`).
+- **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the `TextureView`'s `Surface` — allowing it to be composited natively inside the window's main surface, which enables premium window/layout alpha crossfades.
+- **`MirrorPresentation`** is an `android.app.Presentation` instance anchored to the secondary physical display (`displayId != DEFAULT_DISPLAY`, auto-discovered via `DisplayManager`). It contains both the `TextureView` (video display surface) and a `ComposeView` (UI overlay with `MirrorScreen`).
 - **Presentation focus policy:** while the Presentation hosts the ambient MacroPad and no PillMenu/editor/settings/file-picker overlay is open, its window is marked `FLAG_NOT_FOCUSABLE`. This allows the secondary display to keep receiving touch input without stealing focus from a primary-display game that owns Android pointer capture.
-- **`SurfaceView.setZOrderMediaOverlay(true)`** is critical: without it, the hardware buffer renders _behind_ the window background, producing a black screen even though GPU rendering succeeds.
+- **`TextureView` vs `SurfaceView`:** A `TextureView` is chosen over `SurfaceView` to support standard graphics composition, allowing both the video stream and Jetpack Compose overlay UI elements to smoothly fade together during Window Manager layout transitions.
 
 ### Architecture: Privileged Capture Pipeline (FR-M9)
 
@@ -158,17 +158,17 @@ Primary display layer stack (0)
    │
    ▼ SurfaceControl virtual display (shell UID)
    │
-   └──── setDisplaySurface(app Surface) ─────► MirrorPresentation.SurfaceView
+   └──── setDisplaySurface(app Surface) ─────► MirrorPresentation.TextureView
                                                 Compose / Macro overlays stay above it
 ```
 
 - **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `app/src/main/assets/`.
 - **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (standard MediaProjection path remains usable).
 - **Daemon control protocol** adds `MIRROR START_DIRECT w h` and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. `QUIT` and connection-end paths terminate any running mirror child.
-- **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current `MirrorPresentation.SurfaceView` `Surface` to the server.
+- **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current `MirrorPresentation.TextureView` `Surface` to the server.
 - **`DirectMirrorServer.java`** runs in the shell `app_process`, registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, receives the app-owned `Surface` over Binder, creates a hidden `SurfaceControl` display, and points that display at the app Surface with `setDisplaySurface()`. This preserves the app's `MirrorPresentation` `ComposeView` overlay without an intermediate codec stream.
 - **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, while `ScreenCaptureService` sends the current app Surface to the direct server and launches the MediaProjection consent flow when either step fails.
-- **Surface-start race guard:** `ScreenCaptureService` assigns a monotonically increasing generation to each privileged `SurfaceView` ready/destroy event. Only the latest generation may complete a direct mirror start or launch the MediaProjection fallback; stale coroutine results are ignored so an older timed-out `START_DIRECT` round trip cannot tear down a newer running privileged mirror session.
+- **Surface-start race guard:** `ScreenCaptureService` assigns a monotonically increasing generation to each privileged `TextureView` ready/destroy event. Only the latest generation may complete a direct mirror start or launch the MediaProjection fallback; stale coroutine results are ignored so an older timed-out `START_DIRECT` round trip cannot tear down a newer running privileged mirror session.
 - **`ScreenCaptureService`** routes `ACTION_START_PRIVD` to a separate `startPrivdPath()` which uses `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` (vs. `FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION` for the standard path). All viewport/touch-projection state is shared between the two paths.
 - **DRM caveat:** `SurfaceControl.createDisplay(name, secure=false)` produces a non-secure virtual display. DRM-protected surfaces (Widevine, Netflix, etc.) are blanked by SurfaceFlinger when composited to a non-secure target — the same behaviour as `scrcpy`. Setting `secure=true` would require `INTERNAL_SYSTEM_WINDOW`, which the shell UID does not have.
 
@@ -189,7 +189,7 @@ This lets Compose run inside the detached `Presentation` window exactly as it wo
 
 ### Aspect Ratio Preservation (Letterboxing / Pillarboxing)
 
-On `MirrorPresentation.onCreate()`, the secondary display's window metrics are read and the `SurfaceView` dimensions are computed to preserve the source aspect ratio without distortion:
+On `MirrorPresentation.onCreate()`, the secondary display's window metrics are read and the `TextureView` dimensions are computed to preserve the source aspect ratio without distortion:
 
 ```kotlin
 if (srcRatio > targetRatio) {
@@ -199,7 +199,7 @@ if (srcRatio > targetRatio) {
 }
 ```
 
-The `SurfaceView` uses `setFixedSize(srcWidth, srcHeight)` so the hardware buffer allocation exactly matches the source resolution. The rendered display size is constrained via `FrameLayout.LayoutParams`.
+The `TextureView`'s `SurfaceTexture` uses `setDefaultBufferSize(srcWidth, srcHeight)` so the hardware buffer allocation exactly matches the source resolution. The rendered display size is constrained via `FrameLayout.LayoutParams`.
 
 ### Pan & Zoom
 
@@ -209,7 +209,7 @@ State flows through three layers:
 | ------------------ | ------------------------------------------------------------------------------------------ |
 | Gesture capture    | `detectTapGestures` (tap, double-tap) + `detectTransformGestures` (loop) in `MirrorScreen` |
 | Animation          | Three `Animatable` instances: `animScale`, `animOffsetX`, `animOffsetY`                    |
-| Hardware transform | `ScreenCaptureManager` StateFlows → `SurfaceView.scaleX / translationX / translationY`     |
+| Hardware transform | `ScreenCaptureManager` StateFlows → `TextureView.scaleX / translationX / translationY`     |
 
 **Gallery-style boundary clamping:**
 
@@ -228,14 +228,12 @@ Overlay controls are rendered separately from the gesture surface so gesture det
 
 **Freeze ON:**
 
-1. `PixelCopy.request(surfaceView, bitmap, callback, handler)` copies the current hardware frame into a `Bitmap`.
-2. On `PixelCopy.SUCCESS`: `ScreenCaptureManager.setFrozenBitmap(bitmap)` — manager takes ownership and auto-recycles any previous bitmap. `SurfaceView.visibility = INVISIBLE` hides the live feed.
+1. `TextureView.getBitmap(bitmap)` synchronously retrieves the current video frame directly into a `Bitmap` with zero copy-latency.
+2. `ScreenCaptureManager.setFrozenBitmap(bitmap)` — the manager takes ownership and auto-recycles any previous bitmap. `TextureView.visibility = INVISIBLE` hides the live feed.
 3. `ScreenCaptureService` detects `isFrozen = true` and executes `virtualDisplay.surface = null`, detaching the producer. The hardware buffer retains the last frame at ~0% CPU/GPU cost.
 4. `MirrorScreen` renders the frozen bitmap via `Image(frozenBitmap.asImageBitmap())`.
 
-**Freeze OFF:** `SurfaceView.visibility = VISIBLE`, `setFrozenBitmap(null)` (recycles frozen bitmap), `virtualDisplay.surface` is restored to the active surface.
-
-**PixelCopy failure:** If `PixelCopy` returns a non-SUCCESS result, the caller MUST call `bitmap.recycle()` immediately — the manager never received ownership (see AGENTS.md §7.3).
+**Freeze OFF:** `TextureView.visibility = VISIBLE`, `setFrozenBitmap(null)` (recycles frozen bitmap), `virtualDisplay.surface` is restored to the active surface.
 
 ### Follow Touch Mode
 
@@ -299,7 +297,7 @@ To deliver an incredibly premium and seamless transition, the app uses hardware-
 2. **Fade-in Transition (`show()`)**:
    - Inside `MirrorPresentation.show()`, before calling `super.show()`, the window attributes `alpha` is explicitly set to `0f` to guarantee the window manager mounts it completely transparently, avoiding any single-frame black flashes or sudden solid color pops.
    - After `super.show()` mounts the window, a `ValueAnimator` animates the window attributes `alpha` from `0f` to `1f` over `PRESENTATION_FADE_DURATION_MS` (300 ms).
-   - This smoothly blends the live `SurfaceView` video and the Compose UI overlay layer into view, directly on top of the underlying `MainActivity`.
+   - This smoothly blends the live `TextureView` video and the Compose UI overlay layer into view, directly on top of the underlying `MainActivity`.
 
 3. **Fade-out Transition (`hide()`)**:
    - Inside `MirrorPresentation.hide()`, the window attributes `alpha` is smoothly animated from its current value (nominally `1f`) to `0f` over `PRESENTATION_FADE_DURATION_MS` (300 ms).

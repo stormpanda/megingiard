@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.SurfaceTexture
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.compose.ui.graphics.Color as ComposeColor
@@ -17,10 +18,8 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.Gravity
-import android.view.PixelCopy
 import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
+import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewPropertyAnimator
@@ -105,7 +104,8 @@ class MirrorPresentation(
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
     var onSurfaceReady: ((Surface) -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
-    private var surfaceView: SurfaceView? = null
+    private var textureView: TextureView? = null
+    private var surface: Surface? = null
     private var fadeAnimator: ValueAnimator? = null
     private var isHiding = false
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -193,15 +193,28 @@ class MirrorPresentation(
             setBackgroundColor(Color.BLACK)
         }
 
-        val sv = SurfaceView(context).apply {
+        val tv = TextureView(context).apply {
             layoutParams = FrameLayout.LayoutParams(finalWidth, finalHeight, Gravity.CENTER)
-            setZOrderMediaOverlay(true)
         }
-        // Force the hardware buffer memory allocation to match the raw screen pixel coordinates
-        sv.holder.setFixedSize(srcWidth, srcHeight)
-        surfaceView = sv
+        tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
+                texture.setDefaultBufferSize(srcWidth, srcHeight)
+                val s = Surface(texture)
+                surface = s
+                onSurfaceReady?.invoke(s)
+            }
+            override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) {}
+            override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
+                onSurfaceDestroyed?.invoke()
+                surface?.release()
+                surface = null
+                return true
+            }
+            override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {}
+        }
+        textureView = tv
 
-        container.addView(sv)
+        container.addView(tv)
 
         // BackHandler (used in Compose Dialog) requires
         // LocalOnBackPressedDispatcherOwner. backDispatcher is a class property so that
@@ -522,22 +535,10 @@ class MirrorPresentation(
 
         setContentView(container)
 
-        sv.holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: SurfaceHolder) {
-                onSurfaceReady?.invoke(holder.surface)
-            }
-            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-                // no-op
-            }
-            override fun surfaceDestroyed(holder: SurfaceHolder) {
-                onSurfaceDestroyed?.invoke()
-            }
-        })
-
-        bindStateFlows(sv)
+        bindStateFlows(tv)
     }
 
-    private fun bindStateFlows(sv: SurfaceView) {
+    private fun bindStateFlows(tv: TextureView) {
         scope.launch {
             combine(
                 AppStateManager.isFullscreenKeyboardActive,
@@ -609,40 +610,29 @@ class MirrorPresentation(
         }
         scope.launch {
             ScreenCaptureManager.scale.collect { 
-                sv.scaleX = it
-                sv.scaleY = it
+                tv.scaleX = it
+                tv.scaleY = it
             }
         }
         scope.launch {
-            ScreenCaptureManager.offsetX.collect { sv.translationX = it }
+            ScreenCaptureManager.offsetX.collect { tv.translationX = it }
         }
         scope.launch {
-            ScreenCaptureManager.offsetY.collect { sv.translationY = it }
+            ScreenCaptureManager.offsetY.collect { tv.translationY = it }
         }
         scope.launch {
             ScreenCaptureManager.isFrozen.collect { frozen ->
-                if (frozen && sv.width > 0 && sv.height > 0) {
+                if (frozen && tv.width > 0 && tv.height > 0) {
                     try {
-                        val bitmap = Bitmap.createBitmap(sv.width, sv.height, Bitmap.Config.ARGB_8888)
-                        PixelCopy.request(
-                            sv,
-                            bitmap,
-                            { result ->
-                                if (result == PixelCopy.SUCCESS) {
-                                    ScreenCaptureManager.setFrozenBitmap(bitmap)
-                                    sv.visibility = View.INVISIBLE
-                                } else {
-                                    AppLog.e(TAG, "PixelCopy failed with result code: $result")
-                                    bitmap.recycle()
-                                }
-                            },
-                            Handler(Looper.getMainLooper())
-                        )
+                        val bitmap = Bitmap.createBitmap(tv.width, tv.height, Bitmap.Config.ARGB_8888)
+                        tv.getBitmap(bitmap)
+                        ScreenCaptureManager.setFrozenBitmap(bitmap)
+                        tv.visibility = View.INVISIBLE
                     } catch (e: Exception) {
-                        AppLog.e(TAG, "PixelCopy exception", e)
+                        AppLog.e(TAG, "TextureView freeze exception", e)
                     }
                 } else if (!frozen) {
-                    sv.visibility = View.VISIBLE
+                    tv.visibility = View.VISIBLE
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }
@@ -717,6 +707,6 @@ class MirrorPresentation(
         animator.start()
     }
 
-    fun getSurface(): Surface? = surfaceView?.holder?.surface
+    fun getSurface(): Surface? = surface
 }
 
