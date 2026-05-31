@@ -96,6 +96,12 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - When Smoothing is enabled, the viewport panning MUST glide smoothly to target coordinates using exponential easing. When disabled, the panning MUST snap instantly.
 - Activating Viewport Edit Mode MUST automatically turn off Follow Touch Mode to prevent pan/zoom gesture and coordinate conflicts (mutual exclusion).
 
+### FR-M11: Transition Animations
+
+- The screen mirroring presentation window MUST fade in smoothly when starting or becoming visible (`show()`).
+- The screen mirroring presentation window MUST fade out smoothly when stopping or becoming hidden (`hide()`).
+- Fade transitions MUST have a duration of **300 ms** to ensure a premium, polished user experience without abrupt screen flickering.
+
 ---
 
 ## Technical Implementation
@@ -281,6 +287,20 @@ combine(
 The Presentation hides when the MacroPad Editor or Ambient Settings overlay opens. These modals
 run in the Activity window which sits below `TYPE_PRIVATE_PRESENTATION` in the Z-order; hiding
 the Presentation ensures touch input reaches the Activity-level modals.
+
+### Transition Animations Implementation
+
+To prevent abrupt screen flickering and deliver a premium visual experience, `MirrorPresentation` overrides the native `show()` and `hide()` methods:
+
+1. **Fade-in (`show()`)**:
+   - Any active animator is cancelled immediately.
+   - Calls `super.show()` to attach the Presentation window and make it visible.
+   - Animates the alpha of the root `FrameLayout` container from its current alpha to `1f` over `PRESENTATION_FADE_DURATION_MS` (300 ms).
+2. **Fade-out (`hide()`)**:
+   - Any active animator is cancelled immediately.
+   - Animates the alpha of the root `FrameLayout` container to `0f` over `PRESENTATION_FADE_DURATION_MS` (300 ms).
+   - In `onAnimationEnd`, once the fade-out completes, calls `super.hide()` to remove the window from Z-order.
+   - Guarded against quick-toggle races to ensure the window is never left in an inconsistent state.
 
 ### Service Lifecycle
 

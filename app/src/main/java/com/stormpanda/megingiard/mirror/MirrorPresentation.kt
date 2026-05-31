@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.app.Application
 import android.app.Presentation
 import android.content.Context
@@ -19,6 +21,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewPropertyAnimator
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.window.OnBackInvokedCallback
@@ -88,6 +91,7 @@ private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
+private const val PRESENTATION_FADE_DURATION_MS = 2000L
 
 class MirrorPresentation(
     context: Context, 
@@ -98,6 +102,9 @@ class MirrorPresentation(
     var onSurfaceReady: ((Surface) -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
     private var surfaceView: SurfaceView? = null
+    private var fadeOverlayView: View? = null
+    private var fadeAnimator: ViewPropertyAnimator? = null
+    private var isHiding = false
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // OnBackPressedDispatcher provided to the Compose tree. Needs to be a class
@@ -503,6 +510,17 @@ class MirrorPresentation(
             ViewGroup.LayoutParams.MATCH_PARENT
         ))
 
+        val overlay = View(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(Color.BLACK)
+            alpha = 1f // Start fully black
+        }
+        fadeOverlayView = overlay
+        container.addView(overlay)
+
         setContentView(container)
 
         sv.holder.addCallback(object : SurfaceHolder.Callback {
@@ -640,6 +658,53 @@ class MirrorPresentation(
             AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive presentation overlay)")
             window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
+    }
+
+    override fun show() {
+        AppLog.i(TAG, "show() with fade-in initiated")
+        isHiding = false
+        fadeAnimator?.cancel()
+        super.show()
+        fadeOverlayView?.let { view ->
+            view.visibility = View.VISIBLE
+            fadeAnimator = view.animate()
+                .alpha(0f)
+                .setDuration(PRESENTATION_FADE_DURATION_MS)
+                .setListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (!isHiding) {
+                            view.visibility = View.GONE
+                        }
+                    }
+                })
+            fadeAnimator?.start()
+        }
+    }
+
+    override fun hide() {
+        AppLog.i(TAG, "hide() with fade-out initiated")
+        if (isHiding) return
+        val view = fadeOverlayView
+        if (view == null) {
+            super.hide()
+            return
+        }
+        isHiding = true
+        fadeAnimator?.cancel()
+        view.visibility = View.VISIBLE
+        fadeAnimator = view.animate()
+            .alpha(1f)
+            .setDuration(PRESENTATION_FADE_DURATION_MS)
+            .setListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (isHiding) {
+                        AppLog.i(TAG, "fade-out completed → calling super.hide()")
+                        super@MirrorPresentation.hide()
+                        isHiding = false
+                    }
+                }
+            })
+        fadeAnimator?.start()
     }
 
     fun getSurface(): Surface? = surfaceView?.holder?.surface
