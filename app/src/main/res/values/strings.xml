@@ -269,8 +269,8 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_new_layout">New Layout</string>
     <string name="settings_macropad_edit">Edit</string>
     <string name="settings_macropad_new">New</string>
-    <string name="macropad_layout_template_title">Template</string>
-    <string name="macropad_layout_template_blank">Blank</string>
+    <string name="macropad_layout_template_title">Copy from…</string>
+    <string name="macropad_layout_template_blank">Empty</string>
 
     <!-- MacroPad ambient display settings -->
     <string name="settings_section_background_following">Background following</string>
