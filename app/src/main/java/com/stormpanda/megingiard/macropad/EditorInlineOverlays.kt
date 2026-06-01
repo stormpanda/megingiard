@@ -522,3 +522,122 @@ private fun getDrawableBitmap(drawable: Drawable): Bitmap {
     drawable.draw(canvas)
     return bitmap
 }
+
+@Composable
+internal fun InlineLayoutSettingsOverlay(
+    title: String,
+    initialName: String,
+    initialEnabled: Boolean,
+    accentColor: Color,
+    existingNames: List<String>,
+    onConfirm: (String, Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var nameText by remember { mutableStateOf(initialName) }
+    var isEnabled by remember { mutableStateOf(initialEnabled) }
+    val normalizedName = nameText.trim()
+    val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
+    val hasError = normalizedName.isEmpty() || isDuplicate
+    val colors = LocalAppColors.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .clickable(enabled = true, onClick = {})
+                .padding(MPE_PADDING),
+        ) {
+            Text(
+                text = title,
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = stringResource(R.string.pill_menu_layout_name_hint),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(4.dp))
+
+            OutlinedTextField(
+                value = nameText,
+                onValueChange = { nameText = it },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                isError = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = accentColor,
+                    unfocusedBorderColor = colors.accentBorder,
+                    focusedTextColor = colors.onSurface,
+                    unfocusedTextColor = colors.onSurface,
+                    cursorColor = accentColor,
+                ),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.layout_settings_visibility_title),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = stringResource(R.string.layout_settings_visibility_desc),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                androidx.compose.material3.Switch(
+                    checked = isEnabled,
+                    onCheckedChange = { isEnabled = it },
+                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                        checkedThumbColor = colors.onAccent,
+                        checkedTrackColor = colors.accent,
+                        uncheckedThumbColor = colors.onSurfaceSecondary,
+                        uncheckedTrackColor = colors.surfaceVariant
+                    )
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+                TextButton(
+                    onClick = { if (!hasError) onConfirm(normalizedName, isEnabled) },
+                    enabled = !hasError,
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_done),
+                        color = if (!hasError) accentColor else colors.onSurfaceSecondary,
+                    )
+                }
+            }
+        }
+    }
+}
+
