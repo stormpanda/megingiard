@@ -391,7 +391,7 @@ MacroListEditor
 
 Context menu actions per macro row: Edit, Duplicate, Delete.
 
-**`MacroPicker` in `PadActionPicker`** uses a single dropdown listing all macros in the active profile. Pre-selects the currently assigned macro (if any).
+**`MacroPicker` in `PadActionPicker`** uses a dropdown listing all macros in the active profile (pre-selecting the currently assigned macro, if any), an "Edit" button to modify the selected macro's timeline, and a "New" button to create a blank macro and immediately open it in the timeline editor.
 
 ```
 PadProfile

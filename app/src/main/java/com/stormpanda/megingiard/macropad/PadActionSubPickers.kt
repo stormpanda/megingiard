@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.LocalAppColors
+import java.util.UUID
 
 private const val TAG = "PadActionSubPickers"
 
@@ -236,6 +238,7 @@ internal fun MacroPicker(
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros  = profile?.macros ?: emptyList()
     val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
+    val defaultName = stringResource(R.string.macropad_macro_default_name)
 
     val selectedMacro = macros.firstOrNull { it.id == current.macroId }
         ?: macros.firstOrNull()
@@ -275,7 +278,41 @@ internal fun MacroPicker(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        stringResource(R.string.cd_edit_macro),
+                        stringResource(R.string.settings_macropad_edit),
+                        color = accentColor,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+            if (onEditMacro != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .clickable {
+                            val newMacroId = UUID.randomUUID().toString()
+                            val newMacro = Macro(
+                                id = newMacroId,
+                                name = defaultName,
+                                steps = emptyList()
+                            )
+                            MacroPadState.addMacro(newMacro)
+                            onChange(PadAction.Macro(newMacroId))
+                            onEditMacro(newMacro)
+                        }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.Add,
+                        contentDescription = null,
+                        tint     = accentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.settings_macropad_new),
                         color = accentColor,
                         style = MaterialTheme.typography.bodyMedium,
                     )
