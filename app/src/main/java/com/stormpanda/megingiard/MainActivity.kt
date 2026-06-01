@@ -62,6 +62,7 @@ import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -588,7 +589,7 @@ class MainActivity : ComponentActivity() {
             null
         }
         val intent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         }
         try {
             startActivity(intent, options?.toBundle())
@@ -603,37 +604,42 @@ class MainActivity : ComponentActivity() {
         // Temporarily force focusability to prevent focus-loss minimization during dismissal
         AppStateManager.setForceFocusable(true)
 
-        // 1. If not currently in foreground, bring to front first before stopping
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            AppLog.i(TAG, "stopMirror: MainActivity not in foreground, bringing to front first")
-            bringMainActivityToFront()
+        try {
+            // 1. If not currently in foreground, bring to front first before stopping
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                AppLog.i(TAG, "stopMirror: MainActivity not in foreground, bringing to front first")
+                bringMainActivityToFront()
+                withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+                    AppStateManager.isActivityResumed.first { it }
+                }
+            }
+
+            // 2. Stop the capture service
+            stopMirrorService()
+
+            // 3. Wait for the capture session to end
             withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
-                AppStateManager.isActivityResumed.first { it }
+                ScreenCaptureManager.isCapturing.first { !it }
+            }
+
+            // Let the system's Home transition run (which might minimize the app if primary is showing the launcher)
+            delay(SYSTEM_TRANSITION_DELAY_MS)
+
+            // 4. If we were minimized or paused during the transition, force MainActivity back to front!
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                AppLog.i(TAG, "stopMirror: MainActivity was minimized by system Home transition, forcing to front")
+                bringMainActivityToFront()
+                withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+                    AppStateManager.isActivityResumed.first { it }
+                }
+                // Allow the new bring-to-front focus to settle before making it non-focusable again
+                delay(FOCUS_SETTLE_DELAY_MS)
+            }
+        } finally {
+            withContext(NonCancellable) {
+                AppStateManager.setForceFocusable(false)
             }
         }
-
-        // 2. Stop the capture service
-        stopMirrorService()
-
-        // 3. Wait for the capture session to end
-        ScreenCaptureManager.isCapturing.first { !it }
-
-        // Let the system's Home transition run (which might minimize the app if primary is showing the launcher)
-        delay(SYSTEM_TRANSITION_DELAY_MS)
-
-        // 4. If we were minimized or paused during the transition, force MainActivity back to front!
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            AppLog.i(TAG, "stopMirror: MainActivity was minimized by system Home transition, forcing to front")
-            bringMainActivityToFront()
-            withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
-                AppStateManager.isActivityResumed.first { it }
-            }
-            // Allow the new bring-to-front focus to settle before making it non-focusable again
-            delay(FOCUS_SETTLE_DELAY_MS)
-        }
-
-        // Restore normal focus policy
-        AppStateManager.setForceFocusable(false)
     }
 
     private suspend fun startMirrorWithForegroundCheck() {
@@ -642,32 +648,37 @@ class MainActivity : ComponentActivity() {
         // Temporarily force focusability to prevent focus-loss minimization during starting transitions
         AppStateManager.setForceFocusable(true)
 
-        // Start the mirror session using the standard policy strategy
-        startMirrorByPolicy()
+        try {
+            // Start the mirror session using the standard policy strategy
+            startMirrorByPolicy()
 
-        // Wait for capture to successfully start or for prompt to end if cancelled
-        combine(
-            ScreenCaptureManager.isCapturing,
-            AppStateManager.promptInFlight
-        ) { capturing, prompting -> capturing || !prompting }
-            .first { it }
-
-        // Let the system's focus/task transitions run (which might minimize the app)
-        delay(SYSTEM_TRANSITION_DELAY_MS)
-
-        // If we were minimized or paused during the starting transitions, force MainActivity back to front!
-        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            AppLog.i(TAG, "startMirror: MainActivity was minimized by system starting transition, forcing to front")
-            bringMainActivityToFront()
+            // Wait for capture to successfully start or for prompt to end if cancelled
             withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
-                AppStateManager.isActivityResumed.first { it }
+                combine(
+                    ScreenCaptureManager.isCapturing,
+                    AppStateManager.promptInFlight
+                ) { capturing, prompting -> capturing || !prompting }
+                    .first { it }
             }
-            // Allow the focus to settle before restoring focus policy
-            delay(FOCUS_SETTLE_DELAY_MS)
-        }
 
-        // Restore normal focus policy
-        AppStateManager.setForceFocusable(false)
+            // Let the system's focus/task transitions run (which might minimize the app)
+            delay(SYSTEM_TRANSITION_DELAY_MS)
+
+            // If we were minimized or paused during the starting transitions, force MainActivity back to front!
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                AppLog.i(TAG, "startMirror: MainActivity was minimized by system starting transition, forcing to front")
+                bringMainActivityToFront()
+                withTimeoutOrNull(FOREGROUND_CHECK_TIMEOUT_MS) {
+                    AppStateManager.isActivityResumed.first { it }
+                }
+                // Allow the focus to settle before restoring focus policy
+                delay(FOCUS_SETTLE_DELAY_MS)
+            }
+        } finally {
+            withContext(NonCancellable) {
+                AppStateManager.setForceFocusable(false)
+            }
+        }
     }
 
     private fun stopMirrorService() {
