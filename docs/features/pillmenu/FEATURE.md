@@ -56,13 +56,7 @@ Pill the universal "go back" mechanism throughout the app.
 - **Layout section:** A horizontally scrollable row of chips, one per **enabled** layout in the
   active profile. Disabled layouts are hidden from this list. Tapping a chip immediately activates
   that layout and dismisses the menu.
-- A **"+" icon button** at the trailing end of each row opens a name-input dialog:
-  - **New Profile** dialog creates a blank profile with a single blank layout sharing the same name.
-  - **New Layout** dialog triggers `NewLayoutOverlay`, which supports entering a name and either
-    creating a blank layout or selecting an existing layout from any profile to use as a template.
-  - The input dialog prevents duplicate names within the same context (profile names globally,
-    layout names within the active profile). Confirming an empty name falls back to a default
-    string (`"New Profile"` / `"New Layout"`).
+- New profiles and layouts MUST be created inside the `MacroPadEditor` (using the "+ Add" separator actions), not in the Pill Menu.
 
 ### FR-PM4: Action Buttons (Bottom Card)
 
@@ -123,8 +117,8 @@ MainAppScreen (or BackgroundMacroPadOverlay)
               │     ├── Viewport Edit IconButton
               │     └── Touch Projection IconButton
               └── Bottom Column card (inline Column, slides in from bottom)
-                    ├── Profile chips row  (+  new profile button)
-                    ├── Layout chips row   (+  new layout button)
+                    ├── Profile chips row
+                    ├── Layout chips row
                     ├── Divider
                     ├── "Edit Layout" ActionButton (PillActionChip)
                     └── "Global Settings" ActionButton (PillActionChip)
