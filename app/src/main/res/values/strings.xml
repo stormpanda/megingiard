@@ -96,7 +96,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_title_edit_profile">Edit Profile</string>
     <string name="layout_settings_visibility_title">Show in overlays</string>
     <string name="layout_settings_visibility_desc">Participate in Pill Menu selector and Next/Previous navigation.</string>
-    <string name="macropad_editor_done">Done</string>
+    <string name="macropad_editor_done">Save</string>
     <string name="macropad_editor_add_button">Add Button</string>
     <string name="macropad_editor_add">Add</string>
     <string name="macropad_editor_delete_button">Delete</string>
