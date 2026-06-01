@@ -34,20 +34,45 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
+import androidx.compose.material3.IconButton
+
 private const val TAG = "EditorBaseComponents"
 
 @Composable
-internal fun EditorSectionHeader(@StringRes textRes: Int) {
+internal fun EditorSectionHeader(
+    @StringRes textRes: Int,
+    actionIcon: ImageVector? = null,
+    actionContentDescription: String? = null,
+    onActionClick: (() -> Unit)? = null,
+) {
     val colors = LocalAppColors.current
-    Text(
-        text     = stringResource(textRes).uppercase(Locale.ROOT),
-        color    = colors.sectionHeaderColor,
-        style    = MaterialTheme.typography.labelSmall,
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surfaceVariant)
-            .padding(horizontal = MPE_PADDING, vertical = MPE_SECTION_HEADER_V_PADDING),
-    )
+            .padding(horizontal = MPE_PADDING, vertical = MPE_SECTION_HEADER_V_PADDING - 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text     = stringResource(textRes).uppercase(Locale.ROOT),
+            color    = colors.sectionHeaderColor,
+            style    = MaterialTheme.typography.labelSmall,
+        )
+        if (actionIcon != null && onActionClick != null) {
+            IconButton(
+                onClick = onActionClick,
+                modifier = Modifier.size(20.dp),
+            ) {
+                Icon(
+                    imageVector = actionIcon,
+                    contentDescription = actionContentDescription,
+                    tint = colors.accent,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable

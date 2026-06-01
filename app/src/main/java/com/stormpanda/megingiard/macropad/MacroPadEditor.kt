@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -313,6 +314,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialPackage = null,
                 accentColor  = colors.accent,
                 existingNames = profiles.map { it.name },
+                showDelete   = false,
+                canDelete    = false,
+                onDelete     = {},
                 onConfirm    = { name, pkg ->
                     val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name, associatedPackage = pkg)
                     MacroPadState.addProfile(newProfile)
@@ -330,6 +334,12 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialPackage = profile.associatedPackage,
                 accentColor  = colors.accent,
                 existingNames = profiles.filter { it.id != profile.id }.map { it.name },
+                showDelete   = true,
+                canDelete    = profiles.size > 1,
+                onDelete     = {
+                    showRenameProfileDialog = false;
+                    showDeleteProfileConfirm = true
+                },
                 onConfirm    = { name, pkg ->
                     MacroPadState.renameProfile(profile.id, name, pkg)
                     showRenameProfileDialog = false
@@ -361,6 +371,12 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialEnabled = curLayout.enabled,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
+                showDelete = true,
+                canDelete = (profile?.layouts?.size ?: 0) > 1,
+                onDelete = {
+                    showEditLayoutDialog = false
+                    layoutPendingDelete = curLayout
+                },
                 onConfirm = { name, enabled ->
                     MacroPadState.updateLayout(curLayout.copy(name = name, enabled = enabled))
                     showEditLayoutDialog = false
@@ -453,19 +469,22 @@ private fun EditorBody(
     ) {
         // 1. Profile section header
         item(key = "section_profile") {
-            EditorSectionHeader(R.string.pill_menu_profile_label)
+            EditorSectionHeader(
+                textRes = R.string.pill_menu_profile_label,
+                actionIcon = Icons.Rounded.Add,
+                actionContentDescription = stringResource(R.string.settings_macropad_new_profile),
+                onActionClick = onNewProfile
+            )
         }
 
         // 2. Profile management bar
         item(key = "profiles") {
-            EditorProfileBar(
+            EditorProfileChipsBar(
                 profiles        = profiles,
                 activeProfile   = profile,
                 accentColor     = accentColor,
                 onSelectProfile = onSelectProfile,
-                onNewProfile    = onNewProfile,
                 onEditProfile   = onEditProfile,
-                onDeleteProfile = onDeleteProfile,
                 modifier        = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
@@ -475,21 +494,22 @@ private fun EditorBody(
 
         // 3. Layout section header
         item(key = "section_layout") {
-            EditorSectionHeader(R.string.macropad_editor_section_layout)
+            EditorSectionHeader(
+                textRes = R.string.macropad_editor_section_layout,
+                actionIcon = Icons.Rounded.Add,
+                actionContentDescription = stringResource(R.string.settings_macropad_new_layout),
+                onActionClick = onNewLayout
+            )
         }
 
         // 4. Layout management bar
         item(key = "layouts") {
-            EditorLayoutDropdownBar(
+            EditorLayoutChipsBar(
                 layouts        = profile.layouts,
                 activeLayout   = layout,
                 accentColor    = accentColor,
                 onSelectLayout = onSelectLayout,
-                onNewLayout    = onNewLayout,
                 onEditLayout   = onEditLayout,
-                onDeleteLayout = {
-                    if (layout != null) onDeleteLayoutRequested(layout)
-                },
                 modifier       = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)

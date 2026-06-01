@@ -27,6 +27,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
@@ -167,6 +171,9 @@ internal fun InlineProfileSettingsOverlay(
     initialPackage: String?,
     accentColor: Color,
     existingNames: List<String>,
+    showDelete: Boolean,
+    canDelete: Boolean,
+    onDelete: () -> Unit,
     onConfirm: (String, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -242,12 +249,32 @@ internal fun InlineProfileSettingsOverlay(
                 .padding(MPE_PADDING),
         ) {
             if (!showAppList) {
-                Text(
-                    text = title,
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (showDelete) {
+                        IconButton(
+                            onClick = onDelete,
+                            enabled = canDelete,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.macropad_editor_delete_button),
+                                tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 
                 Text(
@@ -530,6 +557,9 @@ internal fun InlineLayoutSettingsOverlay(
     initialEnabled: Boolean,
     accentColor: Color,
     existingNames: List<String>,
+    showDelete: Boolean,
+    canDelete: Boolean,
+    onDelete: () -> Unit,
     onConfirm: (String, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -554,12 +584,32 @@ internal fun InlineLayoutSettingsOverlay(
                 .clickable(enabled = true, onClick = {})
                 .padding(MPE_PADDING),
         ) {
-            Text(
-                text = title,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (showDelete) {
+                    IconButton(
+                        onClick = onDelete,
+                        enabled = canDelete,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = stringResource(R.string.macropad_editor_delete_button),
+                            tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(12.dp))
 
             Text(

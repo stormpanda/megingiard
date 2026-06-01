@@ -3,10 +3,14 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
@@ -16,77 +20,65 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 private const val TAG = "EditorLayoutComponents"
 
 @Composable
-internal fun EditorProfileBar(
+internal fun EditorProfileChipsBar(
     profiles: List<PadProfile>,
     activeProfile: PadProfile?,
     accentColor: Color,
     onSelectProfile: (String) -> Unit,
-    onNewProfile: () -> Unit,
     onEditProfile: () -> Unit,
-    onDeleteProfile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val canDelete = profiles.size > 1
 
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        AppDropdown(
-            selected = activeProfile,
-            options = profiles,
-            optionText = { profile -> profile?.name ?: "" },
-            onSelected = { profile -> if (profile != null) onSelectProfile(profile.id) },
+        LazyRow(
             modifier = Modifier.weight(1f),
-            textStyle = MaterialTheme.typography.bodyMedium,
-            fillMaxWidth = true,
-        )
-
-        // Add (red plus)
-        IconButton(onClick = onNewProfile) {
-            Icon(
-                imageVector = Icons.Rounded.Add,
-                contentDescription = stringResource(R.string.settings_macropad_new_profile),
-                tint = colors.error,
-                modifier = Modifier.size(24.dp)
-            )
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(vertical = 4.dp),
+        ) {
+            items(profiles, key = { it.id }) { profile ->
+                val isActive = profile.id == activeProfile?.id
+                AppSelectableChip(
+                    text = profile.name,
+                    selected = isActive,
+                    onClick = { onSelectProfile(profile.id) },
+                )
+            }
         }
 
-        // Edit
-        IconButton(onClick = onEditProfile) {
+        // Edit only
+        IconButton(
+            onClick = onEditProfile,
+            modifier = Modifier.size(28.dp)
+        ) {
             Icon(
                 imageVector = Icons.Rounded.Edit,
                 contentDescription = stringResource(R.string.macropad_editor_rename),
                 tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        // Delete
-        IconButton(
-            onClick = onDeleteProfile,
-            enabled = canDelete
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Delete,
-                contentDescription = stringResource(R.string.macropad_editor_delete_profile),
-                tint = if (canDelete) colors.onSurfaceSecondary else colors.onSurfaceSecondary.copy(alpha = 0.38f),
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -94,67 +86,65 @@ internal fun EditorProfileBar(
 }
 
 @Composable
-internal fun EditorLayoutDropdownBar(
+internal fun EditorLayoutChipsBar(
     layouts: List<PadLayout>,
     activeLayout: PadLayout?,
     accentColor: Color,
     onSelectLayout: (String) -> Unit,
-    onNewLayout: () -> Unit,
     onEditLayout: () -> Unit,
-    onDeleteLayout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val canDelete = layouts.size > 1
+    val latestLayouts by rememberUpdatedState(layouts)
+
+    val lazyRowState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyListState(lazyRowState) { from, to ->
+        val fromIdx = latestLayouts.indexOfFirst { it.id == from.key as? String }
+        val toIdx   = latestLayouts.indexOfFirst { it.id == to.key as? String }
+        if (fromIdx >= 0 && toIdx >= 0) {
+            val mutable = latestLayouts.toMutableList()
+            mutable.add(toIdx, mutable.removeAt(fromIdx))
+            MacroPadState.reorderLayouts(mutable)
+        }
+    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        AppDropdown(
-            selected = activeLayout,
-            options = layouts,
-            optionText = { layout ->
-                if (layout != null) {
-                    if (layout.enabled) layout.name else "${layout.name} (hidden)"
-                } else ""
-            },
-            onSelected = { layout -> if (layout != null) onSelectLayout(layout.id) },
+        LazyRow(
+            state = lazyRowState,
             modifier = Modifier.weight(1f),
-            textStyle = MaterialTheme.typography.bodyMedium,
-            fillMaxWidth = true,
-        )
-
-        // Add (red plus)
-        IconButton(onClick = onNewLayout) {
-            Icon(
-                imageVector = Icons.Rounded.Add,
-                contentDescription = stringResource(R.string.settings_macropad_new_layout),
-                tint = colors.error,
-                modifier = Modifier.size(24.dp)
-            )
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(vertical = 4.dp),
+        ) {
+            items(layouts, key = { it.id }) { layout ->
+                ReorderableItem(reorderState, key = layout.id) {
+                    val isActive = layout.id == activeLayout?.id
+                    val text = if (layout.enabled) layout.name else "${layout.name} (hidden)"
+                    val chipAlpha = if (layout.enabled) 1f else 0.45f
+                    AppSelectableChip(
+                        text = text,
+                        selected = isActive,
+                        onClick = { onSelectLayout(layout.id) },
+                        modifier = Modifier
+                            .alpha(chipAlpha)
+                            .then(Modifier.longPressDraggableHandle())
+                    )
+                }
+            }
         }
 
-        // Edit
-        IconButton(onClick = onEditLayout) {
+        // Edit only
+        IconButton(
+            onClick = onEditLayout,
+            modifier = Modifier.size(28.dp)
+        ) {
             Icon(
                 imageVector = Icons.Rounded.Edit,
                 contentDescription = stringResource(R.string.macropad_editor_rename),
                 tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
-        // Delete
-        IconButton(
-            onClick = onDeleteLayout,
-            enabled = canDelete
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Delete,
-                contentDescription = stringResource(R.string.macropad_editor_delete_layout),
-                tint = if (canDelete) colors.onSurfaceSecondary else colors.onSurfaceSecondary.copy(alpha = 0.38f),
                 modifier = Modifier.size(20.dp)
             )
         }
