@@ -21,8 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.stormpanda.megingiard.ui.AppTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -107,7 +106,7 @@ internal fun NewLayoutOverlay(
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
+            AppTextField(
                 value         = text,
                 onValueChange = { text = it },
                 singleLine    = true,
@@ -119,13 +118,7 @@ internal fun NewLayoutOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                colors        = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor   = accentColor,
-                    unfocusedBorderColor = colors.accentBorder,
-                    focusedTextColor     = colors.onSurface,
-                    unfocusedTextColor   = colors.onSurface,
-                    cursorColor          = accentColor,
-                ),
+                accentColor   = accentColor,
             )
 
             if (templates.isNotEmpty()) {

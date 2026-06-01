@@ -24,8 +24,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.stormpanda.megingiard.ui.AppTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -116,7 +115,7 @@ internal fun IconPickerDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            OutlinedTextField(
+            AppTextField(
                 value = query,
                 onValueChange = { query = it },
                 label = {
@@ -125,14 +124,7 @@ internal fun IconPickerDialog(
                         color = colors.onSurfaceSecondary,
                     )
                 },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor   = accentColor,
-                    unfocusedBorderColor = colors.accentBorder,
-                    focusedTextColor     = colors.onSurface,
-                    unfocusedTextColor   = colors.onSurface,
-                    cursorColor          = accentColor,
-                ),
+                accentColor = accentColor,
                 modifier = Modifier.weight(1f),
             )
             Row(

@@ -23,8 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.stormpanda.megingiard.ui.AppTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
@@ -126,7 +125,7 @@ internal fun InlineNameInputOverlay(
         ) {
             Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
+            AppTextField(
                 value         = text,
                 onValueChange = { text = it },
                 singleLine    = true,
@@ -138,13 +137,7 @@ internal fun InlineNameInputOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                colors        = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor   = accentColor,
-                    unfocusedBorderColor = colors.accentBorder,
-                    focusedTextColor     = colors.onSurface,
-                    unfocusedTextColor   = colors.onSurface,
-                    cursorColor          = accentColor,
-                ),
+                accentColor   = accentColor,
             )
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -285,7 +278,7 @@ internal fun InlineProfileSettingsOverlay(
                 )
                 Spacer(Modifier.height(4.dp))
 
-                OutlinedTextField(
+                AppTextField(
                     value = nameText,
                     onValueChange = { nameText = it },
                     singleLine = true,
@@ -297,13 +290,7 @@ internal fun InlineProfileSettingsOverlay(
                             isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                         }
                     },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        unfocusedBorderColor = colors.accentBorder,
-                        focusedTextColor = colors.onSurface,
-                        unfocusedTextColor = colors.onSurface,
-                        cursorColor = accentColor,
-                    ),
+                    accentColor = accentColor,
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -392,7 +379,7 @@ internal fun InlineProfileSettingsOverlay(
                 )
                 Spacer(Modifier.height(12.dp))
 
-                OutlinedTextField(
+                AppTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     placeholder = {
@@ -403,13 +390,7 @@ internal fun InlineProfileSettingsOverlay(
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        unfocusedBorderColor = colors.accentBorder,
-                        focusedTextColor = colors.onSurface,
-                        unfocusedTextColor = colors.onSurface,
-                        cursorColor = accentColor,
-                    ),
+                    accentColor = accentColor,
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -624,7 +605,7 @@ internal fun InlineLayoutSettingsOverlay(
             )
             Spacer(Modifier.height(4.dp))
 
-            OutlinedTextField(
+            AppTextField(
                 value = nameText,
                 onValueChange = { nameText = it },
                 singleLine = true,
@@ -636,13 +617,7 @@ internal fun InlineLayoutSettingsOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = accentColor,
-                    unfocusedBorderColor = colors.accentBorder,
-                    focusedTextColor = colors.onSurface,
-                    unfocusedTextColor = colors.onSurface,
-                    cursorColor = accentColor,
-                ),
+                accentColor = accentColor,
             )
             Spacer(Modifier.height(12.dp))
 

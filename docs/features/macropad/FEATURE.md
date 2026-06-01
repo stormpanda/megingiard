@@ -189,7 +189,7 @@ Each button supports one of the following actions:
 - When the action type is `ScrollWheel`, `TrackpointMove`, or `BackgroundPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
 - Icon selection opens `IconPickerDialog`, a full-screen overlay with three zones:
   1. **Header** — Cancel (text button) | title | ✓ confirm (icon button).
-  2. **Search row** — `OutlinedTextField` + Filled checkbox.
+  2. **Search row** — `AppTextField` + Filled checkbox.
   3. **Selection row** (only visible when an icon is pending) — preview box (48 dp) + icon name + "Currently selected" subtext + 🗑 delete button.
      Tapping a grid icon sets a local `pendingIcon` state (does **not** close the dialog). The user confirms with ✓ or clears via 🗑. Cancel discards any pending change.
      The icon grid is a `LazyVerticalGrid` (5 columns) of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.

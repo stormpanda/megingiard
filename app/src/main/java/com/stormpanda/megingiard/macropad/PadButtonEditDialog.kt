@@ -21,8 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.stormpanda.megingiard.ui.AppTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -273,19 +272,12 @@ internal fun ButtonEditDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        OutlinedTextField(
+                        AppTextField(
                             value         = label,
                             onValueChange = { label = it },
                             label         = { Text(stringResource(R.string.macropad_editor_button_label), color = colors.onSurfaceSecondary) },
-                            singleLine    = true,
-                            colors        = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor   = accentColor,
-                                unfocusedBorderColor = colors.accentBorder,
-                                focusedTextColor     = colors.onSurface,
-                                unfocusedTextColor   = colors.onSurface,
-                                cursorColor          = accentColor,
-                            ),
-                            modifier = Modifier.weight(1f),
+                            accentColor   = accentColor,
+                            modifier      = Modifier.weight(1f),
                         )
                         // Icon selector button
                         Box(
