@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.ui.AppDropdown
@@ -44,6 +46,16 @@ internal fun ActionPicker(
         category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
     }
 
+    LaunchedEffect(groupActions, currentCategory) {
+        if (groupActions.size == 1) {
+            val singleCategory = groupActions.first()
+            if (currentCategory != singleCategory) {
+                AppLog.d(TAG, "Only one enabled category for group $currentGroup -> auto-selecting in background: $singleCategory")
+                onChange(singleCategory.defaultAction())
+            }
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.macropad_picker_label_group),
@@ -67,20 +79,22 @@ internal fun ActionPicker(
             fillMaxWidth = true,
         )
 
-        Text(
-            text = stringResource(R.string.macropad_editor_action),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.labelSmall,
-        )
+        if (groupActions.size > 1) {
+            Text(
+                text = stringResource(R.string.macropad_editor_action),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelSmall,
+            )
 
-        AppDropdown(
-            selected     = currentCategory,
-            options      = groupActions,
-            optionText   = { category -> stringResource(category.labelResId()) },
-            onSelected   = { category -> onChange(category.defaultAction()) },
-            modifier     = Modifier.fillMaxWidth(),
-            fillMaxWidth = true,
-        )
+            AppDropdown(
+                selected     = currentCategory,
+                options      = groupActions,
+                optionText   = { category -> stringResource(category.labelResId()) },
+                onSelected   = { category -> onChange(category.defaultAction()) },
+                modifier     = Modifier.fillMaxWidth(),
+                fillMaxWidth = true,
+            )
+        }
 
         when (current) {
             is PadAction.KeyboardKey    -> KeyboardKeyPicker(current, onChange)

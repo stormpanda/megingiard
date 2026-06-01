@@ -224,7 +224,7 @@ Each button supports one of the following actions:
 
 - `PadActionPicker` MUST provide a grouped action selection flow in `ButtonEditDialog`.
 - The first dropdown selects the action **group** (`Keyboard`, `Gamepad`, `Mouse`, `Macro`, `Layout`, `Mirror`, `Profile`, `Other`).
-- The second dropdown selects the concrete action inside the currently selected group.
+- The second dropdown selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, this second dropdown is hidden, and that action is automatically selected in the background.**
 - Group and action labels MUST come from `strings.xml` resources.
 - Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker) MUST remain unchanged and appear after action selection.
 - `KeyboardKey` and `GamepadButton` are excluded — they manage their own labels via the key/button name.
