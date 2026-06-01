@@ -128,6 +128,7 @@ internal fun InlineNameInputOverlay(
             AppTextField(
                 value         = text,
                 onValueChange = { text = it },
+                label         = { Text(title, color = colors.onSurfaceSecondary) },
                 singleLine    = true,
                 modifier      = Modifier.fillMaxWidth(),
                 isError       = hasError,
@@ -271,16 +272,10 @@ internal fun InlineProfileSettingsOverlay(
                 }
                 Spacer(Modifier.height(12.dp))
                 
-                Text(
-                    text = stringResource(R.string.profile_settings_name),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall
-                )
-                Spacer(Modifier.height(4.dp))
-
                 AppTextField(
                     value = nameText,
                     onValueChange = { nameText = it },
+                    label = { Text(stringResource(R.string.profile_settings_name), color = colors.onSurfaceSecondary) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     isError = hasError,
@@ -382,7 +377,7 @@ internal fun InlineProfileSettingsOverlay(
                 AppTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = {
+                    label = {
                         Text(
                             text = stringResource(R.string.profile_settings_search_apps),
                             color = colors.onSurfaceSecondary
@@ -598,16 +593,10 @@ internal fun InlineLayoutSettingsOverlay(
             }
             Spacer(Modifier.height(12.dp))
 
-            Text(
-                text = stringResource(R.string.pill_menu_layout_name_hint),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall
-            )
-            Spacer(Modifier.height(4.dp))
-
             AppTextField(
                 value = nameText,
                 onValueChange = { nameText = it },
+                label = { Text(stringResource(R.string.pill_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 isError = hasError,
