@@ -103,6 +103,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_visibility_desc">Im Pill-Menü-Auswahlelement und bei der Navigation zum nächsten/vorherigen Layout einbeziehen.</string>
     <string name="macropad_editor_done">Fertig</string>
     <string name="macropad_editor_add_button">Taste hinzufügen</string>
+    <string name="macropad_editor_add">Hinzufügen</string>
     <string name="macropad_editor_delete_button">Löschen</string>
     <string name="macropad_editor_button_label">Beschriftung</string>
     <string name="macropad_editor_action">Aktion</string>

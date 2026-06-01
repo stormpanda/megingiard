@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
@@ -60,15 +61,25 @@ internal fun EditorSectionHeader(
             style    = MaterialTheme.typography.labelSmall,
         )
         if (actionIcon != null && onActionClick != null) {
-            IconButton(
-                onClick = onActionClick,
-                modifier = Modifier.size(20.dp),
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(onClick = onActionClick)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Icon(
                     imageVector = actionIcon,
                     contentDescription = actionContentDescription,
                     tint = colors.accent,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(
+                    text = stringResource(R.string.macropad_editor_add),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

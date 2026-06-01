@@ -98,6 +98,7 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visibility_desc">Participate in Pill Menu selector and Next/Previous navigation.</string>
     <string name="macropad_editor_done">Done</string>
     <string name="macropad_editor_add_button">Add Button</string>
+    <string name="macropad_editor_add">Add</string>
     <string name="macropad_editor_delete_button">Delete</string>
     <string name="macropad_editor_button_label">Label</string>
     <string name="macropad_editor_action">Action</string>

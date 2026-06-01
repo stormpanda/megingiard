@@ -52,35 +52,18 @@ internal fun ProfileRow(
     activeProfile: PadProfile?,
     colors: AppColors,
     onProfileSelected: (PadProfile) -> Unit,
-    onNewProfile: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
     ) {
-        LazyRow(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
-        ) {
-            items(profiles, key = { it.id }) { profile ->
-                val isActive = profile.id == activeProfile?.id
-                SelectableChip(
-                    text = profile.name,
-                    isSelected = isActive,
-                    contentDescription = profile.name,
-                    onClick = { onProfileSelected(profile) },
-                )
-            }
-        }
-        IconButton(
-            onClick = onNewProfile,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                Icons.Rounded.Add,
-                contentDescription = stringResource(R.string.pill_menu_new_profile),
-                tint = colors.onControlOverlay,
-                modifier = Modifier.size(PM_NAV_ICON_SIZE),
+        items(profiles, key = { it.id }) { profile ->
+            val isActive = profile.id == activeProfile?.id
+            SelectableChip(
+                text = profile.name,
+                isSelected = isActive,
+                contentDescription = profile.name,
+                onClick = { onProfileSelected(profile) },
             )
         }
     }
@@ -92,37 +75,19 @@ internal fun LayoutRow(
     activeLayout: PadLayout?,
     colors: AppColors,
     onLayoutSelected: (String) -> Unit,
-    onNewLayout: () -> Unit,
 ) {
     val enabledLayouts = activeProfile?.layouts?.filter { it.enabled } ?: emptyList()
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
     ) {
-        LazyRow(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
-        ) {
-            items(enabledLayouts, key = { it.id }) { layout ->
-                SelectableChip(
-                    text = layout.name,
-                    isSelected = layout.id == activeLayout?.id,
-                    contentDescription = layout.name,
-                    onClick = { onLayoutSelected(layout.id) },
-                )
-            }
-        }
-
-        IconButton(
-            onClick = onNewLayout,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                Icons.Rounded.Add,
-                contentDescription = stringResource(R.string.pill_menu_new_layout),
-                tint = colors.onControlOverlay,
-                modifier = Modifier.size(PM_NAV_ICON_SIZE),
+        items(enabledLayouts, key = { it.id }) { layout ->
+            SelectableChip(
+                text = layout.name,
+                isSelected = layout.id == activeLayout?.id,
+                contentDescription = layout.name,
+                onClick = { onLayoutSelected(layout.id) },
             )
         }
     }

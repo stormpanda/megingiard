@@ -152,30 +152,7 @@ internal fun EditorLayoutChipsBar(
 }
 
 
-@Composable
-internal fun LayoutSettingsContent(
-    layout:   PadLayout,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    Column(modifier = modifier.fillMaxWidth().background(colors.surface)) {
-        ButtonColorStyleRow(
-            label    = stringResource(R.string.macropad_editor_button_color_no_mirror),
-            selected = layout.buttonColorNoMirror,
-            onSelect = { style ->
-                MacroPadState.updateLayout(layout.copy(buttonColorNoMirror = style))
-            },
-        )
-        AppDivider()
-        ButtonColorStyleRow(
-            label    = stringResource(R.string.macropad_editor_button_color_mirror),
-            selected = layout.buttonColorMirror,
-            onSelect = { style ->
-                MacroPadState.updateLayout(layout.copy(buttonColorMirror = style))
-            },
-        )
-    }
-}
+
 
 @Composable
 internal fun ButtonColorStyleRow(

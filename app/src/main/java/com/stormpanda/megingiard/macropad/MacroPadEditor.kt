@@ -369,6 +369,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 title = stringResource(R.string.macropad_editor_title),
                 initialName = curLayout.name,
                 initialEnabled = curLayout.enabled,
+                initialButtonColorNoMirror = curLayout.buttonColorNoMirror,
+                initialButtonColorMirror = curLayout.buttonColorMirror,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
                 showDelete = true,
@@ -377,8 +379,15 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     showEditLayoutDialog = false
                     layoutPendingDelete = curLayout
                 },
-                onConfirm = { name, enabled ->
-                    MacroPadState.updateLayout(curLayout.copy(name = name, enabled = enabled))
+                onConfirm = { name, enabled, noMirrorStyle, mirrorStyle ->
+                    MacroPadState.updateLayout(
+                        curLayout.copy(
+                            name = name,
+                            enabled = enabled,
+                            buttonColorNoMirror = noMirrorStyle,
+                            buttonColorMirror = mirrorStyle
+                        )
+                    )
                     showEditLayoutDialog = false
                 },
                 onDismiss = { showEditLayoutDialog = false }
@@ -450,9 +459,9 @@ private fun EditorBody(
 
     val lazyListState = rememberLazyListState()
     // Items before buttons: section_profile(0), profiles(1), section_layout(2), layouts(3),
-    // toolbar(4), canvas(5), section_layout_settings(6), layout_settings(7), section_buttons(8) → offset = 9
+    // toolbar(4), canvas(5), section_buttons(6) → offset = 7
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val offset     = 9
+        val offset     = 7
         val curLayout  = layoutRef
         if (curLayout != null) {
             val newButtons = curLayout.buttons.toMutableList()
@@ -544,23 +553,14 @@ private fun EditorBody(
             PadCanvas(profile = profile, layout = layout, accentColor = accentColor, gridMode = gridMode)
         }
 
-        // 5. Layout settings section header
-        item(key = "section_layout_settings") {
-            EditorSectionHeader(R.string.macropad_editor_section_layout_settings)
-        }
-
-        // 6. Layout settings content
-        item(key = "layout_settings") {
-            if (layout != null) {
-                LayoutSettingsContent(
-                    layout = layout,
-                )
-            }
-        }
-
-        // 7. Buttons section header
+        // 5. Buttons section header
         item(key = "section_buttons") {
-            EditorSectionHeader(R.string.macropad_editor_section_buttons)
+            EditorSectionHeader(
+                textRes = R.string.macropad_editor_section_buttons,
+                actionIcon = Icons.Rounded.Add,
+                actionContentDescription = stringResource(R.string.macropad_editor_add_button),
+                onActionClick = onAddButton
+            )
         }
 
         // 6. Button list — tap to edit, drag handle to reorder

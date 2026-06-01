@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -555,16 +556,20 @@ internal fun InlineLayoutSettingsOverlay(
     title: String,
     initialName: String,
     initialEnabled: Boolean,
+    initialButtonColorNoMirror: ButtonColorStyle,
+    initialButtonColorMirror: ButtonColorStyle,
     accentColor: Color,
     existingNames: List<String>,
     showDelete: Boolean,
     canDelete: Boolean,
     onDelete: () -> Unit,
-    onConfirm: (String, Boolean) -> Unit,
+    onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var nameText by remember { mutableStateOf(initialName) }
     var isEnabled by remember { mutableStateOf(initialEnabled) }
+    var noMirrorStyle by remember { mutableStateOf(initialButtonColorNoMirror) }
+    var mirrorStyle by remember { mutableStateOf(initialButtonColorMirror) }
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
@@ -672,13 +677,29 @@ internal fun InlineLayoutSettingsOverlay(
                 )
             }
 
+            Spacer(Modifier.height(12.dp))
+            AppDivider()
+            Spacer(Modifier.height(12.dp))
+
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_no_mirror),
+                selected = noMirrorStyle,
+                onSelect = { noMirrorStyle = it }
+            )
+            Spacer(Modifier.height(8.dp))
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_mirror),
+                selected = mirrorStyle,
+                onSelect = { mirrorStyle = it }
+            )
+
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                 }
                 TextButton(
-                    onClick = { if (!hasError) onConfirm(normalizedName, isEnabled) },
+                    onClick = { if (!hasError) onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle) },
                     enabled = !hasError,
                 ) {
                     Text(

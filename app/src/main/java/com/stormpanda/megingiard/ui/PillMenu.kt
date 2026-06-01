@@ -96,12 +96,7 @@ fun PillMenu(
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
-    val defaultProfileName = stringResource(R.string.pill_menu_new_profile)
-    val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
-
     var showGlobalSettings by remember { mutableStateOf(false) }
-    var showNewProfileDialog by remember { mutableStateOf(false) }
-    var showNewLayoutDialog by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
@@ -185,7 +180,6 @@ fun PillMenu(
                         MacroPadState.setActiveProfileId(profile.id)
                         onDismiss()
                     },
-                    onNewProfile = { showNewProfileDialog = true },
                 )
 
                 Spacer(Modifier.height(PM_SECTION_SPACING))
@@ -202,7 +196,6 @@ fun PillMenu(
                         MacroPadState.setActiveLayoutId(layoutId)
                         onDismiss()
                     },
-                    onNewLayout = { showNewLayoutDialog = true },
                 )
 
                 Spacer(Modifier.height(PM_SECTION_SPACING))
@@ -243,54 +236,5 @@ fun PillMenu(
         GlobalSettingsScreen(onBack = { showGlobalSettings = false })
     }
 
-    // ── New Profile dialog ─────────────────────────────────────────────────
-    if (showNewProfileDialog) {
-        InTreeNameInputDialog(
-            title = stringResource(R.string.pill_menu_new_profile),
-            hint = stringResource(R.string.pill_menu_profile_name_hint),
-            colors = colors,
-            onConfirm = { name ->
-                val layoutId = UUID.randomUUID().toString()
-                val profile = PadProfile(
-                    id = UUID.randomUUID().toString(),
-                    name = name.trim().ifEmpty { defaultProfileName },
-                    layouts = listOf(
-                        PadLayout(
-                            id = layoutId,
-                            name = name.trim().ifEmpty { defaultLayoutName },
-                            buttons = emptyList(),
-                        )
-                    ),
-                    activeLayoutId = layoutId,
-                    macros = emptyList(),
-                )
-                MacroPadState.addProfile(profile)
-                showNewProfileDialog = false
-                onDismiss()
-            },
-            onDismiss = { showNewProfileDialog = false },
-            existingNames = profiles.map { it.name },
-        )
-    }
 
-    // ── New Layout dialog ──────────────────────────────────────────────────
-    if (showNewLayoutDialog) {
-        val profile = activeProfile
-        NewLayoutOverlay(
-            profiles = profiles,
-            existingLayoutNames = profile?.layouts?.map { it.name } ?: emptyList(),
-            accentColor = colors.accent,
-            onConfirm = { name, templateButtons ->
-                val layout = PadLayout(
-                    id = UUID.randomUUID().toString(),
-                    name = name.trim().ifEmpty { defaultLayoutName },
-                    buttons = templateButtons,
-                )
-                MacroPadState.addLayout(layout)
-                showNewLayoutDialog = false
-                onDismiss()
-            },
-            onDismiss = { showNewLayoutDialog = false },
-        )
-    }
 }
