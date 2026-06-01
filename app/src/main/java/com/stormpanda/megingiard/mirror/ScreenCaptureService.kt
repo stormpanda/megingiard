@@ -278,22 +278,20 @@ class ScreenCaptureService : Service() {
                 val isFrozen = ScreenCaptureManager.isFrozen.value
                 val activeSurface = if (isFrozen) null else surface
                 if (virtualDisplay != null) {
-                    // Reattach surface after a hide/show cycle — VirtualDisplay was kept
-                    // alive with surface=null while the Presentation window was hidden.
-                    virtualDisplay?.setSurface(activeSurface)
-                    AppLog.d(TAG, "VirtualDisplay surface reattached after show()")
-                } else {
-                    try {
-                        virtualDisplay = mediaProjection?.createVirtualDisplay(
-                            "ScreenCapture",
-                            srcWidth, srcHeight, dpi,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                            activeSurface, null, null
-                        )
-                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Exception creating VirtualDisplay", e)
-                    }
+                    AppLog.i(TAG, "Recreating VirtualDisplay to prevent SurfaceFlinger crop/resolution mismatch")
+                    virtualDisplay?.release()
+                    virtualDisplay = null
+                }
+                try {
+                    virtualDisplay = mediaProjection?.createVirtualDisplay(
+                        "ScreenCapture",
+                        srcWidth, srcHeight, dpi,
+                        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                        activeSurface, null, null
+                    )
+                    AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Exception creating VirtualDisplay", e)
                 }
             }
 

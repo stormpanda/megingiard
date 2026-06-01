@@ -110,6 +110,7 @@ class MirrorPresentation(
     private var fadeAnimator: ValueAnimator? = null
     private var isHiding = false
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var needsTransformRestore = true
 
     // OnBackPressedDispatcher provided to the Compose tree. Needs to be a class
     // property so onBackCallback can delegate to it (see below).
@@ -196,6 +197,13 @@ class MirrorPresentation(
 
         val tv = TextureView(context).apply {
             layoutParams = FrameLayout.LayoutParams(finalWidth, finalHeight, Gravity.CENTER)
+            addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                scaleX = ScreenCaptureManager.scale.value
+                scaleY = ScreenCaptureManager.scale.value
+                translationX = ScreenCaptureManager.offsetX.value
+                translationY = ScreenCaptureManager.offsetY.value
+                AppLog.d(TAG, "onLayoutChange: restored scale=$scaleX offset=($translationX, $translationY)")
+            }
         }
         tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(texture: SurfaceTexture, width: Int, height: Int) {
@@ -203,6 +211,13 @@ class MirrorPresentation(
                 val s = Surface(texture)
                 surface = s
                 onSurfaceReady?.invoke(s)
+
+                needsTransformRestore = true
+                tv.scaleX = ScreenCaptureManager.scale.value
+                tv.scaleY = ScreenCaptureManager.scale.value
+                tv.translationX = ScreenCaptureManager.offsetX.value
+                tv.translationY = ScreenCaptureManager.offsetY.value
+                AppLog.d(TAG, "onSurfaceTextureAvailable: restored scale=${tv.scaleX} offset=(${tv.translationX}, ${tv.translationY})")
             }
             override fun onSurfaceTextureSizeChanged(texture: SurfaceTexture, width: Int, height: Int) {}
             override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean {
@@ -211,7 +226,25 @@ class MirrorPresentation(
                 surface = null
                 return true
             }
-            override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {}
+            override fun onSurfaceTextureUpdated(texture: SurfaceTexture) {
+                val s = ScreenCaptureManager.scale.value
+                val ox = ScreenCaptureManager.offsetX.value
+                val oy = ScreenCaptureManager.offsetY.value
+                if (tv.scaleX != s) {
+                    AppLog.d(TAG, "onSurfaceTextureUpdated: scale reset detected -> restoring scale $s (was ${tv.scaleX})")
+                    tv.scaleX = s
+                }
+                if (tv.scaleY != s) {
+                    tv.scaleY = s
+                }
+                if (tv.translationX != ox) {
+                    AppLog.d(TAG, "onSurfaceTextureUpdated: translationX reset detected -> restoring $ox (was ${tv.translationX})")
+                    tv.translationX = ox
+                }
+                if (tv.translationY != oy) {
+                    tv.translationY = oy
+                }
+            }
         }
         textureView = tv
 
@@ -649,6 +682,7 @@ class MirrorPresentation(
     override fun show() {
         AppLog.i(TAG, "show() with fade-in initiated")
         isHiding = false
+        needsTransformRestore = true
         fadeAnimator?.cancel()
         
         val window = this.window
@@ -659,6 +693,14 @@ class MirrorPresentation(
         }
         
         super.show()
+
+        textureView?.let { tv ->
+            tv.scaleX = ScreenCaptureManager.scale.value
+            tv.scaleY = ScreenCaptureManager.scale.value
+            tv.translationX = ScreenCaptureManager.offsetX.value
+            tv.translationY = ScreenCaptureManager.offsetY.value
+            AppLog.d(TAG, "show: restored scale=${tv.scaleX} offset=(${tv.translationX}, ${tv.translationY})")
+        }
         
         val activeWindow = this.window ?: return
         val lp = activeWindow.attributes
@@ -676,6 +718,7 @@ class MirrorPresentation(
     override fun hide() {
         AppLog.i(TAG, "hide() with fade-out initiated")
         if (isHiding) return
+        needsTransformRestore = true
         val window = this.window ?: run {
             super.hide()
             return
