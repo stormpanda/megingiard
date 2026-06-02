@@ -122,6 +122,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var showEditLayoutDialog     by remember { mutableStateOf(false) }
     var showReorderProfilesOverlay by remember { mutableStateOf(false) }
     var showReorderLayoutsOverlay by remember { mutableStateOf(false) }
+    var isCanvasLocked            by remember { mutableStateOf(true) }
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
@@ -191,6 +192,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     onDeleteRequested       = { btn -> buttonPendingDelete = btn },
                     onReorderProfiles       = { showReorderProfilesOverlay = true },
                     onReorderLayouts        = { showReorderLayoutsOverlay = true },
+                    isCanvasLocked          = isCanvasLocked,
+                    onToggleCanvasLock      = { isCanvasLocked = !isCanvasLocked },
                     modifier                = Modifier.padding(innerPadding),
                 )
             }
@@ -486,6 +489,8 @@ private fun EditorBody(
     onDeleteRequested:       (PadButton) -> Unit,
     onReorderProfiles:       () -> Unit,
     onReorderLayouts:        () -> Unit,
+    isCanvasLocked:          Boolean,
+    onToggleCanvasLock:      () -> Unit,
     modifier:                Modifier = Modifier,
 ) {
     val colors     = LocalAppColors.current
@@ -570,6 +575,8 @@ private fun EditorBody(
                 profile          = profile,
                 accentColor      = accentColor,
                 gridMode         = gridMode,
+                isCanvasLocked   = isCanvasLocked,
+                onToggleCanvasLock = onToggleCanvasLock,
                 onManageMacros   = onManageMacros,
                 onAddButton      = onAddButton,
                 onGridModeChange = {
@@ -588,7 +595,7 @@ private fun EditorBody(
 
         // 4. Pad canvas
         item(key = "canvas") {
-            PadCanvas(profile = profile, layout = layout, accentColor = accentColor, gridMode = gridMode)
+            PadCanvas(profile = profile, layout = layout, accentColor = accentColor, gridMode = gridMode, isLocked = isCanvasLocked)
         }
 
         // 5. Buttons section header

@@ -97,7 +97,13 @@ internal enum class GridMode { OFF, RECTANGULAR, RADIAL }
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Color, gridMode: GridMode) {
+internal fun PadCanvas(
+    profile: PadProfile,
+    layout: PadLayout?,
+    accentColor: Color,
+    gridMode: GridMode,
+    isLocked: Boolean,
+) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val colors     = LocalAppColors.current
     val density    = LocalDensity.current
@@ -136,6 +142,7 @@ internal fun PadCanvas(profile: PadProfile, layout: PadLayout?, accentColor: Col
                 enableMouse    = profile.enableMouse,
                 gridMode       = gridMode,
                 gridStepPx     = gridStepPx,
+                isLocked       = isLocked,
                 onPositionChanged = { nx, ny ->
                     val layoutId = targetLayoutId
                     val activeProfile = MacroPadState.activeProfile.value
@@ -167,6 +174,7 @@ private fun DraggableButton(
     enableMouse:       Boolean,
     gridMode:          GridMode,
     gridStepPx:        Float,
+    isLocked:          Boolean,
     onPositionChanged: (Float, Float) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -272,33 +280,36 @@ private fun DraggableButton(
                 if (isIconOnly) Modifier
                 else Modifier.border(1.dp, accentColor, chipShape)
             )
-            .pointerInput(btn.id, canvasSize) {
-                detectDragGestures(
-                    onDragStart = {
-                        // Capture the current (live) position as anchor so the
-                        // accumulated delta is always relative to this drag's start.
-                        startPosX = currentBtn.value.posX
-                        startPosY = currentBtn.value.posY
-                        dragOffsetX = 0f
-                        dragOffsetY = 0f
-                    },
-                    onDrag = { change, drag ->
-                        change.consume()
-                        dragOffsetX += drag.x
-                        dragOffsetY += drag.y
-                        val rawX = (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN)
-                        val rawY = (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN)
-                        val (snappedX, snappedY) = snapPosition(
-                            rawX, rawY, w, h,
-                            currentGridMode.value, currentGridStepPx.value,
-                        )
-                        currentOnPositionChanged.value(
-                            snappedX.coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
-                            snappedY.coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
-                        )
-                    },
-                )
-            }
+            .then(
+                if (isLocked) Modifier
+                else Modifier.pointerInput(btn.id, canvasSize) {
+                    detectDragGestures(
+                        onDragStart = {
+                            // Capture the current (live) position as anchor so the
+                            // accumulated delta is always relative to this drag's start.
+                            startPosX = currentBtn.value.posX
+                            startPosY = currentBtn.value.posY
+                            dragOffsetX = 0f
+                            dragOffsetY = 0f
+                        },
+                        onDrag = { change, drag ->
+                            change.consume()
+                            dragOffsetX += drag.x
+                            dragOffsetY += drag.y
+                            val rawX = (startPosX + dragOffsetX / w).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN)
+                            val rawY = (startPosY + dragOffsetY / h).coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN)
+                            val (snappedX, snappedY) = snapPosition(
+                                rawX, rawY, w, h,
+                                currentGridMode.value, currentGridStepPx.value,
+                            )
+                            currentOnPositionChanged.value(
+                                snappedX.coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
+                                snappedY.coerceIn(ED_EDGE_MARGIN, 1f - ED_EDGE_MARGIN),
+                            )
+                        },
+                    )
+                }
+            )
     ) {
         if (btn.action is PadAction.TrackpointMove) {
             Text("●", color = accentColor, style = MaterialTheme.typography.bodyMedium)

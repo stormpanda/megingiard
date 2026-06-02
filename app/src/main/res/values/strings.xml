@@ -464,7 +464,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_grid_off">Grid off</string>
     <string name="macropad_editor_grid_rectangular">Rectangular grid</string>
     <string name="macropad_editor_grid_radial">Radial grid</string>
-    <string name="macropad_editor_grid_toggle">Show grid</string>
+    <string name="macropad_editor_grid_toggle">Grid</string>
+    <string name="macropad_editor_toolbar_button">Button</string>
+    <string name="macropad_editor_unlock">Unlock</string>
+    <string name="macropad_editor_lock">Lock</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>

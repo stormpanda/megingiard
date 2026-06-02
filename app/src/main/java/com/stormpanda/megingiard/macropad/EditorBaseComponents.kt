@@ -15,10 +15,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Grid4x4
+import androidx.compose.material.icons.rounded.GridOff
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,8 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
-
-import androidx.compose.material3.IconButton
 
 private const val TAG = "EditorBaseComponents"
 
@@ -116,26 +117,32 @@ internal fun EditorToolbar(
     profile:          PadProfile,
     accentColor:      Color,
     gridMode:         GridMode,
+    isCanvasLocked:   Boolean,
+    onToggleCanvasLock: () -> Unit,
     onManageMacros:   () -> Unit,
     onAddButton:      () -> Unit,
     onGridModeChange: () -> Unit,
     modifier:         Modifier = Modifier,
 ) {
-    val colors   = LocalAppColors.current
     val gridIcon = when (gridMode) {
         GridMode.OFF         -> Icons.Rounded.GridOff
         GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
         GridMode.RADIAL      -> Icons.Rounded.TripOrigin
     }
-    val gridTint = if (gridMode == GridMode.OFF) colors.onSurfaceSecondary else accentColor
+    val gridLabel = stringResource(R.string.macropad_editor_grid_toggle)
+    val buttonLabel = stringResource(R.string.macropad_editor_toolbar_button)
+
+    val lockIcon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen
+    val lockLabel = if (isCanvasLocked) stringResource(R.string.macropad_editor_unlock) else stringResource(R.string.macropad_editor_lock)
+
     Row(
         modifier              = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
         verticalAlignment     = Alignment.CenterVertically,
     ) {
-        // Add Button
+        // Add Button ("Button")
         EditorActionChip(
-            label       = stringResource(R.string.macropad_editor_add_button),
+            label       = buttonLabel,
             icon        = Icons.Rounded.Add,
             accentColor = accentColor,
             onClick     = onAddButton,
@@ -149,12 +156,20 @@ internal fun EditorToolbar(
             onClick     = onManageMacros,
             modifier    = Modifier.weight(1f),
         )
-        // Grid toggle
+        // Grid toggle ("Grid", accent color all the time)
         EditorActionChip(
-            label       = stringResource(R.string.macropad_editor_grid_toggle),
+            label       = gridLabel,
             icon        = gridIcon,
-            accentColor = gridTint,
+            accentColor = accentColor,
             onClick     = onGridModeChange,
+            modifier    = Modifier.weight(1f),
+        )
+        // Unlock / Lock button (4th button)
+        EditorActionChip(
+            label       = lockLabel,
+            icon        = lockIcon,
+            accentColor = accentColor,
+            onClick     = onToggleCanvasLock,
             modifier    = Modifier.weight(1f),
         )
     }
