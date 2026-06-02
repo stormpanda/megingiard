@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FormatListNumbered
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -46,6 +47,7 @@ internal fun EditorProfileChipsBar(
     accentColor: Color,
     onSelectProfile: (String) -> Unit,
     onEditProfile: () -> Unit,
+    onReorderProfiles: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -70,7 +72,6 @@ internal fun EditorProfileChipsBar(
             }
         }
 
-        // Edit only
         IconButton(
             onClick = onEditProfile,
             modifier = Modifier.size(28.dp)
@@ -78,6 +79,18 @@ internal fun EditorProfileChipsBar(
             Icon(
                 imageVector = Icons.Rounded.Edit,
                 contentDescription = stringResource(R.string.macropad_editor_rename),
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        IconButton(
+            onClick = onReorderProfiles,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.FormatListNumbered,
+                contentDescription = stringResource(R.string.macropad_reorder_profiles),
                 tint = colors.onSurfaceSecondary,
                 modifier = Modifier.size(20.dp)
             )
@@ -92,6 +105,7 @@ internal fun EditorLayoutChipsBar(
     accentColor: Color,
     onSelectLayout: (String) -> Unit,
     onEditLayout: () -> Unit,
+    onReorderLayouts: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -136,7 +150,6 @@ internal fun EditorLayoutChipsBar(
             }
         }
 
-        // Edit only
         IconButton(
             onClick = onEditLayout,
             modifier = Modifier.size(28.dp)
@@ -148,11 +161,20 @@ internal fun EditorLayoutChipsBar(
                 modifier = Modifier.size(20.dp)
             )
         }
+
+        IconButton(
+            onClick = onReorderLayouts,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.FormatListNumbered,
+                contentDescription = stringResource(R.string.macropad_reorder_layouts),
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
-
-
-
 
 @Composable
 internal fun ButtonColorStyleRow(

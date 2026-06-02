@@ -120,6 +120,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var showNewLayoutDialog      by remember { mutableStateOf(false) }
     var layoutPendingDelete      by remember { mutableStateOf<PadLayout?>(null) }
     var showEditLayoutDialog     by remember { mutableStateOf(false) }
+    var showReorderProfilesOverlay by remember { mutableStateOf(false) }
+    var showReorderLayoutsOverlay by remember { mutableStateOf(false) }
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
@@ -127,7 +129,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
         editingButtonActive || buttonPendingDelete != null ||
         showNewLayoutDialog || layoutPendingDelete != null ||
         showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm ||
-        showEditLayoutDialog
+        showEditLayoutDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay
     BackHandler(enabled = anyOverlayVisible) {
         when {
             showMacroListEditor      -> showMacroListEditor = false
@@ -140,6 +142,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
             showRenameProfileDialog  -> showRenameProfileDialog = false
             showDeleteProfileConfirm -> showDeleteProfileConfirm = false
             showEditLayoutDialog     -> showEditLayoutDialog = false
+            showReorderProfilesOverlay -> showReorderProfilesOverlay = false
+            showReorderLayoutsOverlay -> showReorderLayoutsOverlay = false
         }
     }
 
@@ -185,6 +189,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     onAddButton             = { showAddButton = true },
                     onEditButton            = { btn -> editingButton = btn; editingButtonActive = true },
                     onDeleteRequested       = { btn -> buttonPendingDelete = btn },
+                    onReorderProfiles       = { showReorderProfilesOverlay = true },
+                    onReorderLayouts        = { showReorderLayoutsOverlay = true },
                     modifier                = Modifier.padding(innerPadding),
                 )
             }
@@ -393,6 +399,34 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 onDismiss = { showEditLayoutDialog = false }
             )
         }
+
+        // Render ReorderProfilesOverlay
+        AnimatedVisibility(
+            visible  = showReorderProfilesOverlay,
+            enter    = slideInVertically { it } + fadeIn(),
+            exit     = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            ReorderProfilesOverlay(
+                profiles = profiles,
+                onDone   = { showReorderProfilesOverlay = false },
+            )
+        }
+
+        // Render ReorderLayoutsOverlay
+        AnimatedVisibility(
+            visible  = showReorderLayoutsOverlay && profile != null,
+            enter    = slideInVertically { it } + fadeIn(),
+            exit     = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            if (profile != null) {
+                ReorderLayoutsOverlay(
+                    layouts = profile.layouts,
+                    onDone  = { showReorderLayoutsOverlay = false },
+                )
+            }
+        }
     } // end Box
 }
 
@@ -450,6 +484,8 @@ private fun EditorBody(
     onAddButton:             () -> Unit,
     onEditButton:            (PadButton) -> Unit,
     onDeleteRequested:       (PadButton) -> Unit,
+    onReorderProfiles:       () -> Unit,
+    onReorderLayouts:        () -> Unit,
     modifier:                Modifier = Modifier,
 ) {
     val colors     = LocalAppColors.current
@@ -494,6 +530,7 @@ private fun EditorBody(
                 accentColor     = accentColor,
                 onSelectProfile = onSelectProfile,
                 onEditProfile   = onEditProfile,
+                onReorderProfiles = onReorderProfiles,
                 modifier        = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
@@ -519,6 +556,7 @@ private fun EditorBody(
                 accentColor    = accentColor,
                 onSelectLayout = onSelectLayout,
                 onEditLayout   = onEditLayout,
+                onReorderLayouts = onReorderLayouts,
                 modifier       = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
