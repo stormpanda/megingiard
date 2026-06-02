@@ -92,7 +92,7 @@ internal fun MacroListEditor(
 ) {
     val colors       = LocalAppColors.current
     val accentColor  = colors.accent
-    val isDirectEdit = onDirectEditSave != null && onDirectEditCancel != null
+    val isDirectEdit = initialEditMacroId != null
 
     var editingMacro by remember(initialEditMacroId) {
         mutableStateOf(
