@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -86,10 +87,23 @@ private const val ML_PADDING        = 16
 internal fun MacroListEditor(
     onDone: () -> Unit,
     initialEditMacroId: String? = null,
+    onDirectEditSave: ((Macro) -> Unit)? = null,
+    onDirectEditCancel: (() -> Unit)? = null,
 ) {
     val colors       = LocalAppColors.current
     val accentColor  = colors.accent
     var editingMacro by remember { mutableStateOf<Macro?>(null) }
+    val isDirectEdit = onDirectEditSave != null && onDirectEditCancel != null
+
+    BackHandler(enabled = true) {
+        if (isDirectEdit) {
+            onDirectEditCancel?.invoke()
+        } else if (editingMacro != null) {
+            editingMacro = null
+        } else {
+            onDone()
+        }
+    }
 
     // If the caller wants to open a specific macro immediately, look it up once.
     LaunchedEffect(initialEditMacroId) {
@@ -106,6 +120,11 @@ internal fun MacroListEditor(
     val macros = profile?.macros ?: emptyList()
 
     if (editingMacro == null) {
+        if (isDirectEdit) {
+            LaunchedEffect(Unit) {
+                onDirectEditCancel?.invoke()
+            }
+        }
         MacroListView(
             accentColor  = accentColor,
             macros       = macros,
@@ -136,9 +155,19 @@ internal fun MacroListEditor(
                 } else {
                     MacroPadState.updateMacro(saved)
                 }
-                editingMacro = null
+                if (isDirectEdit) {
+                    onDirectEditSave?.invoke(saved)
+                } else {
+                    editingMacro = null
+                }
             },
-            onBack = { editingMacro = null },
+            onBack = {
+                if (isDirectEdit) {
+                    onDirectEditCancel?.invoke()
+                } else {
+                    editingMacro = null
+                }
+            },
         )
     }
 }

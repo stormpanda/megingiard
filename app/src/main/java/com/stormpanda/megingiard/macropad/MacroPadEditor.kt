@@ -199,18 +199,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
             }
         }
 
-        // Render MacroListEditor as a full-screen inline overlay (same window — no nested Dialog)
-        AnimatedVisibility(
-            visible  = showMacroListEditor,
-            enter    = slideInVertically { it } + fadeIn(),
-            exit     = slideOutVertically { it } + fadeOut(),
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            MacroListEditor(
-                onDone             = { showMacroListEditor = false; pendingMacroEditId = null },
-                initialEditMacroId = pendingMacroEditId,
-            )
-        }
 
         // Add button overlay
         AnimatedVisibility(
@@ -223,7 +211,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 ButtonEditDialog(
                     button      = null,
                     accentColor = colors.accent,
-                    onEditMacro = { macro -> pendingMacroEditId = macro.id; showAddButton = false; showMacroListEditor = true },
+                    onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
                     onConfirm   = { newBtn ->
                         val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                         MacroPadState.updateLayout(layout.copy(buttons = layout.buttons + newBtn))
@@ -245,7 +233,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 ButtonEditDialog(
                     button      = editingButton,
                     accentColor = colors.accent,
-                    onEditMacro = { macro -> pendingMacroEditId = macro.id; editingButtonActive = false; showMacroListEditor = true },
+                    onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
                     onConfirm   = { updated ->
                         val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                         MacroPadState.updateLayout(
@@ -429,6 +417,36 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     onDone  = { showReorderLayoutsOverlay = false },
                 )
             }
+        }
+
+        // Render MacroListEditor as a full-screen inline overlay (same window — no nested Dialog)
+        AnimatedVisibility(
+            visible  = showMacroListEditor,
+            enter    = slideInVertically { it } + fadeIn(),
+            exit     = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            MacroListEditor(
+                onDone             = { showMacroListEditor = false; pendingMacroEditId = null },
+                initialEditMacroId = pendingMacroEditId,
+                onDirectEditSave   = { savedMacro ->
+                    showMacroListEditor = false
+                    pendingMacroEditId = null
+                    AppLog.d(TAG, "Direct edit macro saved: ${savedMacro.name}")
+                },
+                onDirectEditCancel = {
+                    showMacroListEditor = false
+                    val draftId = pendingMacroEditId
+                    pendingMacroEditId = null
+                    if (draftId != null) {
+                        val macro = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == draftId }
+                        if (macro != null && macro.steps.isEmpty()) {
+                            AppLog.d(TAG, "Cleaning up empty macro draft on cancel: $draftId")
+                            MacroPadState.deleteMacro(draftId)
+                        }
+                    }
+                }
+            )
         }
     } // end Box
 }
