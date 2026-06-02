@@ -92,8 +92,17 @@ internal fun MacroListEditor(
 ) {
     val colors       = LocalAppColors.current
     val accentColor  = colors.accent
-    var editingMacro by remember { mutableStateOf<Macro?>(null) }
     val isDirectEdit = onDirectEditSave != null && onDirectEditCancel != null
+
+    var editingMacro by remember(initialEditMacroId) {
+        mutableStateOf(
+            if (initialEditMacroId != null) {
+                MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == initialEditMacroId }
+            } else {
+                null
+            }
+        )
+    }
 
     BackHandler(enabled = true) {
         if (isDirectEdit) {
@@ -105,14 +114,6 @@ internal fun MacroListEditor(
         }
     }
 
-    // If the caller wants to open a specific macro immediately, look it up once.
-    LaunchedEffect(initialEditMacroId) {
-        if (initialEditMacroId != null && editingMacro == null) {
-            val macro = MacroPadState.activeProfile.value?.macros
-                ?.firstOrNull { it.id == initialEditMacroId }
-            if (macro != null) editingMacro = macro
-        }
-    }
     val defaultName  = stringResource(R.string.macropad_macro_default_name)
     val copyNameFormat = stringResource(R.string.macropad_macro_copy_name)
 
