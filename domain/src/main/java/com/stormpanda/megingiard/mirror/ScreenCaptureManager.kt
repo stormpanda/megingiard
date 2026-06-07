@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -175,6 +176,10 @@ object ScreenCaptureManager {
 
     fun onTouchReceived(nx: Float, ny: Float) {
         if (!_isCapturing.value || !_isFollowActive.value) return
+        val layout = MacroPadState.activeLayout.value
+        if (layout != null && layout.mirrorFollowDisableDuringMacro && MacroExecutor.runningMacroIds.value.isNotEmpty()) {
+            return
+        }
         updateFollowCenter(nx, ny)
     }
 

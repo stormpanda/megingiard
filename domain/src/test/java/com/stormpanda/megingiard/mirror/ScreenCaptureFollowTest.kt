@@ -1,9 +1,10 @@
 package com.stormpanda.megingiard.mirror
 
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.core.DataStore
-import com.stormpanda.megingiard.settings.MirrorSettings
+import androidx.datastore.preferences.core.Preferences
+import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Dispatchers
@@ -144,5 +145,66 @@ class ScreenCaptureFollowTest {
         assertFalse(ScreenCaptureManager.isFollowActive.value)
         MirrorViewportController.restoreFromLayout()
         assertTrue(ScreenCaptureManager.isFollowActive.value)
+    }
+
+    @Test
+    fun `onTouchReceived ignores touch when mirrorFollowDisableDuringMacro is true and macro is running`() {
+        ScreenCaptureManager.setCapturing(true)
+        ScreenCaptureManager.setFollowActive(true)
+
+        // Enable mirrorFollowDisableDuringMacro on active layout
+        val layout = MacroPadState.activeLayout.value!!
+        MacroPadState.updateLayout(layout.copy(mirrorFollowDisableDuringMacro = true))
+
+        // Initial offsets should be 0f
+        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
+        assertEquals(0f, ScreenCaptureManager.offsetY.value, 0.001f)
+
+        // Mock running macro
+        MacroExecutor.setRunningMacroIdsForTest(setOf("test-macro-id"))
+
+        // Send touch event (0.2f, 0.2f)
+        ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
+
+        // Offsets should remain 0f (ignored)
+        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
+        assertEquals(0f, ScreenCaptureManager.offsetY.value, 0.001f)
+
+        // Clear running macros
+        MacroExecutor.setRunningMacroIdsForTest(emptySet())
+
+        // Send touch event again
+        ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
+
+        // Now it should center: targetOffsetX = -(0.2 - 0.5) * 1920 * 5 = 2880f
+        assertEquals(2880f, ScreenCaptureManager.offsetX.value, 0.001f)
+        assertEquals(1620f, ScreenCaptureManager.offsetY.value, 0.001f)
+    }
+
+    @Test
+    fun `onTouchReceived processes touch when mirrorFollowDisableDuringMacro is false even if macro is running`() {
+        ScreenCaptureManager.setCapturing(true)
+        ScreenCaptureManager.setFollowActive(true)
+
+        // Disable mirrorFollowDisableDuringMacro on active layout
+        val layout = MacroPadState.activeLayout.value!!
+        MacroPadState.updateLayout(layout.copy(mirrorFollowDisableDuringMacro = false))
+
+        // Initial offsets should be 0f
+        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
+        assertEquals(0f, ScreenCaptureManager.offsetY.value, 0.001f)
+
+        // Mock running macro
+        MacroExecutor.setRunningMacroIdsForTest(setOf("test-macro-id"))
+
+        // Send touch event
+        ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
+
+        // It should center as normal
+        assertEquals(2880f, ScreenCaptureManager.offsetX.value, 0.001f)
+        assertEquals(1620f, ScreenCaptureManager.offsetY.value, 0.001f)
+
+        // Clean up mock
+        MacroExecutor.setRunningMacroIdsForTest(emptySet())
     }
 }

@@ -94,6 +94,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Activating Follow Touch Mode MUST restore the saved viewport (scale + offset) as the starting position. Deactivating it MUST restore the same saved viewport, discarding any panning drift accumulated during tracking. Follow Touch Mode MUST never write to the saved viewport.
 - A **Smoothing** switch (ON by default) MUST be dynamically displayed directly below the primary toggle only when Follow Touch Mode is active.
 - When Smoothing is enabled, the viewport panning MUST glide smoothly to target coordinates using exponential easing. When disabled, the panning MUST snap instantly.
+- A **Disable during macro execution** switch MUST be dynamically displayed directly below the Smoothing toggle when Follow Touch Mode is active. When enabled, touch tracking and viewport centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
 - Activating Viewport Edit Mode MUST automatically turn off Follow Touch Mode to prevent pan/zoom gesture and coordinate conflicts (mutual exclusion).
 
 ---
@@ -245,6 +246,7 @@ Follow Touch Mode centers the viewport in real-time on the spot last touched on 
    $$current = current + (target - current) \times 0.15$$
    If Smoothing is disabled, the viewport snaps instantly to the target coordinates.
 5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
+6. **Macro Execution Guard:** When the "Disable during macro execution" setting is active, `ScreenCaptureManager.onTouchReceived(nx, ny)` checks `MacroExecutor.runningMacroIds` before proceeding. If any macro is currently executing, it returns early without updating the target offsets, effectively pausing the camera tracking.
 
 ### Mode Switching: `show()` / `hide()` vs. `dismiss()`
 

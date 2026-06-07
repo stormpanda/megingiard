@@ -213,4 +213,7 @@ object MacroExecutor {
         }
     }
 
+    internal fun setRunningMacroIdsForTest(ids: Set<String>) {
+        _runningMacroIds.value = ids
+    }
 }

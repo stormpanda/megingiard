@@ -308,6 +308,28 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                     }
                                 )
                             }
+                            AppDivider()
+                            AppSettingsRow {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_mirror_follow_disable_during_macro),
+                                        color = colors.onSurface,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_mirror_follow_disable_during_macro_desc),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                                Switch(
+                                    checked = currentLayout.mirrorFollowDisableDuringMacro,
+                                    onCheckedChange = {
+                                        AppLog.d(TAG, "mirrorFollowDisableDuringMacro → $it")
+                                        commitLayout { copy(mirrorFollowDisableDuringMacro = it) }
+                                    }
+                                )
+                            }
                         }
                     }
 
