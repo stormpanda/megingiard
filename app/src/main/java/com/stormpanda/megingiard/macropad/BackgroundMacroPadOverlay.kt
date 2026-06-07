@@ -38,6 +38,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
@@ -176,7 +177,8 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, pillZoneWidthPx) {
+            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, pillZoneWidthPx, previewConfig == null) {
+                if (previewConfig != null) return@pointerInput
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -314,7 +316,12 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                 }
                 else -> { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
             }
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blockPointerEvents(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
                 AsoPreviewBar(
                     label = pc.label,
                     value = previewValue,

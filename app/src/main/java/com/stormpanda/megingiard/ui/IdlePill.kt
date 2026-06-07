@@ -52,6 +52,9 @@ val PILL_INSET: Dp = IP_PILL_TOP_PADDING + IP_PILL_IDLE_HEIGHT + 3.dp
  */
 @Composable
 fun IdlePill(modifier: Modifier = Modifier) {
+    val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    if (previewConfig != null) return
+
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val isAnyModalActive by AppStateManager.isAnyModalActive.collectAsState()
     val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
