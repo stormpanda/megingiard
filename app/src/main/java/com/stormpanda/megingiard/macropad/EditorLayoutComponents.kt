@@ -75,7 +75,7 @@ internal fun EditorProfileChipsBar(
         ) {
             Icon(
                 imageVector = Icons.Rounded.Edit,
-                contentDescription = stringResource(R.string.macropad_editor_rename),
+                contentDescription = stringResource(R.string.macropad_editor_title_edit_profile),
                 tint = colors.onSurfaceSecondary,
                 modifier = Modifier.size(20.dp)
             )
@@ -152,7 +152,7 @@ internal fun EditorLayoutChipsBar(
         ) {
             Icon(
                 imageVector = Icons.Rounded.Edit,
-                contentDescription = stringResource(R.string.macropad_editor_rename),
+                contentDescription = stringResource(R.string.macropad_editor_section_layout_settings),
                 tint = colors.onSurfaceSecondary,
                 modifier = Modifier.size(20.dp)
             )

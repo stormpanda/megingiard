@@ -5,6 +5,8 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppReorderOverlay
 
+private const val TAG = "ReorderOverlays"
+
 @Composable
 internal fun ReorderProfilesOverlay(
     profiles: List<PadProfile>,

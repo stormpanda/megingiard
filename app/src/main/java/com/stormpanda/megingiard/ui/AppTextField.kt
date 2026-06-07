@@ -5,6 +5,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
+private const val TAG = "AppTextField"
+
 @Composable
 internal fun AppTextField(
     value: String,
