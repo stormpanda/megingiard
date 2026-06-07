@@ -330,30 +330,36 @@ internal fun ButtonEditDialog(
                         }
                     }
 
-                    // ── Shape + Size side by side ──────────────────────────────────────────────
+                    // ── Shape + Size + Haptic side by side ──────────────────────────────────────────────
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ButtonShape.entries.forEach { shape ->
-                                    val selected = shape == buttonShape
-                                    val shapeLabel = when (shape) {
+                            AppDropdown(
+                                selected          = buttonShape,
+                                options           = ButtonShape.entries,
+                                optionText        = { shape ->
+                                    when (shape) {
                                         ButtonShape.CIRCLE    -> stringResource(R.string.macropad_editor_shape_circle)
                                         ButtonShape.SQUARE    -> stringResource(R.string.macropad_editor_shape_square)
                                         ButtonShape.ICON_ONLY -> stringResource(R.string.macropad_editor_shape_icon_only)
                                     }
-                                    AppSelectableChip(
-                                        text     = shapeLabel,
-                                        selected = selected,
-                                        onClick  = { buttonShape = shape },
-                                    )
-                                }
-                            }
+                                },
+                                onSelected        = { shape -> buttonShape = shape },
+                                horizontalPadding = 16.dp,
+                                verticalPadding   = 10.dp,
+                                fillMaxWidth      = true,
+                            )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
                             AppDropdown(
                                 selected          = buttonSize,
@@ -362,64 +368,27 @@ internal fun ButtonEditDialog(
                                 onSelected        = { size -> buttonSize = size },
                                 horizontalPadding = 16.dp,
                                 verticalPadding   = 10.dp,
+                                fillMaxWidth      = true,
                             )
                         }
-                    }
-                } else if (action is PadAction.TrackpointMove) {
-                    // ── Trackpoint size picker ──────────────────────────────────────────────
-                    SectionLabel(stringResource(R.string.macropad_editor_trackpoint_size), accentColor)
-                    val tpAction = action as PadAction.TrackpointMove
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TrackpointSize.entries.forEach { sz ->
-                            val selected = sz == tpAction.size
-                            val szLabel = when (sz) {
-                                TrackpointSize.SMALL  -> stringResource(R.string.macropad_trackpoint_size_small)
-                                TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                                TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                            ) {
-                                AppSelectableChip(
-                                    text     = szLabel,
-                                    selected = selected,
-                                    onClick  = { action = PadAction.TrackpointMove(sz) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                        }
-                    }
-                } else if (action is PadAction.ScrollWheel) {
-                    // ── ScrollWheel: size locked to 1×2 ────────────────────────────────────
-                    SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
-                    Text(
-                        text     = ButtonSize.SIZE_1X2.displayLabel(),
-                        color    = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-
-                // Action picker
-                SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HapticStrength.entries.forEach { strength ->
-                        val selected = strength == hapticStrength
-                        val strengthLabel = when (strength) {
-                            HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
-                            HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
-                            HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                            HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                            HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .weight(1f),
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            AppSelectableChip(
-                                text     = strengthLabel,
-                                selected = selected,
-                                onClick  = {
+                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
+                            AppDropdown(
+                                selected          = hapticStrength,
+                                options           = HapticStrength.entries,
+                                optionText        = { strength ->
+                                    when (strength) {
+                                        HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
+                                        HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
+                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+                                    }
+                                },
+                                onSelected        = { strength ->
                                     // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
                                     when (strength) {
                                         HapticStrength.LIGHT  -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER }
@@ -429,7 +398,126 @@ internal fun ButtonEditDialog(
                                     }
                                     hapticStrength = strength
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                horizontalPadding = 16.dp,
+                                verticalPadding   = 10.dp,
+                                fillMaxWidth      = true,
+                            )
+                        }
+                    }
+                } else if (action is PadAction.TrackpointMove) {
+                    // ── Trackpoint size picker + Haptic side by side ────────────────────────
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1.5f)
+                        ) {
+                            SectionLabel(stringResource(R.string.macropad_editor_trackpoint_size), accentColor)
+                            val tpAction = action as PadAction.TrackpointMove
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                TrackpointSize.entries.forEach { sz ->
+                                    val selected = sz == tpAction.size
+                                    val szLabel = when (sz) {
+                                        TrackpointSize.SMALL  -> stringResource(R.string.macropad_trackpoint_size_small)
+                                        TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
+                                        TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
+                                    }
+                                    Box(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        AppSelectableChip(
+                                            text     = szLabel,
+                                            selected = selected,
+                                            onClick  = { action = PadAction.TrackpointMove(sz) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
+                            AppDropdown(
+                                selected          = hapticStrength,
+                                options           = HapticStrength.entries,
+                                optionText        = { strength ->
+                                    when (strength) {
+                                        HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
+                                        HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
+                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+                                    }
+                                },
+                                onSelected        = { strength ->
+                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
+                                    when (strength) {
+                                        HapticStrength.LIGHT  -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER }
+                                        HapticStrength.MEDIUM -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER }
+                                        HapticStrength.STRONG -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER }
+                                        else                  -> { /* OFF / CUSTOM → keep current slider values */ }
+                                    }
+                                    hapticStrength = strength
+                                },
+                                horizontalPadding = 16.dp,
+                                verticalPadding   = 10.dp,
+                                fillMaxWidth      = true,
+                            )
+                        }
+                    }
+                } else if (action is PadAction.ScrollWheel) {
+                    // ── ScrollWheel: size locked to 1×2 + Haptic side by side ────────────────────
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
+                            Text(
+                                text     = ButtonSize.SIZE_1X2.displayLabel(),
+                                color    = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
+                            AppDropdown(
+                                selected          = hapticStrength,
+                                options           = HapticStrength.entries,
+                                optionText        = { strength ->
+                                    when (strength) {
+                                        HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
+                                        HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
+                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+                                    }
+                                },
+                                onSelected        = { strength ->
+                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
+                                    when (strength) {
+                                        HapticStrength.LIGHT  -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER }
+                                        HapticStrength.MEDIUM -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER }
+                                        HapticStrength.STRONG -> { hapticCustomDurationMs = HF_PRESET_DURATION_MS; hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER }
+                                        else                  -> { /* OFF / CUSTOM → keep current slider values */ }
+                                    }
+                                    hapticStrength = strength
+                                },
+                                horizontalPadding = 16.dp,
+                                verticalPadding   = 10.dp,
+                                fillMaxWidth      = true,
                             )
                         }
                     }
