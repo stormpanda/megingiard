@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -49,6 +51,13 @@ fun <T> AppReorderOverlay(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    DisposableEffect(title) {
+        AppLog.d(TAG, "AppReorderOverlay shown: $title")
+        onDispose {
+            AppLog.d(TAG, "AppReorderOverlay dismissed: $title")
+        }
+    }
+
     val colors = LocalAppColors.current
     val lazyListState = rememberLazyListState()
     val latestItems by rememberUpdatedState(items)

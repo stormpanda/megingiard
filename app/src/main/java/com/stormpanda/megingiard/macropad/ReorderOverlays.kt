@@ -29,7 +29,7 @@ internal fun ReorderLayoutsOverlay(
         title = stringResource(R.string.macropad_reorder_layouts),
         items = layouts,
         itemKey = { it.id },
-        itemText = { if (it.enabled) it.name else "${it.name} (hidden)" },
+        itemText = { if (it.enabled) it.name else stringResource(R.string.macropad_layout_name_hidden, it.name) },
         onReorder = { MacroPadState.reorderLayouts(it) },
         onDone = onDone,
     )

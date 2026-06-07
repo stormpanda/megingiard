@@ -271,6 +271,7 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_new">New</string>
     <string name="macropad_layout_template_title">Copy from…</string>
     <string name="macropad_layout_template_blank">Empty</string>
+    <string name="macropad_layout_name_hidden">%1$s (hidden)</string>
     <string name="macropad_reorder_profiles">Reorder Profiles</string>
     <string name="macropad_reorder_layouts">Reorder Layouts</string>
 

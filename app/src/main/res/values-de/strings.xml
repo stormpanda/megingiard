@@ -227,6 +227,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_new">Neu</string>
     <string name="macropad_layout_template_title">Kopieren von…</string>
     <string name="macropad_layout_template_blank">Leer</string>
+    <string name="macropad_layout_name_hidden">%1$s (ausgeblendet)</string>
     <string name="macropad_reorder_profiles">Profile sortieren</string>
     <string name="macropad_reorder_layouts">Layouts sortieren</string>
 

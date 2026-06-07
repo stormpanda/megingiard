@@ -276,7 +276,6 @@ internal fun ButtonEditDialog(
                             value         = label,
                             onValueChange = { label = it },
                             label         = { Text(stringResource(R.string.macropad_editor_button_label), color = colors.onSurfaceSecondary) },
-                            accentColor   = accentColor,
                             modifier      = Modifier.weight(1f),
                         )
                         // Icon selector button

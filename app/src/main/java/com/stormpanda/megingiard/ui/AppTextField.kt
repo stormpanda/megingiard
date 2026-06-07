@@ -11,17 +11,17 @@ internal fun AppTextField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    label: @Composable (() -> Unit)? = null,
-    placeholder: @Composable (() -> Unit)? = null,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    supportingText: @Composable (() -> Unit)? = null,
+    label: (@Composable () -> Unit)? = null,
+    placeholder: (@Composable () -> Unit)? = null,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    supportingText: (@Composable () -> Unit)? = null,
     isError: Boolean = false,
     singleLine: Boolean = true,
     enabled: Boolean = true,
-    accentColor: Color = LocalAppColors.current.accent,
 ) {
     val colors = LocalAppColors.current
+    val accentColor = colors.accent
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,

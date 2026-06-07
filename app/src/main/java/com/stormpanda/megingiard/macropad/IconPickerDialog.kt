@@ -124,7 +124,6 @@ internal fun IconPickerDialog(
                         color = colors.onSurfaceSecondary,
                     )
                 },
-                accentColor = accentColor,
                 modifier = Modifier.weight(1f),
             )
             Row(

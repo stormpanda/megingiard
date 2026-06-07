@@ -108,7 +108,6 @@ internal fun NewLayoutOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                accentColor   = accentColor,
             )
 
             if (templates.isNotEmpty()) {

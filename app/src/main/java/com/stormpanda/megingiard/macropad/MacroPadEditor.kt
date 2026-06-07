@@ -334,7 +334,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 showDelete   = true,
                 canDelete    = profiles.size > 1,
                 onDelete     = {
-                    showRenameProfileDialog = false;
+                    showRenameProfileDialog = false
                     showDeleteProfileConfirm = true
                 },
                 onConfirm    = { name, pkg ->

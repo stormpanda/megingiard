@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import com.stormpanda.megingiard.ui.AppTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -138,7 +139,6 @@ internal fun InlineNameInputOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                accentColor   = accentColor,
             )
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -263,7 +263,7 @@ internal fun InlineProfileSettingsOverlay(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Delete,
-                                contentDescription = stringResource(R.string.macropad_editor_delete_button),
+                                contentDescription = stringResource(R.string.macropad_editor_delete_profile),
                                 tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -285,7 +285,6 @@ internal fun InlineProfileSettingsOverlay(
                             isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                         }
                     },
-                    accentColor = accentColor,
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -385,7 +384,6 @@ internal fun InlineProfileSettingsOverlay(
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    accentColor = accentColor,
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -584,7 +582,7 @@ internal fun InlineLayoutSettingsOverlay(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Delete,
-                            contentDescription = stringResource(R.string.macropad_editor_delete_button),
+                            contentDescription = stringResource(R.string.macropad_editor_delete_layout),
                             tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
                             modifier = Modifier.size(20.dp)
                         )
@@ -606,7 +604,6 @@ internal fun InlineLayoutSettingsOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                accentColor = accentColor,
             )
             Spacer(Modifier.height(12.dp))
 
@@ -629,15 +626,9 @@ internal fun InlineLayoutSettingsOverlay(
                     )
                 }
 
-                androidx.compose.material3.Switch(
+                Switch(
                     checked = isEnabled,
-                    onCheckedChange = { isEnabled = it },
-                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                        checkedThumbColor = colors.onAccent,
-                        checkedTrackColor = colors.accent,
-                        uncheckedThumbColor = colors.onSurfaceSecondary,
-                        uncheckedTrackColor = colors.surfaceVariant
-                    )
+                    onCheckedChange = { isEnabled = it }
                 )
             }
 
