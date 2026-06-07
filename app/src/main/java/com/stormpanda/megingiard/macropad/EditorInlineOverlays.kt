@@ -18,36 +18,41 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.draw.alpha
-import androidx.compose.foundation.layout.width
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
+import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppTextField
+import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -121,9 +126,10 @@ internal fun InlineNameInputOverlay(
         ) {
             Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
+            AppTextField(
                 value         = text,
                 onValueChange = { text = it },
+                label         = { Text(title, color = colors.onSurfaceSecondary) },
                 singleLine    = true,
                 modifier      = Modifier.fillMaxWidth(),
                 isError       = hasError,
@@ -133,13 +139,6 @@ internal fun InlineNameInputOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                colors        = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor   = accentColor,
-                    unfocusedBorderColor = colors.accentBorder,
-                    focusedTextColor     = colors.onSurface,
-                    unfocusedTextColor   = colors.onSurface,
-                    cursorColor          = accentColor,
-                ),
             )
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -167,6 +166,9 @@ internal fun InlineProfileSettingsOverlay(
     initialPackage: String?,
     accentColor: Color,
     existingNames: List<String>,
+    showDelete: Boolean,
+    canDelete: Boolean,
+    onDelete: () -> Unit,
     onConfirm: (String, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -242,24 +244,38 @@ internal fun InlineProfileSettingsOverlay(
                 .padding(MPE_PADDING),
         ) {
             if (!showAppList) {
-                Text(
-                    text = title,
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (showDelete) {
+                        IconButton(
+                            onClick = onDelete,
+                            enabled = canDelete,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.macropad_editor_delete_profile),
+                                tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 
-                Text(
-                    text = stringResource(R.string.profile_settings_name),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall
-                )
-                Spacer(Modifier.height(4.dp))
-
-                OutlinedTextField(
+                AppTextField(
                     value = nameText,
                     onValueChange = { nameText = it },
+                    label = { Text(stringResource(R.string.profile_settings_name), color = colors.onSurfaceSecondary) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     isError = hasError,
@@ -269,13 +285,6 @@ internal fun InlineProfileSettingsOverlay(
                             isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                         }
                     },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        unfocusedBorderColor = colors.accentBorder,
-                        focusedTextColor = colors.onSurface,
-                        unfocusedTextColor = colors.onSurface,
-                        cursorColor = accentColor,
-                    ),
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -364,10 +373,10 @@ internal fun InlineProfileSettingsOverlay(
                 )
                 Spacer(Modifier.height(12.dp))
 
-                OutlinedTextField(
+                AppTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = {
+                    label = {
                         Text(
                             text = stringResource(R.string.profile_settings_search_apps),
                             color = colors.onSurfaceSecondary
@@ -375,13 +384,6 @@ internal fun InlineProfileSettingsOverlay(
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        unfocusedBorderColor = colors.accentBorder,
-                        focusedTextColor = colors.onSurface,
-                        unfocusedTextColor = colors.onSurface,
-                        cursorColor = accentColor,
-                    ),
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -522,3 +524,146 @@ private fun getDrawableBitmap(drawable: Drawable): Bitmap {
     drawable.draw(canvas)
     return bitmap
 }
+
+@Composable
+internal fun InlineLayoutSettingsOverlay(
+    title: String,
+    initialName: String,
+    initialEnabled: Boolean,
+    initialButtonColorNoMirror: ButtonColorStyle,
+    initialButtonColorMirror: ButtonColorStyle,
+    accentColor: Color,
+    existingNames: List<String>,
+    showDelete: Boolean,
+    canDelete: Boolean,
+    onDelete: () -> Unit,
+    onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var nameText by remember { mutableStateOf(initialName) }
+    var isEnabled by remember { mutableStateOf(initialEnabled) }
+    var noMirrorStyle by remember { mutableStateOf(initialButtonColorNoMirror) }
+    var mirrorStyle by remember { mutableStateOf(initialButtonColorMirror) }
+    val normalizedName = nameText.trim()
+    val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
+    val hasError = normalizedName.isEmpty() || isDuplicate
+    val colors = LocalAppColors.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .clickable(enabled = true, onClick = {})
+                .padding(MPE_PADDING),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (showDelete) {
+                    IconButton(
+                        onClick = onDelete,
+                        enabled = canDelete,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = stringResource(R.string.macropad_editor_delete_layout),
+                            tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+
+            AppTextField(
+                value = nameText,
+                onValueChange = { nameText = it },
+                label = { Text(stringResource(R.string.pill_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                isError = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                    }
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.layout_settings_visibility_title),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = stringResource(R.string.layout_settings_visibility_desc),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = { isEnabled = it }
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            AppDivider()
+            Spacer(Modifier.height(12.dp))
+
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_no_mirror),
+                selected = noMirrorStyle,
+                onSelect = { noMirrorStyle = it }
+            )
+            Spacer(Modifier.height(8.dp))
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_mirror),
+                selected = mirrorStyle,
+                onSelect = { mirrorStyle = it }
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+                TextButton(
+                    onClick = { if (!hasError) onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle) },
+                    enabled = !hasError,
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_done),
+                        color = if (!hasError) accentColor else colors.onSurfaceSecondary,
+                    )
+                }
+            }
+        }
+    }
+}
+

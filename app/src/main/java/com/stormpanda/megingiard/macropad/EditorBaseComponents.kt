@@ -15,8 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Grid4x4
+import androidx.compose.material.icons.rounded.GridOff
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
@@ -37,17 +40,50 @@ import java.util.Locale
 private const val TAG = "EditorBaseComponents"
 
 @Composable
-internal fun EditorSectionHeader(@StringRes textRes: Int) {
+internal fun EditorSectionHeader(
+    @StringRes textRes: Int,
+    actionIcon: ImageVector? = null,
+    actionContentDescription: String? = null,
+    onActionClick: (() -> Unit)? = null,
+) {
     val colors = LocalAppColors.current
-    Text(
-        text     = stringResource(textRes).uppercase(Locale.ROOT),
-        color    = colors.sectionHeaderColor,
-        style    = MaterialTheme.typography.labelSmall,
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.surfaceVariant)
-            .padding(horizontal = MPE_PADDING, vertical = MPE_SECTION_HEADER_V_PADDING),
-    )
+            .padding(horizontal = MPE_PADDING, vertical = MPE_SECTION_HEADER_V_PADDING - 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text     = stringResource(textRes).uppercase(Locale.ROOT),
+            color    = colors.sectionHeaderColor,
+            style    = MaterialTheme.typography.labelSmall,
+        )
+        if (actionIcon != null && onActionClick != null) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(onClick = onActionClick)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = actionIcon,
+                    contentDescription = actionContentDescription,
+                    tint = colors.accent,
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(
+                    text = stringResource(R.string.macropad_editor_add),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -80,26 +116,32 @@ internal fun EditorToolbar(
     profile:          PadProfile,
     accentColor:      Color,
     gridMode:         GridMode,
+    isCanvasLocked:   Boolean,
+    onToggleCanvasLock: () -> Unit,
     onManageMacros:   () -> Unit,
     onAddButton:      () -> Unit,
     onGridModeChange: () -> Unit,
     modifier:         Modifier = Modifier,
 ) {
-    val colors   = LocalAppColors.current
     val gridIcon = when (gridMode) {
         GridMode.OFF         -> Icons.Rounded.GridOff
         GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
         GridMode.RADIAL      -> Icons.Rounded.TripOrigin
     }
-    val gridTint = if (gridMode == GridMode.OFF) colors.onSurfaceSecondary else accentColor
+    val gridLabel = stringResource(R.string.macropad_editor_grid_toggle)
+    val buttonLabel = stringResource(R.string.macropad_editor_toolbar_button)
+
+    val lockIcon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen
+    val lockLabel = if (isCanvasLocked) stringResource(R.string.macropad_editor_unlock) else stringResource(R.string.macropad_editor_lock)
+
     Row(
         modifier              = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
         verticalAlignment     = Alignment.CenterVertically,
     ) {
-        // Add Button
+        // Add Button ("Button")
         EditorActionChip(
-            label       = stringResource(R.string.macropad_editor_add_button),
+            label       = buttonLabel,
             icon        = Icons.Rounded.Add,
             accentColor = accentColor,
             onClick     = onAddButton,
@@ -113,12 +155,20 @@ internal fun EditorToolbar(
             onClick     = onManageMacros,
             modifier    = Modifier.weight(1f),
         )
-        // Grid toggle
+        // Grid toggle ("Grid", accent color all the time)
         EditorActionChip(
-            label       = stringResource(R.string.macropad_editor_grid_toggle),
+            label       = gridLabel,
             icon        = gridIcon,
-            accentColor = gridTint,
+            accentColor = accentColor,
             onClick     = onGridModeChange,
+            modifier    = Modifier.weight(1f),
+        )
+        // Unlock / Lock button (4th button)
+        EditorActionChip(
+            label       = lockLabel,
+            icon        = lockIcon,
+            accentColor = accentColor,
+            onClick     = onToggleCanvasLock,
             modifier    = Modifier.weight(1f),
         )
     }

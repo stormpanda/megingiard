@@ -12,10 +12,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FormatListNumbered
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,10 +28,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppSettingsRow
-import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -41,18 +39,73 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 private const val TAG = "EditorLayoutComponents"
 
 @Composable
-internal fun EditorLayoutBar(
-    profile:                 PadProfile,
-    activeLayoutId:          String?,
-    accentColor:             Color,
-    onSelectLayout:          (String) -> Unit,
-    onToggleEnabled:         (String, Boolean) -> Unit,
-    onDeleteLayoutRequested: (PadLayout) -> Unit,
-    onNewLayout:             () -> Unit,
-    modifier:                Modifier = Modifier,
+internal fun EditorProfileChipsBar(
+    profiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    onSelectProfile: (String) -> Unit,
+    onEditProfile: () -> Unit,
+    onReorderProfiles: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val canDelete = profile.layouts.size > 1
-    val latestLayouts by rememberUpdatedState(profile.layouts)
+    val colors = LocalAppColors.current
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        LazyRow(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(vertical = 4.dp),
+        ) {
+            items(profiles, key = { it.id }) { profile ->
+                val isActive = profile.id == activeProfile?.id
+                AppSelectableChip(
+                    text = profile.name,
+                    selected = isActive,
+                    onClick = { onSelectProfile(profile.id) },
+                )
+            }
+        }
+
+        IconButton(
+            onClick = onEditProfile,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Edit,
+                contentDescription = stringResource(R.string.macropad_editor_title_edit_profile),
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        IconButton(
+            onClick = onReorderProfiles,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.FormatListNumbered,
+                contentDescription = stringResource(R.string.macropad_reorder_profiles),
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+internal fun EditorLayoutChipsBar(
+    layouts: List<PadLayout>,
+    activeLayout: PadLayout?,
+    onSelectLayout: (String) -> Unit,
+    onEditLayout: () -> Unit,
+    onReorderLayouts: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val latestLayouts by rememberUpdatedState(layouts)
 
     val lazyRowState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(lazyRowState) { from, to ->
@@ -66,118 +119,56 @@ internal fun EditorLayoutBar(
     }
 
     Row(
-        modifier              = modifier.fillMaxWidth(),
-        verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         LazyRow(
-            state                 = lazyRowState,
-            modifier              = Modifier.weight(1f),
+            state = lazyRowState,
+            modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding        = PaddingValues(vertical = 4.dp),
+            contentPadding = PaddingValues(vertical = 4.dp),
         ) {
-            items(profile.layouts, key = { it.id }) { layout ->
+            items(layouts, key = { it.id }) { layout ->
                 ReorderableItem(reorderState, key = layout.id) {
-                    val isActive = layout.id == activeLayoutId ||
-                        (activeLayoutId == null && profile.layouts.firstOrNull()?.id == layout.id)
-                    LayoutChip(
-                        layout       = layout,
-                        isActive     = isActive,
-                        canDelete    = canDelete,
-                        onSelect     = { onSelectLayout(layout.id) },
-                        onToggle     = { onToggleEnabled(layout.id, !layout.enabled) },
-                        onDelete     = { onDeleteLayoutRequested(layout) },
-                        dragModifier = Modifier.longPressDraggableHandle(),
+                    val isActive = layout.id == activeLayout?.id
+                    val text = if (layout.enabled) layout.name else stringResource(R.string.macropad_layout_name_hidden, layout.name)
+                    val chipAlpha = if (layout.enabled) 1f else 0.45f
+                    AppSelectableChip(
+                        text = text,
+                        selected = isActive,
+                        onClick = { onSelectLayout(layout.id) },
+                        modifier = Modifier
+                            .alpha(chipAlpha)
+                            .then(Modifier.longPressDraggableHandle())
                     )
                 }
             }
         }
 
         IconButton(
-            onClick  = onNewLayout,
-            modifier = Modifier.size(MPE_GRID_TOGGLE_SIZE),
+            onClick = onEditLayout,
+            modifier = Modifier.size(28.dp)
         ) {
             Icon(
-                Icons.Rounded.Add,
-                contentDescription = stringResource(R.string.settings_macropad_new_layout),
-                tint     = accentColor,
-                modifier = Modifier.size(20.dp),
+                imageVector = Icons.Rounded.Edit,
+                contentDescription = stringResource(R.string.macropad_editor_section_layout_settings),
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(20.dp)
             )
         }
-    }
-}
 
-@Composable
-internal fun LayoutChip(
-    layout:       PadLayout,
-    isActive:     Boolean,
-    canDelete:    Boolean,
-    onSelect:     () -> Unit,
-    onToggle:     () -> Unit,
-    onDelete:     () -> Unit,
-    dragModifier: Modifier = Modifier,
-) {
-    val chipAlpha = if (layout.enabled) 1f else 0.45f
-
-    AppSelectableChip(
-        text     = layout.name,
-        selected = isActive,
-        onClick  = onSelect,
-        modifier = Modifier
-            .alpha(chipAlpha)
-            .then(dragModifier),
-        trailingContent = { contentColor ->
-            IconButton(
-                onClick  = onToggle,
-                modifier = Modifier.size(20.dp),
-            ) {
-                Icon(
-                    imageVector        = if (layout.enabled) Icons.Rounded.CheckCircle
-                                         else Icons.Rounded.RadioButtonUnchecked,
-                    contentDescription = stringResource(R.string.cd_layout_enable_toggle),
-                    tint               = contentColor.copy(alpha = 0.75f),
-                    modifier           = Modifier.size(14.dp),
-                )
-            }
-            if (canDelete) {
-                IconButton(
-                    onClick  = onDelete,
-                    modifier = Modifier.size(20.dp),
-                ) {
-                    Icon(
-                        imageVector        = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.macropad_editor_delete_layout),
-                        tint               = contentColor.copy(alpha = 0.75f),
-                        modifier           = Modifier.size(14.dp),
-                    )
-                }
-            }
-        },
-    )
-}
-
-@Composable
-internal fun LayoutSettingsContent(
-    layout:   PadLayout,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    Column(modifier = modifier.fillMaxWidth().background(colors.surface)) {
-        ButtonColorStyleRow(
-            label    = stringResource(R.string.macropad_editor_button_color_no_mirror),
-            selected = layout.buttonColorNoMirror,
-            onSelect = { style ->
-                MacroPadState.updateLayout(layout.copy(buttonColorNoMirror = style))
-            },
-        )
-        AppDivider()
-        ButtonColorStyleRow(
-            label    = stringResource(R.string.macropad_editor_button_color_mirror),
-            selected = layout.buttonColorMirror,
-            onSelect = { style ->
-                MacroPadState.updateLayout(layout.copy(buttonColorMirror = style))
-            },
-        )
+        IconButton(
+            onClick = onReorderLayouts,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.FormatListNumbered,
+                contentDescription = stringResource(R.string.macropad_reorder_layouts),
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

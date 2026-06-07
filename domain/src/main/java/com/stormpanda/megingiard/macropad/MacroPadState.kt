@@ -241,6 +241,12 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
+    fun reorderProfiles(newOrder: List<PadProfile>) {
+        AppLog.d(TAG, "reorderProfiles count=${newOrder.size}")
+        _profiles.value = newOrder
+        MacroPadSettings.saveMacroPadData()
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Layout CRUD (within the active profile)
     // ─────────────────────────────────────────────────────────────────────────

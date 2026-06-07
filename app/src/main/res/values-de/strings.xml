@@ -98,8 +98,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- MacroPad editor -->
     <string name="macropad_editor_title">Layout bearbeiten</string>
-    <string name="macropad_editor_done">Fertig</string>
+    <string name="macropad_editor_title_edit_profile">Profil bearbeiten</string>
+    <string name="layout_settings_visibility_title">In Overlays anzeigen</string>
+    <string name="layout_settings_visibility_desc">Im Pill-Menü-Auswahlelement und bei der Navigation zum nächsten/vorherigen Layout einbeziehen.</string>
+    <string name="macropad_editor_done">Speichern</string>
     <string name="macropad_editor_add_button">Taste hinzufügen</string>
+    <string name="macropad_editor_add">Hinzufügen</string>
     <string name="macropad_editor_delete_button">Löschen</string>
     <string name="macropad_editor_button_label">Beschriftung</string>
     <string name="macropad_editor_action">Aktion</string>
@@ -188,7 +192,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_grid_off">Raster aus</string>
     <string name="macropad_editor_grid_rectangular">Rechteckiges Raster</string>
     <string name="macropad_editor_grid_radial">Radiales Raster</string>
-    <string name="macropad_editor_grid_toggle">Raster zeigen</string>
+    <string name="macropad_editor_grid_toggle">Raster</string>
+    <string name="macropad_editor_toolbar_button">Taste</string>
+    <string name="macropad_editor_unlock">Entsperren</string>
+    <string name="macropad_editor_lock">Sperren</string>
 
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Tastaturtaste</string>
@@ -218,8 +225,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_new_layout">Neues Layout</string>
     <string name="settings_macropad_edit">Bearbeiten</string>
     <string name="settings_macropad_new">Neu</string>
-    <string name="macropad_layout_template_title">Vorlage</string>
+    <string name="macropad_layout_template_title">Kopieren von…</string>
     <string name="macropad_layout_template_blank">Leer</string>
+    <string name="macropad_layout_name_hidden">%1$s (ausgeblendet)</string>
+    <string name="macropad_reorder_profiles">Profile sortieren</string>
+    <string name="macropad_reorder_layouts">Layouts sortieren</string>
 
     <!-- MacroPad-Ambient-Display-Einstellungen -->
     <string name="settings_section_background_following">Hintergrund-Verfolgung</string>

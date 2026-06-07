@@ -7,22 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.TripOrigin
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,12 +27,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.AppSelectableChip
+import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 
 private const val TAG = "LayoutTemplateOverlay"
-private val NLO_MAX_TEMPLATES_HEIGHT = 240.dp
 private val NLO_TEMPLATES_PADDING_VERTICAL = 8.dp
 private val ED_PADDING = 16.dp
 
@@ -71,7 +61,6 @@ internal fun NewLayoutOverlay(
     val hasError = normalizedName.isEmpty() || isDuplicate
     val colors           = LocalAppColors.current
     val blankLabel       = stringResource(R.string.macropad_layout_template_blank)
-    val scrollState      = rememberScrollState()
 
     val templates = remember(profiles) {
         profiles.flatMap { profile ->
@@ -96,7 +85,6 @@ internal fun NewLayoutOverlay(
             modifier = Modifier
                 .padding(vertical = 24.dp)
                 .fillMaxWidth(0.85f)
-                .fillMaxHeight()
                 .background(colors.surface, RoundedCornerShape(12.dp))
                 .clickable(enabled = true, onClick = {})
                 .padding(ED_PADDING),
@@ -107,9 +95,10 @@ internal fun NewLayoutOverlay(
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
+            AppTextField(
                 value         = text,
                 onValueChange = { text = it },
+                label         = { Text(stringResource(R.string.pill_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
                 singleLine    = true,
                 modifier      = Modifier.fillMaxWidth(),
                 isError       = hasError,
@@ -119,13 +108,6 @@ internal fun NewLayoutOverlay(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                colors        = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor   = accentColor,
-                    unfocusedBorderColor = colors.accentBorder,
-                    focusedTextColor     = colors.onSurface,
-                    unfocusedTextColor   = colors.onSurface,
-                    cursorColor          = accentColor,
-                ),
             )
 
             if (templates.isNotEmpty()) {
@@ -138,35 +120,23 @@ internal fun NewLayoutOverlay(
                 )
                 Spacer(Modifier.height(NLO_TEMPLATES_PADDING_VERTICAL))
 
-                // Scrollable template list – fills all remaining space above the buttons
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(scrollState),
-                ) {
-                    // Blank option
-                    TemplateRow(
-                        label       = blankLabel,
-                        subtitle    = null,
-                        isSelected  = selectedTemplate == null,
-                        accentColor = accentColor,
-                        onClick     = { selectedTemplate = null },
-                    )
-
-                    // Template options from all profiles
-                    templates.forEach { tmpl ->
-                        TemplateRow(
-                            label       = tmpl.layoutName,
-                            subtitle    = tmpl.profileName,
-                            isSelected  = selectedTemplate == tmpl,
-                            accentColor = accentColor,
-                            onClick     = { selectedTemplate = tmpl },
-                        )
-                    }
+                val dropdownOptions = remember(templates) {
+                    listOf<TemplateOption?>(null) + templates
                 }
 
-                Spacer(Modifier.height(NLO_TEMPLATES_PADDING_VERTICAL))
+                AppDropdown(
+                    selected = selectedTemplate,
+                    options = dropdownOptions,
+                    optionText = { option ->
+                        if (option == null) {
+                            blankLabel
+                        } else {
+                            "${option.layoutName} (${option.profileName})"
+                        }
+                    },
+                    onSelected = { selectedTemplate = it },
+                    fillMaxWidth = true,
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -189,47 +159,6 @@ internal fun NewLayoutOverlay(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-internal fun TemplateRow(
-    label:       String,
-    subtitle:    String?,
-    isSelected:  Boolean,
-    accentColor: Color,
-    onClick:     () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text     = label,
-                color    = if (isSelected) accentColor else colors.onSurface,
-                style    = MaterialTheme.typography.bodyMedium,
-            )
-            if (subtitle != null) {
-                Text(
-                    text     = subtitle,
-                    color    = colors.onSurfaceSecondary,
-                    style    = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-        if (isSelected) {
-            Icon(
-                Icons.Rounded.TripOrigin,
-                contentDescription = null,
-                tint     = accentColor,
-                modifier = Modifier.size(18.dp),
-            )
         }
     }
 }

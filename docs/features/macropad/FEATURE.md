@@ -139,6 +139,8 @@ Each button supports one of the following actions:
 - **Gamepad recording overlay layout:** Four-zone layout — (1) **Title bar**: full-width Row with title + Abbrechen/Fertig buttons; (2) **Controls strip**: three independent `Row` groups placed via absolute `Modifier.offset()` — left `[LB (outer) | LT (inner)]` at `GRO_LB_X`/`GRO_SHOULDER_Y`, center `[SE | ST]` at `GRO_CENTER_X`/`GRO_SHOULDER_Y`, right `[RT (inner) | RB (outer)]` at `GRO_RB_X`/`GRO_SHOULDER_Y`; (3) **Main area** rendered as `BoxWithConstraints` with absolute proportional positioning: L-Stick center at `GRO_LEFT_STICK_X` (15 %) / `GRO_STICK_Y` (43 %), R-Stick center at `GRO_RIGHT_STICK_X` (85 %) / `GRO_STICK_Y` (43 %), D-Pad top-left at `GRO_DPAD_X` (10 %) / `GRO_DPAD_Y` (62 %), Face Cluster top-left at (`GRO_FACE_X` (90 %) − `GRO_FACE_CLUSTER_SIZE`) / `GRO_FACE_Y` (60 %) (all as fraction of `BoxWithConstraints` width/height); positions are clamped with `coerceAtMost`/`coerceAtLeast` to prevent off-screen clipping; `GRO_FACE_CLUSTER_SIZE = 148 dp` with `GRO_FACE_CLUSTER_PADDING = 4 dp` around each face button; (4) **Bottom buttons**: L3 at `GRO_L3_X` (4 %) and R3 at (`GRO_R3_X` (96 %) − button size), both pinned to the bottom edge via `maxHeight − GRO_FACE_BUTTON_SIZE − GRO_PADDING`. The `PressableSurface` and `StickSurface` composables use `pointerInput(Unit)` with `rememberUpdatedState` for their callbacks and `try/finally` blocks to guarantee neutral reset on gesture cancellation.
 - The macro list is a **flat list** (no folders). Macros can be reordered via drag handle, and CRUD operations (add, edit, duplicate, delete) are available via context menu on each row.
 - Macro CRUD is performed through `MacroPadState.addMacro()`, `updateMacro()`, `deleteMacro()`, `renameMacro()`, `reorderMacros()`. All mutations persist via `MacroPadSettings.saveMacroPadData()`.
+- **Direct Editor Navigation & Callback-based Backstack:** When creating or editing a macro directly from `ButtonEditDialog` via the "New" or "Edit" button of the Macro category action, the layout editor navigates the user **directly** to `MacroTimelineEditor`, completely bypassing the flat macro list view. The `ButtonEditDialog` state is kept active in the background to preserve all unsaved form fields. Explicit callbacks (`onDirectEditSave` / `onDirectEditCancel`) dictate the exit behaviors. If the user cancels out of a newly created macro without adding any steps, the empty draft is automatically deleted from the profile's macro list.
+
 
 ### FR-P8: Multi-Layout Profiles
 
@@ -189,7 +191,7 @@ Each button supports one of the following actions:
 - When the action type is `ScrollWheel`, `TrackpointMove`, or `BackgroundPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
 - Icon selection opens `IconPickerDialog`, a full-screen overlay with three zones:
   1. **Header** — Cancel (text button) | title | ✓ confirm (icon button).
-  2. **Search row** — `OutlinedTextField` + Filled checkbox.
+  2. **Search row** — `AppTextField` + Filled checkbox.
   3. **Selection row** (only visible when an icon is pending) — preview box (48 dp) + icon name + "Currently selected" subtext + 🗑 delete button.
      Tapping a grid icon sets a local `pendingIcon` state (does **not** close the dialog). The user confirms with ✓ or clears via 🗑. Cancel discards any pending change.
      The icon grid is a `LazyVerticalGrid` (5 columns) of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
@@ -224,7 +226,7 @@ Each button supports one of the following actions:
 
 - `PadActionPicker` MUST provide a grouped action selection flow in `ButtonEditDialog`.
 - The first dropdown selects the action **group** (`Keyboard`, `Gamepad`, `Mouse`, `Macro`, `Layout`, `Mirror`, `Profile`, `Other`).
-- The second dropdown selects the concrete action inside the currently selected group.
+- The second dropdown selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, this second dropdown is hidden, and that action is automatically selected in the background.**
 - Group and action labels MUST come from `strings.xml` resources.
 - Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker) MUST remain unchanged and appear after action selection.
 - `KeyboardKey` and `GamepadButton` are excluded — they manage their own labels via the key/button name.
@@ -391,7 +393,7 @@ MacroListEditor
 
 Context menu actions per macro row: Edit, Duplicate, Delete.
 
-**`MacroPicker` in `PadActionPicker`** uses a single dropdown listing all macros in the active profile. Pre-selects the currently assigned macro (if any).
+**`MacroPicker` in `PadActionPicker`** uses a dropdown listing all macros in the active profile (pre-selecting the currently assigned macro, if any), an "Edit" button to modify the selected macro's timeline, and a "New" button to create a blank macro and immediately open it in the timeline editor.
 
 ```
 PadProfile
@@ -574,7 +576,15 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 ### Layout Editor
 
-`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition), controlled by UI state in the hosting screen. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile, new layout) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`, `NewLayoutOverlay`) instead of `AlertDialog`. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor's **layout bar** (`EditorLayoutBar`) shows horizontally scrollable `AppSelectableChip` layout chips with drag-reorder (long-press drag via `rememberReorderableLazyListState`), trailing enable/delete actions, and a "+" chip for creating new layouts (blank or from template). The editor list is scrollable via `LazyColumn`.
+`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition), controlled by UI state in the hosting screen. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile, new layout, edit layout) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`, `NewLayoutOverlay`, `InlineLayoutSettingsOverlay`, `ReorderProfilesOverlay`, `ReorderLayoutsOverlay`) instead of `AlertDialog`. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor features horizontally scrollable chip rows for both profile and layout selection (`EditorProfileChipsBar` and `EditorLayoutChipsBar`). Next to each row of chips is an Edit button that opens the corresponding settings dialog, and a Reorder button (using the standard numbered list icon) that opens a full-screen drag-reordering overlay (`ReorderProfilesOverlay` or `ReorderLayoutsOverlay`) enabling the user to reorganize profiles and layouts via drag handles. Deletion has been moved into the headers of both the profile and layout edit dialogs, aligned on the right-hand side. If a profile or layout is the only one in existence, it cannot be deleted; the delete button in the dialog header is disabled and styled with `0.38f` alpha. The Add button (plus icon) has been moved into the right-hand side of the Profile, Layout, and Buttons section separators as a premium clickable `Row` showing "+ Add", colored with the active accent color. Layout chips support drag-reordering via long press. When a layout is disabled (hidden), `(hidden)` is appended to its chip text and its opacity is reduced to `0.45f`. The layout-level settings (the two button color options: no-mirror and mirror styles) are configured directly inside `InlineLayoutSettingsOverlay` rather than in the main list, and are saved atomically upon confirmation.
+
+The editor list features an action toolbar (`EditorToolbar`) containing four compact action chips:
+1. **Button** (replaces "Add Button") — opens the button configuration dialog.
+2. **Macros** — opens the full-screen timeline macro editor.
+3. **Grid** (replaces "Show Grid", styled with the active accent color at all times) — toggles grid snapping modes (`OFF`, `RECTANGULAR`, `RADIAL`).
+4. **Unlock / Lock** (new 4th button) — controls layout canvas editing. By default, the layout canvas is **locked** so that buttons cannot be accidentally moved or dragged. Tapping "Unlock" (displays a locked lock icon) changes the wording to "Lock" (displays an unlocked lock icon), enabling real-time drag-repositioning of buttons on the canvas.
+
+The editor list is scrollable via `LazyColumn`.
 
 ### Grid Snap Overlay
 
