@@ -25,6 +25,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -153,6 +155,30 @@ internal fun ButtonEditDialog(
         )
     }
     val colors            = LocalAppColors.current
+    val profile by MacroPadState.activeProfile.collectAsState()
+    val macros = profile?.macros ?: emptyList()
+
+    var actionBeforeEdit by remember { mutableStateOf<PadAction?>(null) }
+
+    LaunchedEffect(macros) {
+        val currentAction = action
+        if (currentAction is PadAction.Macro) {
+            val macroExists = macros.any { it.id == currentAction.macroId }
+            if (!macroExists) {
+                val revertTo = actionBeforeEdit
+                if (revertTo != null) {
+                    if (revertTo is PadAction.Macro) {
+                        val revertMacroExists = macros.any { it.id == revertTo.macroId }
+                        action = if (revertMacroExists) revertTo else initAction
+                    } else {
+                        action = revertTo
+                    }
+                } else {
+                    action = initAction
+                }
+            }
+        }
+    }
 
     fun onActionChanged(newAction: PadAction) {
         action = newAction
@@ -170,7 +196,7 @@ internal fun ButtonEditDialog(
         }
         // For Macro: fill label from the macro name if the label field is still blank.
         if (newAction is PadAction.Macro && label.isBlank()) {
-            val macroName = MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == newAction.macroId }?.name
+            val macroName = macros.firstOrNull { it.id == newAction.macroId }?.name
             if (macroName != null) label = macroName
         }
         // For new buttons (or when the label was never customised), pre-fill with the
@@ -186,7 +212,7 @@ internal fun ButtonEditDialog(
     val isConfirmEnabled = when {
         action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
         action is PadAction.Macro -> label.isNotBlank() &&
-            MacroPadState.activeProfile.value?.macros?.any { it.id == (action as PadAction.Macro).macroId } == true
+            macros.any { it.id == (action as PadAction.Macro).macroId }
         else -> label.isNotBlank()
     }
 
@@ -500,7 +526,10 @@ internal fun ButtonEditDialog(
                     enableKeyboard = enableKeyboard,
                     enableGamepad  = enableGamepad,
                     enableMouse    = enableMouse,
-                    onEditMacro    = onEditMacro,
+                    onEditMacro    = { macro ->
+                        actionBeforeEdit = action
+                        onEditMacro?.invoke(macro)
+                    },
                     onChange       = ::onActionChanged,
                 )
             }
