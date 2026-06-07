@@ -406,6 +406,7 @@ internal fun ButtonEditDialog(
                     }
                 } else if (action is PadAction.TrackpointMove) {
                     // ── Trackpoint size picker + Haptic side by side ────────────────────────
+                    val tpAction = action as PadAction.TrackpointMove
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth(),
@@ -415,7 +416,6 @@ internal fun ButtonEditDialog(
                             modifier = Modifier.weight(1.5f)
                         ) {
                             SectionLabel(stringResource(R.string.macropad_editor_trackpoint_size), accentColor)
-                            val tpAction = action as PadAction.TrackpointMove
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 TrackpointSize.entries.forEach { sz ->
                                     val selected = sz == tpAction.size
@@ -430,7 +430,7 @@ internal fun ButtonEditDialog(
                                         AppSelectableChip(
                                             text     = szLabel,
                                             selected = selected,
-                                            onClick  = { action = PadAction.TrackpointMove(sz) },
+                                            onClick  = { action = PadAction.TrackpointMove(sz, tpAction.mode) },
                                             modifier = Modifier.fillMaxWidth(),
                                         )
                                     }
@@ -469,6 +469,39 @@ internal fun ButtonEditDialog(
                                 fillMaxWidth      = true,
                             )
                         }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SectionLabel(stringResource(R.string.macropad_editor_trackpoint_mode), accentColor)
+                        AppDropdown(
+                            selected          = tpAction.mode,
+                            options           = TrackpointMode.entries,
+                            optionText        = { mode ->
+                                when (mode) {
+                                    TrackpointMode.PHYSICAL_MOUSE -> stringResource(R.string.macropad_trackpoint_mode_physical)
+                                    TrackpointMode.VIRTUAL_TOUCH  -> stringResource(R.string.macropad_trackpoint_mode_touch)
+                                }
+                            },
+                            onSelected        = { newMode ->
+                                action = PadAction.TrackpointMove(tpAction.size, newMode)
+                            },
+                            horizontalPadding = 16.dp,
+                            verticalPadding   = 10.dp,
+                            fillMaxWidth      = true,
+                        )
+                        val explainerRes = when (tpAction.mode) {
+                            TrackpointMode.PHYSICAL_MOUSE -> R.string.macropad_trackpoint_mode_physical_desc
+                            TrackpointMode.VIRTUAL_TOUCH  -> R.string.macropad_trackpoint_mode_touch_desc
+                        }
+                        Text(
+                            text = stringResource(explainerRes),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
                     }
                 } else if (action is PadAction.ScrollWheel) {
                     // ── ScrollWheel: size locked to 1×2 + Haptic side by side ────────────────────

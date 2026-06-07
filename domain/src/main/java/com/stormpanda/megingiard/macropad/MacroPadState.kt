@@ -44,12 +44,15 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
     val ms = hasMacro || allButtons.any {
         it.action is PadAction.MouseButton    ||
         it.action is PadAction.ScrollWheel    ||
-        it.action is PadAction.TrackpointMove ||
+        (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE) ||
         it.action is PadAction.FullScreenMouse ||
         it.action is PadAction.MirrorTouchProjection
     }
-    return if (enableKeyboard == kb && enableGamepad == gp && enableMouse == ms) this
-    else copy(enableKeyboard = kb, enableGamepad = gp, enableMouse = ms)
+    val ts = hasMacro || allButtons.any {
+        (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH)
+    }
+    return if (enableKeyboard == kb && enableGamepad == gp && enableMouse == ms && enableTouch == ts) this
+    else copy(enableKeyboard = kb, enableGamepad = gp, enableMouse = ms, enableTouch = ts)
 }
 
 /**

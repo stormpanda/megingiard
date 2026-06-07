@@ -41,6 +41,7 @@ internal fun ButtonListItem(
     enableKeyboard:     Boolean,
     enableGamepad:      Boolean,
     enableMouse:        Boolean,
+    enableTouch:        Boolean,
     isDragging:         Boolean,
     onEdit:             () -> Unit,
     onDelete:           () -> Unit,
@@ -54,8 +55,10 @@ internal fun ButtonListItem(
         is PadAction.KeyboardKey                 -> !enableKeyboard
         is PadAction.GamepadButton               -> !enableGamepad
         is PadAction.MouseButton,
-        is PadAction.ScrollWheel,
-        is PadAction.TrackpointMove              -> !enableMouse
+        is PadAction.ScrollWheel                 -> !enableMouse
+        is PadAction.TrackpointMove              -> {
+            if ((btn.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
+        }
         is PadAction.Macro                       -> !enableGamepad
         is PadAction.BackgroundPeek                 -> false
         is PadAction.LayoutNext,

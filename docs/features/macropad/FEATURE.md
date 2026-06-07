@@ -58,11 +58,12 @@ Each button supports one of the following actions:
 
 ### FR-P4: Per-Profile Device Flags
 
-- Each profile has three independent boolean flags: `enableKeyboard`, `enableGamepad`, `enableMouse` (all default **`false`** — new profiles start with all injectors off).
+- Each profile has four independent boolean flags: `enableKeyboard`, `enableGamepad`, `enableMouse`, `enableTouch` (all default **`false`** — new profiles start with all injectors off).
 - These flags are **not user-configurable** directly. They are automatically recomputed whenever the button list changes (add / edit / delete) by inspecting the action types of all buttons:
   - `enableKeyboard = true` if any button has a `KeyboardKey` action.
   - `enableGamepad = true` if any button has a `GamepadButton` action.
-  - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` action.
+  - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action.
+  - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
 - Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
 - When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
@@ -72,10 +73,12 @@ Each button supports one of the following actions:
 
 - A trackpoint is a **regular `PadButton`** with a `TrackpointMove` action, not a separate profile-level toggle.
 - Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
-- In use mode, dragging a finger on a trackpoint button translates relative motion into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta (`MP_TRACKPOINT_SENSITIVITY = 3f`).
+- In use mode, dragging a finger on a trackpoint button translates relative motion depending on the configured **Tracking Mode**:
+  - **Virtual Physical Mouse**: relative motion is translated into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta (`MP_TRACKPOINT_SENSITIVITY = 3f`).
+  - **Virtual Touch**: relative motion is translated into absolute touches on the primary landscape display (`1920x1080`) via `TouchInjector.injectTouch()`. A virtual cursor position is tracked internally (initially at center `(0.5f, 0.5f)`) and persists across finger lifts, allowing subsequent swipes from the same position. Dragging accumulates normalized coordinates based on the pixel delta scaled by `MP_TRACKPOINT_SENSITIVITY` (3f) and normalized over display dimensions `1920f` (width) and `1080f` (height).
 - **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
 - **BackgroundPeek buttons** render a visibility icon: `Icons.Rounded.Visibility` when peek is inactive, `Icons.Rounded.VisibilityOff` when active.
-- In the editor, the `ButtonEditDialog` hides the label field and shape dropdown when action is `TrackpointMove`, `ScrollWheel`, or `BackgroundPeek`.
+- In the editor, the `ButtonEditDialog` hides the label field and shape dropdown when action is `TrackpointMove`, `ScrollWheel`, or `BackgroundPeek`. When the action is `TrackpointMove`, a dropdown selector is displayed to choose between the **Virtual Physical Mouse** and **Virtual Touch** tracking modes, with a dynamic explainer text displayed below the dropdown.
 
 ### FR-P6: Multi-Touch Button Support
 
@@ -429,7 +432,7 @@ PadProfile
         │     GamepadButton(btnCode, label)
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
-        │     TrackpointMove(size: TrackpointSize) — SMALL/MEDIUM/LARGE
+        │     TrackpointMove(size: TrackpointSize, mode: TrackpointMode) — SMALL/MEDIUM/LARGE, PHYSICAL_MOUSE/VIRTUAL_TOUCH
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
