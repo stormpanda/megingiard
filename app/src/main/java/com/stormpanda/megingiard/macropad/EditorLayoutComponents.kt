@@ -12,10 +12,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FormatListNumbered
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FormatListNumbered
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,10 +28,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppSettingsRow
-import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -44,7 +42,6 @@ private const val TAG = "EditorLayoutComponents"
 internal fun EditorProfileChipsBar(
     profiles: List<PadProfile>,
     activeProfile: PadProfile?,
-    accentColor: Color,
     onSelectProfile: (String) -> Unit,
     onEditProfile: () -> Unit,
     onReorderProfiles: () -> Unit,
@@ -102,7 +99,6 @@ internal fun EditorProfileChipsBar(
 internal fun EditorLayoutChipsBar(
     layouts: List<PadLayout>,
     activeLayout: PadLayout?,
-    accentColor: Color,
     onSelectLayout: (String) -> Unit,
     onEditLayout: () -> Unit,
     onReorderLayouts: () -> Unit,

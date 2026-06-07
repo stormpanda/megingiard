@@ -20,18 +20,15 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -51,8 +48,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
@@ -550,7 +547,6 @@ private fun EditorBody(
             EditorProfileChipsBar(
                 profiles        = profiles,
                 activeProfile   = profile,
-                accentColor     = accentColor,
                 onSelectProfile = onSelectProfile,
                 onEditProfile   = onEditProfile,
                 onReorderProfiles = onReorderProfiles,
@@ -576,7 +572,6 @@ private fun EditorBody(
             EditorLayoutChipsBar(
                 layouts        = profile.layouts,
                 activeLayout   = layout,
-                accentColor    = accentColor,
                 onSelectLayout = onSelectLayout,
                 onEditLayout   = onEditLayout,
                 onReorderLayouts = onReorderLayouts,

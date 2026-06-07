@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import com.stormpanda.megingiard.ui.blockPointerEvents
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import com.stormpanda.megingiard.ui.AppDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,13 +46,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import java.util.Locale
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.blockPointerEvents
+import java.util.Locale
 import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -94,19 +94,32 @@ internal fun MacroListEditor(
     val accentColor  = colors.accent
     val isDirectEdit = initialEditMacroId != null
 
-    var editingMacro by remember(initialEditMacroId) {
-        mutableStateOf(
-            if (initialEditMacroId != null) {
-                MacroPadState.activeProfile.value?.macros?.firstOrNull { it.id == initialEditMacroId }
-            } else {
-                null
+    val profile by MacroPadState.activeProfile.collectAsState()
+    val macros = profile?.macros ?: emptyList()
+
+    var editingMacro by remember { mutableStateOf<Macro?>(null) }
+    var lookupAttempted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(profile, initialEditMacroId) {
+        if (initialEditMacroId != null && profile != null && !lookupAttempted) {
+            val found = profile?.macros?.firstOrNull { it.id == initialEditMacroId }
+            if (found != null) {
+                editingMacro = found
             }
-        )
+            lookupAttempted = true
+        }
+    }
+
+    // Fallback/auto-cancel if lookup failed after profile loaded
+    LaunchedEffect(profile, lookupAttempted, editingMacro) {
+        if (isDirectEdit && profile != null && lookupAttempted && editingMacro == null) {
+            onDirectEditCancel?.invoke() ?: onDone()
+        }
     }
 
     BackHandler(enabled = true) {
         if (isDirectEdit) {
-            onDirectEditCancel?.invoke()
+            onDirectEditCancel?.invoke() ?: onDone()
         } else if (editingMacro != null) {
             editingMacro = null
         } else {
@@ -117,34 +130,30 @@ internal fun MacroListEditor(
     val defaultName  = stringResource(R.string.macropad_macro_default_name)
     val copyNameFormat = stringResource(R.string.macropad_macro_copy_name)
 
-    val profile by MacroPadState.activeProfile.collectAsState()
-    val macros = profile?.macros ?: emptyList()
-
     if (editingMacro == null) {
-        if (isDirectEdit) {
-            LaunchedEffect(Unit) {
-                onDirectEditCancel?.invoke()
-            }
+        if (!isDirectEdit) {
+            MacroListView(
+                accentColor  = accentColor,
+                macros       = macros,
+                onEditMacro  = { editingMacro = it },
+                onDuplicateMacro = { original ->
+                    val existingNames = macros.map { it.name }.toSet()
+                    val baseName = copyNameFormat.format(original.name)
+                    val copyName = if (baseName !in existingNames) baseName else {
+                        var n = 2
+                        while ("$baseName ($n)" in existingNames) n++
+                        "$baseName ($n)"
+                    }
+                    MacroPadState.addMacro(original.copy(id = UUID.randomUUID().toString(), name = copyName))
+                },
+                onNewMacro = {
+                    editingMacro = Macro(id = UUID.randomUUID().toString(), name = defaultName, steps = emptyList())
+                },
+                onDone = onDone,
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxSize())
         }
-        MacroListView(
-            accentColor  = accentColor,
-            macros       = macros,
-            onEditMacro  = { editingMacro = it },
-            onDuplicateMacro = { original ->
-                val existingNames = macros.map { it.name }.toSet()
-                val baseName = copyNameFormat.format(original.name)
-                val copyName = if (baseName !in existingNames) baseName else {
-                    var n = 2
-                    while ("$baseName ($n)" in existingNames) n++
-                    "$baseName ($n)"
-                }
-                MacroPadState.addMacro(original.copy(id = UUID.randomUUID().toString(), name = copyName))
-            },
-            onNewMacro = {
-                editingMacro = Macro(id = UUID.randomUUID().toString(), name = defaultName, steps = emptyList())
-            },
-            onDone = onDone,
-        )
     } else {
         MacroTimelineEditor(
             macro       = editingMacro!!,
@@ -164,7 +173,7 @@ internal fun MacroListEditor(
             },
             onBack = {
                 if (isDirectEdit) {
-                    onDirectEditCancel?.invoke()
+                    onDirectEditCancel?.invoke() ?: onDone()
                 } else {
                     editingMacro = null
                 }
