@@ -14,6 +14,8 @@ private const val TAG = "MacroPadHitTest"
 
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
+private const val LOGICAL_SCREEN_WIDTH = 1920f
+private const val LOGICAL_SCREEN_HEIGHT = 1080f
 
 /**
  * Reason a MacroPad button tap was blocked — returned instead of an R.string resource ID
@@ -180,8 +182,8 @@ class MacroPadHitTestEngine(
                 val tpAction = mappedBtn.action as PadAction.TrackpointMove
                 if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
                     if (lastTpPos != null) {
-                        val dxNormalized = (deltaX * MP_TRACKPOINT_SENSITIVITY) / 1920f
-                        val dyNormalized = (deltaY * MP_TRACKPOINT_SENSITIVITY) / 1080f
+                        val dxNormalized = (deltaX * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_WIDTH
+                        val dyNormalized = (deltaY * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_HEIGHT
 
                         val currentDxSign = if (dxNormalized > 0f) 1f else if (dxNormalized < 0f) -1f else 0f
                         if (currentDxSign != 0f && lastDxSign != 0f && currentDxSign != lastDxSign) {
@@ -311,10 +313,17 @@ class MacroPadHitTestEngine(
     /** Reset all tracking state and cleanly release any active hardware injections. */
     fun releaseAll(buttons: List<PadButton>) {
         val activeIds = _pressedIds.value
+        val pointerMappedIds = pointerMap.values.toSet()
+        val allActiveIds = activeIds + pointerMappedIds
+
         _pressedIds.value = emptySet()
         pointerMap.clear()
         lastTpPos = null
         scrollStartY.clear()
+
+        val upX = unclampedCursorX
+        val upY = unclampedCursorY
+
         virtualCursorX = virtualCursorX.coerceIn(0f, 1f)
         virtualCursorY = virtualCursorY.coerceIn(0f, 1f)
         unclampedCursorX = virtualCursorX
@@ -322,11 +331,24 @@ class MacroPadHitTestEngine(
         lastDxSign = 0f
         lastDySign = 0f
 
-        activeIds.forEach { buttonId ->
+        allActiveIds.forEach { buttonId ->
             val btn = buttons.firstOrNull { it.id == buttonId }
             if (btn != null) {
                 AppLog.d(TAG, "Releasing button due to gesture cancellation: $buttonId")
-                injectActionUp(btn.action)
+                when {
+                    btn.action is PadAction.TrackpointMove -> {
+                        val tpAction = btn.action as PadAction.TrackpointMove
+                        if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                            TouchInjector.injectTouch(TouchAction.UP, upX, upY)
+                        }
+                    }
+                    btn.action is PadAction.ScrollWheel -> {
+                        // no-op
+                    }
+                    else -> {
+                        injectActionUp(btn.action)
+                    }
+                }
             }
         }
     }

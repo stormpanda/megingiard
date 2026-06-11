@@ -229,4 +229,22 @@ class MacroPadHitTestEngineTest {
         assertEquals("btn-test", blocked?.id)
         assertEquals(0, queue.size)
     }
+
+    @Test
+    fun `releaseAll with active virtual touch trackpoint injects UP event`() {
+        val engine = MacroPadHitTestEngine(dummyDpToPx)
+        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
+
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(button), enabledProfile)
+        queue.clear()
+
+        engine.releaseAll(listOf(button))
+        assertEquals(1, queue.size)
+        val cmd = queue.poll()
+        assertNotNull(cmd)
+        assertEquals(TouchAction.UP, cmd!!.action)
+        assertEquals(600, cmd.x)
+        assertEquals(1110, cmd.y)
+    }
 }
