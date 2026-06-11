@@ -30,8 +30,9 @@ private fun List<String>.nextUniqueName(baseName: String, fallback: String): Str
 }
 
 /**
- * Recomputes [PadProfile.enableKeyboard], [PadProfile.enableGamepad], and [PadProfile.enableMouse]
- * from button actions across **all layouts** so the injectors are started only when needed.
+ * Recomputes [PadProfile.enableKeyboard], [PadProfile.enableGamepad], [PadProfile.enableMouse],
+ * and [PadProfile.enableTouch] from button actions across **all layouts** so the injectors
+ * are started only when needed.
  */
 private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
     val allButtons = layouts.flatMap { it.buttons }

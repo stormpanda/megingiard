@@ -120,8 +120,6 @@ class RecordingMirrorPresentation(
 
     private var virtualDisplay: VirtualDisplay? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    /** True if this Presentation started [TouchInjector]; false if it was already running. */
-    private var injectorStartedByUs = false
 
     /** Prevent the system from dismissing this Presentation on back press. */
     override fun cancel() {
@@ -133,11 +131,8 @@ class RecordingMirrorPresentation(
         AppLog.i(TAG, "onCreate display=${display?.displayId} src=${srcWidth}x${srcHeight}")
 
         // Start TouchInjector now so it is ready by the time the user taps.
-        if (!TouchInjector.isRunning) {
-            TouchInjector.start(context)
-            injectorStartedByUs = true
-            AppLog.d(TAG, "TouchInjector started by RecordingMirrorPresentation")
-        }
+        TouchInjector.start(context, "RecordingMirrorPresentation")
+        AppLog.d(TAG, "TouchInjector started by RecordingMirrorPresentation")
 
         val lifecycleOwner = MirrorPresentationLifecycleOwner(context.applicationContext as Application)
         window?.decorView?.apply {
@@ -149,11 +144,8 @@ class RecordingMirrorPresentation(
         setOnDismissListener {
             AppLog.i(TAG, "dismissed → scope cancelled, lifecycle destroyed")
             scope.cancel()
-            if (injectorStartedByUs) {
-                TouchInjector.stop()
-                injectorStartedByUs = false
-                AppLog.d(TAG, "TouchInjector stopped by RecordingMirrorPresentation")
-            }
+            TouchInjector.stop("RecordingMirrorPresentation")
+            AppLog.d(TAG, "TouchInjector stopped by RecordingMirrorPresentation")
             lifecycleOwner.destroy()
         }
 

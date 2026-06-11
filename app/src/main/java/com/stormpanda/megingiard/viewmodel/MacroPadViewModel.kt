@@ -117,7 +117,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                             if (ap?.enableKeyboard == true) KeyInjector.start(context)
                             if (ap?.enableGamepad == true) GamepadInjector.start(context)
                             if (ap?.enableMouse == true) MouseInjector.start(context)
-                            if (ap?.enableTouch == true) TouchInjector.start(context)
+                            if (ap?.enableTouch == true) TouchInjector.start(context, "MacroPadViewModel")
                         }
                     }
                 }
@@ -130,7 +130,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
-        TouchInjector.stop()
+        TouchInjector.stop("MacroPadViewModel")
         MacroPadState.resetPeek()
     }
 
@@ -140,7 +140,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
-        TouchInjector.stop()
+        TouchInjector.stop("MacroPadViewModel")
         MacroPadState.resetPeek()
     }
 }

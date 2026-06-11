@@ -158,7 +158,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                         if (ap?.enableKeyboard == true) KeyInjector.start(context)
                         if (ap?.enableGamepad == true) GamepadInjector.start(context)
                         if (ap?.enableMouse == true) MouseInjector.start(context)
-                        if (ap?.enableTouch == true) TouchInjector.start(context)
+                        if (ap?.enableTouch == true) TouchInjector.start(context, "BackgroundMacroPadOverlay")
                     }
                 }
             }
@@ -172,7 +172,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()
-            TouchInjector.stop()
+            TouchInjector.stop("BackgroundMacroPadOverlay")
             MacroPadState.resetPeek()
         }
     }

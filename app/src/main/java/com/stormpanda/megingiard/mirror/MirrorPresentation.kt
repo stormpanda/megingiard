@@ -265,9 +265,9 @@ class MirrorPresentation(
 
                         LaunchedEffect(isTouchProjectionActive) {
                             if (isTouchProjectionActive) {
-                                TouchInjector.start(localeContext)
+                                TouchInjector.start(localeContext, "MirrorPresentation")
                             } else {
-                                TouchInjector.stop()
+                                TouchInjector.stop("MirrorPresentation")
                             }
                         }
                         LaunchedEffect(isFollowActive, capturing) {
@@ -283,7 +283,7 @@ class MirrorPresentation(
                         }
                         DisposableEffect(Unit) {
                             onDispose {
-                                TouchInjector.stop()
+                                TouchInjector.stop("MirrorPresentation")
                                 TouchScreenObserver.stop()
                             }
                         }

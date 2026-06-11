@@ -324,14 +324,14 @@ During MacroPad touch recording, `RecordingMirrorPresentation` keeps the mirrore
 | ----------------------- | ---------------------------------------------------------------------- |
 | `TouchAction.kt`        | Shared `DOWN / MOVE / UP` enum                                         |
 | `ShellInputInjector.kt` | Native binary lifecycle, writer thread, MOVE coalescing                |
-| `TouchInjector.kt`      | `start / stop / injectTouch` facade with hardware coordinate transform |
+| `TouchInjector.kt`      | `start / stop / injectTouch` facade with hardware coordinate transform and client-aware lifecycle coordination |
 
-Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both features; only one can be active at a time by design (they correspond to separate `AppMode` values).
+Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both features. To coordinate the native process lifetime across multiple concurrent callers (Mirror Touch Projection, relative trackpoints in MacroPad, macro executors), `TouchInjector` implements a thread-safe, client-aware reference-counted lifecycle. The native binary is started when the first client registers itself, and is terminated only after the last active client has unregistered.
 
 **Lifecycle:**
 
-- `LaunchedEffect(isTouchProjectionActive)` starts the injector when projection is enabled and stops it when disabled.
-- `DisposableEffect(Unit)` stops the injector unconditionally when `MirrorScreen` leaves composition (mode switch).
+- `LaunchedEffect(isTouchProjectionActive)` starts the injector with the `"MirrorPresentation"` token when projection is enabled, and stops it when disabled.
+- `DisposableEffect(Unit)` stops the injector with the `"MirrorPresentation"` token when `MirrorScreen` leaves composition (mode switch).
 - `resetMirrorSessionState()` resets `isLocked`, `isTouchProjectionActive`, and `isFrozen` atomically — called from the Stop button (after saving state).
 
 ### Session State Persistence

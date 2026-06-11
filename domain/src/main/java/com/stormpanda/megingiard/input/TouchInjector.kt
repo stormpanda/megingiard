@@ -30,26 +30,51 @@ object TouchInjector {
     private const val PHYS_W = 1080
     private const val PHYS_H = 1920
 
+    private val activeClients = mutableSetOf<String>()
+
     /**
-     * Starts the native touch injector. Safe to call if already running (no-op).
+     * Starts the native touch injector for a specific client [token].
+     * Coordinates start/stop across multiple active clients. Safe to call if already running.
      */
-    fun start(context: Context) {
-        AppLog.i(TAG, "start()")
-        if (!ShellInputInjector.isRunning) ShellInputInjector.start(context)
+    @Synchronized
+    fun start(context: Context, token: String) {
+        val wasEmpty = activeClients.isEmpty()
+        activeClients.add(token)
+        AppLog.i(TAG, "start() client='$token' activeClients=$activeClients")
+        if (wasEmpty || !ShellInputInjector.isRunning) {
+            if (!ShellInputInjector.isRunning) {
+                ShellInputInjector.start(context)
+            }
+        }
     }
 
-    fun stop() {
-        AppLog.i(TAG, "stop()")
-        if (!ShellInputInjector.isRunning) { ShellInputInjector.stop(); return }
-        releaseAllSlots()
-        /* Flush and stop on a daemon thread to avoid blocking the calling thread.
-           stop() can be invoked from Compose DisposableEffect.onDispose (main thread). */
-        Thread {
-            if (!ShellInputInjector.flushPendingTouches(TOUCH_STOP_FLUSH_TIMEOUT_MS)) {
-                AppLog.w(TAG, "stop() timed out while flushing touch release commands")
+    /**
+     * Stops the native touch injector for a specific client [token].
+     * Coordinates teardown by only stopping the daemon when all clients have released it.
+     */
+    @Synchronized
+    fun stop(token: String) {
+        if (!activeClients.contains(token)) {
+            AppLog.w(TAG, "stop() called for non-active client '$token'. Ignoring.")
+            return
+        }
+        activeClients.remove(token)
+        AppLog.i(TAG, "stop() client='$token' activeClients=$activeClients")
+        if (activeClients.isEmpty()) {
+            if (!ShellInputInjector.isRunning) {
+                ShellInputInjector.stop()
+                return
             }
-            ShellInputInjector.stop()
-        }.also { it.isDaemon = true }.start()
+            releaseAllSlots()
+            /* Flush and stop on a daemon thread to avoid blocking the calling thread.
+               stop() can be invoked from Compose DisposableEffect.onDispose (main thread). */
+            Thread {
+                if (!ShellInputInjector.flushPendingTouches(TOUCH_STOP_FLUSH_TIMEOUT_MS)) {
+                    AppLog.w(TAG, "stop() timed out while flushing touch release commands")
+                }
+                ShellInputInjector.stop()
+            }.also { it.isDaemon = true }.start()
+        }
     }
 
     val isRunning: Boolean
