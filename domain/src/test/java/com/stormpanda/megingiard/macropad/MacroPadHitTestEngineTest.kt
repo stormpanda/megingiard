@@ -111,14 +111,14 @@ class MacroPadHitTestEngineTest {
 
         // Move 2: Drag way off screen to test unclamped coordinate tracking
         // deltaX = 1000f, deltaY = 1000f -> unclamped accumulates to (2.140625, 3.222222)
-        // Clamped to (1.0, 1.0) -> px = 0, py = 1920
+        // Clamped to (1.5, 1.5) -> px = (1 - 1.5) * 1080 = -540, py = 1.5 * 1920 = 2880
         engine.onMove(0L, 1550f, 1480f, 1000f, 1000f, listOf(button), enabledProfile)
         assertEquals(1, queue.size)
         val cmd2 = queue.poll()
         assertNotNull(cmd2)
         assertEquals(TouchAction.MOVE, cmd2!!.action)
-        assertEquals(0, cmd2.x)
-        assertEquals(1920, cmd2.y)
+        assertEquals(-540, cmd2.x)
+        assertEquals(2880, cmd2.y)
 
         // Move 3: Drag in opposite direction to test direction change snap
         // deltaX = -50f, deltaY = -50f -> Direction changes!
@@ -164,19 +164,19 @@ class MacroPadHitTestEngineTest {
         queue.clear()
 
         // Move way off screen: unclampedCursor should accumulate to (2.0625, 3.277778)
-        // Clamps injected touch to (1.0, 1.0) i.e. (0, 1920)
+        // Clamps injected touch to (1.5, 1.5) i.e. (-540, 2880)
         engine.onMove(0L, 1500f, 1500f, 1000f, 1000f, listOf(button), enabledProfile)
         val cmdMove = queue.poll()!!
         assertEquals(TouchAction.MOVE, cmdMove.action)
-        assertEquals(0, cmdMove.x)
-        assertEquals(1920, cmdMove.y)
+        assertEquals(-540, cmdMove.x)
+        assertEquals(2880, cmdMove.y)
 
-        // Release: should inject UP at clamped (1.0, 1.0) i.e. (0, 1920)
+        // Release: should inject UP at clamped (1.5, 1.5) i.e. (-540, 2880)
         engine.onRelease(0L, listOf(button), enabledProfile)
         val cmdRelease = queue.poll()!!
         assertEquals(TouchAction.UP, cmdRelease.action)
-        assertEquals(0, cmdRelease.x)
-        assertEquals(1920, cmdRelease.y)
+        assertEquals(-540, cmdRelease.x)
+        assertEquals(2880, cmdRelease.y)
 
         // Start a new swipe: should DOWN at clamped (1.0f, 1.0f) i.e. (0, 1920)
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)

@@ -63,8 +63,8 @@ object TouchInjector {
      * @param normalizedY  0.0 (top)  … 1.0 (bottom) of the logical display
      */
     fun injectTouch(action: TouchAction, normalizedX: Float, normalizedY: Float) {
-        val cx = normalizedX.coerceIn(0f, 1f)
-        val cy = normalizedY.coerceIn(0f, 1f)
+        val cx = normalizedX.coerceIn(-0.5f, 1.5f)
+        val cy = normalizedY.coerceIn(-0.5f, 1.5f)
         val px = ((1f - cy) * PHYS_W).toInt()
         val py = (cx * PHYS_H).toInt()
         ShellInputInjector.injectTouch(action, px, py)
@@ -74,8 +74,8 @@ object TouchInjector {
      * Injects a slot-aware touch event using normalised coordinates.
      */
     fun injectTouch(slot: Int, action: TouchAction, normalizedX: Float, normalizedY: Float) {
-        val cx = normalizedX.coerceIn(0f, 1f)
-        val cy = normalizedY.coerceIn(0f, 1f)
+        val cx = normalizedX.coerceIn(-0.5f, 1.5f)
+        val cy = normalizedY.coerceIn(-0.5f, 1.5f)
         val px = ((1f - cy) * PHYS_W).toInt()
         val py = (cx * PHYS_H).toInt()
         ShellInputInjector.injectTouch(slot, action, px, py)
