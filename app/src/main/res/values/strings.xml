@@ -125,9 +125,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_trackpoint_size_large">Large</string>
     <string name="macropad_editor_trackpoint_mode">Tracking Mode</string>
     <string name="macropad_trackpoint_mode_physical">Virtual Physical Mouse</string>
-    <string name="macropad_trackpoint_mode_touch">Virtual Touch</string>
+    <string name="macropad_trackpoint_mode_touch">Virtual Touch (WIP)</string>
     <string name="macropad_trackpoint_mode_physical_desc">Simulates a standard mouse. Dragging moves the system cursor relatively from its current position.</string>
-    <string name="macropad_trackpoint_mode_touch_desc">Simulates absolute touch inputs on the primary screen. The cursor position is remembered, letting you perform multiple swipes from the same spot.</string>
+    <string name="macropad_trackpoint_mode_touch_desc">Simulates absolute touch inputs on the primary screen. The cursor position is remembered, letting you perform multiple swipes from the same spot. (WIP)</string>
     <string name="macropad_editor_section_haptic">Haptic Feedback</string>
     <string name="macropad_haptic_off">Off</string>
     <string name="macropad_haptic_light">Light</string>

@@ -130,9 +130,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_trackpoint_size_large">Groß</string>
     <string name="macropad_editor_trackpoint_mode">Tracking-Modus</string>
     <string name="macropad_trackpoint_mode_physical">Virtuelle physische Maus</string>
-    <string name="macropad_trackpoint_mode_touch">Virtueller Touch</string>
+    <string name="macropad_trackpoint_mode_touch">Virtueller Touch (WIP)</string>
     <string name="macropad_trackpoint_mode_physical_desc">Simuliert eine Standardmaus. Ziehen bewegt den Systemcursor relativ von seiner aktuellen Position.</string>
-    <string name="macropad_trackpoint_mode_touch_desc">Simuliert absolute Toucheingaben auf dem Hauptbildschirm. Die Cursorposition wird gespeichert, sodass Sie mehrere Wischbewegungen an derselben Stelle fortsetzen können.</string>
+    <string name="macropad_trackpoint_mode_touch_desc">Simuliert absolute Toucheingaben auf dem Hauptbildschirm. Die Cursorposition wird gespeichert, sodass Sie mehrere Wischbewegungen an derselben Stelle fortsetzen können. (WIP)</string>
     <string name="macropad_editor_section_haptic">Haptisches Feedback</string>
     <string name="macropad_haptic_off">Aus</string>
     <string name="macropad_haptic_light">Leicht</string>
