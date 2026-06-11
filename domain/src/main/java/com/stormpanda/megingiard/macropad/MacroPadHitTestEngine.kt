@@ -63,6 +63,10 @@ class MacroPadHitTestEngine(
     private val scrollStartY = mutableMapOf<Long, Float>()
     private var virtualCursorX = 0.5f
     private var virtualCursorY = 0.5f
+    private var unclampedCursorX = 0.5f
+    private var unclampedCursorY = 0.5f
+    private var lastDxSign = 0f
+    private var lastDySign = 0f
 
     /**
      * Handle a Press event.
@@ -123,7 +127,11 @@ class MacroPadHitTestEngine(
                 lastTpPos = Pair(px, py)
                 val tpAction = hitButton.action as PadAction.TrackpointMove
                 if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
-                    TouchInjector.injectTouch(TouchAction.DOWN, virtualCursorX, virtualCursorY)
+                    unclampedCursorX = virtualCursorX
+                    unclampedCursorY = virtualCursorY
+                    lastDxSign = 0f
+                    lastDySign = 0f
+                    TouchInjector.injectTouch(TouchAction.DOWN, unclampedCursorX, unclampedCursorY)
                 }
             }
             else -> {
@@ -174,9 +182,28 @@ class MacroPadHitTestEngine(
                     if (lastTpPos != null) {
                         val dxNormalized = (deltaX * MP_TRACKPOINT_SENSITIVITY) / 1920f
                         val dyNormalized = (deltaY * MP_TRACKPOINT_SENSITIVITY) / 1080f
+
+                        val currentDxSign = if (dxNormalized > 0f) 1f else if (dxNormalized < 0f) -1f else 0f
+                        if (currentDxSign != 0f && lastDxSign != 0f && currentDxSign != lastDxSign) {
+                            unclampedCursorX = virtualCursorX
+                        }
+                        if (currentDxSign != 0f) {
+                            lastDxSign = currentDxSign
+                        }
+
+                        val currentDySign = if (dyNormalized > 0f) 1f else if (dyNormalized < 0f) -1f else 0f
+                        if (currentDySign != 0f && lastDySign != 0f && currentDySign != lastDySign) {
+                            unclampedCursorY = virtualCursorY
+                        }
+                        if (currentDySign != 0f) {
+                            lastDySign = currentDySign
+                        }
+
+                        unclampedCursorX += dxNormalized
+                        unclampedCursorY += dyNormalized
                         virtualCursorX = (virtualCursorX + dxNormalized).coerceIn(0f, 1f)
                         virtualCursorY = (virtualCursorY + dyNormalized).coerceIn(0f, 1f)
-                        TouchInjector.injectTouch(TouchAction.MOVE, virtualCursorX, virtualCursorY)
+                        TouchInjector.injectTouch(TouchAction.MOVE, unclampedCursorX, unclampedCursorY)
                         if (mappedBtn.hapticStrength != HapticStrength.OFF) {
                             val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
                             val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
@@ -254,7 +281,7 @@ class MacroPadHitTestEngine(
                 lastTpPos = null
                 val tpAction = btn.action as PadAction.TrackpointMove
                 if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
-                    TouchInjector.injectTouch(TouchAction.UP, virtualCursorX, virtualCursorY)
+                    TouchInjector.injectTouch(TouchAction.UP, unclampedCursorX, unclampedCursorY)
                 }
             }
             btn.action is PadAction.ScrollWheel -> {
@@ -273,6 +300,12 @@ class MacroPadHitTestEngine(
         _pressedIds.value = emptySet()
         lastTpPos = null
         scrollStartY.clear()
+        virtualCursorX = virtualCursorX.coerceIn(0f, 1f)
+        virtualCursorY = virtualCursorY.coerceIn(0f, 1f)
+        unclampedCursorX = virtualCursorX
+        unclampedCursorY = virtualCursorY
+        lastDxSign = 0f
+        lastDySign = 0f
     }
 
     /** Reset all tracking state and cleanly release any active hardware injections. */
@@ -282,6 +315,12 @@ class MacroPadHitTestEngine(
         pointerMap.clear()
         lastTpPos = null
         scrollStartY.clear()
+        virtualCursorX = virtualCursorX.coerceIn(0f, 1f)
+        virtualCursorY = virtualCursorY.coerceIn(0f, 1f)
+        unclampedCursorX = virtualCursorX
+        unclampedCursorY = virtualCursorY
+        lastDxSign = 0f
+        lastDySign = 0f
 
         activeIds.forEach { buttonId ->
             val btn = buttons.firstOrNull { it.id == buttonId }

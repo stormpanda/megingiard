@@ -109,10 +109,9 @@ class MacroPadHitTestEngineTest {
         assertEquals(600, cmd1.x)
         assertEquals(1110, cmd1.y)
 
-        // Move 2: Drag way off screen to test coercion
-        // deltaX = 1000f, deltaY = 1000f -> should coerce cursor to (1.0, 1.0)
-        // px = (1 - 1.0) * 1080 = 0
-        // py = 1.0 * 1920 = 1920
+        // Move 2: Drag way off screen to test unclamped coordinate tracking
+        // deltaX = 1000f, deltaY = 1000f -> unclamped accumulates to (2.140625, 3.222222)
+        // Clamped to (1.0, 1.0) -> px = 0, py = 1920
         engine.onMove(0L, 1550f, 1480f, 1000f, 1000f, listOf(button), enabledProfile)
         assertEquals(1, queue.size)
         val cmd2 = queue.poll()
@@ -120,6 +119,22 @@ class MacroPadHitTestEngineTest {
         assertEquals(TouchAction.MOVE, cmd2!!.action)
         assertEquals(0, cmd2.x)
         assertEquals(1920, cmd2.y)
+
+        // Move 3: Drag in opposite direction to test direction change snap
+        // deltaX = -50f, deltaY = -50f -> Direction changes!
+        // dxNormalized = (-50 * 3) / 1920 = -0.078125
+        // dyNormalized = (-50 * 3) / 1080 = -0.13888889
+        // unclampedCursorX snaps to virtualCursorX (1.0f) -> unclampedCursorX = 1.0f - 0.078125 = 0.921875
+        // unclampedCursorY snaps to virtualCursorY (1.0f) -> unclampedCursorY = 1.0f - 0.13888889 = 0.8611111
+        // px = (1 - 0.8611111) * 1080 = 150
+        // py = 0.921875 * 1920 = 1770
+        engine.onMove(0L, 1500f, 1430f, -50f, -50f, listOf(button), enabledProfile)
+        assertEquals(1, queue.size)
+        val cmd3 = queue.poll()
+        assertNotNull(cmd3)
+        assertEquals(TouchAction.MOVE, cmd3!!.action)
+        assertEquals(150, cmd3.x)
+        assertEquals(1770, cmd3.y)
     }
 
     @Test
@@ -138,6 +153,37 @@ class MacroPadHitTestEngineTest {
         assertEquals(TouchAction.UP, cmd!!.action)
         assertEquals(600, cmd.x)
         assertEquals(1110, cmd.y)
+    }
+
+    @Test
+    fun `virtual touch trackpoint keeps internally tracked position clamped on release`() {
+        val engine = MacroPadHitTestEngine(dummyDpToPx)
+        val button = centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH))
+
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        queue.clear()
+
+        // Move way off screen: unclampedCursor should accumulate to (2.0625, 3.277778)
+        // Clamps injected touch to (1.0, 1.0) i.e. (0, 1920)
+        engine.onMove(0L, 1500f, 1500f, 1000f, 1000f, listOf(button), enabledProfile)
+        val cmdMove = queue.poll()!!
+        assertEquals(TouchAction.MOVE, cmdMove.action)
+        assertEquals(0, cmdMove.x)
+        assertEquals(1920, cmdMove.y)
+
+        // Release: should inject UP at clamped (1.0, 1.0) i.e. (0, 1920)
+        engine.onRelease(0L, listOf(button), enabledProfile)
+        val cmdRelease = queue.poll()!!
+        assertEquals(TouchAction.UP, cmdRelease.action)
+        assertEquals(0, cmdRelease.x)
+        assertEquals(1920, cmdRelease.y)
+
+        // Start a new swipe: should DOWN at clamped (1.0f, 1.0f) i.e. (0, 1920)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        val cmdPress = queue.poll()!!
+        assertEquals(TouchAction.DOWN, cmdPress.action)
+        assertEquals(0, cmdPress.x)
+        assertEquals(1920, cmdPress.y)
     }
 
     @Test
