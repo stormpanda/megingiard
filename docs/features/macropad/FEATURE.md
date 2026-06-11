@@ -59,11 +59,13 @@ Each button supports one of the following actions:
 ### FR-P4: Per-Profile Device Flags
 
 - Each profile has four independent boolean flags: `enableKeyboard`, `enableGamepad`, `enableMouse`, `enableTouch` (all default **`false`** — new profiles start with all injectors off).
-- These flags are **not user-configurable** directly. They are automatically recomputed whenever the button list changes (add / edit / delete) by inspecting the action types of all buttons:
-  - `enableKeyboard = true` if any button has a `KeyboardKey` action.
-  - `enableGamepad = true` if any button has a `GamepadButton` action.
-  - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action.
-  - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
+- These flags are **not user-configurable** directly. They are automatically recomputed whenever the button list changes (add / edit / delete) by inspecting the action types of all buttons. The exact derivation rules are:
+  - If the profile contains any button with a `Macro` action, all four flags are force-enabled (`true`).
+  - Otherwise, each flag is set to `true` if any button matches the following actions:
+    - `enableKeyboard = true` if any button has a `KeyboardKey` or `FullScreenKeyboard` action.
+    - `enableGamepad = true` if any button has a `GamepadButton` action.
+    - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode), or `FullScreenMouse` action. (Note: `MirrorTouchProjection` is explicitly excluded from this derivation because the screen mirror presentation manages its own touch injector lifecycle).
+    - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
 - Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
 - When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
@@ -75,7 +77,7 @@ Each button supports one of the following actions:
 - Trackpoint buttons are **always circular**, have no visible label, and are sized by a `TrackpointSize` enum: `SMALL` (1.5×), `MEDIUM` (2.0×), `LARGE` (3.0×), where the multiplier scales `MP_BUTTON_UNIT_DP` (60 dp).
 - In use mode, dragging a finger on a trackpoint button translates relative motion depending on the configured **Tracking Mode**:
   - **Virtual Physical Mouse**: relative motion is translated into **REL_X / REL_Y mouse events** via `MouseInjector.moveMouse()`. Sensitivity is fixed at 3× the raw pixel delta (`MP_TRACKPOINT_SENSITIVITY = 3f`).
-  - **Virtual Touch**: relative motion is translated into absolute touches on the primary landscape display (`1920x1080`) via `TouchInjector.injectTouch()`. A virtual cursor position is tracked internally (initially at center `(0.5f, 0.5f)`) and persists across finger lifts, allowing subsequent swipes from the same position. The internally tracked position (`virtualCursorX` / `virtualCursorY`) is clamped to screen boundaries `[0.0f, 1.0f]` at all times. Touch events injected to the system are clamped to screen boundaries `[0.0f, 1.0f]` to prevent coordinate wrapping or jumps. Relative movements are tracked unclamped during dragging, but snap immediately to the internally tracked position as soon as the user changes drag direction (sign change in delta) to eliminate lag or dead zones when moving back from edges. There is no snap-back logic on release or overshoot limits.
+  - **Virtual Touch**: relative motion is translated into absolute touches on the primary landscape display (`1920x1080`) via `TouchInjector.injectTouch()`. A virtual cursor position is tracked internally (initially at center `(0.5f, 0.5f)`) and persists across finger lifts, allowing subsequent swipes from the same position. The internally tracked position (`virtualCursorX` / `virtualCursorY`) is clamped to screen boundaries `[0.0f, 1.0f]` at all times. Touch events injected to the system are clamped to the safe overrun range of `[-0.5f, 1.5f]` to prevent coordinate wrapping or jumps while allowing the system cursor to catch up. Relative movements are tracked unclamped during dragging, but snap immediately to the internally tracked position as soon as the user changes drag direction (sign change in delta) to eliminate lag or dead zones when moving back from edges. There is no snap-back logic on release or overshoot limits.
 - **ScrollWheel buttons** render two up-chevron icons (full opacity) and two down-chevron icons (half opacity), vertically centred. Scroll sensitivity is 12 px per wheel unit (`MP_SCROLL_SENSITIVITY_PX = 12f`).
 - **BackgroundPeek buttons** render a visibility icon: `Icons.Rounded.Visibility` when peek is inactive, `Icons.Rounded.VisibilityOff` when active.
 - In the editor, the `ButtonEditDialog` hides the label field and shape dropdown when action is `TrackpointMove`, `ScrollWheel`, or `BackgroundPeek`. When the action is `TrackpointMove`, a dropdown selector is displayed to choose between the **Virtual Physical Mouse** and **Virtual Touch** tracking modes, with a dynamic explainer text displayed below the dropdown.

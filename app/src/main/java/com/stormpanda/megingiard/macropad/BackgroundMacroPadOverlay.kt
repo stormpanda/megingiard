@@ -144,13 +144,11 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                     KeyInjector.stop()
                     GamepadInjector.stop()
                     MouseInjector.stop()
-                    TouchInjector.stop()
                 }
                 gate.stopMouseAndGamepad -> {
                     AppLog.d(TAG, "pill menu open → stopping gamepad/mouse injectors")
                     GamepadInjector.stop()
                     MouseInjector.stop()
-                    TouchInjector.stop()
                 }
                 else -> {
                     delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)

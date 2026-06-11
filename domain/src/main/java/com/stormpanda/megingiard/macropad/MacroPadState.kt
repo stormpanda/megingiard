@@ -45,8 +45,7 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
         it.action is PadAction.MouseButton    ||
         it.action is PadAction.ScrollWheel    ||
         (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE) ||
-        it.action is PadAction.FullScreenMouse ||
-        it.action is PadAction.MirrorTouchProjection
+        it.action is PadAction.FullScreenMouse
     }
     val ts = hasMacro || allButtons.any {
         (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH)

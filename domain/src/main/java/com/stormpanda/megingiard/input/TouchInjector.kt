@@ -58,9 +58,12 @@ object TouchInjector {
     /**
      * Injects a touch event using normalised coordinates.
      *
+     * Coordinates are clamped to the safe overrun range of [-0.5, 1.5] to prevent
+     * signed integer overflow wrapping/jumps in target applications.
+     *
      * @param action       DOWN / MOVE / UP
-     * @param normalizedX  0.0 (left) … 1.0 (right) of the logical display
-     * @param normalizedY  0.0 (top)  … 1.0 (bottom) of the logical display
+     * @param normalizedX  normalised coordinate, clamped to [-0.5, 1.5] (maps to logical screen bounds with safe overrun)
+     * @param normalizedY  normalised coordinate, clamped to [-0.5, 1.5] (maps to logical screen bounds with safe overrun)
      */
     fun injectTouch(action: TouchAction, normalizedX: Float, normalizedY: Float) {
         val cx = normalizedX.coerceIn(-0.5f, 1.5f)
@@ -72,6 +75,14 @@ object TouchInjector {
 
     /**
      * Injects a slot-aware touch event using normalised coordinates.
+     *
+     * Coordinates are clamped to the safe overrun range of [-0.5, 1.5] to prevent
+     * signed integer overflow wrapping/jumps in target applications.
+     *
+     * @param slot         touch slot index
+     * @param action       DOWN / MOVE / UP
+     * @param normalizedX  normalised coordinate, clamped to [-0.5, 1.5]
+     * @param normalizedY  normalised coordinate, clamped to [-0.5, 1.5]
      */
     fun injectTouch(slot: Int, action: TouchAction, normalizedX: Float, normalizedY: Float) {
         val cx = normalizedX.coerceIn(-0.5f, 1.5f)
