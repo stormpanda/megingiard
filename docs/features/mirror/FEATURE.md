@@ -20,7 +20,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M2: Viewport Management (Pan & Zoom)
 
 - Zoom and pan gestures MUST only be active when the user explicitly enters **Viewport Edit Mode** (`isViewportEditActive = true`) via the controls panel. Outside of Viewport Edit Mode, all pan and zoom gestures are locked.
-- While Viewport Edit Mode is active, users MUST be able to zoom into the mirrored image using a two-finger **Pinch-to-Zoom** gesture (range: 1× to 5×).
+- While Viewport Edit Mode is active, users MUST be able to zoom into the mirrored image using a two-finger **Pinch-to-Zoom** gesture (range: 1× to 10×).
 - While Viewport Edit Mode is active, users MUST be able to pan the zoomed image by dragging with one finger.
 - Panning MUST be gallery-style constrained: the viewport MUST be hard-clamped to the exact image edges at the current zoom level — panning into empty/black space is prohibited.
 - A **Snap-Back** mechanic MUST restore the viewport to `scale = 1.0, offset = (0, 0)` automatically when:

@@ -37,7 +37,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 ### 1. Latency-Free Screen Mirroring
 
 - **Direct Hardware Pipe:** Utilizes Android's `MediaProjection` coupled with native `VirtualDisplay` directly into a `SurfaceView` to bypass all software composition and copy steps.
-- **Gallery-Style Pan & Zoom (1× – 5×):** Smart and natural multi-touch gestures with physical boundaries (_Hard Edges_ to prevent vanishing windows) and automatic snap-back when zooming out.
+- **Gallery-Style Pan & Zoom (1× – 10×):** Smart and natural multi-touch gestures with physical boundaries (_Hard Edges_ to prevent vanishing windows) and automatic snap-back when zooming out.
 - **Resource-Efficient Freeze Frame:** Physically decouples the video producer from the renderer to freeze the current frame in the hardware buffer. Zoom and pan the frozen reference frame with zero extra CPU or memory overhead.
 - **Follow Touch Mode:** Real-time touch tracking on the primary screen. The mirror viewport automatically centers on the spot last touched on the primary screen at your current zoom level, with optional movement smoothing to keep target action in focus.
 - **Customizable Controls:** Fully integrate mirror controls (Start / Stop / Freeze / Viewport reset) directly as buttons onto your custom MacroPad layouts, or use the always-present controls in the Pill Menu overlay.

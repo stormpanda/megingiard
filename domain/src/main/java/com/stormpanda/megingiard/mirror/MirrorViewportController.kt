@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 private const val TAG = "MirrorViewportCtrl"
 
 const val VIEWPORT_ZOOM_MIN = 1f
-const val VIEWPORT_ZOOM_MAX = 5f
+const val VIEWPORT_ZOOM_MAX = 10f
 private const val SNAP_BACK_THRESHOLD = 1.15f
 private const val VIEWPORT_SAVE_DEBOUNCE_MS = 300L
 
