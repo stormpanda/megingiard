@@ -55,7 +55,7 @@ object TouchInjector {
     @Synchronized
     fun stop(token: String) {
         if (!activeClients.contains(token)) {
-            AppLog.w(TAG, "stop() called for non-active client '$token'. Ignoring.")
+            AppLog.d(TAG, "stop() called for non-active client '$token'. Ignoring.")
             return
         }
         activeClients.remove(token)
@@ -72,7 +72,13 @@ object TouchInjector {
                 if (!ShellInputInjector.flushPendingTouches(TOUCH_STOP_FLUSH_TIMEOUT_MS)) {
                     AppLog.w(TAG, "stop() timed out while flushing touch release commands")
                 }
-                ShellInputInjector.stop()
+                synchronized(TouchInjector) {
+                    if (activeClients.isEmpty()) {
+                        ShellInputInjector.stop()
+                    } else {
+                        AppLog.i(TAG, "stop() aborted: new clients registered during flush: $activeClients")
+                    }
+                }
             }.also { it.isDaemon = true }.start()
         }
     }
