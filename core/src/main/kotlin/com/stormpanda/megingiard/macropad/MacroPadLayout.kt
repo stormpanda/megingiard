@@ -46,6 +46,18 @@ enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Trackpoint tracking mode
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Serializable
+enum class TrackpointMode {
+    @SerialName("physical_mouse")
+    PHYSICAL_MOUSE,
+    @SerialName("virtual_touch")
+    VIRTUAL_TOUCH,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Button color style — per-layout override for neutral vs accented appearance
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -142,6 +154,7 @@ sealed class PadAction {
     @SerialName("trackpoint")
     data class TrackpointMove(
         val size: TrackpointSize = TrackpointSize.MEDIUM,
+        val mode: TrackpointMode = TrackpointMode.PHYSICAL_MOUSE,
     ) : PadAction()
 
     /**
@@ -359,6 +372,7 @@ data class PadProfile(
     val enableKeyboard: Boolean = false,
     val enableGamepad: Boolean = false,
     val enableMouse: Boolean = false,
+    val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
     val associatedPackage: String? = null,
 )

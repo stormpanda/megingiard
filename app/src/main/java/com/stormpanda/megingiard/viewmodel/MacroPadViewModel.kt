@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.GamepadInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
@@ -112,10 +113,11 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                         delay(INJECTOR_RESTART_DEBOUNCE_MS)
                         withContext(Dispatchers.IO) {
                             val ap = MacroPadState.activeProfile.value
-                            AppLog.i(TAG, "all guards clear \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
+                            AppLog.i(TAG, "all guards clear \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse} ts=${ap?.enableTouch})")
                             if (ap?.enableKeyboard == true) KeyInjector.start(context)
                             if (ap?.enableGamepad == true) GamepadInjector.start(context)
                             if (ap?.enableMouse == true) MouseInjector.start(context)
+                            if (ap?.enableTouch == true) TouchInjector.start(context, "MacroPadViewModel")
                         }
                     }
                 }
@@ -128,6 +130,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
+        TouchInjector.stop("MacroPadViewModel")
         MacroPadState.resetPeek()
     }
 
@@ -137,6 +140,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
         KeyInjector.stop()
         GamepadInjector.stop()
         MouseInjector.stop()
+        TouchInjector.stop("MacroPadViewModel")
         MacroPadState.resetPeek()
     }
 }

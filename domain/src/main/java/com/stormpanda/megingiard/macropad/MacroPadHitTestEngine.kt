@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.input.TouchInjector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,13 +14,15 @@ private const val TAG = "MacroPadHitTest"
 
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
+private const val LOGICAL_SCREEN_WIDTH = 1920f
+private const val LOGICAL_SCREEN_HEIGHT = 1080f
 
 /**
  * Reason a MacroPad button tap was blocked — returned instead of an R.string resource ID
  * so the `:domain` module never references Android resources directly.
  * The UI layer maps this to a localised string.
  */
-enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE }
+enum class DisabledReason { KEYBOARD, GAMEPAD, MOUSE, TOUCH }
 
 /**
  * Hit-test engine and multi-touch dispatch for MacroPad use-mode.
@@ -59,6 +63,12 @@ class MacroPadHitTestEngine(
     private val pointerMap = mutableMapOf<Long, String>()
     private var lastTpPos: Pair<Float, Float>? = null
     private val scrollStartY = mutableMapOf<Long, Float>()
+    private var virtualCursorX = 0.5f
+    private var virtualCursorY = 0.5f
+    private var unclampedCursorX = 0.5f
+    private var unclampedCursorY = 0.5f
+    private var lastDxSign = 0f
+    private var lastDySign = 0f
 
     /**
      * Handle a Press event.
@@ -117,6 +127,14 @@ class MacroPadHitTestEngine(
             }
             hitButton.action is PadAction.TrackpointMove -> {
                 lastTpPos = Pair(px, py)
+                val tpAction = hitButton.action as PadAction.TrackpointMove
+                if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                    unclampedCursorX = virtualCursorX
+                    unclampedCursorY = virtualCursorY
+                    lastDxSign = 0f
+                    lastDySign = 0f
+                    TouchInjector.injectTouch(TouchAction.DOWN, unclampedCursorX, unclampedCursorY)
+                }
             }
             else -> {
                 _pressedIds.value = _pressedIds.value + hitButton.id
@@ -161,20 +179,64 @@ class MacroPadHitTestEngine(
 
         when {
             mappedBtn.action is PadAction.TrackpointMove -> {
-                if (lastTpPos != null) {
-                    val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                    val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
-                    if (dx != 0 || dy != 0) {
-                        MouseInjector.moveMouse(dx, dy)
+                val tpAction = mappedBtn.action as PadAction.TrackpointMove
+                if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                    if (lastTpPos != null) {
+                        val dxNormalized = (deltaX * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_WIDTH
+                        val dyNormalized = (deltaY * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_HEIGHT
+
+                        val currentDxSign = if (dxNormalized > 0f) 1f else if (dxNormalized < 0f) -1f else 0f
+                        if (currentDxSign != 0f && lastDxSign != 0f && currentDxSign != lastDxSign) {
+                            unclampedCursorX = virtualCursorX
+                        }
+                        if (currentDxSign != 0f) {
+                            lastDxSign = currentDxSign
+                        }
+
+                        val currentDySign = if (dyNormalized > 0f) 1f else if (dyNormalized < 0f) -1f else 0f
+                        if (currentDySign != 0f && lastDySign != 0f && currentDySign != lastDySign) {
+                            unclampedCursorY = virtualCursorY
+                        }
+                        if (currentDySign != 0f) {
+                            lastDySign = currentDySign
+                        }
+
+                        unclampedCursorX += dxNormalized
+                        unclampedCursorY += dyNormalized
+                        virtualCursorX = (virtualCursorX + dxNormalized).coerceIn(0f, 1f)
+                        virtualCursorY = (virtualCursorY + dyNormalized).coerceIn(0f, 1f)
+                        TouchInjector.injectTouch(TouchAction.MOVE, unclampedCursorX, unclampedCursorY)
                         if (mappedBtn.hapticStrength != HapticStrength.OFF) {
+                            val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                            val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
                             val mag = sqrt((dx * dx + dy * dy).toFloat())
-                            onHapticFeedback?.invoke(
-                                mappedBtn.id,
-                                mappedBtn.hapticStrength,
-                                mappedBtn.hapticCustomDurationMs,
-                                mappedBtn.hapticCustomAmplitude,
-                                mag,
-                            )
+                            if (mag > 0f) {
+                                onHapticFeedback?.invoke(
+                                    mappedBtn.id,
+                                    mappedBtn.hapticStrength,
+                                    mappedBtn.hapticCustomDurationMs,
+                                    mappedBtn.hapticCustomAmplitude,
+                                    mag,
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    if (lastTpPos != null) {
+                        val dx = (deltaX * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                        val dy = (deltaY * MP_TRACKPOINT_SENSITIVITY).roundToInt()
+                        if (dx != 0 || dy != 0) {
+                            MouseInjector.moveMouse(dx, dy)
+                            if (mappedBtn.hapticStrength != HapticStrength.OFF) {
+                                val mag = sqrt((dx * dx + dy * dy).toFloat())
+                                onHapticFeedback?.invoke(
+                                    mappedBtn.id,
+                                    mappedBtn.hapticStrength,
+                                    mappedBtn.hapticCustomDurationMs,
+                                    mappedBtn.hapticCustomAmplitude,
+                                    mag,
+                                )
+                            }
                         }
                     }
                 }
@@ -219,6 +281,10 @@ class MacroPadHitTestEngine(
         when {
             btn.action is PadAction.TrackpointMove -> {
                 lastTpPos = null
+                val tpAction = btn.action as PadAction.TrackpointMove
+                if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                    TouchInjector.injectTouch(TouchAction.UP, unclampedCursorX, unclampedCursorY)
+                }
             }
             btn.action is PadAction.ScrollWheel -> {
                 scrollStartY.remove(pointerId)
@@ -236,21 +302,53 @@ class MacroPadHitTestEngine(
         _pressedIds.value = emptySet()
         lastTpPos = null
         scrollStartY.clear()
+        virtualCursorX = virtualCursorX.coerceIn(0f, 1f)
+        virtualCursorY = virtualCursorY.coerceIn(0f, 1f)
+        unclampedCursorX = virtualCursorX
+        unclampedCursorY = virtualCursorY
+        lastDxSign = 0f
+        lastDySign = 0f
     }
 
     /** Reset all tracking state and cleanly release any active hardware injections. */
     fun releaseAll(buttons: List<PadButton>) {
         val activeIds = _pressedIds.value
+        val pointerMappedIds = pointerMap.values.toSet()
+        val allActiveIds = activeIds + pointerMappedIds
+
         _pressedIds.value = emptySet()
         pointerMap.clear()
         lastTpPos = null
         scrollStartY.clear()
 
-        activeIds.forEach { buttonId ->
+        val upX = unclampedCursorX
+        val upY = unclampedCursorY
+
+        virtualCursorX = virtualCursorX.coerceIn(0f, 1f)
+        virtualCursorY = virtualCursorY.coerceIn(0f, 1f)
+        unclampedCursorX = virtualCursorX
+        unclampedCursorY = virtualCursorY
+        lastDxSign = 0f
+        lastDySign = 0f
+
+        allActiveIds.forEach { buttonId ->
             val btn = buttons.firstOrNull { it.id == buttonId }
             if (btn != null) {
                 AppLog.d(TAG, "Releasing button due to gesture cancellation: $buttonId")
-                injectActionUp(btn.action)
+                when {
+                    btn.action is PadAction.TrackpointMove -> {
+                        val tpAction = btn.action as PadAction.TrackpointMove
+                        if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                            TouchInjector.injectTouch(TouchAction.UP, upX, upY)
+                        }
+                    }
+                    btn.action is PadAction.ScrollWheel -> {
+                        // no-op
+                    }
+                    else -> {
+                        injectActionUp(btn.action)
+                    }
+                }
             }
         }
     }
@@ -264,8 +362,10 @@ class MacroPadHitTestEngine(
             is PadAction.KeyboardKey -> !profile.enableKeyboard
             is PadAction.GamepadButton -> !profile.enableGamepad
             is PadAction.MouseButton,
-            is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove -> !profile.enableMouse
+            is PadAction.ScrollWheel -> !profile.enableMouse
+            is PadAction.TrackpointMove -> {
+                if (action.mode == TrackpointMode.VIRTUAL_TOUCH) !profile.enableTouch else !profile.enableMouse
+            }
             is PadAction.Macro -> false
             is PadAction.BackgroundPeek -> false
             is PadAction.LayoutNext,
@@ -287,8 +387,14 @@ class MacroPadHitTestEngine(
             is PadAction.KeyboardKey -> if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
             is PadAction.GamepadButton -> if (!profile.enableGamepad) DisabledReason.GAMEPAD else null
             is PadAction.MouseButton,
-            is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove -> if (!profile.enableMouse) DisabledReason.MOUSE else null
+            is PadAction.ScrollWheel -> if (!profile.enableMouse) DisabledReason.MOUSE else null
+            is PadAction.TrackpointMove -> {
+                if (action.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                    if (!profile.enableTouch) DisabledReason.TOUCH else null
+                } else {
+                    if (!profile.enableMouse) DisabledReason.MOUSE else null
+                }
+            }
             is PadAction.Macro -> null
             is PadAction.BackgroundPeek -> null
             is PadAction.LayoutNext,

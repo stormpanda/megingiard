@@ -158,4 +158,138 @@ class MacroPadStateTest {
         MacroPadState.renameProfile(p1Id, "Citra")
         assertEquals("Citra (2)", MacroPadState.profiles.value.first { it.id == p1Id }.name)
     }
+
+    @Test
+    fun `withSyncedDeviceFlags synchronization rules`() {
+        val p1Id = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val p1 = PadProfile(
+            id = p1Id,
+            name = "Test Profile",
+            layouts = listOf(PadLayout(id = l1Id, name = "L1", buttons = emptyList())),
+            activeLayoutId = l1Id
+        )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // 1. Empty button list -> all flags false
+        var active = MacroPadState.activeProfile.value!!
+        assertEquals(false, active.enableKeyboard)
+        assertEquals(false, active.enableGamepad)
+        assertEquals(false, active.enableMouse)
+        assertEquals(false, active.enableTouch)
+
+        // 2. Add Keyboard button
+        val layoutWithKb = active.layouts.first().copy(
+            buttons = listOf(
+                PadButton(
+                    id = "b1",
+                    label = "A",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.KeyboardKey(65, "A")
+                )
+            )
+        )
+        MacroPadState.updateLayout(layoutWithKb)
+        active = MacroPadState.activeProfile.value!!
+        assertEquals(true, active.enableKeyboard)
+        assertEquals(false, active.enableGamepad)
+        assertEquals(false, active.enableMouse)
+        assertEquals(false, active.enableTouch)
+
+        // 3. Add Gamepad button
+        val layoutWithGp = active.layouts.first().copy(
+            buttons = listOf(
+                PadButton(
+                    id = "b1",
+                    label = "GP",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.GamepadButton(96, "GP")
+                )
+            )
+        )
+        MacroPadState.updateLayout(layoutWithGp)
+        active = MacroPadState.activeProfile.value!!
+        assertEquals(false, active.enableKeyboard)
+        assertEquals(true, active.enableGamepad)
+        assertEquals(false, active.enableMouse)
+        assertEquals(false, active.enableTouch)
+
+        // 4. Add Mouse button
+        val layoutWithMs = active.layouts.first().copy(
+            buttons = listOf(
+                PadButton(
+                    id = "b1",
+                    label = "MS",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.MouseButton(MouseButton.LEFT)
+                )
+            )
+        )
+        MacroPadState.updateLayout(layoutWithMs)
+        active = MacroPadState.activeProfile.value!!
+        assertEquals(false, active.enableKeyboard)
+        assertEquals(false, active.enableGamepad)
+        assertEquals(true, active.enableMouse)
+        assertEquals(false, active.enableTouch)
+
+        // 5. Add Trackpoint VIRTUAL_TOUCH button
+        val layoutWithTouch = active.layouts.first().copy(
+            buttons = listOf(
+                PadButton(
+                    id = "b1",
+                    label = "Touch",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.TrackpointMove(mode = TrackpointMode.VIRTUAL_TOUCH)
+                )
+            )
+        )
+        MacroPadState.updateLayout(layoutWithTouch)
+        active = MacroPadState.activeProfile.value!!
+        assertEquals(false, active.enableKeyboard)
+        assertEquals(false, active.enableGamepad)
+        assertEquals(false, active.enableMouse)
+        assertEquals(true, active.enableTouch)
+
+        // 6. Add MirrorTouchProjection button -> enableMouse and enableTouch should remain false!
+        val layoutWithProj = active.layouts.first().copy(
+            buttons = listOf(
+                PadButton(
+                    id = "b1",
+                    label = "Proj",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.MirrorTouchProjection
+                )
+            )
+        )
+        MacroPadState.updateLayout(layoutWithProj)
+        active = MacroPadState.activeProfile.value!!
+        assertEquals(false, active.enableKeyboard)
+        assertEquals(false, active.enableGamepad)
+        assertEquals(false, active.enableMouse)
+        assertEquals(false, active.enableTouch)
+
+        // 7. Add Macro button -> all flags force-enabled (true)
+        val layoutWithMacro = active.layouts.first().copy(
+            buttons = listOf(
+                PadButton(
+                    id = "b1",
+                    label = "Macro",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.Macro("macro-1")
+                )
+            )
+        )
+        MacroPadState.updateLayout(layoutWithMacro)
+        active = MacroPadState.activeProfile.value!!
+        assertEquals(true, active.enableKeyboard)
+        assertEquals(true, active.enableGamepad)
+        assertEquals(true, active.enableMouse)
+        assertEquals(true, active.enableTouch)
+    }
 }

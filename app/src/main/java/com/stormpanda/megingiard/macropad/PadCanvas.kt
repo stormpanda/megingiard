@@ -140,6 +140,7 @@ internal fun PadCanvas(
                 enableKeyboard = profile.enableKeyboard,
                 enableGamepad  = profile.enableGamepad,
                 enableMouse    = profile.enableMouse,
+                enableTouch    = profile.enableTouch,
                 gridMode       = gridMode,
                 gridStepPx     = gridStepPx,
                 isLocked       = isLocked,
@@ -172,6 +173,7 @@ private fun DraggableButton(
     enableKeyboard:    Boolean,
     enableGamepad:     Boolean,
     enableMouse:       Boolean,
+    enableTouch:       Boolean,
     gridMode:          GridMode,
     gridStepPx:        Float,
     isLocked:          Boolean,
@@ -195,12 +197,14 @@ private fun DraggableButton(
 
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
-    val isDeviceDisabled = when (btn.action) {
+    val isDeviceDisabled = when (val act = btn.action) {
         is PadAction.KeyboardKey                 -> !enableKeyboard
         is PadAction.GamepadButton               -> !enableGamepad
         is PadAction.MouseButton,
-        is PadAction.ScrollWheel,
-        is PadAction.TrackpointMove              -> !enableMouse
+        is PadAction.ScrollWheel                 -> !enableMouse
+        is PadAction.TrackpointMove              -> {
+            if (act.mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
+        }
         is PadAction.Macro                       -> !enableGamepad
         is PadAction.BackgroundPeek                 -> false
         is PadAction.LayoutNext,

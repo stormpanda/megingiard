@@ -122,9 +122,9 @@ object MacroExecutor {
             // Start injectors that aren't already running.
             // start() blocks until the binary signals readiness ("R\n") before returning,
             // so no additional delay is needed — isRunning is already true when start() returns.
-            if (hasTouchEvents && context != null && !TouchInjector.isRunning) {
+            if (hasTouchEvents && context != null) {
                 AppLog.i(TAG, "macro has touch events → starting TouchInjector")
-                TouchInjector.start(context)
+                TouchInjector.start(context, "MacroExecutor_${macro.id}")
             }
             startedGamepad = hasGamepadEvents && context != null && !GamepadInjector.isRunning
             if (startedGamepad) {
@@ -197,7 +197,7 @@ object MacroExecutor {
             }
             if (hasTouchEvents) {
                 AppLog.i(TAG, "macro done → stopping TouchInjector")
-                TouchInjector.stop()
+                TouchInjector.stop("MacroExecutor_${macro.id}")
             }
             if (startedGamepad) {
                 AppLog.i(TAG, "macro done → stopping GamepadInjector")

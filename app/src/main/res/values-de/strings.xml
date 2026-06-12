@@ -128,6 +128,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_trackpoint_size_small">Klein</string>
     <string name="macropad_trackpoint_size_medium">Mittel</string>
     <string name="macropad_trackpoint_size_large">Groß</string>
+    <string name="macropad_editor_trackpoint_mode">Tracking-Modus</string>
+    <string name="macropad_trackpoint_mode_physical">Virtuelle physische Maus</string>
+    <string name="macropad_trackpoint_mode_touch">Virtueller Touch (WIP)</string>
+    <string name="macropad_trackpoint_mode_physical_desc">Simuliert eine Standardmaus. Ziehen bewegt den Systemcursor relativ von seiner aktuellen Position.</string>
+    <string name="macropad_trackpoint_mode_touch_desc">Simuliert absolute Toucheingaben auf dem Hauptbildschirm. Die Cursorposition wird gespeichert, sodass Sie mehrere Wischbewegungen an derselben Stelle fortsetzen können. (WIP)</string>
     <string name="macropad_editor_section_haptic">Haptisches Feedback</string>
     <string name="macropad_haptic_off">Aus</string>
     <string name="macropad_haptic_light">Leicht</string>
@@ -157,6 +162,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="kb_mouse_btn_pos_right">Rechts</string>
     <string name="kb_mouse_btn_pos_both">Links &amp; Rechts</string>
     <string name="macropad_device_disabled_mouse">Maus ist für dieses Layout deaktiviert</string>
+    <string name="macropad_device_disabled_touch">Touch-Eingabe ist für dieses Layout deaktiviert</string>
     <string name="macropad_editor_new_profile_name">Neues Profil</string>
     <string name="macropad_editor_rename">Umbenennen</string>
     <string name="macropad_editor_delete_profile">Profil löschen</string>

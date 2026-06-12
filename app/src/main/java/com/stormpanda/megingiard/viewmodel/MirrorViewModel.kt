@@ -83,17 +83,17 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun startTouchInjector(context: Context) {
         AppLog.i(TAG, "TouchInjector starting")
-        TouchInjector.start(context)
+        TouchInjector.start(context, "MirrorViewModel")
     }
 
     fun stopTouchInjector() {
         AppLog.i(TAG, "TouchInjector stopping")
-        TouchInjector.stop()
+        TouchInjector.stop("MirrorViewModel")
     }
 
     override fun onCleared() {
         super.onCleared()
         AppLog.i(TAG, "onCleared → TouchInjector stop (safety net)")
-        TouchInjector.stop()
+        TouchInjector.stop("MirrorViewModel")
     }
 }

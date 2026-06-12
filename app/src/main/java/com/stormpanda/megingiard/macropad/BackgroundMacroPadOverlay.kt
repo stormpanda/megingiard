@@ -35,6 +35,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -153,10 +154,11 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                     delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
                     withContext(Dispatchers.IO) {
                         val ap = MacroPadState.activeProfile.value
-                        AppLog.i(TAG, "all guards clear → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse})")
+                        AppLog.i(TAG, "all guards clear → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse} ts=${ap?.enableTouch})")
                         if (ap?.enableKeyboard == true) KeyInjector.start(context)
                         if (ap?.enableGamepad == true) GamepadInjector.start(context)
                         if (ap?.enableMouse == true) MouseInjector.start(context)
+                        if (ap?.enableTouch == true) TouchInjector.start(context, "BackgroundMacroPadOverlay")
                     }
                 }
             }
@@ -170,6 +172,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
             KeyInjector.stop()
             GamepadInjector.stop()
             MouseInjector.stop()
+            TouchInjector.stop("BackgroundMacroPadOverlay")
             MacroPadState.resetPeek()
         }
     }

@@ -20,7 +20,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M2: Viewport Management (Pan & Zoom)
 
 - Zoom and pan gestures MUST only be active when the user explicitly enters **Viewport Edit Mode** (`isViewportEditActive = true`) via the controls panel. Outside of Viewport Edit Mode, all pan and zoom gestures are locked.
-- While Viewport Edit Mode is active, users MUST be able to zoom into the mirrored image using a two-finger **Pinch-to-Zoom** gesture (range: 1× to 5×).
+- While Viewport Edit Mode is active, users MUST be able to zoom into the mirrored image using a two-finger **Pinch-to-Zoom** gesture (range: 1× to 10×).
 - While Viewport Edit Mode is active, users MUST be able to pan the zoomed image by dragging with one finger.
 - Panning MUST be gallery-style constrained: the viewport MUST be hard-clamped to the exact image edges at the current zoom level — panning into empty/black space is prohibited.
 - A **Snap-Back** mechanic MUST restore the viewport to `scale = 1.0, offset = (0, 0)` automatically when:
@@ -314,7 +314,7 @@ A fourth `pointerInput` block, placed last in the modifier chain (innermost = fi
    normalizedX = contentX / surfaceWidth
    ```
    If the result is outside [0, 1], `projectCoordinates()` returns `null` — the touch is inside a letterbox bar and is discarded (or an UP is sent if a gesture was in progress).
-3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop()` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
+3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop(token)` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
 
 During MacroPad touch recording, `RecordingMirrorPresentation` keeps the mirrored 16:9 content centered in the 4:3 secondary display and renders the gesture-mode **Cancel** and **Stop & Save** controls in the lower black letterbox band. This keeps the control row outside the projected content geometry, so the touch-coordinate transform remains unchanged and button taps are not recorded as primary-screen touch samples.
 
@@ -324,14 +324,14 @@ During MacroPad touch recording, `RecordingMirrorPresentation` keeps the mirrore
 | ----------------------- | ---------------------------------------------------------------------- |
 | `TouchAction.kt`        | Shared `DOWN / MOVE / UP` enum                                         |
 | `ShellInputInjector.kt` | Native binary lifecycle, writer thread, MOVE coalescing                |
-| `TouchInjector.kt`      | `start / stop / injectTouch` facade with hardware coordinate transform |
+| `TouchInjector.kt`      | `start / stop / injectTouch` facade with hardware coordinate transform and client-aware lifecycle coordination |
 
-Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both features; only one can be active at a time by design (they correspond to separate `AppMode` values).
+Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from the `input/` package. The same native binary (`touchinjector_arm64`) and device node (`/dev/input/event6`) are used by both features. To coordinate the native process lifetime across multiple concurrent callers (Mirror Touch Projection, relative trackpoints in MacroPad, macro executors), `TouchInjector` implements a thread-safe, client-aware reference-counted lifecycle. The native binary is started when the first client registers itself, and is terminated only after the last active client has unregistered.
 
 **Lifecycle:**
 
-- `LaunchedEffect(isTouchProjectionActive)` starts the injector when projection is enabled and stops it when disabled.
-- `DisposableEffect(Unit)` stops the injector unconditionally when `MirrorScreen` leaves composition (mode switch).
+- `LaunchedEffect(isTouchProjectionActive)` starts the injector with the `"MirrorPresentation"` token when projection is enabled, and stops it when disabled.
+- `DisposableEffect(Unit)` stops the injector with the `"MirrorPresentation"` token when `MirrorScreen` leaves composition (mode switch).
 - `resetMirrorSessionState()` resets `isLocked`, `isTouchProjectionActive`, and `isFrozen` atomically — called from the Stop button (after saving state).
 
 ### Session State Persistence

@@ -642,6 +642,7 @@ private fun EditorBody(
                         enableKeyboard     = profile.enableKeyboard,
                         enableGamepad      = profile.enableGamepad,
                         enableMouse        = profile.enableMouse,
+                        enableTouch        = profile.enableTouch,
                         isDragging         = isDragging,
                         onEdit             = { onEditButton(btn) },
                         onDelete           = { onDeleteRequested(btn) },

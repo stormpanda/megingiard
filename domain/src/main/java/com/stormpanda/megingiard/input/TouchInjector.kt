@@ -30,26 +30,57 @@ object TouchInjector {
     private const val PHYS_W = 1080
     private const val PHYS_H = 1920
 
+    private val activeClients = mutableSetOf<String>()
+
     /**
-     * Starts the native touch injector. Safe to call if already running (no-op).
+     * Starts the native touch injector for a specific client [token].
+     * Coordinates start/stop across multiple active clients. Safe to call if already running.
      */
-    fun start(context: Context) {
-        AppLog.i(TAG, "start()")
-        if (!ShellInputInjector.isRunning) ShellInputInjector.start(context)
+    @Synchronized
+    fun start(context: Context, token: String) {
+        val wasEmpty = activeClients.isEmpty()
+        activeClients.add(token)
+        AppLog.i(TAG, "start() client='$token' activeClients=$activeClients")
+        if (wasEmpty || !ShellInputInjector.isRunning) {
+            if (!ShellInputInjector.isRunning) {
+                ShellInputInjector.start(context)
+            }
+        }
     }
 
-    fun stop() {
-        AppLog.i(TAG, "stop()")
-        if (!ShellInputInjector.isRunning) { ShellInputInjector.stop(); return }
-        releaseAllSlots()
-        /* Flush and stop on a daemon thread to avoid blocking the calling thread.
-           stop() can be invoked from Compose DisposableEffect.onDispose (main thread). */
-        Thread {
-            if (!ShellInputInjector.flushPendingTouches(TOUCH_STOP_FLUSH_TIMEOUT_MS)) {
-                AppLog.w(TAG, "stop() timed out while flushing touch release commands")
+    /**
+     * Stops the native touch injector for a specific client [token].
+     * Coordinates teardown by only stopping the daemon when all clients have released it.
+     */
+    @Synchronized
+    fun stop(token: String) {
+        if (!activeClients.contains(token)) {
+            AppLog.d(TAG, "stop() called for non-active client '$token'. Ignoring.")
+            return
+        }
+        activeClients.remove(token)
+        AppLog.i(TAG, "stop() client='$token' activeClients=$activeClients")
+        if (activeClients.isEmpty()) {
+            if (!ShellInputInjector.isRunning) {
+                ShellInputInjector.stop()
+                return
             }
-            ShellInputInjector.stop()
-        }.also { it.isDaemon = true }.start()
+            releaseAllSlots()
+            /* Flush and stop on a daemon thread to avoid blocking the calling thread.
+               stop() can be invoked from Compose DisposableEffect.onDispose (main thread). */
+            Thread {
+                if (!ShellInputInjector.flushPendingTouches(TOUCH_STOP_FLUSH_TIMEOUT_MS)) {
+                    AppLog.w(TAG, "stop() timed out while flushing touch release commands")
+                }
+                synchronized(TouchInjector) {
+                    if (activeClients.isEmpty()) {
+                        ShellInputInjector.stop()
+                    } else {
+                        AppLog.i(TAG, "stop() aborted: new clients registered during flush: $activeClients")
+                    }
+                }
+            }.also { it.isDaemon = true }.start()
+        }
     }
 
     val isRunning: Boolean
@@ -58,22 +89,37 @@ object TouchInjector {
     /**
      * Injects a touch event using normalised coordinates.
      *
+     * Coordinates are clamped to the safe overrun range of [-0.5, 1.5] to prevent
+     * signed integer overflow wrapping/jumps in target applications.
+     *
      * @param action       DOWN / MOVE / UP
-     * @param normalizedX  0.0 (left) … 1.0 (right) of the logical display
-     * @param normalizedY  0.0 (top)  … 1.0 (bottom) of the logical display
+     * @param normalizedX  normalised coordinate, clamped to [-0.5, 1.5] (maps to logical screen bounds with safe overrun)
+     * @param normalizedY  normalised coordinate, clamped to [-0.5, 1.5] (maps to logical screen bounds with safe overrun)
      */
     fun injectTouch(action: TouchAction, normalizedX: Float, normalizedY: Float) {
-        val px = ((1f - normalizedY) * PHYS_W).toInt()
-        val py = (normalizedX * PHYS_H).toInt()
+        val cx = normalizedX.coerceIn(-0.5f, 1.5f)
+        val cy = normalizedY.coerceIn(-0.5f, 1.5f)
+        val px = ((1f - cy) * PHYS_W).toInt()
+        val py = (cx * PHYS_H).toInt()
         ShellInputInjector.injectTouch(action, px, py)
     }
 
     /**
      * Injects a slot-aware touch event using normalised coordinates.
+     *
+     * Coordinates are clamped to the safe overrun range of [-0.5, 1.5] to prevent
+     * signed integer overflow wrapping/jumps in target applications.
+     *
+     * @param slot         touch slot index
+     * @param action       DOWN / MOVE / UP
+     * @param normalizedX  normalised coordinate, clamped to [-0.5, 1.5]
+     * @param normalizedY  normalised coordinate, clamped to [-0.5, 1.5]
      */
     fun injectTouch(slot: Int, action: TouchAction, normalizedX: Float, normalizedY: Float) {
-        val px = ((1f - normalizedY) * PHYS_W).toInt()
-        val py = (normalizedX * PHYS_H).toInt()
+        val cx = normalizedX.coerceIn(-0.5f, 1.5f)
+        val cy = normalizedY.coerceIn(-0.5f, 1.5f)
+        val px = ((1f - cy) * PHYS_W).toInt()
+        val py = (cx * PHYS_H).toInt()
         ShellInputInjector.injectTouch(slot, action, px, py)
     }
 

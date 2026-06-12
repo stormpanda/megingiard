@@ -134,6 +134,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 DisabledReason.KEYBOARD -> stringResource(R.string.macropad_device_disabled_keyboard)
                 DisabledReason.GAMEPAD  -> stringResource(R.string.macropad_device_disabled_gamepad)
                 DisabledReason.MOUSE    -> stringResource(R.string.macropad_device_disabled_mouse)
+                DisabledReason.TOUCH    -> stringResource(R.string.macropad_device_disabled_touch)
             }
             Text(
                 text = feedbackText,
