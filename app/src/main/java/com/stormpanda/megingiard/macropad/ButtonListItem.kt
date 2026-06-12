@@ -115,6 +115,14 @@ internal fun ButtonListItem(
 
         Spacer(Modifier.width(12.dp))
 
+        val hapticLabel = when (btn.hapticStrength) {
+            HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
+            HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
+            HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+            HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+            HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+        }
+
         Column(modifier = Modifier.weight(1f)) {
             if (isTrackpoint) {
                 val sizeLabel = when ((btn.action as PadAction.TrackpointMove).size) {
@@ -122,21 +130,20 @@ internal fun ButtonListItem(
                     TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
                     TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
                 }
+                val desc = listOf(sizeLabel, hapticLabel).joinToString(" • ")
                 Text(stringResource(R.string.macropad_action_trackpoint), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                Text(sizeLabel, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                Text(desc, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
             } else {
+                val actionLabel = btn.action.displayLabel()
+                val sizeLabel = if (btn.action !is PadAction.ScrollWheel) {
+                    "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
+                } else {
+                    null
+                }
+                val desc = listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
                 Text(btn.label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(btn.action.displayLabel(), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(desc, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-        }
-
-        if (!isTrackpoint && btn.action !is PadAction.ScrollWheel) {
-            Text(
-                text = "${btn.buttonSize.cols}×${btn.buttonSize.rows}",
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(end = 4.dp),
-            )
         }
 
         IconButton(onClick = { onDelete() }) {
