@@ -1,7 +1,9 @@
 package com.stormpanda.megingiard
 
+import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.app.LocaleManager
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
@@ -332,6 +334,13 @@ class MainActivity : ComponentActivity() {
                 if (localeManager.applicationLocales != desired) {
                     localeManager.applicationLocales = desired
                 }
+            }
+        }
+        lifecycleScope.launch {
+            SettingsManager.excludeFromRecents.collect { exclude ->
+                AppLog.d(TAG, "excludeFromRecents changed to $exclude → updating task")
+                val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                am.appTasks.firstOrNull()?.setExcludeFromRecents(exclude)
             }
         }
         enableEdgeToEdge()

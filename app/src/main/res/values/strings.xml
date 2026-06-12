@@ -43,6 +43,8 @@
     <string name="settings_mirror_auto_start_desc">When enabled, mirroring resumes on app launch and on layout switch for layouts that were last running with mirror on</string>
     <string name="settings_auto_switch_profiles">Auto-switch profiles</string>
     <string name="settings_auto_switch_profiles_desc">Automatically switch the MacroPad profile when a mapped app is launched on the primary screen</string>
+    <string name="settings_exclude_from_recents">Exclude from Recents</string>
+    <string name="settings_exclude_from_recents_desc">Hide the app from the recent apps / overview list when you switch away</string>
     <string name="settings_accessibility_status">Accessibility Service</string>
     <string name="settings_accessibility_status_active">Active</string>
     <string name="settings_accessibility_status_inactive">Inactive (Tap to enable)</string>

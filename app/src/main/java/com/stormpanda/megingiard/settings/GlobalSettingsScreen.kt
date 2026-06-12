@@ -88,6 +88,7 @@ fun GlobalSettingsScreen(
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
+    val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
     val colors = LocalAppColors.current
@@ -220,6 +221,13 @@ fun GlobalSettingsScreen(
                             description = stringResource(R.string.settings_auto_switch_profiles_desc),
                             checked = autoSwitchProfiles,
                             onCheckedChange = { viewModel.setAutoSwitchProfiles(it) },
+                        )
+                        AppDivider()
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_exclude_from_recents),
+                            description = stringResource(R.string.settings_exclude_from_recents_desc),
+                            checked = excludeFromRecents,
+                            onCheckedChange = { viewModel.setExcludeFromRecents(it) },
                         )
                         AppDivider()
                         AppSettingsRow(

@@ -48,6 +48,8 @@
     <string name="settings_mirror_auto_start_desc">Wenn aktiviert, wird die Spiegelung beim App-Start und beim Layout-Wechsel automatisch fortgesetzt für Layouts, in denen sie zuletzt aktiv war</string>
     <string name="settings_auto_switch_profiles">Profile autom. wechseln</string>
     <string name="settings_auto_switch_profiles_desc">Automatisches Wechseln des MacroPad-Profils, wenn eine verknüpfte App auf dem Hauptbildschirm gestartet wird</string>
+    <string name="settings_exclude_from_recents">Aus \"Letzte Apps\" ausschließen</string>
+    <string name="settings_exclude_from_recents_desc">Die App aus der Liste der kürzlich geöffneten Apps ausblenden, wenn Sie zu einer anderen App wechseln</string>
     <string name="settings_accessibility_status">Bedienungshilfen-Dienst</string>
     <string name="settings_accessibility_status_active">Aktiv</string>
     <string name="settings_accessibility_status_inactive">Inaktiv (Tippen zum Aktivieren)</string>

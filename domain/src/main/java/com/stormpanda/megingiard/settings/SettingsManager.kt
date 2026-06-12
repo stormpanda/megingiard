@@ -79,6 +79,9 @@ object SettingsManager {
     private val _autoSwitchProfiles = MutableStateFlow(true)
     val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
 
+    private val _excludeFromRecents = MutableStateFlow(false)
+    val excludeFromRecents: StateFlow<Boolean> = _excludeFromRecents.asStateFlow()
+
     private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
     val accentColor: StateFlow<Int> = _accentColor.asStateFlow()
 
@@ -155,6 +158,7 @@ object SettingsManager {
 
                     _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
                     _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
+                    _excludeFromRecents.value = prefs[KEY_EXCLUDE_FROM_RECENTS] ?: false
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
@@ -209,6 +213,18 @@ object SettingsManager {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
                     prefs[KEY_AUTO_SWITCH_PROFILES] = value
+                }
+            }
+        }
+    }
+
+    fun setExcludeFromRecents(value: Boolean) {
+        AppLog.d(TAG, "setExcludeFromRecents($value)")
+        _excludeFromRecents.value = value
+        scope.launch {
+            if (::dataStore.isInitialized) {
+                dataStore.edit { prefs ->
+                    prefs[KEY_EXCLUDE_FROM_RECENTS] = value
                 }
             }
         }

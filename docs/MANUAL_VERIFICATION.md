@@ -199,6 +199,15 @@ Megingiard enforces a strict trust model to ensure no rogue local app can exploi
 - **Verification**: Logcat output is compiled and compressed into a ZIP containing detailed diagnostic text files and stored at the selected user destination.
 - **Check**: Open the ZIP to confirm files `logcat.txt` and `metadata.json` are present and readable.
 
+### 4.5 Exclude from Recents Toggle
+- **Step 1 (Enable)**: Open Global Settings -> General, and toggle **Exclude from Recents** to **ON**.
+- **Action**: Swipe away from Megingiard to return to the Android Home screen or another app. Open the recent apps / overview list.
+- **Verification**: Megingiard must not be visible in the recent apps list.
+- **Step 2 (Disable)**: Re-enter the app, open Global Settings -> General, and toggle **Exclude from Recents** to **OFF**.
+- **Action**: Swipe away from the app again and open the recent apps / overview list.
+- **Verification**: Megingiard must now be visible in the recent apps list.
+- **Step 3 (Persistence)**: Force-stop the app and open it again. Verify that the toggle status and task visibility are restored correctly according to the saved preference.
+
 ---
 
 ## 5. Security & Sandbox Guardrails
