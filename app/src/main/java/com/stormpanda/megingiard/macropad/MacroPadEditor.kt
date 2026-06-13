@@ -120,6 +120,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var showReorderProfilesOverlay by remember { mutableStateOf(false) }
     var showReorderLayoutsOverlay by remember { mutableStateOf(false) }
     var isCanvasLocked            by remember { mutableStateOf(true) }
+    var showCopyLayoutProfileDialog by remember { mutableStateOf(false) }
+    var showCopyButtonLayoutDialog by remember { mutableStateOf(false) }
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
@@ -127,7 +129,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
         editingButtonActive || buttonPendingDelete != null ||
         showNewLayoutDialog || layoutPendingDelete != null ||
         showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm ||
-        showEditLayoutDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay
+        showEditLayoutDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay ||
+        showCopyLayoutProfileDialog || showCopyButtonLayoutDialog
     BackHandler(enabled = anyOverlayVisible) {
         when {
             showMacroListEditor      -> showMacroListEditor = false
@@ -142,6 +145,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
             showEditLayoutDialog     -> showEditLayoutDialog = false
             showReorderProfilesOverlay -> showReorderProfilesOverlay = false
             showReorderLayoutsOverlay -> showReorderLayoutsOverlay = false
+            showCopyLayoutProfileDialog -> showCopyLayoutProfileDialog = false
+            showCopyButtonLayoutDialog -> showCopyButtonLayoutDialog = false
         }
     }
 
@@ -231,6 +236,17 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     button      = editingButton,
                     accentColor = colors.accent,
                     onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
+                    onDuplicate = {
+                        val layout = MacroPadState.activeLayout.value
+                        if (layout != null && editingButton != null) {
+                            MacroPadState.duplicateButtonInLayout(editingButton!!, layout.id)
+                        }
+                        editingButtonActive = false
+                        editingButton = null
+                    },
+                    onCopyToLayout = {
+                        showCopyButtonLayoutDialog = true
+                    },
                     onConfirm   = { updated ->
                         val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                         MacroPadState.updateLayout(
@@ -373,6 +389,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     showEditLayoutDialog = false
                     layoutPendingDelete = curLayout
                 },
+                onCopyToProfile = {
+                    showEditLayoutDialog = false
+                    showCopyLayoutProfileDialog = true
+                },
                 onConfirm = { name, enabled, noMirrorStyle, mirrorStyle ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
@@ -443,6 +463,38 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         }
                     }
                 }
+            )
+        }
+
+        // Copy layout selection overlay
+        if (showCopyLayoutProfileDialog && activeLayout != null && profile != null) {
+            val curLayout = activeLayout!!
+            InlineProfileSelectionOverlay(
+                title = stringResource(R.string.macropad_editor_copy_profile_select),
+                profiles = profiles,
+                excludeProfileId = profile.id,
+                onSelect = { targetProfileId ->
+                    MacroPadState.copyLayoutToProfile(curLayout, profile.id, targetProfileId)
+                    showCopyLayoutProfileDialog = false
+                },
+                onDismiss = { showCopyLayoutProfileDialog = false }
+            )
+        }
+
+        // Copy button selection overlay
+        if (showCopyButtonLayoutDialog && editingButton != null && profile != null) {
+            val curButton = editingButton!!
+            InlineLayoutSelectionOverlay(
+                title = stringResource(R.string.macropad_editor_copy_layout_select),
+                profiles = profiles,
+                excludeLayoutId = activeLayout?.id,
+                onSelect = { targetProfileId, targetLayoutId ->
+                    MacroPadState.copyButtonToLayout(curButton, profile.id, targetProfileId, targetLayoutId)
+                    showCopyButtonLayoutDialog = false
+                    editingButtonActive = false
+                    editingButton = null
+                },
+                onDismiss = { showCopyButtonLayoutDialog = false }
             )
         }
     } // end Box

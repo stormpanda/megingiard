@@ -386,6 +386,146 @@ object MacroPadState {
         updateProfile(profile.copy(macros = profile.macros + copied))
     }
 
+    /** Copy a macro to a specific profile, renaming on collision. */
+    fun copyMacroToProfile(macro: Macro, targetProfileId: String) {
+        val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
+        val existingNames = targetProfile.macros.map { it.name }
+        val desiredName = "${macro.name} (Copy)"
+        val uniqueName = existingNames.nextUniqueName(desiredName, "Macro (Copy)")
+        val copied = macro.copy(
+            id = UUID.randomUUID().toString(),
+            name = uniqueName,
+        )
+        AppLog.d(TAG, "copyMacroToProfile macroId=${macro.id} targetProfileId=$targetProfileId newId=${copied.id} name='$uniqueName'")
+        val updatedProfile = targetProfile.copy(macros = targetProfile.macros + copied)
+        updateProfile(updatedProfile)
+    }
+
+    /** Copy a layout to a specific profile, cloning buttons and copying referenced macros if cross-profile. */
+    fun copyLayoutToProfile(layout: PadLayout, sourceProfileId: String, targetProfileId: String) {
+        val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return
+        val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
+
+        val existingNames = targetProfile.layouts.map { it.name }
+        val desiredName = "${layout.name} (Copy)"
+        val uniqueName = existingNames.nextUniqueName(desiredName, "Layout (Copy)")
+
+        val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
+        var updatedTargetProfile = targetProfile
+
+        if (sourceProfileId != targetProfileId) {
+            val referencedMacroIds = layout.buttons.mapNotNull { (it.action as? PadAction.Macro)?.macroId }.distinct()
+            for (macroId in referencedMacroIds) {
+                val sourceMacro = sourceProfile.macros.firstOrNull { it.id == macroId }
+                if (sourceMacro != null) {
+                    val targetExistingMacroNames = updatedTargetProfile.macros.map { it.name }
+                    val targetMacroName = targetExistingMacroNames.nextUniqueName("${sourceMacro.name} (Copy)", "Macro")
+                    val targetMacroId = UUID.randomUUID().toString()
+                    val copiedMacro = sourceMacro.copy(
+                        id = targetMacroId,
+                        name = targetMacroName
+                    )
+                    macroMapping[macroId] = targetMacroId
+                    updatedTargetProfile = updatedTargetProfile.copy(macros = updatedTargetProfile.macros + copiedMacro)
+                    AppLog.d(TAG, "copyLayoutToProfile: copied referenced macro sourceId=$macroId targetId=$targetMacroId name='$targetMacroName'")
+                }
+            }
+        }
+
+        val copiedButtons = layout.buttons.map { btn ->
+            val updatedAction = when (val action = btn.action) {
+                is PadAction.Macro -> {
+                    val newMacroId = macroMapping[action.macroId] ?: action.macroId
+                    PadAction.Macro(newMacroId)
+                }
+                else -> action
+            }
+            btn.copy(
+                id = UUID.randomUUID().toString(),
+                action = updatedAction
+            )
+        }
+
+        val copiedLayout = layout.copy(
+            id = UUID.randomUUID().toString(),
+            name = uniqueName,
+            buttons = copiedButtons
+        )
+
+        AppLog.d(TAG, "copyLayoutToProfile layoutId=${layout.id} name='$uniqueName' to profileId=$targetProfileId")
+        updatedTargetProfile = updatedTargetProfile.copy(layouts = updatedTargetProfile.layouts + copiedLayout)
+        updateProfile(updatedTargetProfile)
+    }
+
+    /** Copy a single button to a layout in any profile, copying its referenced macro if cross-profile. */
+    fun copyButtonToLayout(button: PadButton, sourceProfileId: String, targetProfileId: String, targetLayoutId: String) {
+        val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return
+        val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
+        val targetLayout = targetProfile.layouts.firstOrNull { it.id == targetLayoutId } ?: return
+
+        var updatedTargetProfile = targetProfile
+        var updatedAction = button.action
+
+        if (button.action is PadAction.Macro && sourceProfileId != targetProfileId) {
+            val macroId = (button.action as PadAction.Macro).macroId
+            val sourceMacro = sourceProfile.macros.firstOrNull { it.id == macroId }
+            if (sourceMacro != null) {
+                val targetExistingMacroNames = updatedTargetProfile.macros.map { it.name }
+                val targetMacroName = targetExistingMacroNames.nextUniqueName("${sourceMacro.name} (Copy)", "Macro")
+                val targetMacroId = UUID.randomUUID().toString()
+                val copiedMacro = sourceMacro.copy(
+                    id = targetMacroId,
+                    name = targetMacroName
+                )
+                updatedAction = PadAction.Macro(targetMacroId)
+                updatedTargetProfile = updatedTargetProfile.copy(macros = updatedTargetProfile.macros + copiedMacro)
+                AppLog.d(TAG, "copyButtonToLayout: copied referenced macro sourceId=$macroId targetId=$targetMacroId name='$targetMacroName'")
+            }
+        }
+
+        val clonedButton = button.copy(
+            id = UUID.randomUUID().toString(),
+            action = updatedAction
+        )
+
+        val updatedLayouts = updatedTargetProfile.layouts.map { layout ->
+            if (layout.id == targetLayoutId) {
+                layout.copy(buttons = layout.buttons + clonedButton)
+            } else {
+                layout
+            }
+        }
+
+        AppLog.d(TAG, "copyButtonToLayout buttonId=${button.id} to profileId=$targetProfileId layoutId=$targetLayoutId")
+        updateProfile(updatedTargetProfile.copy(layouts = updatedLayouts))
+    }
+
+    /** Duplicate a button in the current layout, shifting its position slightly to prevent perfect overlap. */
+    fun duplicateButtonInLayout(button: PadButton, layoutId: String) {
+        val profile = activeProfile.value ?: return
+        val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return
+
+        val newPosX = (button.posX + 0.05f).coerceIn(0f, 1f)
+        val newPosY = (button.posY + 0.05f).coerceIn(0f, 1f)
+
+        val clonedButton = button.copy(
+            id = UUID.randomUUID().toString(),
+            posX = newPosX,
+            posY = newPosY
+        )
+
+        val updatedLayouts = profile.layouts.map { lay ->
+            if (lay.id == layoutId) {
+                lay.copy(buttons = lay.buttons + clonedButton)
+            } else {
+                lay
+            }
+        }
+
+        AppLog.d(TAG, "duplicateButtonInLayout buttonId=${button.id} layoutId=$layoutId offset to ($newPosX, $newPosY)")
+        updateProfile(profile.copy(layouts = updatedLayouts))
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Mirror viewport persistence (per-layout)
     // ─────────────────────────────────────────────────────────────────────────

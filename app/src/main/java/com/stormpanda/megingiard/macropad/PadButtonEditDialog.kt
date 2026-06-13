@@ -113,6 +113,8 @@ internal fun ButtonEditDialog(
     enableMouse:    Boolean = true,
     initialAction:  PadAction? = null,  // pre-set action for new buttons; ignored if button != null
     onEditMacro:    ((Macro) -> Unit)? = null,
+    onDuplicate:    (() -> Unit)? = null,
+    onCopyToLayout: (() -> Unit)? = null,
     onConfirm:      (PadButton) -> Unit,
     onDismiss:      () -> Unit,
     modifier:       Modifier = Modifier,
@@ -653,6 +655,27 @@ internal fun ButtonEditDialog(
                     },
                     onChange       = ::onActionChanged,
                 )
+
+                if (button != null) {
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        TextButton(
+                            onClick = { onDuplicate?.invoke() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.macropad_editor_copy_button_duplicate), color = accentColor)
+                        }
+                        TextButton(
+                            onClick = { onCopyToLayout?.invoke() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.macropad_editor_copy_to_layout), color = accentColor)
+                        }
+                    }
+                }
             }
         }
 
