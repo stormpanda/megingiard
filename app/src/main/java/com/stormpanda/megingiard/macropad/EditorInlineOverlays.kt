@@ -537,7 +537,6 @@ internal fun InlineLayoutSettingsOverlay(
     showDelete: Boolean,
     canDelete: Boolean,
     onDelete: () -> Unit,
-    onCopyToProfile: () -> Unit,
     onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -648,21 +647,6 @@ internal fun InlineLayoutSettingsOverlay(
                 selected = mirrorStyle,
                 onSelect = { mirrorStyle = it }
             )
-
-            Spacer(Modifier.height(12.dp))
-            AppDivider()
-            Spacer(Modifier.height(12.dp))
-
-            TextButton(
-                onClick = onCopyToProfile,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = stringResource(R.string.macropad_editor_copy_to_profile),
-                    color = accentColor,
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
 
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

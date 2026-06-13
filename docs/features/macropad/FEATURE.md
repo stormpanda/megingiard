@@ -293,10 +293,12 @@ Each button supports one of the following actions:
 
 ### FR-P16: Entity Duplication and Copying
 
-- **Macro Copying**: The Macro Library context menu (3-dots) MUST provide a **"Copy to Profile…"** option. Tapping it shows an inline selection overlay with all other profiles. Selecting a profile clones the macro into it (generating a new UUID, and appending `(Copy)` or increments to the name on collision).
-- **Layout Copying**: The Layout Settings overlay MUST provide a **"Copy to Profile…"** option. Selecting a target profile clones the layout (including background settings) and all its buttons into it. If copying cross-profile, any buttons referencing macros MUST cause those macros to be copied into the target profile (mapping unique macro IDs to avoid duplicates), and the copied buttons are updated to point to the new macro UUIDs.
-- **Button Duplication**: The Button Settings dialog for an existing button MUST provide a **"Duplicate Button"** option. This clones the button in the current layout and offsets its `posX` and `posY` coordinates slightly by `+0.05` (clamped to `[0f, 1f]`) so that the duplicated button is clearly visible and does not perfectly overlap the original button.
-- **Button Copying**: The Button Settings dialog for an existing button MUST provide a **"Copy to Layout…"** option. Tapping it shows a hierarchical profile-layout selection overlay. Selecting a target layout clones the button into it (generating a new UUID, same position, and copying the macro if copying to a different profile, updating the macro ID).
+- **Name Collision Formatting**: All copy and duplication operations MUST avoid adding a `(Copy)` suffix. Instead, standard conflict resolution numbering (e.g. `Combo (2)` or `Lay1 (2)`) is appended on name collision. If no collision occurs, the original name is kept.
+- **Contextual Dropdowns ("...")**: Individual action buttons in management bars and lists are merged into unified contextual "..." dropdown menus to keep the editor interface clean:
+  - **Profiles**: Edit, Duplicate, and Reorder options are accessed via a "..." dropdown in the profiles management row. Duplicating a profile deep-copies all its layouts and macros, and maps macro IDs within layout buttons.
+  - **Layouts**: Edit, Duplicate, Copy to Profile, and Reorder options are accessed via a "..." dropdown in the layouts management bar. Duplicating a layout clones all its buttons with new UUIDs within the active profile.
+  - **Button List**: Each item in the button list replaces the individual Delete button with a "..." dropdown providing Edit, Duplicate, Copy to Layout, and Delete options. Drag-reorder handles remain separate.
+  - **Dialogs & Overlays**: Property configuration dialogs (e.g., `ButtonEditDialog`) and inline configuration overlays (e.g., `InlineLayoutSettingsOverlay`) remain focused strictly on metadata/metadata settings editing, without copy or duplicate options.
 
 ---
 

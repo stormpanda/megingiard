@@ -14,13 +14,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -44,11 +50,14 @@ internal fun ButtonListItem(
     enableTouch:        Boolean,
     isDragging:         Boolean,
     onEdit:             () -> Unit,
+    onDuplicate:        () -> Unit,
+    onCopyToLayout:     () -> Unit,
     onDelete:           () -> Unit,
     dragHandleModifier: Modifier,
     modifier:           Modifier = Modifier,
 ) {
     val colors      = LocalAppColors.current
+    var menuExpanded by remember { mutableStateOf(false) }
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val isDeviceDisabled = when (btn.action) {
@@ -146,8 +155,32 @@ internal fun ButtonListItem(
             }
         }
 
-        IconButton(onClick = { onDelete() }) {
-            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.macropad_editor_delete_button), tint = colors.onSurfaceSecondary)
+        Box {
+            IconButton(onClick = { menuExpanded = true }) {
+                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
+            }
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                modifier = Modifier.background(colors.surface),
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.settings_macropad_edit), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                    onClick = { menuExpanded = false; onEdit() }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.macropad_editor_copy_button_duplicate), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                    onClick = { menuExpanded = false; onDuplicate() }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.macropad_editor_copy_to_layout), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                    onClick = { menuExpanded = false; onCopyToLayout() }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.macropad_editor_delete_button), color = colors.error, style = MaterialTheme.typography.bodyMedium) },
+                    onClick = { menuExpanded = false; onDelete() }
+                )
+            }
         }
         Icon(
             imageVector        = Icons.Rounded.DragHandle,

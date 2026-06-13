@@ -191,6 +191,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     onManageMacros          = { showMacroListEditor = true },
                     onAddButton             = { showAddButton = true },
                     onEditButton            = { btn -> editingButton = btn; editingButtonActive = true },
+                    onCopyToProfile         = { showCopyLayoutProfileDialog = true },
+                    onCopyToLayout          = { btn -> editingButton = btn; showCopyButtonLayoutDialog = true },
                     onDeleteRequested       = { btn -> buttonPendingDelete = btn },
                     onReorderProfiles       = { showReorderProfilesOverlay = true },
                     onReorderLayouts        = { showReorderLayoutsOverlay = true },
@@ -236,17 +238,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     button      = editingButton,
                     accentColor = colors.accent,
                     onEditMacro = { macro -> pendingMacroEditId = macro.id; showMacroListEditor = true },
-                    onDuplicate = {
-                        val layout = MacroPadState.activeLayout.value
-                        if (layout != null && editingButton != null) {
-                            MacroPadState.duplicateButtonInLayout(editingButton!!, layout.id)
-                        }
-                        editingButtonActive = false
-                        editingButton = null
-                    },
-                    onCopyToLayout = {
-                        showCopyButtonLayoutDialog = true
-                    },
                     onConfirm   = { updated ->
                         val layout = MacroPadState.activeLayout.value ?: return@ButtonEditDialog
                         MacroPadState.updateLayout(
@@ -388,10 +379,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 onDelete = {
                     showEditLayoutDialog = false
                     layoutPendingDelete = curLayout
-                },
-                onCopyToProfile = {
-                    showEditLayoutDialog = false
-                    showCopyLayoutProfileDialog = true
                 },
                 onConfirm = { name, enabled, noMirrorStyle, mirrorStyle ->
                     MacroPadState.updateLayout(
@@ -553,6 +540,8 @@ private fun EditorBody(
     onManageMacros:          () -> Unit,
     onAddButton:             () -> Unit,
     onEditButton:            (PadButton) -> Unit,
+    onCopyToProfile:         () -> Unit,
+    onCopyToLayout:          (PadButton) -> Unit,
     onDeleteRequested:       (PadButton) -> Unit,
     onReorderProfiles:       () -> Unit,
     onReorderLayouts:        () -> Unit,
@@ -601,6 +590,7 @@ private fun EditorBody(
                 activeProfile   = profile,
                 onSelectProfile = onSelectProfile,
                 onEditProfile   = onEditProfile,
+                onDuplicateProfile = { profile?.id?.let { MacroPadState.duplicateProfile(it) } },
                 onReorderProfiles = onReorderProfiles,
                 modifier        = Modifier
                     .background(colors.surface)
@@ -626,6 +616,8 @@ private fun EditorBody(
                 activeLayout   = layout,
                 onSelectLayout = onSelectLayout,
                 onEditLayout   = onEditLayout,
+                onDuplicateLayout = { layout?.id?.let { MacroPadState.duplicateLayout(it) } },
+                onCopyToProfile = onCopyToProfile,
                 onReorderLayouts = onReorderLayouts,
                 modifier       = Modifier
                     .background(colors.surface)
@@ -697,6 +689,8 @@ private fun EditorBody(
                         enableTouch        = profile.enableTouch,
                         isDragging         = isDragging,
                         onEdit             = { onEditButton(btn) },
+                        onDuplicate        = { MacroPadState.duplicateButtonInLayout(btn, layout.id) },
+                        onCopyToLayout     = { onCopyToLayout(btn) },
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )

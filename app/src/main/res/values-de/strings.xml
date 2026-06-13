@@ -660,4 +660,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_copy_profile_select">Zielprofil auswählen</string>
     <string name="macropad_editor_copy_layout_select">Ziellayout auswählen</string>
     <string name="macropad_editor_copy_button_duplicate">Taste duplizieren</string>
+    <string name="macropad_duplicate_profile">Profil duplizieren</string>
+    <string name="macropad_duplicate_layout">Layout duplizieren</string>
 </resources>

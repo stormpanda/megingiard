@@ -653,4 +653,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_copy_profile_select">Select Target Profile</string>
     <string name="macropad_editor_copy_layout_select">Select Target Layout</string>
     <string name="macropad_editor_copy_button_duplicate">Duplicate Button</string>
+    <string name="macropad_duplicate_profile">Duplicate Profile</string>
+    <string name="macropad_duplicate_layout">Duplicate Layout</string>
 </resources>

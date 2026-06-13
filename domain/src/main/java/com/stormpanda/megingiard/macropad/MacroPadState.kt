@@ -250,6 +250,61 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
+    fun duplicateProfile(profileId: String) {
+        val sourceProfile = _profiles.value.firstOrNull { it.id == profileId } ?: return
+        val existingNames = _profiles.value.map { it.name }
+        val uniqueName = existingNames.nextUniqueName(sourceProfile.name, MP_DEFAULT_PROFILE_NAME)
+        
+        val newProfileId = UUID.randomUUID().toString()
+        val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
+        
+        // Copy macros
+        val copiedMacros = sourceProfile.macros.map { macro ->
+            val targetMacroId = UUID.randomUUID().toString()
+            macroMapping[macro.id] = targetMacroId
+            macro.copy(id = targetMacroId)
+        }
+        
+        // Copy layouts
+        val copiedLayouts = sourceProfile.layouts.map { layout ->
+            val copiedButtons = layout.buttons.map { btn ->
+                val updatedAction = when (val action = btn.action) {
+                    is PadAction.Macro -> {
+                        val newMacroId = macroMapping[action.macroId] ?: action.macroId
+                        PadAction.Macro(newMacroId)
+                    }
+                    else -> action
+                }
+                btn.copy(
+                    id = UUID.randomUUID().toString(),
+                    action = updatedAction
+                )
+            }
+            layout.copy(
+                id = UUID.randomUUID().toString(),
+                buttons = copiedButtons
+            )
+        }
+        
+        val newActiveLayoutId = sourceProfile.activeLayoutId?.let { activeId ->
+            val sourceIndex = sourceProfile.layouts.indexOfFirst { it.id == activeId }
+            if (sourceIndex != -1) copiedLayouts[sourceIndex].id else copiedLayouts.firstOrNull()?.id
+        } ?: copiedLayouts.firstOrNull()?.id
+        
+        val duplicated = sourceProfile.copy(
+            id = newProfileId,
+            name = uniqueName,
+            layouts = copiedLayouts,
+            macros = copiedMacros,
+            activeLayoutId = newActiveLayoutId,
+            isDefault = false
+        ).withSyncedDeviceFlags()
+        
+        AppLog.d(TAG, "duplicateProfile originalId=$profileId newId=$newProfileId name='$uniqueName'")
+        _profiles.value = _profiles.value + duplicated
+        MacroPadSettings.saveMacroPadData()
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Layout CRUD (within the active profile)
     // ─────────────────────────────────────────────────────────────────────────
@@ -311,6 +366,29 @@ object MacroPadState {
         val profile = activeProfile.value ?: return
         AppLog.d(TAG, "reorderLayouts count=${newOrder.size}")
         updateProfile(profile.copy(layouts = newOrder))
+    }
+
+    fun duplicateLayout(layoutId: String) {
+        val profile = activeProfile.value ?: return
+        val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return
+        val existingNames = profile.layouts.map { it.name }
+        val uniqueName = existingNames.nextUniqueName(layout.name, MP_DEFAULT_LAYOUT_NAME)
+        
+        val copiedButtons = layout.buttons.map { btn ->
+            btn.copy(id = UUID.randomUUID().toString())
+        }
+        
+        val duplicatedLayout = layout.copy(
+            id = UUID.randomUUID().toString(),
+            name = uniqueName,
+            buttons = copiedButtons
+        )
+        
+        AppLog.d(TAG, "duplicateLayout layoutId=$layoutId newId=${duplicatedLayout.id} name='$uniqueName' in profile=${profile.id}")
+        updateProfile(profile.copy(
+            layouts = profile.layouts + duplicatedLayout,
+            activeLayoutId = duplicatedLayout.id
+        ))
     }
 
     /** Switch to the next enabled layout, wrapping around. */
@@ -378,11 +456,13 @@ object MacroPadState {
     /** Copy a macro from any profile into the active profile with a new UUID. */
     fun copyMacroToActiveProfile(macro: Macro) {
         val profile = activeProfile.value ?: return
+        val existingNames = profile.macros.map { it.name }
+        val uniqueName = existingNames.nextUniqueName(macro.name, "Macro")
         val copied = macro.copy(
             id = UUID.randomUUID().toString(),
-            name = "${macro.name} (Copy)",
+            name = uniqueName,
         )
-        AppLog.d(TAG, "copyMacroToActiveProfile originalId=${macro.id} newId=${copied.id}")
+        AppLog.d(TAG, "copyMacroToActiveProfile originalId=${macro.id} newId=${copied.id} name='$uniqueName'")
         updateProfile(profile.copy(macros = profile.macros + copied))
     }
 
@@ -390,8 +470,8 @@ object MacroPadState {
     fun copyMacroToProfile(macro: Macro, targetProfileId: String) {
         val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
         val existingNames = targetProfile.macros.map { it.name }
-        val desiredName = "${macro.name} (Copy)"
-        val uniqueName = existingNames.nextUniqueName(desiredName, "Macro (Copy)")
+        val desiredName = macro.name
+        val uniqueName = existingNames.nextUniqueName(desiredName, "Macro")
         val copied = macro.copy(
             id = UUID.randomUUID().toString(),
             name = uniqueName,
@@ -407,8 +487,8 @@ object MacroPadState {
         val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
 
         val existingNames = targetProfile.layouts.map { it.name }
-        val desiredName = "${layout.name} (Copy)"
-        val uniqueName = existingNames.nextUniqueName(desiredName, "Layout (Copy)")
+        val desiredName = layout.name
+        val uniqueName = existingNames.nextUniqueName(desiredName, "Layout")
 
         val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
         var updatedTargetProfile = targetProfile
@@ -419,7 +499,7 @@ object MacroPadState {
                 val sourceMacro = sourceProfile.macros.firstOrNull { it.id == macroId }
                 if (sourceMacro != null) {
                     val targetExistingMacroNames = updatedTargetProfile.macros.map { it.name }
-                    val targetMacroName = targetExistingMacroNames.nextUniqueName("${sourceMacro.name} (Copy)", "Macro")
+                    val targetMacroName = targetExistingMacroNames.nextUniqueName(sourceMacro.name, "Macro")
                     val targetMacroId = UUID.randomUUID().toString()
                     val copiedMacro = sourceMacro.copy(
                         id = targetMacroId,
@@ -471,7 +551,7 @@ object MacroPadState {
             val sourceMacro = sourceProfile.macros.firstOrNull { it.id == macroId }
             if (sourceMacro != null) {
                 val targetExistingMacroNames = updatedTargetProfile.macros.map { it.name }
-                val targetMacroName = targetExistingMacroNames.nextUniqueName("${sourceMacro.name} (Copy)", "Macro")
+                val targetMacroName = targetExistingMacroNames.nextUniqueName(sourceMacro.name, "Macro")
                 val targetMacroId = UUID.randomUUID().toString()
                 val copiedMacro = sourceMacro.copy(
                     id = targetMacroId,
