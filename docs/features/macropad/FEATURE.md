@@ -298,7 +298,7 @@ Each button supports one of the following actions:
   - **Profiles**: Edit, Duplicate, and Reorder options are accessed via a "..." dropdown in the profiles management row. Duplicating a profile deep-copies all its layouts and macros, and maps macro IDs within layout buttons.
   - **Layouts**: Edit, Duplicate, Copy to Profile, and Reorder options are accessed via a "..." dropdown in the layouts management bar. Duplicating a layout clones all its buttons with new UUIDs within the active profile.
   - **Button List**: Each item in the button list replaces the individual Delete button with a "..." dropdown providing Edit, Duplicate, Copy to Layout, and Delete options. Drag-reorder handles remain separate.
-  - **Dialogs & Overlays**: Property configuration dialogs (e.g., `ButtonEditDialog`) and inline configuration overlays (e.g., `InlineLayoutSettingsOverlay`) remain focused strictly on metadata/metadata settings editing, without copy or duplicate options.
+  - **Dialogs & Overlays**: Property configuration dialogs (e.g., `ButtonEditDialog`) and inline configuration overlays (e.g., `InlineLayoutSettingsOverlay`) remain focused strictly on metadata settings editing, without copy or duplicate options.
 
 ---
 

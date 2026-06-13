@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
@@ -464,7 +465,7 @@ class MacroPadStateTest {
         assertEquals(1, duplicated.buttons.size)
         val dupBtn = duplicated.buttons.first()
         assertEquals("B", dupBtn.label)
-        org.junit.Assert.assertNotEquals("btn-1", dupBtn.id)
+        assertNotEquals("btn-1", dupBtn.id)
     }
 
     @Test
@@ -499,14 +500,14 @@ class MacroPadStateTest {
 
         val dupMacro = duplicatedProfile.macros.first()
         assertEquals("Slash", dupMacro.name)
-        org.junit.Assert.assertNotEquals("macro-1", dupMacro.id)
+        assertNotEquals("macro-1", dupMacro.id)
 
         val dupLayout = duplicatedProfile.layouts.first()
         assertEquals("Lay1", dupLayout.name)
         assertEquals(1, dupLayout.buttons.size)
 
         val dupBtn = dupLayout.buttons.first()
-        org.junit.Assert.assertNotEquals("btn-1", dupBtn.id)
+        assertNotEquals("btn-1", dupBtn.id)
         assertEquals(dupMacro.id, (dupBtn.action as PadAction.Macro).macroId)
     }
 }

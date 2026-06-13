@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.stateIn
 private const val TAG = "MacroPadState"
 private const val MP_DEFAULT_PROFILE_NAME = "Profile"
 private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
+private const val DUPLICATE_BUTTON_OFFSET = 0.05f
 
 private fun List<String>.nextUniqueName(baseName: String, fallback: String): String {
     val normalizedBase = baseName.trim().ifBlank { fallback }
@@ -574,8 +575,8 @@ object MacroPadState {
         val profile = activeProfile.value ?: return
         val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return
 
-        val newPosX = (button.posX + 0.05f).coerceIn(0f, 1f)
-        val newPosY = (button.posY + 0.05f).coerceIn(0f, 1f)
+        val newPosX = (button.posX + DUPLICATE_BUTTON_OFFSET).coerceIn(0f, 1f)
+        val newPosY = (button.posY + DUPLICATE_BUTTON_OFFSET).coerceIn(0f, 1f)
 
         val clonedButton = button.copy(
             id = UUID.randomUUID().toString(),
