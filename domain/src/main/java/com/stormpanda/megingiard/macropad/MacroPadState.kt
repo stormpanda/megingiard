@@ -55,6 +55,22 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
     else copy(enableKeyboard = kb, enableGamepad = gp, enableMouse = ms, enableTouch = ts)
 }
 
+private fun List<PadButton>.cloneWithMacroMapping(macroMapping: Map<String, String>): List<PadButton> {
+    return map { btn ->
+        val updatedAction = when (val action = btn.action) {
+            is PadAction.Macro -> {
+                val newMacroId = macroMapping[action.macroId] ?: action.macroId
+                PadAction.Macro(newMacroId)
+            }
+            else -> action
+        }
+        btn.copy(
+            id = UUID.randomUUID().toString(),
+            action = updatedAction
+        )
+    }
+}
+
 /**
  * Runtime state holder for the MacroPad-centric UI.
  *
@@ -267,22 +283,9 @@ object MacroPadState {
         
         // Copy layouts
         val copiedLayouts = sourceProfile.layouts.map { layout ->
-            val copiedButtons = layout.buttons.map { btn ->
-                val updatedAction = when (val action = btn.action) {
-                    is PadAction.Macro -> {
-                        val newMacroId = macroMapping[action.macroId] ?: action.macroId
-                        PadAction.Macro(newMacroId)
-                    }
-                    else -> action
-                }
-                btn.copy(
-                    id = UUID.randomUUID().toString(),
-                    action = updatedAction
-                )
-            }
             layout.copy(
                 id = UUID.randomUUID().toString(),
-                buttons = copiedButtons
+                buttons = layout.buttons.cloneWithMacroMapping(macroMapping)
             )
         }
         
@@ -512,24 +515,10 @@ object MacroPadState {
             }
         }
 
-        val copiedButtons = layout.buttons.map { btn ->
-            val updatedAction = when (val action = btn.action) {
-                is PadAction.Macro -> {
-                    val newMacroId = macroMapping[action.macroId] ?: action.macroId
-                    PadAction.Macro(newMacroId)
-                }
-                else -> action
-            }
-            btn.copy(
-                id = UUID.randomUUID().toString(),
-                action = updatedAction
-            )
-        }
-
         val copiedLayout = layout.copy(
             id = UUID.randomUUID().toString(),
             name = uniqueName,
-            buttons = copiedButtons
+            buttons = layout.buttons.cloneWithMacroMapping(macroMapping)
         )
 
         AppLog.d(TAG, "copyLayoutToProfile layoutId=${layout.id} name='$uniqueName' to profileId=$targetProfileId")

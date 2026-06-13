@@ -11,7 +11,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,10 +55,77 @@ import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val TAG = "EditorInlineOverlays"
+
+@Composable
+internal fun InlineDialogOverlay(
+    title: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    widthFraction: Float = 0.85f,
+    titleAccessory: @Composable (() -> Unit)? = null,
+    buttonsArrangement: Arrangement.Horizontal = Arrangement.End,
+    buttonsRow: @Composable (RowScope.() -> Unit)? = {
+        TextButton(onClick = onDismiss) {
+            Text(
+                text = stringResource(R.string.macropad_editor_cancel),
+                color = LocalAppColors.current.onSurfaceSecondary
+            )
+        }
+    },
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss)
+            .blockPointerEvents()
+            .then(modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(widthFraction)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .clickable(enabled = true, onClick = {})
+                .padding(MPE_PADDING),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (titleAccessory != null) {
+                    titleAccessory()
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            content()
+            if (buttonsRow != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = buttonsArrangement,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    buttonsRow()
+                }
+            }
+        }
+    }
+}
 
 @Composable
 internal fun InlineConfirmDeleteOverlay(
@@ -66,33 +135,20 @@ internal fun InlineConfirmDeleteOverlay(
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .background(colors.surface, RoundedCornerShape(12.dp))
-                .clickable(enabled = true, onClick = {})
-                .padding(MPE_PADDING),
-        ) {
-            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            Text(body, color = colors.onSurfaceSecondary)
-            Spacer(Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-                TextButton(onClick = onConfirm) {
-                    Text(stringResource(R.string.macropad_editor_confirm), color = LocalAppColors.current.error)
-                }
+    InlineDialogOverlay(
+        title = title,
+        onDismiss = onDismiss,
+        widthFraction = 0.8f,
+        buttonsRow = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+            }
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.macropad_editor_confirm), color = colors.error)
             }
         }
+    ) {
+        Text(body, color = colors.onSurfaceSecondary)
     }
 }
 
@@ -110,52 +166,40 @@ internal fun InlineNameInputOverlay(
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val colors = LocalAppColors.current
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .background(colors.surface, RoundedCornerShape(12.dp))
-                .clickable(enabled = true, onClick = {})
-                .padding(MPE_PADDING),
-        ) {
-            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(12.dp))
-            AppTextField(
-                value         = text,
-                onValueChange = { text = it },
-                label         = { Text(title, color = colors.onSurfaceSecondary) },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth(),
-                isError       = hasError,
-                supportingText = {
-                    when {
-                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                    }
-                },
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-                TextButton(
-                    onClick = { if (!hasError) onConfirm(normalizedName) },
-                    enabled = !hasError,
-                ) {
-                    Text(
-                        stringResource(R.string.macropad_editor_done),
-                        color = if (!hasError) accentColor else colors.onSurfaceSecondary,
-                    )
-                }
+
+    InlineDialogOverlay(
+        title = title,
+        onDismiss = onDismiss,
+        widthFraction = 0.8f,
+        buttonsRow = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+            }
+            TextButton(
+                onClick = { if (!hasError) onConfirm(normalizedName) },
+                enabled = !hasError,
+            ) {
+                Text(
+                    stringResource(R.string.macropad_editor_done),
+                    color = if (!hasError) accentColor else colors.onSurfaceSecondary,
+                )
             }
         }
+    ) {
+        AppTextField(
+            value         = text,
+            onValueChange = { text = it },
+            label         = { Text(title, color = colors.onSurfaceSecondary) },
+            singleLine    = true,
+            modifier      = Modifier.fillMaxWidth(),
+            isError       = hasError,
+            supportingText = {
+                when {
+                    normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                    isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                }
+            },
+        )
     }
 }
 
@@ -229,247 +273,215 @@ internal fun InlineProfileSettingsOverlay(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
+    InlineDialogOverlay(
+        title = if (showAppList) stringResource(R.string.profile_settings_app_mapping) else title,
+        onDismiss = onDismiss,
+        titleAccessory = {
+            if (!showAppList && showDelete) {
+                IconButton(
+                    onClick = onDelete,
+                    enabled = canDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = stringResource(R.string.macropad_editor_delete_profile),
+                        tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        },
+        buttonsArrangement = if (showAppList) Arrangement.Start else Arrangement.End,
+        buttonsRow = {
+            if (showAppList) {
+                TextButton(onClick = { showAppList = false }) {
+                    Text(stringResource(R.string.settings_back), color = colors.onSurface)
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+                TextButton(
+                    onClick = { if (!hasError) onConfirm(normalizedName, selectedPackage) },
+                    enabled = !hasError,
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_done),
+                        color = if (!hasError) accentColor else colors.onSurfaceSecondary,
+                    )
+                }
+            }
+        }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .background(colors.surface, RoundedCornerShape(12.dp))
-                .clickable(enabled = true, onClick = {})
-                .padding(MPE_PADDING),
-        ) {
-            if (!showAppList) {
+        if (!showAppList) {
+            AppTextField(
+                value = nameText,
+                onValueChange = { nameText = it },
+                label = { Text(stringResource(R.string.profile_settings_name), color = colors.onSurfaceSecondary) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                isError = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                    }
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = stringResource(R.string.profile_settings_app_mapping),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(4.dp))
+
+            if (!isAccessibilityActive) {
+                Text(
+                    text = stringResource(R.string.profile_settings_accessibility_required),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = title,
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    if (showDelete) {
-                        IconButton(
-                            onClick = onDelete,
-                            enabled = canDelete,
-                            modifier = Modifier.size(24.dp)
+                    if (selectedPackage != null) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Delete,
-                                contentDescription = stringResource(R.string.macropad_editor_delete_profile),
-                                tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                                modifier = Modifier.size(20.dp)
+                            AppIcon(
+                                packageName = selectedPackage!!,
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(36.dp)
                             )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                
-                AppTextField(
-                    value = nameText,
-                    onValueChange = { nameText = it },
-                    label = { Text(stringResource(R.string.profile_settings_name), color = colors.onSurfaceSecondary) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = hasError,
-                    supportingText = {
-                        when {
-                            normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                            isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                        }
-                    },
-                )
-                Spacer(Modifier.height(12.dp))
-
-                Text(
-                    text = stringResource(R.string.profile_settings_app_mapping),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall
-                )
-                Spacer(Modifier.height(4.dp))
-
-                if (!isAccessibilityActive) {
-                    Text(
-                        text = stringResource(R.string.profile_settings_accessibility_required),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (selectedPackage != null) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                AppIcon(
-                                    packageName = selectedPackage!!,
-                                    modifier = Modifier
-                                        .padding(end = 8.dp)
-                                        .size(36.dp)
-                                )
-                                Text(
-                                    text = selectedAppName,
-                                    color = accentColor,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            TextButton(onClick = { selectedPackage = null }) {
-                                Text(
-                                    text = stringResource(R.string.profile_settings_clear_app),
-                                    color = colors.error
-                                )
-                            }
-                        } else {
                             Text(
-                                text = stringResource(R.string.macropad_modifier_none),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f)
+                                text = selectedAppName,
+                                color = accentColor,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
                             )
-                            TextButton(onClick = { showAppList = true }) {
-                                Text(
-                                    text = stringResource(R.string.profile_settings_select_app),
-                                    color = accentColor
-                                )
-                            }
+                        }
+                        TextButton(onClick = { selectedPackage = null }) {
+                            Text(
+                                text = stringResource(R.string.profile_settings_clear_app),
+                                color = colors.error
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.macropad_modifier_none),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { showAppList = true }) {
+                            Text(
+                                text = stringResource(R.string.profile_settings_select_app),
+                                color = accentColor
+                            )
                         }
                     }
                 }
-
-                Spacer(Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) {
-                        Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                    }
-                    TextButton(
-                        onClick = { if (!hasError) onConfirm(normalizedName, selectedPackage) },
-                        enabled = !hasError,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.macropad_editor_done),
-                            color = if (!hasError) accentColor else colors.onSurfaceSecondary,
-                        )
-                    }
-                }
-            } else {
-                Text(
-                    text = stringResource(R.string.profile_settings_app_mapping),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(12.dp))
-
-                AppTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = {
-                        Text(
-                            text = stringResource(R.string.profile_settings_search_apps),
-                            color = colors.onSurfaceSecondary
-                        )
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(12.dp))
-
-                if (isLoadingApps) {
+            }
+        } else {
+            AppTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = {
                     Text(
-                        text = stringResource(R.string.profile_settings_loading_apps),
+                        text = stringResource(R.string.profile_settings_search_apps),
+                        color = colors.onSurfaceSecondary
+                    )
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
+
+            if (isLoadingApps) {
+                Text(
+                    text = stringResource(R.string.profile_settings_loading_apps),
+                    color = colors.onSurfaceSecondary,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            } else {
+                val filtered = appsList.filter {
+                    it.first.contains(searchQuery, ignoreCase = true) ||
+                    it.second.contains(searchQuery, ignoreCase = true)
+                }
+                if (filtered.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.profile_settings_no_apps),
                         color = colors.onSurfaceSecondary,
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
                 } else {
-                    val filtered = appsList.filter {
-                        it.first.contains(searchQuery, ignoreCase = true) ||
-                        it.second.contains(searchQuery, ignoreCase = true)
-                    }
-                    if (filtered.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.profile_settings_no_apps),
-                            color = colors.onSurfaceSecondary,
-                            modifier = Modifier.padding(vertical = 16.dp)
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                        ) {
-                            items(filtered) { (label, pkg) ->
-                                val isAssigned = assignedPackages.contains(pkg.trim().lowercase())
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(enabled = !isAssigned) {
-                                            selectedPackage = pkg
-                                            showAppList = false
-                                        }
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AppIcon(
-                                        packageName = pkg,
-                                        modifier = Modifier
-                                            .padding(end = 12.dp)
-                                            .size(36.dp)
-                                            .alpha(if (isAssigned) 0.38f else 1f)
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = label,
-                                                color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.5f) else colors.onSurface,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            if (isAssigned) {
-                                                Spacer(Modifier.width(6.dp))
-                                                Text(
-                                                    text = stringResource(R.string.profile_settings_app_assigned),
-                                                    color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
-                                            }
-                                        }
-                                        Text(
-                                            text = pkg,
-                                            color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.38f) else colors.onSurfaceSecondary,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    ) {
+                        items(filtered) { (label, pkg) ->
+                            val isAssigned = assignedPackages.contains(pkg.trim().lowercase())
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = !isAssigned) {
+                                        selectedPackage = pkg
+                                        showAppList = false
                                     }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppIcon(
+                                    packageName = pkg,
+                                    modifier = Modifier
+                                        .padding(end = 12.dp)
+                                        .size(36.dp)
+                                        .alpha(if (isAssigned) 0.38f else 1f)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.5f) else colors.onSurface,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        if (isAssigned) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                text = stringResource(R.string.profile_settings_app_assigned),
+                                                color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = pkg,
+                                        color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.38f) else colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
                                 }
                             }
                         }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                    TextButton(onClick = { showAppList = false }) {
-                        Text(stringResource(R.string.settings_back), color = colors.onSurface)
                     }
                 }
             }
         }
     }
 }
+
 
 @Composable
 internal fun AppIcon(
@@ -549,121 +561,96 @@ internal fun InlineLayoutSettingsOverlay(
     val hasError = normalizedName.isEmpty() || isDuplicate
     val colors = LocalAppColors.current
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .background(colors.surface, RoundedCornerShape(12.dp))
-                .clickable(enabled = true, onClick = {})
-                .padding(MPE_PADDING),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    InlineDialogOverlay(
+        title = title,
+        onDismiss = onDismiss,
+        titleAccessory = {
+            if (showDelete) {
+                IconButton(
+                    onClick = onDelete,
+                    enabled = canDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = stringResource(R.string.macropad_editor_delete_layout),
+                        tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        },
+        buttonsRow = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+            }
+            TextButton(
+                onClick = { if (!hasError) onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle) },
+                enabled = !hasError,
             ) {
                 Text(
-                    text = title,
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+                    text = stringResource(R.string.macropad_editor_done),
+                    color = if (!hasError) accentColor else colors.onSurfaceSecondary,
                 )
-                if (showDelete) {
-                    IconButton(
-                        onClick = onDelete,
-                        enabled = canDelete,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = stringResource(R.string.macropad_editor_delete_layout),
-                            tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-
-            AppTextField(
-                value = nameText,
-                onValueChange = { nameText = it },
-                label = { Text(stringResource(R.string.pill_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                isError = hasError,
-                supportingText = {
-                    when {
-                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                    }
-                },
-            )
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.layout_settings_visibility_title),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = stringResource(R.string.layout_settings_visibility_desc),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                Switch(
-                    checked = isEnabled,
-                    onCheckedChange = { isEnabled = it }
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-            AppDivider()
-            Spacer(Modifier.height(12.dp))
-
-            ButtonColorStyleRow(
-                label = stringResource(R.string.macropad_editor_button_color_no_mirror),
-                selected = noMirrorStyle,
-                onSelect = { noMirrorStyle = it }
-            )
-            Spacer(Modifier.height(8.dp))
-            ButtonColorStyleRow(
-                label = stringResource(R.string.macropad_editor_button_color_mirror),
-                selected = mirrorStyle,
-                onSelect = { mirrorStyle = it }
-            )
-
-            Spacer(Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-                TextButton(
-                    onClick = { if (!hasError) onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle) },
-                    enabled = !hasError,
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_done),
-                        color = if (!hasError) accentColor else colors.onSurfaceSecondary,
-                    )
-                }
             }
         }
+    ) {
+        AppTextField(
+            value = nameText,
+            onValueChange = { nameText = it },
+            label = { Text(stringResource(R.string.pill_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            isError = hasError,
+            supportingText = {
+                when {
+                    normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                    isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                }
+            },
+        )
+        Spacer(Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.layout_settings_visibility_title),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = stringResource(R.string.layout_settings_visibility_desc),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = { isEnabled = it }
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+        AppDivider()
+        Spacer(Modifier.height(12.dp))
+
+        ButtonColorStyleRow(
+            label = stringResource(R.string.macropad_editor_button_color_no_mirror),
+            selected = noMirrorStyle,
+            onSelect = { noMirrorStyle = it }
+        )
+        Spacer(Modifier.height(8.dp))
+        ButtonColorStyleRow(
+            label = stringResource(R.string.macropad_editor_button_color_mirror),
+            selected = mirrorStyle,
+            onSelect = { mirrorStyle = it }
+        )
     }
 }
 
