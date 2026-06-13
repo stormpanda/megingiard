@@ -13,9 +13,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+
+private const val TAG = "CopyDialogs"
 
 @Composable
 internal fun InlineProfileSelectionOverlay(
@@ -34,7 +38,7 @@ internal fun InlineProfileSelectionOverlay(
     ) {
         if (filteredProfiles.isEmpty()) {
             Text(
-                text = "No other profiles available.",
+                text = stringResource(R.string.macropad_copy_no_profiles_available),
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(vertical = 16.dp)
@@ -74,42 +78,54 @@ internal fun InlineLayoutSelectionOverlay(
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val hasSelectableLayouts = profiles.any { profile ->
+        profile.layouts.any { it.id != excludeLayoutId }
+    }
 
     InlineDialogOverlay(
         title = title,
         onDismiss = onDismiss,
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 300.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            profiles.forEach { profile ->
-                val layouts = profile.layouts.filter { it.id != excludeLayoutId }
-                if (layouts.isNotEmpty()) {
-                    item(key = "header_${profile.id}") {
-                        Text(
-                            text = profile.name,
-                            color = colors.accent,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp, start = 8.dp)
-                        )
-                    }
-                    items(layouts) { layout ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelect(profile.id, layout.id) }
-                                .padding(vertical = 10.dp, horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+        if (!hasSelectableLayouts) {
+            Text(
+                text = stringResource(R.string.macropad_copy_no_layouts_available),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                profiles.forEach { profile ->
+                    val layouts = profile.layouts.filter { it.id != excludeLayoutId }
+                    if (layouts.isNotEmpty()) {
+                        item(key = "header_${profile.id}") {
                             Text(
-                                text = layout.name,
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyLarge
+                                text = profile.name,
+                                color = colors.accent,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp, start = 8.dp)
                             )
+                        }
+                        items(layouts) { layout ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelect(profile.id, layout.id) }
+                                    .padding(vertical = 10.dp, horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = layout.name,
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
                         }
                     }
                 }
