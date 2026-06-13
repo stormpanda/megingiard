@@ -315,9 +315,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialPackage = null,
                 accentColor  = colors.accent,
                 existingNames = profiles.map { it.name },
-                showDelete   = false,
-                canDelete    = false,
-                onDelete     = {},
                 onConfirm    = { name, pkg ->
                     val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name, associatedPackage = pkg)
                     MacroPadState.addProfile(newProfile)
@@ -335,12 +332,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialPackage = profile.associatedPackage,
                 accentColor  = colors.accent,
                 existingNames = profiles.filter { it.id != profile.id }.map { it.name },
-                showDelete   = true,
-                canDelete    = profiles.size > 1,
-                onDelete     = {
-                    showRenameProfileDialog = false
-                    showDeleteProfileConfirm = true
-                },
                 onConfirm    = { name, pkg ->
                     MacroPadState.renameProfile(profile.id, name, pkg)
                     showRenameProfileDialog = false
@@ -374,12 +365,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialButtonColorMirror = curLayout.buttonColorMirror,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                showDelete = true,
-                canDelete = (profile?.layouts?.size ?: 0) > 1,
-                onDelete = {
-                    showEditLayoutDialog = false
-                    layoutPendingDelete = curLayout
-                },
                 onConfirm = { name, enabled, noMirrorStyle, mirrorStyle ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
@@ -592,6 +577,7 @@ private fun EditorBody(
                 onEditProfile   = onEditProfile,
                 onDuplicateProfile = { profile?.id?.let { MacroPadState.duplicateProfile(it) } },
                 onReorderProfiles = onReorderProfiles,
+                onDeleteProfile = onDeleteProfile,
                 modifier        = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
@@ -619,6 +605,7 @@ private fun EditorBody(
                 onDuplicateLayout = { layout?.id?.let { MacroPadState.duplicateLayout(it) } },
                 onCopyToProfile = onCopyToProfile,
                 onReorderLayouts = onReorderLayouts,
+                onDeleteLayout = { layout?.let { onDeleteLayoutRequested(it) } },
                 modifier       = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)

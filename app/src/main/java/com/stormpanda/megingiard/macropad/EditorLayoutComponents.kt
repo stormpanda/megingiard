@@ -51,10 +51,12 @@ internal fun EditorProfileChipsBar(
     onEditProfile: () -> Unit,
     onDuplicateProfile: () -> Unit,
     onReorderProfiles: () -> Unit,
+    onDeleteProfile: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     var menuExpanded by remember { mutableStateOf(false) }
+    val canDelete = profiles.size > 1
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -105,6 +107,17 @@ internal fun EditorProfileChipsBar(
                     text = { Text(stringResource(R.string.macropad_reorder_profiles), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { menuExpanded = false; onReorderProfiles() }
                 )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(R.string.macropad_editor_delete_profile),
+                            color = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    enabled = canDelete,
+                    onClick = { menuExpanded = false; onDeleteProfile() }
+                )
             }
         }
     }
@@ -119,11 +132,13 @@ internal fun EditorLayoutChipsBar(
     onDuplicateLayout: () -> Unit,
     onCopyToProfile: () -> Unit,
     onReorderLayouts: () -> Unit,
+    onDeleteLayout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val latestLayouts by rememberUpdatedState(layouts)
     var menuExpanded by remember { mutableStateOf(false) }
+    val canDelete = layouts.size > 1
 
     val lazyRowState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(lazyRowState) { from, to ->
@@ -196,6 +211,17 @@ internal fun EditorLayoutChipsBar(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.macropad_reorder_layouts), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { menuExpanded = false; onReorderLayouts() }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(R.string.macropad_editor_delete_layout),
+                            color = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    enabled = canDelete,
+                    onClick = { menuExpanded = false; onDeleteLayout() }
                 )
             }
         }

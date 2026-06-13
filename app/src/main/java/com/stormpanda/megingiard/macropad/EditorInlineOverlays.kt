@@ -210,9 +210,6 @@ internal fun InlineProfileSettingsOverlay(
     initialPackage: String?,
     accentColor: Color,
     existingNames: List<String>,
-    showDelete: Boolean,
-    canDelete: Boolean,
-    onDelete: () -> Unit,
     onConfirm: (String, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -276,22 +273,6 @@ internal fun InlineProfileSettingsOverlay(
     InlineDialogOverlay(
         title = if (showAppList) stringResource(R.string.profile_settings_app_mapping) else title,
         onDismiss = onDismiss,
-        titleAccessory = {
-            if (!showAppList && showDelete) {
-                IconButton(
-                    onClick = onDelete,
-                    enabled = canDelete,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = stringResource(R.string.macropad_editor_delete_profile),
-                        tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        },
         buttonsArrangement = if (showAppList) Arrangement.Start else Arrangement.End,
         buttonsRow = {
             if (showAppList) {
@@ -546,9 +527,6 @@ internal fun InlineLayoutSettingsOverlay(
     initialButtonColorMirror: ButtonColorStyle,
     accentColor: Color,
     existingNames: List<String>,
-    showDelete: Boolean,
-    canDelete: Boolean,
-    onDelete: () -> Unit,
     onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -564,22 +542,6 @@ internal fun InlineLayoutSettingsOverlay(
     InlineDialogOverlay(
         title = title,
         onDismiss = onDismiss,
-        titleAccessory = {
-            if (showDelete) {
-                IconButton(
-                    onClick = onDelete,
-                    enabled = canDelete,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = stringResource(R.string.macropad_editor_delete_layout),
-                        tint = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        },
         buttonsRow = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
