@@ -120,6 +120,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var showReorderProfilesOverlay by remember { mutableStateOf(false) }
     var showReorderLayoutsOverlay by remember { mutableStateOf(false) }
     var isCanvasLocked            by remember { mutableStateOf(true) }
+    var showCopyLayoutProfileDialog by remember { mutableStateOf(false) }
+    var showCopyButtonLayoutDialog by remember { mutableStateOf(false) }
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
@@ -127,7 +129,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
         editingButtonActive || buttonPendingDelete != null ||
         showNewLayoutDialog || layoutPendingDelete != null ||
         showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm ||
-        showEditLayoutDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay
+        showEditLayoutDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay ||
+        showCopyLayoutProfileDialog || showCopyButtonLayoutDialog
     BackHandler(enabled = anyOverlayVisible) {
         when {
             showMacroListEditor      -> showMacroListEditor = false
@@ -142,6 +145,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
             showEditLayoutDialog     -> showEditLayoutDialog = false
             showReorderProfilesOverlay -> showReorderProfilesOverlay = false
             showReorderLayoutsOverlay -> showReorderLayoutsOverlay = false
+            showCopyLayoutProfileDialog -> showCopyLayoutProfileDialog = false
+            showCopyButtonLayoutDialog -> showCopyButtonLayoutDialog = false
         }
     }
 
@@ -186,6 +191,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     onManageMacros          = { showMacroListEditor = true },
                     onAddButton             = { showAddButton = true },
                     onEditButton            = { btn -> editingButton = btn; editingButtonActive = true },
+                    onCopyToProfile         = { showCopyLayoutProfileDialog = true },
+                    onCopyToLayout          = { btn -> editingButton = btn; showCopyButtonLayoutDialog = true },
                     onDeleteRequested       = { btn -> buttonPendingDelete = btn },
                     onReorderProfiles       = { showReorderProfilesOverlay = true },
                     onReorderLayouts        = { showReorderLayoutsOverlay = true },
@@ -308,9 +315,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialPackage = null,
                 accentColor  = colors.accent,
                 existingNames = profiles.map { it.name },
-                showDelete   = false,
-                canDelete    = false,
-                onDelete     = {},
                 onConfirm    = { name, pkg ->
                     val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name, associatedPackage = pkg)
                     MacroPadState.addProfile(newProfile)
@@ -328,12 +332,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialPackage = profile.associatedPackage,
                 accentColor  = colors.accent,
                 existingNames = profiles.filter { it.id != profile.id }.map { it.name },
-                showDelete   = true,
-                canDelete    = profiles.size > 1,
-                onDelete     = {
-                    showRenameProfileDialog = false
-                    showDeleteProfileConfirm = true
-                },
                 onConfirm    = { name, pkg ->
                     MacroPadState.renameProfile(profile.id, name, pkg)
                     showRenameProfileDialog = false
@@ -367,12 +365,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialButtonColorMirror = curLayout.buttonColorMirror,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                showDelete = true,
-                canDelete = (profile?.layouts?.size ?: 0) > 1,
-                onDelete = {
-                    showEditLayoutDialog = false
-                    layoutPendingDelete = curLayout
-                },
                 onConfirm = { name, enabled, noMirrorStyle, mirrorStyle ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
@@ -445,6 +437,38 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 }
             )
         }
+
+        // Copy layout selection overlay
+        if (showCopyLayoutProfileDialog && activeLayout != null && profile != null) {
+            val curLayout = activeLayout!!
+            InlineProfileSelectionOverlay(
+                title = stringResource(R.string.macropad_editor_copy_profile_select),
+                profiles = profiles,
+                excludeProfileId = profile.id,
+                onSelect = { targetProfileId ->
+                    MacroPadState.copyLayoutToProfile(curLayout, profile.id, targetProfileId)
+                    showCopyLayoutProfileDialog = false
+                },
+                onDismiss = { showCopyLayoutProfileDialog = false }
+            )
+        }
+
+        // Copy button selection overlay
+        if (showCopyButtonLayoutDialog && editingButton != null && profile != null) {
+            val curButton = editingButton!!
+            InlineLayoutSelectionOverlay(
+                title = stringResource(R.string.macropad_editor_copy_layout_select),
+                profiles = profiles,
+                excludeLayoutId = activeLayout?.id,
+                onSelect = { targetProfileId, targetLayoutId ->
+                    MacroPadState.copyButtonToLayout(curButton, profile.id, targetProfileId, targetLayoutId)
+                    showCopyButtonLayoutDialog = false
+                    editingButtonActive = false
+                    editingButton = null
+                },
+                onDismiss = { showCopyButtonLayoutDialog = false }
+            )
+        }
     } // end Box
 }
 
@@ -501,6 +525,8 @@ private fun EditorBody(
     onManageMacros:          () -> Unit,
     onAddButton:             () -> Unit,
     onEditButton:            (PadButton) -> Unit,
+    onCopyToProfile:         () -> Unit,
+    onCopyToLayout:          (PadButton) -> Unit,
     onDeleteRequested:       (PadButton) -> Unit,
     onReorderProfiles:       () -> Unit,
     onReorderLayouts:        () -> Unit,
@@ -549,7 +575,9 @@ private fun EditorBody(
                 activeProfile   = profile,
                 onSelectProfile = onSelectProfile,
                 onEditProfile   = onEditProfile,
+                onDuplicateProfile = { profile?.id?.let { MacroPadState.duplicateProfile(it) } },
                 onReorderProfiles = onReorderProfiles,
+                onDeleteProfile = onDeleteProfile,
                 modifier        = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
@@ -574,7 +602,10 @@ private fun EditorBody(
                 activeLayout   = layout,
                 onSelectLayout = onSelectLayout,
                 onEditLayout   = onEditLayout,
+                onDuplicateLayout = { layout?.id?.let { MacroPadState.duplicateLayout(it) } },
+                onCopyToProfile = onCopyToProfile,
                 onReorderLayouts = onReorderLayouts,
+                onDeleteLayout = { layout?.let { onDeleteLayoutRequested(it) } },
                 modifier       = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
@@ -645,6 +676,8 @@ private fun EditorBody(
                         enableTouch        = profile.enableTouch,
                         isDragging         = isDragging,
                         onEdit             = { onEditButton(btn) },
+                        onDuplicate        = { MacroPadState.duplicateButtonInLayout(btn, layout.id) },
+                        onCopyToLayout     = { onCopyToLayout(btn) },
                         onDelete           = { onDeleteRequested(btn) },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )

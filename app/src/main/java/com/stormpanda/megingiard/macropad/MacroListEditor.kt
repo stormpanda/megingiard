@@ -197,6 +197,10 @@ private fun MacroListView(
 ) {
     val colors = LocalAppColors.current
 
+    val profiles by MacroPadState.profiles.collectAsState()
+    val activeProfile by MacroPadState.activeProfile.collectAsState()
+    var copyingMacro by remember { mutableStateOf<Macro?>(null) }
+
     var deletingMacroId by remember { mutableStateOf<String?>(null) }
 
     val lazyListState   = rememberLazyListState()
@@ -284,6 +288,7 @@ private fun MacroListView(
                         isDragging         = isDragging,
                         onEdit             = { onEditMacro(macro) },
                         onDuplicate        = { onDuplicateMacro(macro) },
+                        onCopy             = { copyingMacro = macro },
                         onDelete           = { deletingMacroId = macro.id },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )
@@ -291,6 +296,21 @@ private fun MacroListView(
                 }
             }
         }
+    }
+
+    // ── Copy macro selection overlay ─────────────────────────────────────────
+    if (copyingMacro != null) {
+        val macro = copyingMacro!!
+        InlineProfileSelectionOverlay(
+            title = stringResource(R.string.macropad_editor_copy_profile_select),
+            profiles = profiles,
+            excludeProfileId = activeProfile?.id,
+            onSelect = { targetProfileId ->
+                MacroPadState.copyMacroToProfile(macro, targetProfileId)
+                copyingMacro = null
+            },
+            onDismiss = { copyingMacro = null }
+        )
     }
 
     // ── Delete macro confirmation ────────────────────────────────────────────
@@ -341,6 +361,7 @@ private fun MacroRow(
     isDragging:         Boolean,
     onEdit:             () -> Unit,
     onDuplicate:        () -> Unit,
+    onCopy:             () -> Unit,
     onDelete:           () -> Unit,
     dragHandleModifier: Modifier,
 ) {
@@ -394,6 +415,10 @@ private fun MacroRow(
                 DropdownMenuItem(
                     text    = { Text(stringResource(R.string.macropad_macro_duplicate), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { menuExpanded = false; onDuplicate() },
+                )
+                DropdownMenuItem(
+                    text    = { Text(stringResource(R.string.macropad_editor_copy_to_profile), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                    onClick = { menuExpanded = false; onCopy() },
                 )
                 DropdownMenuItem(
                     text    = { Text(stringResource(R.string.macropad_macro_delete_title), color = LocalAppColors.current.error, style = MaterialTheme.typography.bodyMedium) },

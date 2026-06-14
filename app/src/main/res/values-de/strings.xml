@@ -653,4 +653,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_restore_option_external">Externe Datei…</string>
     <string name="config_restore_option_external_sub">Wählen Sie eine .mgrd-Sicherungsdatei aus</string>
     <string name="config_restore_option_internal_sub">%1$d Profile • %2$d Layouts • %3$d Makros</string>
+
+    <!-- Copy macros/buttons/layouts to other profiles/layouts -->
+    <string name="macropad_editor_copy_to_profile">In Profil kopieren…</string>
+    <string name="macropad_editor_copy_to_layout">In Layout kopieren…</string>
+    <string name="macropad_editor_copy_profile_select">Zielprofil auswählen</string>
+    <string name="macropad_editor_copy_layout_select">Ziellayout auswählen</string>
+    <string name="macropad_editor_copy_button_duplicate">Taste duplizieren</string>
+    <string name="macropad_duplicate_profile">Profil duplizieren</string>
+    <string name="macropad_duplicate_layout">Layout duplizieren</string>
+    <string name="macropad_copy_no_profiles_available">Keine anderen Profile verfügbar.</string>
+    <string name="macropad_copy_no_layouts_available">Keine anderen Layouts verfügbar.</string>
 </resources>
