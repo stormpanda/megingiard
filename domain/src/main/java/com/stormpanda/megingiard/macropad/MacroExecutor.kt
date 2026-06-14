@@ -70,13 +70,15 @@ object MacroExecutor {
     fun execute(macro: Macro, context: Context? = null) {
         if (macro.steps.isEmpty()) return
         val ctx = context ?: appContext
-        // Cancel any existing execution for this macro before launching a new one.
-        // Do NOT remove from the map here — the finally block handles removal via a job-identity
-        // check, preventing the old job's finally from corrupting the new job's state.
-        runningJobs[macro.id]?.cancel()
-        AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size} loop=${macro.loopEnabled}")
-        val job = scope.launch { executeSuspend(macro, ctx) }
-        runningJobs[macro.id] = job
+        synchronized(runningJobs) {
+            // Cancel any existing execution for this macro before launching a new one.
+            // Do NOT remove from the map here — the finally block handles removal via a job-identity
+            // check, preventing the old job's finally from corrupting the new job's state.
+            runningJobs[macro.id]?.cancel()
+            AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size} loop=${macro.loopEnabled}")
+            val job = scope.launch { executeSuspend(macro, ctx) }
+            runningJobs[macro.id] = job
+        }
     }
 
     /**
@@ -85,8 +87,10 @@ object MacroExecutor {
      */
     fun stop(macroId: String) {
         AppLog.d(TAG, "stop macroId=$macroId")
-        // Do NOT remove from the map — let the finally block do it via job-identity check.
-        runningJobs[macroId]?.cancel()
+        synchronized(runningJobs) {
+            // Do NOT remove from the map — let the finally block do it via job-identity check.
+            runningJobs[macroId]?.cancel()
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -207,8 +211,12 @@ object MacroExecutor {
             // still the one registered for this macro. A rapid execute()→execute() restart
             // replaces the map entry before our finally runs — we must not remove the newer
             // job or clear its running indicator.
-            if (runningJobs.remove(macro.id, thisJob)) {
-                _runningMacroIds.update { it - macro.id }
+            // Synchronize on runningJobs to ensure that the calling thread has finished
+            // assigning the job to the map in execute() before we attempt to remove it.
+            synchronized(runningJobs) {
+                if (runningJobs.remove(macro.id, thisJob)) {
+                    _runningMacroIds.update { it - macro.id }
+                }
             }
         }
     }
