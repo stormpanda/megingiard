@@ -39,16 +39,16 @@ Given its hardware-specific approach and advanced features, this project is exte
 - **Direct Hardware Pipe:** Utilizes Android's `MediaProjection` coupled with native `VirtualDisplay` directly into a `SurfaceView` to bypass all software composition and copy steps.
 - **Gallery-Style Pan & Zoom (1× – 10×):** Smart and natural multi-touch gestures with physical boundaries (_Hard Edges_ to prevent vanishing windows) and automatic snap-back when zooming out.
 - **Resource-Efficient Freeze Frame:** Physically decouples the video producer from the renderer to freeze the current frame in the hardware buffer. Zoom and pan the frozen reference frame with zero extra CPU or memory overhead.
-- **Follow Touch Mode:** Real-time touch tracking on the primary screen. The mirror viewport automatically centers on the spot last touched on the primary screen at your current zoom level, with optional movement smoothing to keep target action in focus.
+- **Follow Touch Mode:** Real-time touch tracking on the primary screen. The mirror viewport automatically centers on the spot last touched on the primary screen at your current zoom level, with optional movement smoothing. Can be configured to temporarily disable during macro execution to prevent movement conflicts.
 - **Customizable Controls:** Fully integrate mirror controls (Start / Stop / Freeze / Viewport reset) directly as buttons onto your custom MacroPad layouts, or use the always-present controls in the Pill Menu overlay.
 
 ### 2. MacroPad Central Mode
 
 - **Configurable Button Pad:** Create named profiles with multiple custom layouts, featuring free-placement buttons of varying size, shape, and actions.
-- **Rich Action Mapping:** Bind buttons to standard keyboard keys, gamepad buttons, mouse buttons, scroll wheels, or trackpoints (relative mouse movement).
+- **Rich Action Mapping:** Bind buttons to standard keyboard keys, gamepad buttons, mouse buttons, scroll wheels, or trackpoints (relative mouse movement/virtual touch).
 - **Robust Layout Editor:** Drag-to-place button layout canvas with rectangular or radial snap grids, and an integrated grid picker backed by the Material Symbols library with over 4,000 icons.
-- **App-Aware Profile Auto-Switching:** Bind profiles to specific Android applications. When a mapped app is launched on the primary screen, Megingiard instantly switches to its associated MacroPad profile on the secondary screen. This feature uses a dedicated, highly efficient **Accessibility Service** that must be activated first in Android settings.
-- **Visual Macro Editor & Recorder:** Hand-craft or record and edit timed sequences of key, mouse, and gamepad events. Record macros from on-screen taps or, in Privileged Mode, directly from your physical controller. Includes **timing randomizers** (customizable random offsets added to step start times and durations) to simulate natural, human-like variation.
+- **App-Aware Profile Auto-Switching:** Bind profiles to specific Android applications. When a mapped app is launched on the primary screen, Megingiard instantly switches to its associated MacroPad profile on the secondary screen. This event-driven feature uses a dedicated, highly efficient **Accessibility Service** (with system UI exclusions to prevent focus loops) and offers a live connection status dot in settings.
+- **Visual Macro Editor & Recorder:** Hand-craft or record and edit timed sequences of key, mouse, and gamepad events. Record macros from on-screen taps or, in Privileged Mode, directly from your physical controller. Includes **timing & duration randomizers** (dynamic random offsets between 10ms and 100ms added per-step) to simulate natural, human-like variation.
 
 ### 3. Virtual Keyboard
 
