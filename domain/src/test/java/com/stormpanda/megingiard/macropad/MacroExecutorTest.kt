@@ -36,6 +36,15 @@ class MacroExecutorTest {
         // Execute macro
         MacroExecutor.execute(macro)
 
+        // Ensure it has started running
+        val started = withTimeoutOrNull(500) {
+            while (!MacroExecutor.isRunning(macro.id)) {
+                delay(5)
+            }
+            true
+        }
+        assertEquals("Macro should start running", true, started)
+
         // Wait/poll for the macro to finish executing
         val success = withTimeoutOrNull(1000) {
             while (MacroExecutor.isRunning(macro.id)) {
