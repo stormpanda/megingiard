@@ -234,8 +234,17 @@ internal fun PadSurface(
                                 }
 
                                 event.changes.forEach { change ->
-                                    if (change.isConsumed) return@forEach
                                     val id = change.id.value
+
+                                    // Always release pointers when fingers are lifted or touch is cancelled,
+                                    // even if another component has consumed the event.
+                                    if (!change.pressed && change.previousPressed) {
+                                        engine.onRelease(id, layout.buttons, profile)
+                                        change.consume()
+                                        return@forEach
+                                    }
+
+                                    if (change.isConsumed) return@forEach
 
                                     when (event.type) {
                                         PointerEventType.Press -> {
@@ -259,13 +268,6 @@ internal fun PadSurface(
                                         PointerEventType.Move -> {
                                             val delta = change.positionChange()
                                             engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, layout.buttons, profile)
-                                            change.consume()
-                                        }
-
-                                        PointerEventType.Release -> {
-                                            if (!change.pressed) {
-                                                engine.onRelease(id, layout.buttons, profile)
-                                            }
                                             change.consume()
                                         }
 
