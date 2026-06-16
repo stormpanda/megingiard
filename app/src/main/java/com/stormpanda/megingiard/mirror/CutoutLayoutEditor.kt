@@ -61,6 +61,8 @@ fun CutoutLayoutEditor(
     val isMultiCutoutEditMode by AppStateManager.isMultiCutoutEditMode.collectAsState()
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val density = LocalDensity.current
+    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
+    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
 
     val layout = activeLayout ?: return
 
@@ -69,9 +71,21 @@ fun CutoutLayoutEditor(
             .fillMaxSize()
             .background(Color.Transparent)
     ) {
-        val screenW = constraints.maxWidth.toFloat()
-        val screenH = constraints.maxHeight.toFloat()
-        if (screenW <= 0f || screenH <= 0f) return@BoxWithConstraints
+        val containerW = constraints.maxWidth.toFloat()
+        val containerH = constraints.maxHeight.toFloat()
+        if (containerW <= 0f || containerH <= 0f) return@BoxWithConstraints
+
+        val screenW = if (surfaceWidth > 0f) surfaceWidth else containerW
+        val screenH = if (surfaceHeight > 0f) surfaceHeight else containerH
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(
+                    width = with(density) { screenW.toDp() },
+                    height = with(density) { screenH.toDp() }
+                )
+        ) {
 
         if (!isMultiCutoutEditMode) {
             // ── Single Viewport Edit Mode ──────────────────────────────────────────
@@ -328,6 +342,7 @@ fun CutoutLayoutEditor(
                 }
             }
         }
+    }
 
         // ── Floating Toolbar Card ───────────────────────────────────────────────
         Surface(

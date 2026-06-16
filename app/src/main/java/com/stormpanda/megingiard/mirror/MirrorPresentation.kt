@@ -723,15 +723,19 @@ class MultiCutoutContainer(
             try {
                 canvas.translate(dx, dy)
                 
-                if (cutouts.size == 1 && (viewportScale != 1f || viewportOffsetX != 0f || viewportOffsetY != 0f)) {
+                if (cutouts.size == 1 && !AppStateManager.isMultiCutoutEditMode.value) {
                     canvas.translate(viewportOffsetX, viewportOffsetY)
                     canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
-                }
 
-                val scaleX = dw / sw
-                val scaleY = dh / sh
-                canvas.translate(-sx * scaleX, -sy * scaleY)
-                canvas.scale(scaleX, scaleY)
+                    val scaleX = dw / srcWidth
+                    val scaleY = dh / srcHeight
+                    canvas.scale(scaleX, scaleY)
+                } else {
+                    val scaleX = dw / sw
+                    val scaleY = dh / sh
+                    canvas.translate(-sx * scaleX, -sy * scaleY)
+                    canvas.scale(scaleX, scaleY)
+                }
 
                 if (isFrozen && frozenBitmap != null) {
                     canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
