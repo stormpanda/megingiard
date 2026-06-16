@@ -14,7 +14,9 @@ import android.os.Looper
 import android.view.Display
 import android.view.Gravity
 import android.view.PixelCopy
+import android.graphics.Canvas
 import android.graphics.Matrix
+import android.graphics.Paint
 import android.graphics.SurfaceTexture
 import android.view.Surface
 import android.view.TextureView
@@ -96,17 +98,12 @@ class MirrorPresentation(
     private val srcWidth: Int, 
     private val srcHeight: Int
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
-    var onCutoutSurfaceReady: ((String, Surface) -> Unit)? = null
-    var onCutoutSurfaceDestroyed: ((String) -> Unit)? = null
+    var onSurfaceReady: ((Surface) -> Unit)? = null
+    var onSurfaceDestroyed: (() -> Unit)? = null
     
-    private val cutoutViews = mutableMapOf<String, CutoutViewHolder>()
-    private var mirrorContainerView: FrameLayout? = null
-
-    private class CutoutViewHolder(
-        val container: FrameLayout,
-        val textureView: TextureView,
-        var surface: Surface? = null
-    )
+    private var masterTextureView: TextureView? = null
+    private var masterSurface: Surface? = null
+    private var multiCutoutContainer: MultiCutoutContainer? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // OnBackPressedDispatcher provided to the Compose tree. Needs to be a class
@@ -185,22 +182,41 @@ class MirrorPresentation(
             setBackgroundColor(Color.BLACK)
         }
 
-        val mirrorContainer = FrameLayout(context).apply {
+        val mcc = MultiCutoutContainer(context, srcWidth, srcHeight).apply {
             layoutParams = FrameLayout.LayoutParams(finalWidth, finalHeight, Gravity.CENTER)
-            clipChildren = true
         }
-        mirrorContainerView = mirrorContainer
-        container.addView(mirrorContainer)
+        multiCutoutContainer = mcc
+        container.addView(mcc)
+
+        val tv = TextureView(context)
+        masterTextureView = tv
+        mcc.addView(tv)
+
+        tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
+                st.setDefaultBufferSize(srcWidth, srcHeight)
+                val surface = Surface(st)
+                masterSurface = surface
+                AppLog.d(TAG, "master TextureView surface available")
+                onSurfaceReady?.invoke(surface)
+            }
+            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) {}
+            override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                AppLog.d(TAG, "master TextureView surface destroyed")
+                onSurfaceDestroyed?.invoke()
+                masterSurface?.release()
+                masterSurface = null
+                return true
+            }
+            override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
+        }
 
         scope.launch {
             ScreenCaptureManager.cutouts.collect { cutouts ->
-                updateCutoutViews(mirrorContainer, cutouts)
+                mcc.cutouts = cutouts
             }
         }
 
-        // Observe viewport scale/offset for live zoom/pan in single-cutout mode.
-        // The TextureView crop transform combines the cutout's src region with
-        // the viewport controller's interactive zoom/pan.
         scope.launch {
             combine(
                 ScreenCaptureManager.scale,
@@ -208,7 +224,9 @@ class MirrorPresentation(
                 ScreenCaptureManager.offsetY,
             ) { s, ox, oy -> Triple(s, ox, oy) }
             .collect { (scale, offsetX, offsetY) ->
-                applyCutoutTransforms(scale, offsetX, offsetY)
+                mcc.viewportScale = scale
+                mcc.viewportOffsetX = offsetX
+                mcc.viewportOffsetY = offsetY
             }
         }
 
@@ -434,28 +452,7 @@ class MirrorPresentation(
                                     }
                                 },
                         ) {
-                            // Layer 1: Frozen bitmap — rendered with the same viewport
-                            // transform (graphicsLayer) that was applied to the SurfaceView,
-                            // so it looks identical to what was visible before freeze.
-                            // PixelCopy captures without View transforms, so we re-apply
-                            // scale/offsetX/offsetY here. Collecting via StateFlow also
-                            // makes it reactive during viewport-edit pan/zoom.
-                            val bitmap = frozenBitmap
-                            if (isFrozen && bitmap != null) {
-                                Image(
-                                    bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .graphicsLayer(
-                                            scaleX = scale,
-                                            scaleY = scale,
-                                            translationX = offsetX,
-                                            translationY = offsetY,
-                                        ),
-                                    contentScale = ContentScale.Fit,
-                                )
-                            }
+
 
                             // Layer 2: BackgroundMacroPadOverlay — always rendered when active
                             // so IdlePill remains visible in all modes. Internally hides
@@ -595,22 +592,23 @@ class MirrorPresentation(
         }
         scope.launch {
             ScreenCaptureManager.isFrozen.collect { frozen ->
-                val firstHolder = cutoutViews.values.firstOrNull()
-                val firstTv = firstHolder?.textureView
-                if (frozen && firstTv != null && firstTv.width > 0 && firstTv.height > 0) {
+                val tv = masterTextureView
+                if (frozen && tv != null && tv.width > 0 && tv.height > 0) {
                     try {
-                        val bitmap = firstTv.getBitmap()
+                        val bitmap = tv.getBitmap()
                         if (bitmap != null) {
                             ScreenCaptureManager.setFrozenBitmap(bitmap)
-                            mirrorContainerView?.visibility = View.INVISIBLE
+                            multiCutoutContainer?.isFrozen = true
+                            multiCutoutContainer?.frozenBitmap = bitmap
                         } else {
-                            AppLog.e(TAG, "TextureView.getBitmap() returned null")
+                            AppLog.e(TAG, "masterTextureView.getBitmap() returned null")
                         }
                     } catch (e: Exception) {
-                        AppLog.e(TAG, "TextureView.getBitmap() exception", e)
+                        AppLog.e(TAG, "masterTextureView.getBitmap() exception", e)
                     }
                 } else if (!frozen) {
-                    mirrorContainerView?.visibility = View.VISIBLE
+                    multiCutoutContainer?.isFrozen = false
+                    multiCutoutContainer?.frozenBitmap = null
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }
@@ -627,137 +625,136 @@ class MirrorPresentation(
         }
     }
 
-    private fun updateCutoutViews(parent: FrameLayout, cutouts: List<ScreenCutout>) {
-        val currentIds = cutouts.map { it.id }.toSet()
-        
-        // 1. Remove views for deleted cutouts
-        val removedIds = cutoutViews.keys.filter { it !in currentIds }
-        for (id in removedIds) {
-            val holder = cutoutViews.remove(id)
-            if (holder != null) {
-                parent.removeView(holder.container)
-                holder.surface?.release()
-                holder.surface = null
-                onCutoutSurfaceDestroyed?.invoke(id)
-            }
-        }
-        
-        // 2. Add or update views for active cutouts
-        val parentW = parent.width.toFloat()
-        val parentH = parent.height.toFloat()
-        if (parentW <= 0f || parentH <= 0f) {
-            parent.post { updateCutoutViews(parent, cutouts) }
-            return
-        }
-
-        for (cutout in cutouts) {
-            val holder = cutoutViews[cutout.id] ?: run {
-                val clipContainer = FrameLayout(context).apply {
-                    clipChildren = true
-                    clipToPadding = true
-                }
-                val tv = TextureView(context)
-                clipContainer.addView(
-                    tv,
-                    FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                )
-                parent.addView(clipContainer)
-
-                val cutoutId = cutout.id
-                tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                    override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
-                        st.setDefaultBufferSize(srcWidth, srcHeight)
-                        val surface = Surface(st)
-                        val viewHolder = cutoutViews[cutoutId]
-                        if (viewHolder != null) {
-                            viewHolder.surface = surface
-                        }
-                        AppLog.d(TAG, "TextureView surface available for cutout=$cutoutId")
-                        onCutoutSurfaceReady?.invoke(cutoutId, surface)
-                    }
-                    override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) {}
-                    override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                        AppLog.d(TAG, "TextureView surface destroyed for cutout=$cutoutId")
-                        onCutoutSurfaceDestroyed?.invoke(cutoutId)
-                        val viewHolder = cutoutViews[cutoutId]
-                        viewHolder?.surface?.release()
-                        viewHolder?.surface = null
-                        return true
-                    }
-                    override fun onSurfaceTextureUpdated(st: SurfaceTexture) {}
-                }
-
-                val newHolder = CutoutViewHolder(clipContainer, tv)
-                cutoutViews[cutout.id] = newHolder
-                newHolder
-            }
-            
-            val dw = (cutout.destWidth * parentW).toInt()
-            val dh = (cutout.destHeight * parentH).toInt()
-            val dx = (cutout.destX * parentW).toInt()
-            val dy = (cutout.destY * parentH).toInt()
-            
-            val lp = FrameLayout.LayoutParams(dw, dh).apply {
-                leftMargin = dx
-                topMargin = dy
-                gravity = Gravity.TOP or Gravity.START
-            }
-            holder.container.layoutParams = lp
-            holder.container.alpha = cutout.opacity
-        }
-
-        // Apply crop transforms after view creation/update
-        applyCutoutTransforms(
-            ScreenCaptureManager.scale.value,
-            ScreenCaptureManager.offsetX.value,
-            ScreenCaptureManager.offsetY.value
-        )
-    }
-
-    /**
-     * Applies the crop transform matrix to each cutout's TextureView.
-     *
-     * The matrix maps the source crop region of the full-resolution buffer
-     * to fill the TextureView's display area. For single-cutout mode,
-     * the viewport controller's interactive zoom/pan is also applied.
-     */
-    private fun applyCutoutTransforms(viewportScale: Float, viewportOffsetX: Float, viewportOffsetY: Float) {
-        val cutouts = ScreenCaptureManager.cutouts.value
-        for (cutout in cutouts) {
-            val holder = cutoutViews[cutout.id] ?: continue
-            val tv = holder.textureView
-            val dw = tv.width.toFloat()
-            val dh = tv.height.toFloat()
-            if (dw <= 0f || dh <= 0f) continue
-
-            val matrix = Matrix()
-            // Map the crop region to fill the TextureView.
-            // Default rendering stretches the full buffer [0, srcWidth]x[0, srcHeight]
-            // into [0, dw]x[0, dh]. The matrix zooms in and translates so only
-            // the crop region [srcX, srcY, srcWidth_crop, srcHeight_crop] is visible.
-            val cropScaleX = 1f / cutout.srcWidth
-            val cropScaleY = 1f / cutout.srcHeight
-            matrix.setScale(cropScaleX, cropScaleY)
-            matrix.postTranslate(
-                -(cutout.srcX / cutout.srcWidth) * dw,
-                -(cutout.srcY / cutout.srcHeight) * dh
-            )
-
-            // In single-cutout mode, additionally apply the viewport controller's
-            // interactive zoom/pan on top of the cutout's base crop.
-            if (cutouts.size == 1 && (viewportScale != 1f || viewportOffsetX != 0f || viewportOffsetY != 0f)) {
-                matrix.postScale(viewportScale, viewportScale, dw / 2f, dh / 2f)
-                matrix.postTranslate(viewportOffsetX, viewportOffsetY)
-            }
-
-            tv.setTransform(matrix)
-        }
-    }
-
-    fun getSurface(): Surface? = cutoutViews.values.firstOrNull()?.surface
-    fun getSurfaces(): Map<String, Surface> = cutoutViews.mapValues { it.value.surface }.filterValues { it != null }.mapValues { it.value!! }
+    fun getSurface(): Surface? = masterSurface
 }
+
+class MultiCutoutContainer(
+    context: Context,
+    private val srcWidth: Int,
+    private val srcHeight: Int
+) : FrameLayout(context) {
+    var cutouts: List<ScreenCutout> = emptyList()
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var isFrozen: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var frozenBitmap: Bitmap? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var viewportScale: Float = 1f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var viewportOffsetX: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var viewportOffsetY: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    private val cutoutPaint = Paint()
+
+    init {
+        clipChildren = true
+        setWillNotDraw(false)
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        if (childCount > 0) {
+            val child = getChildAt(0)
+            child.layout(0, 0, srcWidth, srcHeight)
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        setMeasuredDimension(
+            resolveSize(suggestedMinimumWidth, widthMeasureSpec),
+            resolveSize(suggestedMinimumHeight, heightMeasureSpec)
+        )
+        if (childCount > 0) {
+            val child = getChildAt(0)
+            child.measure(
+                MeasureSpec.makeMeasureSpec(srcWidth, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(srcHeight, MeasureSpec.EXACTLY)
+            )
+        }
+    }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        val masterView = if (childCount > 0) getChildAt(0) else null
+        if (masterView == null && (!isFrozen || frozenBitmap == null)) return
+
+        val parentW = width.toFloat()
+        val parentH = height.toFloat()
+        if (parentW <= 0f || parentH <= 0f) return
+
+        val drawingTime = drawingTime
+
+        for (cutout in cutouts) {
+            val dw = cutout.destWidth * parentW
+            val dh = cutout.destHeight * parentH
+            val dx = cutout.destX * parentW
+            val dy = cutout.destY * parentH
+            
+            val sw = cutout.srcWidth * srcWidth
+            val sh = cutout.srcHeight * srcHeight
+            val sx = cutout.srcX * srcWidth
+            val sy = cutout.srcY * srcHeight
+
+            if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
+
+            val saveCount = if (cutout.opacity < 1f) {
+                cutoutPaint.alpha = (cutout.opacity * 255).toInt()
+                canvas.saveLayer(dx, dy, dx + dw, dy + dh, cutoutPaint)
+            } else {
+                canvas.save()
+                canvas.clipRect(dx, dy, dx + dw, dy + dh)
+                0
+            }
+
+            try {
+                canvas.translate(dx, dy)
+                
+                if (cutouts.size == 1 && (viewportScale != 1f || viewportOffsetX != 0f || viewportOffsetY != 0f)) {
+                    canvas.translate(viewportOffsetX, viewportOffsetY)
+                    canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+                }
+
+                val scaleX = dw / sw
+                val scaleY = dh / sh
+                canvas.translate(-sx * scaleX, -sy * scaleY)
+                canvas.scale(scaleX, scaleY)
+
+                if (isFrozen && frozenBitmap != null) {
+                    canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
+                } else if (masterView != null) {
+                    drawChild(canvas, masterView, drawingTime)
+                }
+            } finally {
+                if (cutout.opacity < 1f) {
+                    canvas.restoreToCount(saveCount)
+                } else {
+                    canvas.restore()
+            }
+        }
+    }
+}
+}
+
+
+
+
+
 

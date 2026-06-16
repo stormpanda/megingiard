@@ -100,7 +100,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M11: Multi-Cutout Screen Mirroring
 
 - Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen instead of just a single viewport.
-- Multi-cutout mode is restricted to Privileged Mode. In standard MediaProjection mode, only a single cutout (the first cutout in the layout) is mirrored live, and the layout editor prevents adding additional cutouts, displaying a warning message.
+- Multi-cutout mode is supported in both standard MediaProjection and Privileged modes. Both modes utilize a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
 - The multi-cutout mode is activated via a toggle button on the Viewport Edit overlay on the secondary display.
 - Defining source crop boundaries is done via the `CropSelectorOverlay` hosted in `CropSelectorActivity` on the primary display.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.

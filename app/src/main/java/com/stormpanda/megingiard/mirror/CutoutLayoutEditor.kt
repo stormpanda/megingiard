@@ -59,7 +59,6 @@ fun CutoutLayoutEditor(
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val isMultiCutoutEditMode by AppStateManager.isMultiCutoutEditMode.collectAsState()
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
-    val isPrivilegedMirror by ScreenCaptureManager.isPrivilegedMirror.collectAsState()
     val density = LocalDensity.current
 
     val layout = activeLayout ?: return
@@ -296,14 +295,7 @@ fun CutoutLayoutEditor(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (!isPrivilegedMirror) {
-                    Text(
-                        text = stringResource(R.string.mirror_editor_multi_cutout_privileged_only),
-                        color = colors.error,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                }
+
 
                 if (!isMultiCutoutEditMode) {
                     // Mode Toggle Button (Single -> Multi)
@@ -321,7 +313,7 @@ fun CutoutLayoutEditor(
                     ToolbarButton(
                         text = stringResource(R.string.mirror_editor_add_cutout),
                         color = colors.accent,
-                        enabled = isPrivilegedMirror,
+                        enabled = true,
                         onClick = {
                             val newId = UUID.randomUUID().toString()
                             var foundX = 0f
