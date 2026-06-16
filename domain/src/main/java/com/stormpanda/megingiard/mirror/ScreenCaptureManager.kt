@@ -57,6 +57,9 @@ object ScreenCaptureManager {
     private val _isFollowActive = MutableStateFlow(false)
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
 
+    private val _isPrivilegedMirror = MutableStateFlow(false)
+    val isPrivilegedMirror: StateFlow<Boolean> = _isPrivilegedMirror.asStateFlow()
+
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     init {
@@ -283,6 +286,11 @@ object ScreenCaptureManager {
                 delay(10)
             }
         }
+    }
+
+    fun setPrivilegedMirror(active: Boolean) {
+        AppLog.d(TAG, "setPrivilegedMirror($active)")
+        _isPrivilegedMirror.value = active
     }
 
     /** Resets all transient mirror session state (lock, projection, freeze, follow). */

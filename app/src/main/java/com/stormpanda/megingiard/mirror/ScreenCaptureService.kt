@@ -170,8 +170,9 @@ class ScreenCaptureService : Service() {
                             mirrorPresentation?.show()
                         }
                         val surfaces = mirrorPresentation?.getSurfaces() ?: emptyMap()
+                        val firstCutoutId = ScreenCaptureManager.cutouts.value.firstOrNull()?.id
                         surfaces.forEach { (id, surface) ->
-                            if (surface.isValid && !activeVirtualDisplays.containsKey(id)) {
+                            if (id == firstCutoutId && surface.isValid && !activeVirtualDisplays.containsKey(id)) {
                                 val dpi = resources.displayMetrics.densityDpi
                                 try {
                                     val vd = mediaProjection?.createVirtualDisplay(
@@ -222,6 +223,7 @@ class ScreenCaptureService : Service() {
             }
 
             isPrivilegedMode = false
+            ScreenCaptureManager.setPrivilegedMirror(false)
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
@@ -266,27 +268,32 @@ class ScreenCaptureService : Service() {
 
             presentation.onCutoutSurfaceReady = { id, surface ->
                 activeCutoutSurfaces[id] = surface
-                val isFrozen = ScreenCaptureManager.isFrozen.value
-                val activeSurface = if (isFrozen) null else surface
-                val existingVd = activeVirtualDisplays[id]
-                if (existingVd != null) {
-                    existingVd.setSurface(activeSurface)
-                    AppLog.d(TAG, "VirtualDisplay surface reattached for cutout=$id after show()")
-                } else {
-                    try {
-                        val vd = mediaProjection?.createVirtualDisplay(
-                            "ScreenCapture-$id",
-                            srcWidth, srcHeight, dpi,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                            activeSurface, null, null
-                        )
-                        if (vd != null) {
-                            activeVirtualDisplays[id] = vd
+                val firstCutoutId = ScreenCaptureManager.cutouts.value.firstOrNull()?.id
+                if (id == firstCutoutId) {
+                    val isFrozen = ScreenCaptureManager.isFrozen.value
+                    val activeSurface = if (isFrozen) null else surface
+                    val existingVd = activeVirtualDisplays[id]
+                    if (existingVd != null) {
+                        existingVd.setSurface(activeSurface)
+                        AppLog.d(TAG, "VirtualDisplay surface reattached for cutout=$id after show()")
+                    } else {
+                        try {
+                            val vd = mediaProjection?.createVirtualDisplay(
+                                "ScreenCapture-$id",
+                                srcWidth, srcHeight, dpi,
+                                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                                activeSurface, null, null
+                            )
+                            if (vd != null) {
+                                activeVirtualDisplays[id] = vd
+                            }
+                            AppLog.i(TAG, "VirtualDisplay created for cutout=$id ${srcWidth}x${srcHeight} dpi=$dpi")
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Exception creating VirtualDisplay for cutout=$id", e)
                         }
-                        AppLog.i(TAG, "VirtualDisplay created for cutout=$id ${srcWidth}x${srcHeight} dpi=$dpi")
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Exception creating VirtualDisplay for cutout=$id", e)
                     }
+                } else {
+                    AppLog.w(TAG, "Ignoring surface ready for cutout=$id in MediaProjection mode (non-privileged) as only one active mirror is allowed.")
                 }
             }
 
@@ -351,6 +358,7 @@ class ScreenCaptureService : Service() {
             return START_NOT_STICKY
         }
         isPrivilegedMode = true
+        ScreenCaptureManager.setPrivilegedMirror(true)
         startForegroundNotificationConnectedDevice()
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -494,6 +502,7 @@ class ScreenCaptureService : Service() {
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.
+        ScreenCaptureManager.setPrivilegedMirror(false)
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         if (!consentFallbackInFlight) AppStateManager.setPromptInFlight(false)
         activeVirtualDisplays.values.forEach { it.release() }

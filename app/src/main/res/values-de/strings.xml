@@ -677,4 +677,5 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_single_mode">Einzelner Viewport</string>
     <string name="mirror_editor_multi_mode">Mehrere Ausschnitte</string>
     <string name="mirror_editor_done">Fertig</string>
+    <string name="mirror_editor_multi_cutout_privileged_only">Mehrere Ausschnitte erfordern den Privilegierten Modus</string>
 </resources>

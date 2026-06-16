@@ -22,7 +22,7 @@ Secondary Display (non-default displayId) — bottom screen, Megingiard UI
   ├─ MainActivity → MainAppScreen (Jetpack Compose)
   │    └─ MacroPad-centric main content
   └─ MirrorPresentation (android.app.Presentation — ambient mirroring modes)
-       ├─ SurfaceView: hardware VirtualDisplay output (mirrors primary display)
+       ├─ TextureView / SurfaceView: hardware VirtualDisplay output (mirrors primary display)
        └─ ComposeView → BackgroundMacroPadOverlay / MirrorScreen
 ```
 
@@ -76,7 +76,7 @@ Release builds enable R8 minification and resource shrinking. This is not the pr
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `android.app.Presentation` for secondary display         | Only reliable Android API for anchoring an independent window to a specific physical display                                                                                                              | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline)                  |
 | `MediaProjection` + `VirtualDisplay` → `SurfaceView`     | Hardware buffer routing bypasses CPU/DRM; zero-copy rendering via Hardware Composer                                                                                                                       | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-capture-pipeline)                  |
-| Privileged mirror direct-to-Surface transport            | Privileged mirror renders the shell-owned virtual display directly into the app's `MirrorPresentation.SurfaceView`; if direct setup fails, the app falls back to the normal MediaProjection consent path. | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-privileged-capture-pipeline-fr-m9) |
+| Privileged mirror direct-to-Surface transport            | Privileged mirror renders the shell-owned virtual display directly into the app's `MirrorPresentation` cutout surfaces; if direct setup fails, the app falls back to the normal MediaProjection consent path. | [mirror/FEATURE.md](features/mirror/FEATURE.md#architecture-privileged-capture-pipeline-fr-m9) |
 | `MirrorPresentationLifecycleOwner` (synthetic)           | Bridges Jetpack Compose lifecycle and ViewModel requirements into a service-backed `Presentation` window                                                                                                  | [mirror/FEATURE.md](features/mirror/FEATURE.md#synthetic-lifecycle-owner)                      |
 | `show()` / `hide()` for mode switching (not `dismiss()`) | Avoids destroying the capture session on mode switch; `dismiss()` only in `onDestroy()`                                                                                                                   | [mirror/FEATURE.md](features/mirror/FEATURE.md#mode-switching-show--hide-vs-dismiss)           |
 | Native binary for touch injection                        | Direct `/dev/input/event6` writes: < 1 ms latency vs. ~7 ms for Binder IPC                                                                                                                                | [touchpad/FEATURE.md](features/touchpad/FEATURE.md#why-a-native-binary)                        |

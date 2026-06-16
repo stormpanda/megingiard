@@ -100,8 +100,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M11: Multi-Cutout Screen Mirroring
 
 - Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen instead of just a single viewport.
+- Multi-cutout mode is restricted to Privileged Mode. In standard MediaProjection mode, only a single cutout (the first cutout in the layout) is mirrored live, and the layout editor prevents adding additional cutouts, displaying a warning message.
 - The multi-cutout mode is activated via a toggle button on the Viewport Edit overlay on the secondary display.
-- Defining source crop boundaries is done via a Crop Selector overlay on the primary display.
+- Defining source crop boundaries is done via the `CropSelectorOverlay` hosted in `CropSelectorActivity` on the primary display.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
 - Legacy layouts containing old single-viewport properties (`mirrorSavedScale`, `mirrorSavedOffsetX`, `mirrorSavedOffsetY`) MUST be automatically migrated to a single full-screen cutout on profile load or surface size initialization.
 
@@ -431,7 +432,8 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 | `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
 | `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `MirrorScreen.kt`                     | Compose UI: gesture handling, control buttons, touch projection                                            |
-| `CropSelectorOverlay.kt`              | Primary display crop selector overlay Activity                                                             |
+| `CropSelectorOverlay.kt`              | Primary display crop selector overlay Composable UI                                                        |
+| `CropSelectorActivity.kt`             | Translucent Activity hosting CropSelectorOverlay on the primary display                                    |
 | `CutoutLayoutEditor.kt`               | Secondary display cutout placement arrange editor                                                          |
 | `ScreenCutout.kt`                     | Serializable data model representing a crop/placement pair                                                 |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |

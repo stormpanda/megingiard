@@ -41,6 +41,7 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
+import com.stormpanda.megingiard.mirror.CropSelectorActivity
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.MirrorStrategy
 import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
@@ -265,6 +266,21 @@ class MainActivity : ComponentActivity() {
                     val filename = LogReportManager.buildReportFilename(timestamp)
                     AppStateManager.setFilePickerOpen(true)
                     createLogDocumentLauncher.launch(filename)
+                }
+            }
+        }
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                AppStateManager.activeCropCutoutId.collect { id ->
+                    if (id != null) {
+                        AppLog.i(TAG, "activeCropCutoutId=$id -> launching CropSelectorActivity on primary display")
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        val intent = Intent(this@MainActivity, CropSelectorActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                        }
+                        startActivity(intent, options.toBundle())
+                    }
                 }
             }
         }
