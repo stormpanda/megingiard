@@ -470,10 +470,6 @@ class MirrorPresentation(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(
-                                            top = if (overlayAtBottom) 0.dp else MP_EDGE_ZONE,
-                                            bottom = if (overlayAtBottom) MP_EDGE_ZONE else 0.dp,
-                                        )
                                 ) {
                                     CutoutLayoutEditor(overlayAtBottom = overlayAtBottom)
                                 }

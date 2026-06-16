@@ -50,6 +50,7 @@ private val HANDLE_SIZE = 20.dp
 private val BORDER_WIDTH = 2.dp
 private val TOOLBAR_SHADOW = 6.dp
 private val TOOLBAR_CORNER = 8.dp
+private val MP_EDGE_ZONE = 40.dp
 
 @Composable
 fun CutoutLayoutEditor(
@@ -118,30 +119,45 @@ fun CutoutLayoutEditor(
                             AppStateManager.setSelectedCutoutId(cutout.id)
                         }
                         .pointerInput(cutout.id) {
-                            detectDragGestures { change, dragAmount ->
-                                change.consume()
-                                val curCutout = currentCutoutState.value
-                                val curLayout = currentLayoutState.value
-                                AppStateManager.setSelectedCutoutId(curCutout.id)
-                                val targetX = curCutout.destX + dragAmount.x / screenW
-                                val targetY = curCutout.destY + dragAmount.y / screenH
-                                
-                                val (clampedX, clampedY) = clampCutoutDrag(
-                                    cutoutId = curCutout.id,
-                                    originalX = curCutout.destX,
-                                    originalY = curCutout.destY,
-                                    targetX = targetX,
-                                    targetY = targetY,
-                                    width = curCutout.destWidth,
-                                    height = curCutout.destHeight,
-                                    allCutouts = curLayout.mirrorCutouts
-                                )
-                                
-                                val updated = curLayout.mirrorCutouts.map {
-                                    if (it.id == curCutout.id) it.copy(destX = clampedX, destY = clampedY) else it
+                            var dragStartX = 0f
+                            var dragStartY = 0f
+                            var accumulatedX = 0f
+                            var accumulatedY = 0f
+                            detectDragGestures(
+                                onDragStart = {
+                                    val curCutout = currentCutoutState.value
+                                    dragStartX = curCutout.destX
+                                    dragStartY = curCutout.destY
+                                    accumulatedX = 0f
+                                    accumulatedY = 0f
+                                    AppStateManager.setSelectedCutoutId(curCutout.id)
+                                },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val curLayout = currentLayoutState.value
+                                    val curCutout = currentCutoutState.value
+                                    accumulatedX += dragAmount.x
+                                    accumulatedY += dragAmount.y
+                                    val targetX = dragStartX + accumulatedX / screenW
+                                    val targetY = dragStartY + accumulatedY / screenH
+
+                                    val (clampedX, clampedY) = clampCutoutDrag(
+                                        cutoutId = curCutout.id,
+                                        originalX = dragStartX,
+                                        originalY = dragStartY,
+                                        targetX = targetX,
+                                        targetY = targetY,
+                                        width = curCutout.destWidth,
+                                        height = curCutout.destHeight,
+                                        allCutouts = curLayout.mirrorCutouts
+                                    )
+
+                                    val updated = curLayout.mirrorCutouts.map {
+                                        if (it.id == curCutout.id) it.copy(destX = clampedX, destY = clampedY) else it
+                                    }
+                                    MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                                 }
-                                MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                            }
+                            )
                         }
                 ) {
                     Text(
@@ -157,27 +173,39 @@ fun CutoutLayoutEditor(
 
                 // Show corner resize handles if selected
                 if (isSelected) {
+                    var dragStartX = 0f
+                    var dragStartY = 0f
+                    var dragStartW = 0f
+                    var dragStartH = 0f
+
                     // Top-Left handle
                     ResizeHandleView(
                         offset = IntOffset(
-                            (destLeft - handleSizePx / 2f).roundToInt(),
-                            (destTop - handleSizePx / 2f).roundToInt()
+                            destLeft.roundToInt(),
+                            destTop.roundToInt()
                         ),
                         color = colors.accent,
-                        onDrag = { dragAmount ->
+                        onDragStart = {
                             val curCutout = currentCutoutState.value
+                            dragStartX = curCutout.destX
+                            dragStartY = curCutout.destY
+                            dragStartW = curCutout.destWidth
+                            dragStartH = curCutout.destHeight
+                        },
+                        onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
+                            val curCutout = currentCutoutState.value
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.TOP_LEFT,
-                                originalX = curCutout.destX,
-                                originalY = curCutout.destY,
-                                originalWidth = curCutout.destWidth,
-                                originalHeight = curCutout.destHeight,
-                                targetX = curCutout.destX + dragAmount.x / screenW,
-                                targetY = curCutout.destY + dragAmount.y / screenH,
-                                targetWidth = curCutout.destWidth - dragAmount.x / screenW,
-                                targetHeight = curCutout.destHeight - dragAmount.y / screenH,
+                                originalX = dragStartX,
+                                originalY = dragStartY,
+                                originalWidth = dragStartW,
+                                originalHeight = dragStartH,
+                                targetX = dragStartX + totalDx / screenW,
+                                targetY = dragStartY + totalDy / screenH,
+                                targetWidth = dragStartW - totalDx / screenW,
+                                targetHeight = dragStartH - totalDy / screenH,
                                 allCutouts = curLayout.mirrorCutouts
                             )
                             val updated = curLayout.mirrorCutouts.map {
@@ -190,24 +218,31 @@ fun CutoutLayoutEditor(
                     // Top-Right handle
                     ResizeHandleView(
                         offset = IntOffset(
-                            (destLeft + destW - handleSizePx / 2f).roundToInt(),
-                            (destTop - handleSizePx / 2f).roundToInt()
+                            (destLeft + destW - handleSizePx).roundToInt(),
+                            destTop.roundToInt()
                         ),
                         color = colors.accent,
-                        onDrag = { dragAmount ->
+                        onDragStart = {
                             val curCutout = currentCutoutState.value
+                            dragStartX = curCutout.destX
+                            dragStartY = curCutout.destY
+                            dragStartW = curCutout.destWidth
+                            dragStartH = curCutout.destHeight
+                        },
+                        onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
+                            val curCutout = currentCutoutState.value
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.TOP_RIGHT,
-                                originalX = curCutout.destX,
-                                originalY = curCutout.destY,
-                                originalWidth = curCutout.destWidth,
-                                originalHeight = curCutout.destHeight,
-                                targetX = curCutout.destX,
-                                targetY = curCutout.destY + dragAmount.y / screenH,
-                                targetWidth = curCutout.destWidth + dragAmount.x / screenW,
-                                targetHeight = curCutout.destHeight - dragAmount.y / screenH,
+                                originalX = dragStartX,
+                                originalY = dragStartY,
+                                originalWidth = dragStartW,
+                                originalHeight = dragStartH,
+                                targetX = dragStartX,
+                                targetY = dragStartY + totalDy / screenH,
+                                targetWidth = dragStartW + totalDx / screenW,
+                                targetHeight = dragStartH - totalDy / screenH,
                                 allCutouts = curLayout.mirrorCutouts
                             )
                             val updated = curLayout.mirrorCutouts.map {
@@ -220,24 +255,31 @@ fun CutoutLayoutEditor(
                     // Bottom-Left handle
                     ResizeHandleView(
                         offset = IntOffset(
-                            (destLeft - handleSizePx / 2f).roundToInt(),
-                            (destTop + destH - handleSizePx / 2f).roundToInt()
+                            destLeft.roundToInt(),
+                            (destTop + destH - handleSizePx).roundToInt()
                         ),
                         color = colors.accent,
-                        onDrag = { dragAmount ->
+                        onDragStart = {
                             val curCutout = currentCutoutState.value
+                            dragStartX = curCutout.destX
+                            dragStartY = curCutout.destY
+                            dragStartW = curCutout.destWidth
+                            dragStartH = curCutout.destHeight
+                        },
+                        onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
+                            val curCutout = currentCutoutState.value
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.BOTTOM_LEFT,
-                                originalX = curCutout.destX,
-                                originalY = curCutout.destY,
-                                originalWidth = curCutout.destWidth,
-                                originalHeight = curCutout.destHeight,
-                                targetX = curCutout.destX + dragAmount.x / screenW,
-                                targetY = curCutout.destY,
-                                targetWidth = curCutout.destWidth - dragAmount.x / screenW,
-                                targetHeight = curCutout.destHeight + dragAmount.y / screenH,
+                                originalX = dragStartX,
+                                originalY = dragStartY,
+                                originalWidth = dragStartW,
+                                originalHeight = dragStartH,
+                                targetX = dragStartX + totalDx / screenW,
+                                targetY = dragStartY,
+                                targetWidth = dragStartW - totalDx / screenW,
+                                targetHeight = dragStartH + totalDy / screenH,
                                 allCutouts = curLayout.mirrorCutouts
                             )
                             val updated = curLayout.mirrorCutouts.map {
@@ -250,24 +292,31 @@ fun CutoutLayoutEditor(
                     // Bottom-Right handle
                     ResizeHandleView(
                         offset = IntOffset(
-                            (destLeft + destW - handleSizePx / 2f).roundToInt(),
-                            (destTop + destH - handleSizePx / 2f).roundToInt()
+                            (destLeft + destW - handleSizePx).roundToInt(),
+                            (destTop + destH - handleSizePx).roundToInt()
                         ),
                         color = colors.accent,
-                        onDrag = { dragAmount ->
+                        onDragStart = {
                             val curCutout = currentCutoutState.value
+                            dragStartX = curCutout.destX
+                            dragStartY = curCutout.destY
+                            dragStartW = curCutout.destWidth
+                            dragStartH = curCutout.destHeight
+                        },
+                        onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
+                            val curCutout = currentCutoutState.value
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.BOTTOM_RIGHT,
-                                originalX = curCutout.destX,
-                                originalY = curCutout.destY,
-                                originalWidth = curCutout.destWidth,
-                                originalHeight = curCutout.destHeight,
-                                targetX = curCutout.destX,
-                                targetY = curCutout.destY,
-                                targetWidth = curCutout.destWidth + dragAmount.x / screenW,
-                                targetHeight = curCutout.destHeight + dragAmount.y / screenH,
+                                originalX = dragStartX,
+                                originalY = dragStartY,
+                                originalWidth = dragStartW,
+                                originalHeight = dragStartH,
+                                targetX = dragStartX,
+                                targetY = dragStartY,
+                                targetWidth = dragStartW + totalDx / screenW,
+                                targetHeight = dragStartH + totalDy / screenH,
                                 allCutouts = curLayout.mirrorCutouts
                             )
                             val updated = curLayout.mirrorCutouts.map {
@@ -284,7 +333,10 @@ fun CutoutLayoutEditor(
         Surface(
             modifier = Modifier
                 .align(if (overlayAtBottom) Alignment.TopCenter else Alignment.BottomCenter)
-                .padding(vertical = 24.dp)
+                .padding(
+                    top = if (overlayAtBottom) 24.dp + MP_EDGE_ZONE else 24.dp,
+                    bottom = if (overlayAtBottom) 24.dp else 24.dp + MP_EDGE_ZONE
+                )
                 .shadow(TOOLBAR_SHADOW, RoundedCornerShape(TOOLBAR_CORNER)),
             color = colors.surface.copy(alpha = 0.9f),
             shape = RoundedCornerShape(TOOLBAR_CORNER),
@@ -404,8 +456,10 @@ fun CutoutLayoutEditor(
 private fun ResizeHandleView(
     offset: IntOffset,
     color: Color,
-    onDrag: (androidx.compose.ui.geometry.Offset) -> Unit
+    onDragStart: () -> Unit,
+    onDrag: (Float, Float) -> Unit
 ) {
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDrag by rememberUpdatedState(onDrag)
     Box(
         modifier = Modifier
@@ -413,10 +467,21 @@ private fun ResizeHandleView(
             .size(HANDLE_SIZE)
             .background(color, RoundedCornerShape(4.dp))
             .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    currentOnDrag(dragAmount)
-                }
+                var accumulatedX = 0f
+                var accumulatedY = 0f
+                detectDragGestures(
+                    onDragStart = {
+                        accumulatedX = 0f
+                        accumulatedY = 0f
+                        currentOnDragStart()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        accumulatedX += dragAmount.x
+                        accumulatedY += dragAmount.y
+                        currentOnDrag(accumulatedX, accumulatedY)
+                    }
+                )
             }
     )
 }

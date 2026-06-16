@@ -125,38 +125,64 @@ fun CropSelectorOverlay(
                 )
                 .border(BORDER_WIDTH, colors.accent)
                 .pointerInput(cutoutId) {
-                    detectDragGestures { change, dragAmount ->
-                        change.consume()
-                        val curCutout = currentCutoutState.value
-                        val curLayout = currentLayoutState.value
-                        val newX = (curCutout.srcX + dragAmount.x / screenW).coerceIn(0f, 1f - curCutout.srcWidth)
-                        val newY = (curCutout.srcY + dragAmount.y / screenH).coerceIn(0f, 1f - curCutout.srcHeight)
-                        
-                        val updated = curLayout.mirrorCutouts.map {
-                            if (it.id == cutoutId) it.copy(srcX = newX, srcY = newY) else it
+                    var dragStartX = 0f
+                    var dragStartY = 0f
+                    var accumulatedX = 0f
+                    var accumulatedY = 0f
+                    detectDragGestures(
+                        onDragStart = {
+                            val curCutout = currentCutoutState.value
+                            dragStartX = curCutout.srcX
+                            dragStartY = curCutout.srcY
+                            accumulatedX = 0f
+                            accumulatedY = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            val curLayout = currentLayoutState.value
+                            val curCutout = currentCutoutState.value
+                            accumulatedX += dragAmount.x
+                            accumulatedY += dragAmount.y
+                            val newX = (dragStartX + accumulatedX / screenW).coerceIn(0f, 1f - curCutout.srcWidth)
+                            val newY = (dragStartY + accumulatedY / screenH).coerceIn(0f, 1f - curCutout.srcHeight)
+                            
+                            val updated = curLayout.mirrorCutouts.map {
+                                if (it.id == cutoutId) it.copy(srcX = newX, srcY = newY) else it
+                            }
+                            MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                         }
-                        MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                    }
+                    )
                 }
         )
 
         // 3. Corner resize handles
+        var dragStartX = 0f
+        var dragStartY = 0f
+        var dragStartW = 0f
+        var dragStartH = 0f
+
         // Top-Left handle
         ResizeHandleView(
             offset = IntOffset(
-                (cropLeft - handleSizePx / 2f).roundToInt(),
-                (cropTop - handleSizePx / 2f).roundToInt()
+                cropLeft.roundToInt(),
+                cropTop.roundToInt()
             ),
             color = colors.accent,
-            onDrag = { dragAmount ->
+            onDragStart = {
                 val curCutout = currentCutoutState.value
+                dragStartX = curCutout.srcX
+                dragStartY = curCutout.srcY
+                dragStartW = curCutout.srcWidth
+                dragStartH = curCutout.srcHeight
+            },
+            onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
-                val rightEdge = curCutout.srcX + curCutout.srcWidth
-                val bottomEdge = curCutout.srcY + curCutout.srcHeight
+                val rightEdge = dragStartX + dragStartW
+                val bottomEdge = dragStartY + dragStartH
                 
-                val newX = (curCutout.srcX + dragAmount.x / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
+                val newX = (dragStartX + totalDx / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
                 val newW = rightEdge - newX
-                val newY = (curCutout.srcY + dragAmount.y / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
+                val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
                 val newH = bottomEdge - newY
                 
                 val updated = curLayout.mirrorCutouts.map {
@@ -169,17 +195,23 @@ fun CropSelectorOverlay(
         // Top-Right handle
         ResizeHandleView(
             offset = IntOffset(
-                (cropLeft + cropW - handleSizePx / 2f).roundToInt(),
-                (cropTop - handleSizePx / 2f).roundToInt()
+                (cropLeft + cropW - handleSizePx).roundToInt(),
+                cropTop.roundToInt()
             ),
             color = colors.accent,
-            onDrag = { dragAmount ->
+            onDragStart = {
                 val curCutout = currentCutoutState.value
+                dragStartX = curCutout.srcX
+                dragStartY = curCutout.srcY
+                dragStartW = curCutout.srcWidth
+                dragStartH = curCutout.srcHeight
+            },
+            onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
-                val bottomEdge = curCutout.srcY + curCutout.srcHeight
+                val bottomEdge = dragStartY + dragStartH
                 
-                val newW = (curCutout.srcWidth + dragAmount.x / screenW).coerceIn(MIN_CROP_SIZE, 1f - curCutout.srcX)
-                val newY = (curCutout.srcY + dragAmount.y / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
+                val newW = (dragStartW + totalDx / screenW).coerceIn(MIN_CROP_SIZE, 1f - dragStartX)
+                val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
                 val newH = bottomEdge - newY
                 
                 val updated = curLayout.mirrorCutouts.map {
@@ -192,18 +224,24 @@ fun CropSelectorOverlay(
         // Bottom-Left handle
         ResizeHandleView(
             offset = IntOffset(
-                (cropLeft - handleSizePx / 2f).roundToInt(),
-                (cropTop + cropH - handleSizePx / 2f).roundToInt()
+                cropLeft.roundToInt(),
+                (cropTop + cropH - handleSizePx).roundToInt()
             ),
             color = colors.accent,
-            onDrag = { dragAmount ->
+            onDragStart = {
                 val curCutout = currentCutoutState.value
+                dragStartX = curCutout.srcX
+                dragStartY = curCutout.srcY
+                dragStartW = curCutout.srcWidth
+                dragStartH = curCutout.srcHeight
+            },
+            onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
-                val rightEdge = curCutout.srcX + curCutout.srcWidth
+                val rightEdge = dragStartX + dragStartW
                 
-                val newX = (curCutout.srcX + dragAmount.x / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
+                val newX = (dragStartX + totalDx / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
                 val newW = rightEdge - newX
-                val newH = (curCutout.srcHeight + dragAmount.y / screenH).coerceIn(MIN_CROP_SIZE, 1f - curCutout.srcY)
+                val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
                 
                 val updated = curLayout.mirrorCutouts.map {
                     if (it.id == cutoutId) it.copy(srcX = newX, srcWidth = newW, srcHeight = newH) else it
@@ -215,15 +253,21 @@ fun CropSelectorOverlay(
         // Bottom-Right handle
         ResizeHandleView(
             offset = IntOffset(
-                (cropLeft + cropW - handleSizePx / 2f).roundToInt(),
-                (cropTop + cropH - handleSizePx / 2f).roundToInt()
+                (cropLeft + cropW - handleSizePx).roundToInt(),
+                (cropTop + cropH - handleSizePx).roundToInt()
             ),
             color = colors.accent,
-            onDrag = { dragAmount ->
+            onDragStart = {
                 val curCutout = currentCutoutState.value
+                dragStartX = curCutout.srcX
+                dragStartY = curCutout.srcY
+                dragStartW = curCutout.srcWidth
+                dragStartH = curCutout.srcHeight
+            },
+            onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
-                val newW = (curCutout.srcWidth + dragAmount.x / screenW).coerceIn(MIN_CROP_SIZE, 1f - curCutout.srcX)
-                val newH = (curCutout.srcHeight + dragAmount.y / screenH).coerceIn(MIN_CROP_SIZE, 1f - curCutout.srcY)
+                val newW = (dragStartW + totalDx / screenW).coerceIn(MIN_CROP_SIZE, 1f - dragStartX)
+                val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
                 
                 val updated = curLayout.mirrorCutouts.map {
                     if (it.id == cutoutId) it.copy(srcWidth = newW, srcHeight = newH) else it
@@ -275,8 +319,10 @@ fun CropSelectorOverlay(
 private fun ResizeHandleView(
     offset: IntOffset,
     color: Color,
-    onDrag: (androidx.compose.ui.geometry.Offset) -> Unit
+    onDragStart: () -> Unit,
+    onDrag: (Float, Float) -> Unit
 ) {
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDrag by rememberUpdatedState(onDrag)
     Box(
         modifier = Modifier
@@ -284,10 +330,21 @@ private fun ResizeHandleView(
             .size(HANDLE_SIZE)
             .background(color, RoundedCornerShape(4.dp))
             .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    currentOnDrag(dragAmount)
-                }
+                var accumulatedX = 0f
+                var accumulatedY = 0f
+                detectDragGestures(
+                    onDragStart = {
+                        accumulatedX = 0f
+                        accumulatedY = 0f
+                        currentOnDragStart()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        accumulatedX += dragAmount.x
+                        accumulatedY += dragAmount.y
+                        currentOnDrag(accumulatedX, accumulatedY)
+                    }
+                )
             }
     )
 }
