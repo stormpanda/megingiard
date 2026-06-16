@@ -95,9 +95,16 @@ class MirrorPresentation(
     private val srcWidth: Int, 
     private val srcHeight: Int
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
-    var onSurfaceReady: ((Surface) -> Unit)? = null
-    var onSurfaceDestroyed: (() -> Unit)? = null
-    private var surfaceView: SurfaceView? = null
+    var onCutoutSurfaceReady: ((String, Surface) -> Unit)? = null
+    var onCutoutSurfaceDestroyed: ((String) -> Unit)? = null
+    
+    private val cutoutViews = mutableMapOf<String, CutoutViewHolder>()
+    private var mirrorContainerView: FrameLayout? = null
+
+    private class CutoutViewHolder(
+        val container: FrameLayout,
+        val surfaceView: SurfaceView
+    )
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // OnBackPressedDispatcher provided to the Compose tree. Needs to be a class
@@ -176,15 +183,18 @@ class MirrorPresentation(
             setBackgroundColor(Color.BLACK)
         }
 
-        val sv = SurfaceView(context).apply {
+        val mirrorContainer = FrameLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(finalWidth, finalHeight, Gravity.CENTER)
-            setZOrderMediaOverlay(true)
+            clipChildren = true
         }
-        // Force the hardware buffer memory allocation to match the raw screen pixel coordinates
-        sv.holder.setFixedSize(srcWidth, srcHeight)
-        surfaceView = sv
+        mirrorContainerView = mirrorContainer
+        container.addView(mirrorContainer)
 
-        container.addView(sv)
+        scope.launch {
+            ScreenCaptureManager.cutouts.collect { cutouts ->
+                updateCutoutViews(mirrorContainer, cutouts)
+            }
+        }
 
         // BackHandler (used in Compose Dialog) requires
         // LocalOnBackPressedDispatcherOwner. backDispatcher is a class property so that
@@ -447,24 +457,13 @@ class MirrorPresentation(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        // Reserve the IdlePill swipe edge zone so
-                                        // BackgroundMacroPadOverlay's SwipeGestureProcessor
-                                        // can detect the edge-swipe and call
-                                        // handleEdgeSwipe() → closeActiveModal().
                                         .padding(
                                             top = if (overlayAtBottom) 0.dp else MP_EDGE_ZONE,
                                             bottom = if (overlayAtBottom) MP_EDGE_ZONE else 0.dp,
                                         )
-                                        .pointerInput(Unit) {
-                                            detectTransformGestures { _, pan, zoom, _ ->
-                                                MirrorViewportController.applyZoomPan(
-                                                    zoom, pan.x, pan.y,
-                                                    ScreenCaptureManager.surfaceWidth.value,
-                                                    ScreenCaptureManager.surfaceHeight.value,
-                                                )
-                                            }
-                                        }
-                                )
+                                ) {
+                                    CutoutLayoutEditor(overlayAtBottom = overlayAtBottom)
+                                }
                             }
 
                             // Layer 4: Fullscreen Mouse Overlay — rendered above background
@@ -505,22 +504,10 @@ class MirrorPresentation(
 
         setContentView(container)
 
-        sv.holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: SurfaceHolder) {
-                onSurfaceReady?.invoke(holder.surface)
-            }
-            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-                // no-op
-            }
-            override fun surfaceDestroyed(holder: SurfaceHolder) {
-                onSurfaceDestroyed?.invoke()
-            }
-        })
-
-        bindStateFlows(sv)
+        bindStateFlows()
     }
 
-    private fun bindStateFlows(sv: SurfaceView) {
+    private fun bindStateFlows() {
         scope.launch {
             combine(
                 AppStateManager.isFullscreenKeyboardActive,
@@ -591,29 +578,19 @@ class MirrorPresentation(
             }
         }
         scope.launch {
-            ScreenCaptureManager.scale.collect { 
-                sv.scaleX = it
-                sv.scaleY = it
-            }
-        }
-        scope.launch {
-            ScreenCaptureManager.offsetX.collect { sv.translationX = it }
-        }
-        scope.launch {
-            ScreenCaptureManager.offsetY.collect { sv.translationY = it }
-        }
-        scope.launch {
             ScreenCaptureManager.isFrozen.collect { frozen ->
-                if (frozen && sv.width > 0 && sv.height > 0) {
+                val firstHolder = cutoutViews.values.firstOrNull()
+                val firstSv = firstHolder?.surfaceView
+                if (frozen && firstSv != null && firstSv.width > 0 && firstSv.height > 0) {
                     try {
-                        val bitmap = Bitmap.createBitmap(sv.width, sv.height, Bitmap.Config.ARGB_8888)
+                        val bitmap = Bitmap.createBitmap(firstSv.width, firstSv.height, Bitmap.Config.ARGB_8888)
                         PixelCopy.request(
-                            sv,
+                            firstSv,
                             bitmap,
                             { result ->
                                 if (result == PixelCopy.SUCCESS) {
                                     ScreenCaptureManager.setFrozenBitmap(bitmap)
-                                    sv.visibility = View.INVISIBLE
+                                    mirrorContainerView?.visibility = View.INVISIBLE
                                 } else {
                                     AppLog.e(TAG, "PixelCopy failed with result code: $result")
                                     bitmap.recycle()
@@ -625,7 +602,7 @@ class MirrorPresentation(
                         AppLog.e(TAG, "PixelCopy exception", e)
                     }
                 } else if (!frozen) {
-                    sv.visibility = View.VISIBLE
+                    mirrorContainerView?.visibility = View.VISIBLE
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }
@@ -642,6 +619,86 @@ class MirrorPresentation(
         }
     }
 
-    fun getSurface(): Surface? = surfaceView?.holder?.surface
+    private fun updateCutoutViews(parent: FrameLayout, cutouts: List<ScreenCutout>) {
+        val currentIds = cutouts.map { it.id }.toSet()
+        
+        // 1. Remove views for deleted cutouts
+        val removedIds = cutoutViews.keys.filter { it !in currentIds }
+        for (id in removedIds) {
+            val holder = cutoutViews.remove(id)
+            if (holder != null) {
+                parent.removeView(holder.container)
+                onCutoutSurfaceDestroyed?.invoke(id)
+            }
+        }
+        
+        // 2. Add or update views for active cutouts
+        val parentW = parent.width.toFloat()
+        val parentH = parent.height.toFloat()
+        if (parentW <= 0f || parentH <= 0f) {
+            parent.post { updateCutoutViews(parent, cutouts) }
+            return
+        }
+
+        for (cutout in cutouts) {
+            val holder = cutoutViews[cutout.id] ?: run {
+                val clipContainer = FrameLayout(context).apply {
+                    clipChildren = true
+                }
+                val sv = SurfaceView(context).apply {
+                    setZOrderMediaOverlay(true)
+                }
+                sv.holder.setFixedSize(srcWidth, srcHeight)
+                clipContainer.addView(sv)
+                parent.addView(clipContainer)
+                
+                sv.holder.addCallback(object : SurfaceHolder.Callback {
+                    override fun surfaceCreated(holder: SurfaceHolder) {
+                        onCutoutSurfaceReady?.invoke(cutout.id, holder.surface)
+                    }
+                    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+                    override fun surfaceDestroyed(holder: SurfaceHolder) {
+                        onCutoutSurfaceDestroyed?.invoke(cutout.id)
+                    }
+                })
+                
+                val newHolder = CutoutViewHolder(clipContainer, sv)
+                cutoutViews[cutout.id] = newHolder
+                newHolder
+            }
+            
+            val dw = (cutout.destWidth * parentW).toInt()
+            val dh = (cutout.destHeight * parentH).toInt()
+            val dx = (cutout.destX * parentW).toInt()
+            val dy = (cutout.destY * parentH).toInt()
+            
+            val lp = FrameLayout.LayoutParams(dw, dh).apply {
+                leftMargin = dx
+                topMargin = dy
+                gravity = Gravity.TOP or Gravity.START
+            }
+            holder.container.layoutParams = lp
+            holder.container.alpha = cutout.opacity
+            
+            val scaleFactor = if (cutout.srcWidth > 0f) dw.toFloat() / (srcWidth.toFloat() * cutout.srcWidth) else 1f
+            val cropCenterX = (cutout.srcX + cutout.srcWidth / 2f) * srcWidth.toFloat()
+            val cropCenterY = (cutout.srcY + cutout.srcHeight / 2f) * srcHeight.toFloat()
+            
+            val svCenterX = srcWidth.toFloat() / 2f
+            val svCenterY = srcHeight.toFloat() / 2f
+            
+            val transX = (svCenterX - cropCenterX) * scaleFactor
+            val transY = (svCenterY - cropCenterY) * scaleFactor
+            
+            holder.surfaceView.layoutParams = FrameLayout.LayoutParams(srcWidth, srcHeight, Gravity.CENTER)
+            holder.surfaceView.scaleX = scaleFactor
+            holder.surfaceView.scaleY = scaleFactor
+            holder.surfaceView.translationX = transX
+            holder.surfaceView.translationY = transY
+        }
+    }
+
+    fun getSurface(): Surface? = cutoutViews.values.firstOrNull()?.surfaceView?.holder?.surface
+    fun getSurfaces(): Map<String, Surface> = cutoutViews.mapValues { it.value.surfaceView.holder.surface }
 }
 

@@ -170,6 +170,30 @@ object AppStateManager {
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
 
+    private val _isMultiCutoutEditMode = MutableStateFlow(false)
+    val isMultiCutoutEditMode: StateFlow<Boolean> = _isMultiCutoutEditMode.asStateFlow()
+
+    private val _activeCropCutoutId = MutableStateFlow<String?>(null)
+    val activeCropCutoutId: StateFlow<String?> = _activeCropCutoutId.asStateFlow()
+
+    private val _selectedCutoutId = MutableStateFlow<String?>(null)
+    val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
+
+    fun setMultiCutoutEditMode(active: Boolean) {
+        AppLog.d(TAG, "setMultiCutoutEditMode($active)")
+        _isMultiCutoutEditMode.value = active
+    }
+
+    fun setActiveCropCutoutId(id: String?) {
+        AppLog.d(TAG, "setActiveCropCutoutId($id)")
+        _activeCropCutoutId.value = id
+    }
+
+    fun setSelectedCutoutId(id: String?) {
+        AppLog.d(TAG, "setSelectedCutoutId($id)")
+        _selectedCutoutId.value = id
+    }
+
     private val _isBackgroundSettingsActive = MutableStateFlow(false)
     val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
 
@@ -274,6 +298,8 @@ object AppStateManager {
         _isBackgroundSettingsActive.value = false
         _isAmbientPreviewActive.value = false
         _ambientPreviewConfig.value = null
+        _activeCropCutoutId.value = null
+        _selectedCutoutId.value = null
         MacroPadState.resetPeek()
     }
 

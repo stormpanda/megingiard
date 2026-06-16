@@ -61,6 +61,7 @@ import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -219,6 +220,14 @@ fun MainAppScreen() {
             ) {
                 BackgroundSettingsOverlay(
                     onDone = { AppStateManager.setBackgroundSettingsActive(false) },
+                )
+            }
+
+            val activeCropCutoutId by AppStateManager.activeCropCutoutId.collectAsState()
+            if (activeCropCutoutId != null) {
+                CropSelectorOverlay(
+                    cutoutId = activeCropCutoutId!!,
+                    onDismiss = { AppStateManager.setActiveCropCutoutId(null) }
                 )
             }
 

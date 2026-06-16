@@ -105,9 +105,19 @@ object MirrorViewportController {
      */
     fun restoreFromLayout() {
         val layout = MacroPadState.activeLayout.value
-        val s = layout?.mirrorSavedScale ?: 1f
-        val ox = layout?.mirrorSavedOffsetX ?: 0f
-        val oy = layout?.mirrorSavedOffsetY ?: 0f
+        val firstCutout = layout?.mirrorCutouts?.firstOrNull()
+        val sw = ScreenCaptureManager.surfaceWidth.value
+        val sh = ScreenCaptureManager.surfaceHeight.value
+
+        val (s, ox, oy) = if (firstCutout != null && sw > 0f && sh > 0f) {
+            val scale = 1.0f / firstCutout.srcWidth
+            val offsetX = -(firstCutout.srcX - 0.5f + firstCutout.srcWidth / 2f) * (sw * scale)
+            val offsetY = -(firstCutout.srcY - 0.5f + firstCutout.srcHeight / 2f) * (sh * scale)
+            Triple(scale, offsetX, offsetY)
+        } else {
+            Triple(layout?.mirrorSavedScale ?: 1f, layout?.mirrorSavedOffsetX ?: 0f, layout?.mirrorSavedOffsetY ?: 0f)
+        }
+
         val follow = layout?.mirrorFollowActive ?: false
         AppLog.d(TAG, "restoreFromLayout layoutId=${layout?.id} scale=$s offset=($ox,$oy) follow=$follow")
         _scale.value = s

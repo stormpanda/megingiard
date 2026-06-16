@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -343,6 +344,7 @@ data class PadLayout(
     val mirrorFollowActive: Boolean = false,
     val mirrorFollowDisableDuringMacro: Boolean = false,
     val mirrorSmoothing: Boolean = true,
+    val mirrorCutouts: List<ScreenCutout> = emptyList(),
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
 )

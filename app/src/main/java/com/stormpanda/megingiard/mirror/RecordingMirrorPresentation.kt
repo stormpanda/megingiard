@@ -205,7 +205,7 @@ class RecordingMirrorPresentation(
                     }
                 } else {
                     AppLog.i(TAG, "surfaceCreated in privileged mode → sending surface to direct server")
-                    DirectMirrorSurfaceBridge.sendToDirectServer(holder.surface)
+                    DirectMirrorSurfaceBridge.sendToDirectServer(holder.surface, srcWidth, srcHeight)
                 }
             }
 

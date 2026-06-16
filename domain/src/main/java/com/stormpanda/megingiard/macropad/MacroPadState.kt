@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -154,9 +156,55 @@ object MacroPadState {
                 needsSave = true
                 val layoutId = UUID.randomUUID().toString()
                 p = p.copy(
-                    layouts        = listOf(PadLayout(id = layoutId, name = p.name)),
+                    layouts        = listOf(
+                        PadLayout(
+                            id = layoutId,
+                            name = p.name,
+                            mirrorCutouts = listOf(
+                                ScreenCutout(
+                                    id = UUID.randomUUID().toString(),
+                                    name = "Full Screen",
+                                    srcX = 0f,
+                                    srcY = 0f,
+                                    srcWidth = 1f,
+                                    srcHeight = 1f,
+                                    destX = 0f,
+                                    destY = 0f,
+                                    destWidth = 1f,
+                                    destHeight = 1f,
+                                    opacity = 1f
+                                )
+                            )
+                        )
+                    ),
                     activeLayoutId = layoutId,
                 )
+            } else {
+                val migratedLayouts = p.layouts.map { layout ->
+                    if (layout.mirrorCutouts.isEmpty()) {
+                        needsSave = true
+                        layout.copy(
+                            mirrorCutouts = listOf(
+                                ScreenCutout(
+                                    id = UUID.randomUUID().toString(),
+                                    name = "Full Screen",
+                                    srcX = 0f,
+                                    srcY = 0f,
+                                    srcWidth = 1f,
+                                    srcHeight = 1f,
+                                    destX = 0f,
+                                    destY = 0f,
+                                    destWidth = 1f,
+                                    destHeight = 1f,
+                                    opacity = 1f
+                                )
+                            )
+                        )
+                    } else {
+                        layout
+                    }
+                }
+                p = p.copy(layouts = migratedLayouts)
             }
 
             p
@@ -327,7 +375,26 @@ object MacroPadState {
         if (uniqueName != desiredName) {
             AppLog.w(TAG, "addLayout: duplicate layout name '$desiredName' adjusted to '$uniqueName'")
         }
-        val normalizedLayout = layout.copy(name = uniqueName)
+        val cutouts = if (layout.mirrorCutouts.isEmpty()) {
+            listOf(
+                ScreenCutout(
+                    id = UUID.randomUUID().toString(),
+                    name = "Full Screen",
+                    srcX = 0f,
+                    srcY = 0f,
+                    srcWidth = 1f,
+                    srcHeight = 1f,
+                    destX = 0f,
+                    destY = 0f,
+                    destWidth = 1f,
+                    destHeight = 1f,
+                    opacity = 1f
+                )
+            )
+        } else {
+            layout.mirrorCutouts
+        }
+        val normalizedLayout = layout.copy(name = uniqueName, mirrorCutouts = cutouts)
         AppLog.d(TAG, "addLayout id=${normalizedLayout.id} name='${normalizedLayout.name}' to profile=${profile.id}")
         updateProfile(profile.copy(
             layouts = profile.layouts + normalizedLayout,
@@ -633,10 +700,28 @@ object MacroPadState {
                 } else {
                     changed = true
                     profileChanged = true
+                    val updatedCutouts = layout.mirrorCutouts.mapIndexed { index, cutout ->
+                        if (index == 0) {
+                            val sw = ScreenCaptureManager.surfaceWidth.value
+                            val sh = ScreenCaptureManager.surfaceHeight.value
+                            if (sw > 0f && sh > 0f) {
+                                val srcWidth = 1f / scale
+                                val srcHeight = 1f / scale
+                                val srcX = (0.5f - 0.5f / scale - offsetX / (sw * scale)).coerceIn(0f, 1f)
+                                val srcY = (0.5f - 0.5f / scale - offsetY / (sh * scale)).coerceIn(0f, 1f)
+                                cutout.copy(srcX = srcX, srcY = srcY, srcWidth = srcWidth, srcHeight = srcHeight)
+                            } else {
+                                cutout
+                            }
+                        } else {
+                            cutout
+                        }
+                    }
                     layout.copy(
                         mirrorSavedScale = scale,
                         mirrorSavedOffsetX = offsetX,
                         mirrorSavedOffsetY = offsetY,
+                        mirrorCutouts = updatedCutouts
                     )
                 }
             }
@@ -644,6 +729,28 @@ object MacroPadState {
         }
         if (!changed) return
         AppLog.d(TAG, "saveMirrorViewport layoutId=$layoutId scale=$scale offset=($offsetX,$offsetY)")
+        _profiles.value = updatedProfiles
+        MacroPadSettings.saveMacroPadData()
+    }
+
+    fun saveMirrorCutouts(layoutId: String, cutouts: List<ScreenCutout>) {
+        var changed = false
+        val updatedProfiles = _profiles.value.map { profile ->
+            var profileChanged = false
+            val updatedLayouts = profile.layouts.map { layout ->
+                if (layout.id != layoutId) return@map layout
+                if (layout.mirrorCutouts == cutouts) {
+                    layout
+                } else {
+                    changed = true
+                    profileChanged = true
+                    layout.copy(mirrorCutouts = cutouts)
+                }
+            }
+            if (profileChanged) profile.copy(layouts = updatedLayouts) else profile
+        }
+        if (!changed) return
+        AppLog.d(TAG, "saveMirrorCutouts layoutId=$layoutId count=${cutouts.size}")
         _profiles.value = updatedProfiles
         MacroPadSettings.saveMacroPadData()
     }

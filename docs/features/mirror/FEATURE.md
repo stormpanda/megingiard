@@ -60,9 +60,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - A **Touch Projection** button MUST be available inside the Mirror Control Card of the Pill Menu.
 - When active, all touch events on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
-- The projected touch position MUST account for the current **zoom level and pan offset**: a user touching a zoomed-in area MUST interact with the correct pixel on the primary display, not the raw viewport pixel.
+- The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them.
 - Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Pill Menu.
-- When the user's finger moves outside the visible content area (due to zoom), an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
+- When the user's finger moves outside the visible content area of the matched cutout, an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
 - Activating Touch Projection MUST automatically activate View Lock (zoom/pan during forwarding is not supported).
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
@@ -96,6 +96,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - When Smoothing is enabled, the viewport panning MUST glide smoothly to target coordinates using exponential easing. When disabled, the panning MUST snap instantly.
 - A **Disable during macro execution** switch MUST be dynamically displayed directly below the Smoothing toggle when Follow Touch Mode is active. When enabled, touch tracking and viewport centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
 - Activating Viewport Edit Mode MUST automatically turn off Follow Touch Mode to prevent pan/zoom gesture and coordinate conflicts (mutual exclusion).
+
+### FR-M11: Multi-Cutout Screen Mirroring
+
+- Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen instead of just a single viewport.
+- The multi-cutout mode is activated via a toggle button on the Viewport Edit overlay on the secondary display.
+- Defining source crop boundaries is done via a Crop Selector overlay on the primary display.
+- Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
+- Legacy layouts containing old single-viewport properties (`mirrorSavedScale`, `mirrorSavedOffsetX`, `mirrorSavedOffsetY`) MUST be automatically migrated to a single full-screen cutout on profile load or surface size initialization.
 
 ---
 
@@ -308,12 +316,14 @@ the Presentation ensures touch input reaches the Activity-level modals.
 A fourth `pointerInput` block, placed last in the modifier chain (innermost = first at `PointerEventPass.Main`), intercepts touch events:
 
 1. **Edge-zone exclusion**: gestures beginning within 40 dp of the overlay edge are flagged (`gestureInEdgeZone = true`) and let fall through to the swipe handler.
-2. **Coordinate inversion**: maps the raw touch back through the current zoom/pan transform to content-normalised coordinates:
+2. **Coordinate inversion**: maps the raw touch to the matched cutout's source coordinates. The controller iterates through the active cutouts to find the one containing the touch, and computes:
    ```
-   contentX = (touchX − centerX − offsetX) / scale + centerX
-   normalizedX = contentX / surfaceWidth
+   contentX = (touchX − destLeft) / destWidth
+   normalizedX = srcX + contentX * srcWidth
+   contentY = (touchY − destTop) / destHeight
+   normalizedY = srcY + contentY * srcHeight
    ```
-   If the result is outside [0, 1], `projectCoordinates()` returns `null` — the touch is inside a letterbox bar and is discarded (or an UP is sent if a gesture was in progress).
+   If the touch is outside the destination bounds of the active cutout, the coordinates are null (or an UP is sent if a gesture was in progress).
 3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop(token)` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
 
 During MacroPad touch recording, `RecordingMirrorPresentation` keeps the mirrored 16:9 content centered in the 4:3 secondary display and renders the gesture-mode **Cancel** and **Stop & Save** controls in the lower black letterbox band. This keeps the control row outside the projected content geometry, so the touch-coordinate transform remains unchanged and button taps are not recorded as primary-screen touch samples.
@@ -421,5 +431,8 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 | `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
 | `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
 | `MirrorScreen.kt`                     | Compose UI: gesture handling, control buttons, touch projection                                            |
+| `CropSelectorOverlay.kt`              | Primary display crop selector overlay Activity                                                             |
+| `CutoutLayoutEditor.kt`               | Secondary display cutout placement arrange editor                                                          |
+| `ScreenCutout.kt`                     | Serializable data model representing a crop/placement pair                                                 |
 | `../input/TouchInjector.kt`           | Shared injection facade (also used by Touchpad)                                                            |
 | `../input/ShellInputInjector.kt`      | Shared native binary lifecycle and command queue                                                           |

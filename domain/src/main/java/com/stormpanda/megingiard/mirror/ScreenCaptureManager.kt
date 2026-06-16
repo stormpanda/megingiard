@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
+import java.util.UUID
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
@@ -38,6 +39,9 @@ object ScreenCaptureManager {
     private val _surfaceHeight = MutableStateFlow(0f)
     val surfaceHeight: StateFlow<Float> = _surfaceHeight.asStateFlow()
 
+    private val _cutouts = MutableStateFlow<List<ScreenCutout>>(emptyList())
+    val cutouts: StateFlow<List<ScreenCutout>> = _cutouts.asStateFlow()
+
     private val _isFrozen = MutableStateFlow(false)
     val isFrozen: StateFlow<Boolean> = _isFrozen.asStateFlow()
 
@@ -54,6 +58,18 @@ object ScreenCaptureManager {
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
 
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    init {
+        scope.launch {
+            MacroPadState.activeLayout.collect { layout ->
+                if (layout != null) {
+                    _cutouts.value = layout.mirrorCutouts
+                } else {
+                    _cutouts.value = emptyList()
+                }
+            }
+        }
+    }
 
     private var targetFollowX = 0f
     private var targetFollowY = 0f
@@ -81,6 +97,42 @@ object ScreenCaptureManager {
     fun setSurfaceSize(width: Float, height: Float) {
         _surfaceWidth.value = width
         _surfaceHeight.value = height
+
+        val layout = MacroPadState.activeLayout.value
+        if (layout != null && (layout.mirrorSavedScale != 1f || layout.mirrorSavedOffsetX != 0f || layout.mirrorSavedOffsetY != 0f)) {
+            val scale = layout.mirrorSavedScale
+            val offsetX = layout.mirrorSavedOffsetX
+            val offsetY = layout.mirrorSavedOffsetY
+
+            val srcWidth = 1f / scale
+            val srcHeight = 1f / scale
+            val srcX = (0.5f - 0.5f / scale - offsetX / (width * scale)).coerceIn(0f, 1f)
+            val srcY = (0.5f - 0.5f / scale - offsetY / (height * scale)).coerceIn(0f, 1f)
+
+            val migratedCutout = ScreenCutout(
+                id = UUID.randomUUID().toString(),
+                name = "Full Screen",
+                srcX = srcX,
+                srcY = srcY,
+                srcWidth = srcWidth,
+                srcHeight = srcHeight,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 1f,
+                destHeight = 1f,
+                opacity = 1f
+            )
+
+            AppLog.i(TAG, "Migrated legacy layout ${layout.id} viewport: scale=$scale offset=($offsetX,$offsetY) -> crop=($srcX,$srcY, $srcWidth x $srcHeight)")
+
+            val updatedLayout = layout.copy(
+                mirrorSavedScale = 1f,
+                mirrorSavedOffsetX = 0f,
+                mirrorSavedOffsetY = 0f,
+                mirrorCutouts = listOf(migratedCutout)
+            )
+            MacroPadState.updateLayout(updatedLayout)
+        }
     }
     fun setFrozen(frozen: Boolean) {
         AppLog.d(TAG, "setFrozen($frozen)")
@@ -138,11 +190,21 @@ object ScreenCaptureManager {
                 MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
             }
         }
+        val layout = MacroPadState.activeLayout.value
+        val firstCutout = layout?.mirrorCutouts?.firstOrNull()
+        val sw = _surfaceWidth.value
+        val sh = _surfaceHeight.value
+
+        val (s, ox, oy) = if (firstCutout != null && sw > 0f && sh > 0f) {
+            val scale = 1.0f / firstCutout.srcWidth
+            val offsetX = -(firstCutout.srcX - 0.5f + firstCutout.srcWidth / 2f) * (sw * scale)
+            val offsetY = -(firstCutout.srcY - 0.5f + firstCutout.srcHeight / 2f) * (sh * scale)
+            Triple(scale, offsetX, offsetY)
+        } else {
+            Triple(layout?.mirrorSavedScale ?: 1f, layout?.mirrorSavedOffsetX ?: 0f, layout?.mirrorSavedOffsetY ?: 0f)
+        }
+
         if (active) {
-            val layout = MacroPadState.activeLayout.value
-            val s = layout?.mirrorSavedScale ?: 1f
-            val ox = layout?.mirrorSavedOffsetX ?: 0f
-            val oy = layout?.mirrorSavedOffsetY ?: 0f
             setScale(s)
             setOffsetX(ox)
             setOffsetY(oy)
@@ -151,22 +213,10 @@ object ScreenCaptureManager {
         } else {
             followAnimationJob?.cancel()
             followAnimationJob = null
-            val layout = MacroPadState.activeLayout.value
-            if (layout != null) {
-                setScale(layout.mirrorSavedScale)
-                setOffsetX(layout.mirrorSavedOffsetX)
-                setOffsetY(layout.mirrorSavedOffsetY)
-                MirrorViewportController.setValues(
-                    layout.mirrorSavedScale,
-                    layout.mirrorSavedOffsetX,
-                    layout.mirrorSavedOffsetY
-                )
-            } else {
-                setScale(1f)
-                setOffsetX(0f)
-                setOffsetY(0f)
-                MirrorViewportController.resetViewport()
-            }
+            setScale(s)
+            setOffsetX(ox)
+            setOffsetY(oy)
+            MirrorViewportController.setValues(s, ox, oy)
         }
     }
 

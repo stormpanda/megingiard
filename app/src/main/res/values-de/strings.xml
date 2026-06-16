@@ -664,4 +664,17 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_duplicate_layout">Layout duplizieren</string>
     <string name="macropad_copy_no_profiles_available">Keine anderen Profile verfügbar.</string>
     <string name="macropad_copy_no_layouts_available">Keine anderen Layouts verfügbar.</string>
+
+    <!-- Crop editor -->
+    <string name="mirror_crop_editor_title">Ausschnitt festlegen</string>
+    <string name="mirror_crop_editor_subtitle">Ausschnitt: %1$s</string>
+    <string name="mirror_crop_editor_done">Fertig</string>
+
+    <!-- Cutout Layout Editor -->
+    <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>
+    <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
+    <string name="mirror_editor_edit_crop">Ausschnitt wählen</string>
+    <string name="mirror_editor_single_mode">Einzelner Viewport</string>
+    <string name="mirror_editor_multi_mode">Mehrere Ausschnitte</string>
+    <string name="mirror_editor_done">Fertig</string>
 </resources>

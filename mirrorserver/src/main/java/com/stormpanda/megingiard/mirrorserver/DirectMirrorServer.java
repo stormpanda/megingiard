@@ -8,9 +8,10 @@ import android.os.Parcel;
 import android.view.Surface;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 public final class DirectMirrorServer {
     private static final String DIRECT_SURFACE_SERVICE_NAME = "megingiard.direct.surface";
@@ -35,19 +36,17 @@ public final class DirectMirrorServer {
         System.err.println("DirectMirrorServer: starting socket=" + socketName + " size=" + width + "x" + height);
 
         CountDownLatch surfaceDelivered = new CountDownLatch(1);
-        AtomicReference<Surface> surfaceRef = new AtomicReference<>();
-        AtomicReference<IBinder> displayTokenRef = new AtomicReference<>();
         LocalServerSocket readinessSocket = null;
+        SurfaceReceiverBinder binder = null;
         try {
-            addService(
-                    DIRECT_SURFACE_SERVICE_NAME,
-                    new SurfaceReceiverBinder(width, height, surfaceDelivered, surfaceRef, displayTokenRef));
+            binder = new SurfaceReceiverBinder(surfaceDelivered);
+            addService(DIRECT_SURFACE_SERVICE_NAME, binder);
             System.err.println("DirectMirrorServer: registered " + DIRECT_SURFACE_SERVICE_NAME);
 
             readinessSocket = new LocalServerSocket(socketName);
-            System.err.println("DirectMirrorServer: readiness socket bound, waiting for surface");
+            System.err.println("DirectMirrorServer: readiness socket bound, waiting for surfaces");
             if (!surfaceDelivered.await(SURFACE_DELIVERY_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                System.err.println("DirectMirrorServer: timed out waiting for app surface");
+                System.err.println("DirectMirrorServer: timed out waiting for app surfaces");
                 System.exit(1);
                 return;
             }
@@ -61,13 +60,8 @@ public final class DirectMirrorServer {
             t.printStackTrace();
             System.exit(1);
         } finally {
-            IBinder displayToken = displayTokenRef.get();
-            if (displayToken != null) {
-                try { SurfaceControlReflect.destroyDisplay(displayToken); } catch (Throwable ignored) {}
-            }
-            Surface surface = surfaceRef.get();
-            if (surface != null) {
-                try { surface.release(); } catch (Throwable ignored) {}
+            if (binder != null) {
+                binder.release();
             }
             if (readinessSocket != null) {
                 try { readinessSocket.close(); } catch (Throwable ignored) {}
@@ -98,27 +92,28 @@ public final class DirectMirrorServer {
     }
 
     private static final class SurfaceReceiverBinder extends Binder {
-        private final int width;
-        private final int height;
         private final CountDownLatch surfaceDelivered;
-        private final AtomicReference<Surface> surfaceRef;
-        private final AtomicReference<IBinder> displayTokenRef;
+        private final List<Surface> activeSurfaces = new ArrayList<>();
+        private final List<IBinder> activeDisplayTokens = new ArrayList<>();
 
-        SurfaceReceiverBinder(
-                int width,
-                int height,
-                CountDownLatch surfaceDelivered,
-                AtomicReference<Surface> surfaceRef,
-                AtomicReference<IBinder> displayTokenRef) {
-            this.width = width;
-            this.height = height;
+        SurfaceReceiverBinder(CountDownLatch surfaceDelivered) {
             this.surfaceDelivered = surfaceDelivered;
-            this.surfaceRef = surfaceRef;
-            this.displayTokenRef = displayTokenRef;
+        }
+
+        public synchronized void release() {
+            System.err.println("DirectMirrorServer: releasing " + activeDisplayTokens.size() + " displays");
+            for (IBinder token : activeDisplayTokens) {
+                try { SurfaceControlReflect.destroyDisplay(token); } catch (Throwable ignored) {}
+            }
+            activeDisplayTokens.clear();
+            for (Surface surface : activeSurfaces) {
+                try { surface.release(); } catch (Throwable ignored) {}
+            }
+            activeSurfaces.clear();
         }
 
         @Override
-        protected boolean onTransact(int code, Parcel data, Parcel reply, int flags) {
+        protected synchronized boolean onTransact(int code, Parcel data, Parcel reply, int flags) {
             if (code == INTERFACE_TRANSACTION) {
                 reply.writeString(DIRECT_SURFACE_DESCRIPTOR);
                 return true;
@@ -126,33 +121,48 @@ public final class DirectMirrorServer {
             if (code != TRANSACTION_SET_SURFACE) return false;
             try {
                 data.enforceInterface(DIRECT_SURFACE_DESCRIPTOR);
-                if (data.readInt() == 0) {
-                    System.err.println("DirectMirrorServer: app sent no surface");
+                
+                // Release all existing resources first before applying the new configuration
+                release();
+
+                int numSurfaces = data.readInt();
+                System.err.println("DirectMirrorServer: receiving " + numSurfaces + " surfaces");
+                
+                if (numSurfaces == 0) {
+                    System.err.println("DirectMirrorServer: app sent 0 surfaces");
                     reply.writeNoException();
-                    reply.writeInt(0);
+                    reply.writeInt(1);
                     return true;
                 }
 
-                Surface surface = Surface.CREATOR.createFromParcel(data);
-                if (surface == null || !surface.isValid()) {
-                    System.err.println("DirectMirrorServer: app surface invalid");
-                    reply.writeNoException();
-                    reply.writeInt(0);
-                    return true;
+                for (int i = 0; i < numSurfaces; i++) {
+                    int w = data.readInt();
+                    int h = data.readInt();
+                    if (data.readInt() == 0) {
+                        System.err.println("DirectMirrorServer: surface at index " + i + " is null");
+                        continue;
+                    }
+                    Surface surface = Surface.CREATOR.createFromParcel(data);
+                    if (surface == null || !surface.isValid()) {
+                        System.err.println("DirectMirrorServer: surface at index " + i + " is invalid");
+                        continue;
+                    }
+
+                    IBinder displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-" + i, false);
+                    Rect rect = new Rect(0, 0, w, h);
+                    SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
+                    
+                    activeDisplayTokens.add(displayToken);
+                    activeSurfaces.add(surface);
                 }
 
-                IBinder displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-mirror", false);
-                Rect rect = new Rect(0, 0, width, height);
-                SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
-                surfaceRef.set(surface);
-                displayTokenRef.set(displayToken);
                 surfaceDelivered.countDown();
-                System.err.println("DirectMirrorServer: app surface accepted and display configured");
+                System.err.println("DirectMirrorServer: " + activeDisplayTokens.size() + " surfaces panned & configured");
                 reply.writeNoException();
                 reply.writeInt(1);
                 return true;
             } catch (Throwable t) {
-                System.err.println("DirectMirrorServer: setSurface failed: " + t);
+                System.err.println("DirectMirrorServer: setSurfaces failed: " + t);
                 t.printStackTrace();
                 reply.writeNoException();
                 reply.writeInt(0);

@@ -151,4 +151,110 @@ class MirrorCoordinateTransformTest {
             projectCoordinates(0f, 0f, 1920f, 1080f, 0f, 1080f, 1f, 0f, 0f),
         )
     }
+
+    @Test
+    fun `projectCutoutCoordinates maps touch to primary display crop`() {
+        val r = projectCutoutCoordinates(
+            touchX = 150f, touchY = 150f,
+            destLeft = 100f, destTop = 100f,
+            destWidth = 100f, destHeight = 100f,
+            srcX = 0.1f, srcY = 0.1f,
+            srcWidth = 0.8f, srcHeight = 0.8f
+        )
+        assertNotNull(r)
+        assertEquals(0.5f, r!!.first, EPS)
+        assertEquals(0.5f, r.second, EPS)
+    }
+
+    @Test
+    fun `projectCutoutCoordinates outside dest bounds returns null when not clamped`() {
+        val r = projectCutoutCoordinates(
+            touchX = 50f, touchY = 150f,
+            destLeft = 100f, destTop = 100f,
+            destWidth = 100f, destHeight = 100f,
+            srcX = 0.1f, srcY = 0.1f,
+            srcWidth = 0.8f, srcHeight = 0.8f,
+            clampToEdge = false
+        )
+        assertNull(r)
+    }
+
+    @Test
+    fun `projectCutoutCoordinates outside dest bounds clamps to edge when clampToEdge is true`() {
+        val r = projectCutoutCoordinates(
+            touchX = 50f, touchY = 150f,
+            destLeft = 100f, destTop = 100f,
+            destWidth = 100f, destHeight = 100f,
+            srcX = 0.1f, srcY = 0.1f,
+            srcWidth = 0.8f, srcHeight = 0.8f,
+            clampToEdge = true
+        )
+        assertNotNull(r)
+        assertEquals(0.1f, r!!.first, EPS)
+        assertEquals(0.5f, r.second, EPS)
+    }
+
+    @Test
+    fun `clampCutoutDrag allows drag without overlap`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
+            ScreenCutout("2", destX = 0.5f, destY = 0.5f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)
+        )
+        val (x, y) = clampCutoutDrag(
+            cutoutId = "1",
+            originalX = 0.1f, originalY = 0.1f,
+            targetX = 0.15f, targetY = 0.15f,
+            width = 0.3f, height = 0.3f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.15f, x, EPS)
+        assertEquals(0.15f, y, EPS)
+    }
+
+    @Test
+    fun `clampCutoutDrag prevents overlap and allows sliding`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
+            ScreenCutout("2", destX = 0.45f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)
+        )
+        val (x, y) = clampCutoutDrag(
+            cutoutId = "1",
+            originalX = 0.1f, originalY = 0.1f,
+            targetX = 0.25f, targetY = 0.15f,
+            width = 0.3f, height = 0.3f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.1f, x, EPS)
+        assertEquals(0.15f, y, EPS)
+    }
+
+    @Test
+    fun `clampCutoutResize allows clear resize and reverts on collision`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
+            ScreenCutout("2", destX = 0.5f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)
+        )
+        val geomClear = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.BOTTOM_RIGHT,
+            originalX = 0.1f, originalY = 0.1f,
+            originalWidth = 0.3f, originalHeight = 0.3f,
+            targetX = 0.1f, targetY = 0.1f,
+            targetWidth = 0.35f, targetHeight = 0.35f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.35f, geomClear.w, EPS)
+        assertEquals(0.35f, geomClear.h, EPS)
+
+        val geomCollision = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.BOTTOM_RIGHT,
+            originalX = 0.1f, originalY = 0.1f,
+            originalWidth = 0.3f, originalHeight = 0.3f,
+            targetX = 0.1f, targetY = 0.1f,
+            targetWidth = 0.45f, targetHeight = 0.3f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.3f, geomCollision.w, EPS)
+    }
 }
