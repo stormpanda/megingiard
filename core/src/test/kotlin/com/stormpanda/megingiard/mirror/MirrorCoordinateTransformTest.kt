@@ -337,7 +337,7 @@ class MirrorCoordinateTransformTest {
     @Test
     fun `clampCutoutResize clamps top-left drag past corner without snapping back`() {
         val allCutouts = listOf(
-            ScreenCutout("1", destX = 0.5f, destY = 0.45f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // Right cutout (b)
+            ScreenCutout("1", destX = 0.35f, destY = 0.42f, destWidth = 0.35f, destHeight = 0.23f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // Right cutout (b) with prev state
             ScreenCutout("2", destX = 0.2f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // Left cutout (a)
         )
         val geom = clampCutoutResize(
@@ -351,6 +351,25 @@ class MirrorCoordinateTransformTest {
         )
         assertEquals(0.35f, geom.x, EPS)
         assertEquals(0.4f, geom.y, EPS)
+    }
+
+    @Test
+    fun `clampCutoutResize clamps top-left drag past corner without snapping back when starting adjacent`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.35f, destY = 0.42f, destWidth = 0.35f, destHeight = 0.23f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // prev state
+            ScreenCutout("2", destX = 0.2f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // Left cutout
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.TOP_LEFT,
+            originalX = 0.40f, originalY = 0.45f, // Starts adjacent horizontally
+            originalWidth = 0.20f, originalHeight = 0.20f,
+            targetX = 0.35f, targetY = 0.34f,
+            targetWidth = 0.25f, targetHeight = 0.31f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.35f, geom.x, EPS)
+        assertEquals(0.40f, geom.y, EPS)
     }
 }
 
