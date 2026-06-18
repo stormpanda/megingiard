@@ -185,6 +185,34 @@ fun clampCutoutDrag(
     val slideX = clampMoveX(originalX, clampedX, clampedY, width, height, others)
     val slideY = clampMoveY(originalY, clampedY, clampedX, width, height, others)
     
+    // Check Candidate 1: Clamp X, keep target Y
+    val overlapsCand1 = others.any { other ->
+        slideX < other.destX + other.destWidth - 0.001f && slideX + width > other.destX + 0.001f &&
+        clampedY < other.destY + other.destHeight - 0.001f && clampedY + height > other.destY + 0.001f
+    }
+    
+    // Check Candidate 2: Keep target X, clamp Y
+    val overlapsCand2 = others.any { other ->
+        clampedX < other.destX + other.destWidth - 0.001f && clampedX + width > other.destX + 0.001f &&
+        slideY < other.destY + other.destHeight - 0.001f && slideY + height > other.destY + 0.001f
+    }
+    
+    if (!overlapsCand1 && !overlapsCand2) {
+        // Both are valid, pick the one closer to target (clampedX, clampedY)
+        val dist1 = abs(slideX - clampedX)
+        val dist2 = abs(slideY - clampedY)
+        return if (dist1 <= dist2) {
+            Pair(slideX, clampedY)
+        } else {
+            Pair(clampedX, slideY)
+        }
+    } else if (!overlapsCand1) {
+        return Pair(slideX, clampedY)
+    } else if (!overlapsCand2) {
+        return Pair(clampedX, slideY)
+    }
+    
+    // Fallback to both clamped
     val overlapsBothSlide = others.any { other ->
         slideX < other.destX + other.destWidth - 0.001f && slideX + width > other.destX + 0.001f &&
         slideY < other.destY + other.destHeight - 0.001f && slideY + height > other.destY + 0.001f

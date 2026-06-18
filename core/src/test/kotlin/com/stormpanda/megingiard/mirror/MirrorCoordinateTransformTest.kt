@@ -229,6 +229,26 @@ class MirrorCoordinateTransformTest {
     }
 
     @Test
+    fun `clampCutoutDrag selects closer candidate when sliding along either axis is valid`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.35f, destY = 0.0f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
+            ScreenCutout("2", destX = 0.1f, destY = 0.3f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)
+        )
+        val (x, y) = clampCutoutDrag(
+            cutoutId = "1",
+            originalX = 0.35f, originalY = 0.0f,
+            targetX = 0.29f, targetY = 0.36f,
+            width = 0.2f, height = 0.2f,
+            allCutouts = allCutouts
+        )
+        // Candidate 1 (slide X, keep target Y): (0.3f, 0.36f) -> distance to target is 0.01
+        // Candidate 2 (keep target X, slide Y): (0.29f, 0.1f) -> distance to target is 0.26
+        // Candidate 1 should be selected.
+        assertEquals(0.3f, x, EPS)
+        assertEquals(0.36f, y, EPS)
+    }
+
+    @Test
     fun `clampCutoutResize allows clear resize and clamps on collision`() {
         val allCutouts = listOf(
             ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
