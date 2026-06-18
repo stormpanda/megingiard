@@ -257,4 +257,43 @@ class MirrorCoordinateTransformTest {
         )
         assertEquals(0.4f, geomCollision.w, EPS)
     }
+
+    @Test
+    fun `clampCutoutResize clamps vertical scaling of lower cutout against upper cutout`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // Lower cutout
+            ScreenCutout("2", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // Upper cutout (bottom is 0.3)
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.TOP_LEFT,
+            originalX = 0.3f, originalY = 0.4f,
+            originalWidth = 0.2f, originalHeight = 0.2f,
+            targetX = 0.3f, targetY = 0.2f, // Drag top edge up past upper cutout's bottom
+            targetWidth = 0.2f, targetHeight = 0.4f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.3f, geom.y, EPS) // Should clamp to upper cutout's bottom (0.3)
+        assertEquals(0.3f, geom.h, EPS) // Height should be 0.6 (originalBottom) - 0.3 = 0.3
+    }
+
+    @Test
+    fun `clampCutoutResize clamps vertical scaling of lower cutout with slight horizontal drift`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // Lower cutout
+            ScreenCutout("2", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // Upper cutout (bottom is 0.3)
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.TOP_LEFT,
+            originalX = 0.3f, originalY = 0.4f,
+            originalWidth = 0.2f, originalHeight = 0.2f,
+            targetX = 0.29f, targetY = 0.2f, // Drag top edge up past bottom (0.3) and left (0.3)
+            targetWidth = 0.21f, targetHeight = 0.4f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.3f, geom.y, EPS)
+        assertEquals(0.3f, geom.h, EPS)
+    }
 }
+
