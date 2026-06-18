@@ -161,18 +161,7 @@ class MirrorPresentation(
         val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
         val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()
 
-        var finalWidth = targetWidth
-        var finalHeight = targetHeight
-
-        if (srcRatio > targetRatio) {
-            // Source is wider than target. Fit width, calculate height to maintain ratio.
-            finalHeight = (targetWidth / srcRatio).toInt()
-        } else {
-            // Source is taller than target. Fit height, calculate width.
-            finalWidth = (targetHeight * srcRatio).toInt()
-        }
-
-        ScreenCaptureManager.setSurfaceSize(finalWidth.toFloat(), finalHeight.toFloat())
+        ScreenCaptureManager.setSurfaceSize(targetWidth.toFloat(), targetHeight.toFloat())
 
         val container = FrameLayout(context).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -183,7 +172,10 @@ class MirrorPresentation(
         }
 
         val mcc = MultiCutoutContainer(context, srcWidth, srcHeight).apply {
-            layoutParams = FrameLayout.LayoutParams(finalWidth, finalHeight, Gravity.CENTER)
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
         }
         multiCutoutContainer = mcc
         container.addView(mcc)
@@ -727,8 +719,25 @@ class MultiCutoutContainer(
                     canvas.translate(viewportOffsetX, viewportOffsetY)
                     canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
 
-                    val scaleX = dw / srcWidth
-                    val scaleY = dh / srcHeight
+                    // Fit srcWidth x srcHeight into dw x dh preserving aspect ratio
+                    val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                    val destRatio = dw / dh
+                    
+                    var fitW = dw
+                    var fitH = dh
+                    if (srcRatio > destRatio) {
+                        fitH = dw / srcRatio
+                    } else {
+                        fitW = dh * srcRatio
+                    }
+                    
+                    // Center the fitted rectangle within dw x dh
+                    val fitX = (dw - fitW) / 2f
+                    val fitY = (dh - fitH) / 2f
+                    canvas.translate(fitX, fitY)
+
+                    val scaleX = fitW / srcWidth
+                    val scaleY = fitH / srcHeight
                     canvas.scale(scaleX, scaleY)
                 } else {
                     val scaleX = dw / sw
