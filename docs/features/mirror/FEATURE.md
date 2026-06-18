@@ -104,7 +104,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The multi-cutout mode is activated via a toggle button on the Viewport Edit overlay on the secondary display.
 - Defining source crop boundaries is done via the `CropSelectorOverlay` hosted in `CropSelectorActivity` on the primary display.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
-- Legacy layouts containing old single-viewport properties (`mirrorSavedScale`, `mirrorSavedOffsetX`, `mirrorSavedOffsetY`) MUST be automatically migrated to a single full-screen cutout on profile load or surface size initialization.
+- Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout`. Toggling between single-viewport and multi-viewport modes switches the active display mode (`mirrorMultiMode`) without overwriting or destroying the configuration of the other mode. Single-viewport mode dynamically generates the full-screen cutout at runtime.
 - In multi-cutout mode, the user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts).
 - Toggling to multi-cutout mode from the default single full-screen viewport MUST start with an empty slate (0 cutouts) rather than keeping the default full-screen cutout, unless a custom layout (multiple cutouts or a non-default single cutout/viewport crop) was already configured.
 

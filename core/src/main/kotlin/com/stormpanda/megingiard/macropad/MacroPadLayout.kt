@@ -346,6 +346,7 @@ data class PadLayout(
     val mirrorSmoothing: Boolean = true,
     val mirrorCutouts: List<ScreenCutout> = emptyList(),
     val mirrorConfigured: Boolean = false,
+    val mirrorMultiMode: Boolean = false,
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
 )

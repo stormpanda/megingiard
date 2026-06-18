@@ -182,27 +182,8 @@ object MacroPadState {
                 )
             } else {
                 val migratedLayouts = p.layouts.map { layout ->
-                    if (!layout.mirrorConfigured && layout.mirrorCutouts.isEmpty()) {
+                    if (!layout.mirrorConfigured) {
                         needsSave = true
-                        layout.copy(
-                            mirrorCutouts = listOf(
-                                ScreenCutout(
-                                    id = UUID.randomUUID().toString(),
-                                    name = "Full Screen",
-                                    srcX = 0f,
-                                    srcY = 0f,
-                                    srcWidth = 1f,
-                                    srcHeight = 1f,
-                                    destX = 0f,
-                                    destY = 0f,
-                                    destWidth = 1f,
-                                    destHeight = 1f,
-                                    opacity = 1f
-                                )
-                            ),
-                            mirrorConfigured = true
-                        )
-                    } else if (!layout.mirrorConfigured) {
                         layout.copy(mirrorConfigured = true)
                     } else {
                         layout
@@ -705,28 +686,10 @@ object MacroPadState {
                 } else {
                     changed = true
                     profileChanged = true
-                    val updatedCutouts = layout.mirrorCutouts.mapIndexed { index, cutout ->
-                        if (index == 0) {
-                            val sw = ScreenCaptureManager.surfaceWidth.value
-                            val sh = ScreenCaptureManager.surfaceHeight.value
-                            if (sw > 0f && sh > 0f) {
-                                val srcWidth = 1f / scale
-                                val srcHeight = 1f / scale
-                                val srcX = (0.5f - 0.5f / scale - offsetX / (sw * scale)).coerceIn(0f, 1f)
-                                val srcY = (0.5f - 0.5f / scale - offsetY / (sh * scale)).coerceIn(0f, 1f)
-                                cutout.copy(srcX = srcX, srcY = srcY, srcWidth = srcWidth, srcHeight = srcHeight)
-                            } else {
-                                cutout
-                            }
-                        } else {
-                            cutout
-                        }
-                    }
                     layout.copy(
                         mirrorSavedScale = scale,
                         mirrorSavedOffsetX = offsetX,
                         mirrorSavedOffsetY = offsetY,
-                        mirrorCutouts = updatedCutouts,
                         mirrorConfigured = true
                     )
                 }

@@ -374,17 +374,8 @@ fun CutoutLayoutEditor(
                         color = colors.accent,
                         onClick = {
                             AppStateManager.setMultiCutoutEditMode(true)
-                            val isDefaultSingle = layout.mirrorCutouts.size == 1 &&
-                                    layout.mirrorCutouts[0].destX == 0f &&
-                                    layout.mirrorCutouts[0].destY == 0f &&
-                                    layout.mirrorCutouts[0].destWidth == 1f &&
-                                    layout.mirrorCutouts[0].destHeight == 1f
-                            if (isDefaultSingle) {
-                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = emptyList()))
-                                AppStateManager.setSelectedCutoutId(null)
-                            } else {
-                                AppStateManager.setSelectedCutoutId(layout.mirrorCutouts.firstOrNull()?.id)
-                            }
+                            MacroPadState.updateLayout(layout.copy(mirrorMultiMode = true))
+                            AppStateManager.setSelectedCutoutId(layout.mirrorCutouts.firstOrNull()?.id)
                         }
                     )
                 } else {
@@ -452,13 +443,7 @@ fun CutoutLayoutEditor(
                         color = colors.onSurfaceSecondary,
                         onClick = {
                             AppStateManager.setMultiCutoutEditMode(false)
-                            val singleCutout = ScreenCutout(
-                                id = UUID.randomUUID().toString(),
-                                name = "Full Screen",
-                                srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
-                                destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f
-                            )
-                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(singleCutout)))
+                            MacroPadState.updateLayout(layout.copy(mirrorMultiMode = false))
                             AppStateManager.setSelectedCutoutId(null)
                         }
                     )

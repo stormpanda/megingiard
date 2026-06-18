@@ -47,7 +47,7 @@ class MirrorCutoutDomainTest {
     }
 
     @Test
-    fun `loadFrom migrates layouts with empty cutouts to default full screen`() {
+    fun `loadFrom does not populate cutouts list and preserves unconfigured empty cutouts`() {
         val layoutWithoutCutouts = PadLayout(
             id = "test-layout-1",
             name = "Test Layout 1",
@@ -64,21 +64,12 @@ class MirrorCutoutDomainTest {
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
-        assertEquals(1, activeLayout!!.mirrorCutouts.size)
-        val cutout = activeLayout.mirrorCutouts.first()
-        assertEquals("Full Screen", cutout.name)
-        assertEquals(0f, cutout.srcX, 0.001f)
-        assertEquals(0f, cutout.srcY, 0.001f)
-        assertEquals(1f, cutout.srcWidth, 0.001f)
-        assertEquals(1f, cutout.srcHeight, 0.001f)
-        assertEquals(0f, cutout.destX, 0.001f)
-        assertEquals(0f, cutout.destY, 0.001f)
-        assertEquals(1f, cutout.destWidth, 0.001f)
-        assertEquals(1f, cutout.destHeight, 0.001f)
+        assertEquals(0, activeLayout!!.mirrorCutouts.size)
+        assertTrue(activeLayout.mirrorConfigured)
     }
 
     @Test
-    fun `setSurfaceSize migrates layouts with legacy viewport settings`() {
+    fun `setSurfaceSize does not migrate legacy viewport settings to cutouts list`() {
         val layoutWithLegacy = PadLayout(
             id = "test-layout-legacy",
             name = "Test Layout Legacy",
@@ -96,25 +87,17 @@ class MirrorCutoutDomainTest {
 
         MacroPadState.loadFrom(listOf(profile), "test-profile-legacy")
 
-        // Call setSurfaceSize which triggers the migration
+        // Call setSurfaceSize
         ScreenCaptureManager.setSurfaceSize(1920f, 1080f)
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
-        assertEquals(1, activeLayout!!.mirrorCutouts.size)
+        assertEquals(0, activeLayout!!.mirrorCutouts.size)
         
-        // Assert legacy fields are cleared
-        assertEquals(1f, activeLayout.mirrorSavedScale, 0.001f)
-        assertEquals(0f, activeLayout.mirrorSavedOffsetX, 0.001f)
-        assertEquals(0f, activeLayout.mirrorSavedOffsetY, 0.001f)
-
-        val cutout = activeLayout.mirrorCutouts.first()
-        assertEquals(0.2f, cutout.srcWidth, 0.001f)
-        assertEquals(0.2f, cutout.srcHeight, 0.001f)
-        // srcX = (0.5 - 0.5/5 - 960/(1920*5)) = 0.5 - 0.1 - 0.1 = 0.3f
-        assertEquals(0.3f, cutout.srcX, 0.001f)
-        // srcY = (0.5 - 0.5/5 - 540/(1080*5)) = 0.5 - 0.1 - 0.1 = 0.3f
-        assertEquals(0.3f, cutout.srcY, 0.001f)
+        // Assert legacy fields are preserved
+        assertEquals(5f, activeLayout.mirrorSavedScale, 0.001f)
+        assertEquals(960f, activeLayout.mirrorSavedOffsetX, 0.001f)
+        assertEquals(540f, activeLayout.mirrorSavedOffsetY, 0.001f)
     }
 
     @Test
@@ -162,49 +145,37 @@ class MirrorCutoutDomainTest {
     }
 
     @Test
-    fun `loadFrom migrates layouts with empty cutouts to default full screen when mirrorConfigured is false`() {
-        val layoutWithoutCutouts = PadLayout(
-            id = "test-layout-unconfigured",
-            name = "Unconfigured Layout",
-            mirrorCutouts = emptyList(),
-            mirrorConfigured = false
+    fun `toggling multi-mode and saving viewport does not override other mode configs`() {
+        val layout = PadLayout(
+            id = "test-layout-toggle",
+            name = "Toggle Layout",
+            mirrorMultiMode = false,
+            mirrorSavedScale = 2f,
+            mirrorCutouts = listOf(
+                ScreenCutout(
+                    id = "c1", name = "Cutout 1",
+                    srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
+                    destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f
+                )
+            )
         )
         val profile = PadProfile(
-            id = "test-profile-unconfigured",
-            name = "Unconfigured Profile",
-            layouts = listOf(layoutWithoutCutouts),
-            activeLayoutId = "test-layout-unconfigured"
+            id = "test-profile-toggle",
+            name = "Toggle Profile",
+            layouts = listOf(layout),
+            activeLayoutId = "test-layout-toggle"
         )
 
-        MacroPadState.loadFrom(listOf(profile), "test-profile-unconfigured")
+        MacroPadState.loadFrom(listOf(profile), "test-profile-toggle")
+
+        // Save viewport while in single-mode
+        MacroPadState.saveMirrorViewport("test-layout-toggle", scale = 3f, offsetX = 10f, offsetY = 10f)
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
-        assertEquals(1, activeLayout!!.mirrorCutouts.size)
-        assertTrue(activeLayout.mirrorConfigured)
-        assertEquals("Full Screen", activeLayout.mirrorCutouts.first().name)
-    }
-
-    @Test
-    fun `loadFrom does not migrate layouts with empty cutouts when mirrorConfigured is true`() {
-        val layoutIntentionallyEmpty = PadLayout(
-            id = "test-layout-empty-configured",
-            name = "Intentionally Empty Layout",
-            mirrorCutouts = emptyList(),
-            mirrorConfigured = true
-        )
-        val profile = PadProfile(
-            id = "test-profile-empty-configured",
-            name = "Empty Configured Profile",
-            layouts = listOf(layoutIntentionallyEmpty),
-            activeLayoutId = "test-layout-empty-configured"
-        )
-
-        MacroPadState.loadFrom(listOf(profile), "test-profile-empty-configured")
-
-        val activeLayout = MacroPadState.activeLayout.value
-        assertNotNull(activeLayout)
-        assertEquals(0, activeLayout!!.mirrorCutouts.size)
-        assertTrue(activeLayout.mirrorConfigured)
+        assertEquals(3f, activeLayout!!.mirrorSavedScale, 0.001f)
+        // Multi-mode cutouts list must NOT be overwritten or modified
+        assertEquals(1, activeLayout.mirrorCutouts.size)
+        assertEquals("c1", activeLayout.mirrorCutouts.first().id)
     }
 }
