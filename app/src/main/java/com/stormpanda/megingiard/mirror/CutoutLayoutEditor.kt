@@ -147,6 +147,7 @@ fun CutoutLayoutEditor(
                                     dragStartY = curCutout.destY
                                     accumulatedX = 0f
                                     accumulatedY = 0f
+                                    AppLog.d(TAG, "Drag start cutout '${curCutout.name}' at (${curCutout.destX}, ${curCutout.destY})")
                                     AppStateManager.setSelectedCutoutId(curCutout.id)
                                 },
                                 onDrag = { change, dragAmount ->
@@ -168,6 +169,10 @@ fun CutoutLayoutEditor(
                                         height = curCutout.destHeight,
                                         allCutouts = curLayout.mirrorCutouts
                                     )
+
+                                    if (clampedX != targetX || clampedY != targetY) {
+                                        AppLog.d(TAG, "Drag clamped '${curCutout.name}': target=($targetX, $targetY) -> clamped=($clampedX, $clampedY)")
+                                    }
 
                                     val updated = curLayout.mirrorCutouts.map {
                                         if (it.id == curCutout.id) it.copy(destX = clampedX, destY = clampedY) else it
@@ -208,10 +213,15 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            AppLog.d(TAG, "Resize start TOP_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
                             val curCutout = currentCutoutState.value
+                            val targetX = dragStartX + totalDx / screenW
+                            val targetY = dragStartY + totalDy / screenH
+                            val targetWidth = dragStartW - totalDx / screenW
+                            val targetHeight = dragStartH - totalDy / screenH
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.TOP_LEFT,
@@ -219,12 +229,15 @@ fun CutoutLayoutEditor(
                                 originalY = dragStartY,
                                 originalWidth = dragStartW,
                                 originalHeight = dragStartH,
-                                targetX = dragStartX + totalDx / screenW,
-                                targetY = dragStartY + totalDy / screenH,
-                                targetWidth = dragStartW - totalDx / screenW,
-                                targetHeight = dragStartH - totalDy / screenH,
+                                targetX = targetX,
+                                targetY = targetY,
+                                targetWidth = targetWidth,
+                                targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts
                             )
+                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
+                                AppLog.d(TAG, "Resize TOP_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                            }
                             val updated = curLayout.mirrorCutouts.map {
                                 if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
                             }
@@ -245,10 +258,15 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            AppLog.d(TAG, "Resize start TOP_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
                             val curCutout = currentCutoutState.value
+                            val targetX = dragStartX
+                            val targetY = dragStartY + totalDy / screenH
+                            val targetWidth = dragStartW + totalDx / screenW
+                            val targetHeight = dragStartH - totalDy / screenH
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.TOP_RIGHT,
@@ -256,12 +274,15 @@ fun CutoutLayoutEditor(
                                 originalY = dragStartY,
                                 originalWidth = dragStartW,
                                 originalHeight = dragStartH,
-                                targetX = dragStartX,
-                                targetY = dragStartY + totalDy / screenH,
-                                targetWidth = dragStartW + totalDx / screenW,
-                                targetHeight = dragStartH - totalDy / screenH,
+                                targetX = targetX,
+                                targetY = targetY,
+                                targetWidth = targetWidth,
+                                targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts
                             )
+                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
+                                AppLog.d(TAG, "Resize TOP_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                            }
                             val updated = curLayout.mirrorCutouts.map {
                                 if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
                             }
@@ -282,10 +303,15 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            AppLog.d(TAG, "Resize start BOTTOM_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
                             val curCutout = currentCutoutState.value
+                            val targetX = dragStartX + totalDx / screenW
+                            val targetY = dragStartY
+                            val targetWidth = dragStartW - totalDx / screenW
+                            val targetHeight = dragStartH + totalDy / screenH
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.BOTTOM_LEFT,
@@ -293,12 +319,15 @@ fun CutoutLayoutEditor(
                                 originalY = dragStartY,
                                 originalWidth = dragStartW,
                                 originalHeight = dragStartH,
-                                targetX = dragStartX + totalDx / screenW,
-                                targetY = dragStartY,
-                                targetWidth = dragStartW - totalDx / screenW,
-                                targetHeight = dragStartH + totalDy / screenH,
+                                targetX = targetX,
+                                targetY = targetY,
+                                targetWidth = targetWidth,
+                                targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts
                             )
+                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
+                                AppLog.d(TAG, "Resize BOTTOM_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                            }
                             val updated = curLayout.mirrorCutouts.map {
                                 if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
                             }
@@ -319,10 +348,15 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            AppLog.d(TAG, "Resize start BOTTOM_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
                             val curCutout = currentCutoutState.value
+                            val targetX = dragStartX
+                            val targetY = dragStartY
+                            val targetWidth = dragStartW + totalDx / screenW
+                            val targetHeight = dragStartH + totalDy / screenH
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.BOTTOM_RIGHT,
@@ -330,12 +364,15 @@ fun CutoutLayoutEditor(
                                 originalY = dragStartY,
                                 originalWidth = dragStartW,
                                 originalHeight = dragStartH,
-                                targetX = dragStartX,
-                                targetY = dragStartY,
-                                targetWidth = dragStartW + totalDx / screenW,
-                                targetHeight = dragStartH + totalDy / screenH,
+                                targetX = targetX,
+                                targetY = targetY,
+                                targetWidth = targetWidth,
+                                targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts
                             )
+                            if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
+                                AppLog.d(TAG, "Resize BOTTOM_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                            }
                             val updated = curLayout.mirrorCutouts.map {
                                 if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
                             }
