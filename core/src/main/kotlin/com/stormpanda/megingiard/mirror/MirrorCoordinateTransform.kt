@@ -235,6 +235,8 @@ fun clampCutoutResize(
     val prevY = prevCutout?.destY ?: originalY
     val prevW = prevCutout?.destWidth ?: originalWidth
     val prevH = prevCutout?.destHeight ?: originalHeight
+    val prevRight = prevX + prevW
+    val prevBottom = prevY + prevH
     
     val clampedWidth = targetWidth.coerceIn(MIN_CUTOUT_SIZE, 1f)
     val clampedHeight = targetHeight.coerceIn(MIN_CUTOUT_SIZE, 1f)
@@ -248,25 +250,32 @@ fun clampCutoutResize(
     var finalHeight = clampedHeight
     when (handle) {
         ResizeHandle.TOP_LEFT -> {
-            val tx = targetX
-            val ty = targetY
             clampedX = clampedX.coerceIn(0f, originalRight - MIN_CUTOUT_SIZE)
             clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
             
             for (other in others) {
-                val xOverlaps = tx < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
-                val yOverlaps = ty < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
+                val xOverlaps = clampedX < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
+                val yOverlaps = clampedY < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
                 
                 if (xOverlaps && yOverlaps) {
                     val candX = other.destX + other.destWidth
                     val candY = other.destY + other.destHeight
                     
-                    val distX = abs(candX - prevX) + abs(ty - prevY)
-                    val distY = abs(tx - prevX) + abs(candY - prevY)
-                    if (distX < distY) {
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    
+                    if (prevYOverlaps && !prevXOverlaps) {
                         clampedX = maxOf(clampedX, candX)
-                    } else {
+                    } else if (prevXOverlaps && !prevYOverlaps) {
                         clampedY = maxOf(clampedY, candY)
+                    } else {
+                        val distX = abs(candX - prevX) + abs(clampedY - prevY)
+                        val distY = abs(clampedX - prevX) + abs(candY - prevY)
+                        if (distX < distY) {
+                            clampedX = maxOf(clampedX, candX)
+                        } else {
+                            clampedY = maxOf(clampedY, candY)
+                        }
                     }
                 }
             }
@@ -277,26 +286,32 @@ fun clampCutoutResize(
         }
         
         ResizeHandle.TOP_RIGHT -> {
-            val tr = originalX + targetWidth
-            val ty = targetY
             var clampedRight = (originalX + clampedWidth).coerceIn(originalX + MIN_CUTOUT_SIZE, 1f)
             clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
             
-            val prevRight = prevX + prevW
             for (other in others) {
-                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && tr > other.destX + 0.001f
-                val yOverlaps = ty < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
+                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && clampedRight > other.destX + 0.001f
+                val yOverlaps = clampedY < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
                 
                 if (xOverlaps && yOverlaps) {
                     val candRight = other.destX
                     val candY = other.destY + other.destHeight
                     
-                    val distX = abs(candRight - prevRight) + abs(ty - prevY)
-                    val distY = abs(tr - prevRight) + abs(candY - prevY)
-                    if (distX < distY) {
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    
+                    if (prevYOverlaps && !prevXOverlaps) {
                         clampedRight = minOf(clampedRight, candRight)
-                    } else {
+                    } else if (prevXOverlaps && !prevYOverlaps) {
                         clampedY = maxOf(clampedY, candY)
+                    } else {
+                        val distX = abs(candRight - prevRight) + abs(clampedY - prevY)
+                        val distY = abs(clampedRight - prevRight) + abs(candY - prevY)
+                        if (distX < distY) {
+                            clampedRight = minOf(clampedRight, candRight)
+                        } else {
+                            clampedY = maxOf(clampedY, candY)
+                        }
                     }
                 }
             }
@@ -308,26 +323,32 @@ fun clampCutoutResize(
         }
         
         ResizeHandle.BOTTOM_LEFT -> {
-            val tx = targetX
-            val tb = originalY + targetHeight
             clampedX = clampedX.coerceIn(0f, originalRight - MIN_CUTOUT_SIZE)
             var clampedBottom = (originalY + clampedHeight).coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
             
-            val prevBottom = prevY + prevH
             for (other in others) {
-                val xOverlaps = tx < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
-                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && tb > other.destY + 0.001f
+                val xOverlaps = clampedX < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
+                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && clampedBottom > other.destY + 0.001f
                 
                 if (xOverlaps && yOverlaps) {
                     val candX = other.destX + other.destWidth
                     val candBottom = other.destY
                     
-                    val distX = abs(candX - prevX) + abs(tb - prevBottom)
-                    val distY = abs(tx - prevX) + abs(candBottom - prevBottom)
-                    if (distX < distY) {
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    
+                    if (prevYOverlaps && !prevXOverlaps) {
                         clampedX = maxOf(clampedX, candX)
-                    } else {
+                    } else if (prevXOverlaps && !prevYOverlaps) {
                         clampedBottom = minOf(clampedBottom, candBottom)
+                    } else {
+                        val distX = abs(candX - prevX) + abs(clampedBottom - prevBottom)
+                        val distY = abs(clampedX - prevX) + abs(candBottom - prevBottom)
+                        if (distX < distY) {
+                            clampedX = maxOf(clampedX, candX)
+                        } else {
+                            clampedBottom = minOf(clampedBottom, candBottom)
+                        }
                     }
                 }
             }
@@ -339,27 +360,32 @@ fun clampCutoutResize(
         }
         
         ResizeHandle.BOTTOM_RIGHT -> {
-            val tr = originalX + targetWidth
-            val tb = originalY + targetHeight
             var clampedRight = (originalX + clampedWidth).coerceIn(originalX + MIN_CUTOUT_SIZE, 1f)
             var clampedBottom = (originalY + clampedHeight).coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
             
-            val prevRight = prevX + prevW
-            val prevBottom = prevY + prevH
             for (other in others) {
-                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && tr > other.destX + 0.001f
-                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && tb > other.destY + 0.001f
+                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && clampedRight > other.destX + 0.001f
+                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && clampedBottom > other.destY + 0.001f
                 
                 if (xOverlaps && yOverlaps) {
                     val candRight = other.destX
                     val candBottom = other.destY
                     
-                    val distX = abs(candRight - prevRight) + abs(tb - prevBottom)
-                    val distY = abs(tr - prevRight) + abs(candBottom - prevBottom)
-                    if (distX < distY) {
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    
+                    if (prevYOverlaps && !prevXOverlaps) {
                         clampedRight = minOf(clampedRight, candRight)
-                    } else {
+                    } else if (prevXOverlaps && !prevYOverlaps) {
                         clampedBottom = minOf(clampedBottom, candBottom)
+                    } else {
+                        val distX = abs(candRight - prevRight) + abs(clampedBottom - prevBottom)
+                        val distY = abs(clampedRight - prevRight) + abs(candBottom - prevBottom)
+                        if (distX < distY) {
+                            clampedRight = minOf(clampedRight, candRight)
+                        } else {
+                            clampedBottom = minOf(clampedBottom, candBottom)
+                        }
                     }
                 }
             }

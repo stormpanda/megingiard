@@ -371,6 +371,27 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.35f, geom.x, EPS)
         assertEquals(0.40f, geom.y, EPS)
     }
+
+    @Test
+    fun `clampCutoutResize clamps top-right drag against multiple cutouts correctly`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.35f, destY = 0.42f, destWidth = 0.30f, destHeight = 0.23f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // prev state of C (right is 0.65)
+            ScreenCutout("2", destX = 0.30f, destY = 0.20f, destWidth = 0.30f, destHeight = 0.20f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // A (above, bottom is 0.40)
+            ScreenCutout("3", destX = 0.65f, destY = 0.30f, destWidth = 0.20f, destHeight = 0.20f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // B (right, left is 0.65)
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.TOP_RIGHT,
+            originalX = 0.35f, originalY = 0.42f,
+            originalWidth = 0.30f, originalHeight = 0.23f,
+            targetX = 0.35f, targetY = 0.30f,
+            targetWidth = 0.32f, targetHeight = 0.35f, // tr = 0.67, ty = 0.30
+            allCutouts = allCutouts
+        )
+        assertEquals(0.35f, geom.x, EPS)
+        assertEquals(0.40f, geom.y, EPS) // clamped to A's bottom (0.40)
+        assertEquals(0.30f, geom.w, EPS) // clamped to B's left (0.65), width is 0.65 - 0.35 = 0.30
+    }
 }
 
 
