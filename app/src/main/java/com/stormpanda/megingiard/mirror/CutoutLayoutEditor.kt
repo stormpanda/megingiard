@@ -27,7 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -187,10 +190,10 @@ fun CutoutLayoutEditor(
 
                 // Show corner resize handles if selected
                 if (isSelected) {
-                    var dragStartX = 0f
-                    var dragStartY = 0f
-                    var dragStartW = 0f
-                    var dragStartH = 0f
+                    var dragStartX by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartY by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartW by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartH by remember(cutout.id) { mutableStateOf(0f) }
 
                     // Top-Left handle
                     ResizeHandleView(
