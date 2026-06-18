@@ -132,7 +132,8 @@ object ScreenCaptureManager {
                 mirrorSavedScale = 1f,
                 mirrorSavedOffsetX = 0f,
                 mirrorSavedOffsetY = 0f,
-                mirrorCutouts = listOf(migratedCutout)
+                mirrorCutouts = listOf(migratedCutout),
+                mirrorConfigured = true
             )
             MacroPadState.updateLayout(updatedLayout)
         }

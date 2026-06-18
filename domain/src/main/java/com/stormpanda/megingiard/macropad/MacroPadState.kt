@@ -174,14 +174,15 @@ object MacroPadState {
                                     destHeight = 1f,
                                     opacity = 1f
                                 )
-                            )
+                            ),
+                            mirrorConfigured = true
                         )
                     ),
                     activeLayoutId = layoutId,
                 )
             } else {
                 val migratedLayouts = p.layouts.map { layout ->
-                    if (layout.mirrorCutouts.isEmpty()) {
+                    if (!layout.mirrorConfigured && layout.mirrorCutouts.isEmpty()) {
                         needsSave = true
                         layout.copy(
                             mirrorCutouts = listOf(
@@ -198,8 +199,11 @@ object MacroPadState {
                                     destHeight = 1f,
                                     opacity = 1f
                                 )
-                            )
+                            ),
+                            mirrorConfigured = true
                         )
+                    } else if (!layout.mirrorConfigured) {
+                        layout.copy(mirrorConfigured = true)
                     } else {
                         layout
                     }
@@ -394,7 +398,7 @@ object MacroPadState {
         } else {
             layout.mirrorCutouts
         }
-        val normalizedLayout = layout.copy(name = uniqueName, mirrorCutouts = cutouts)
+        val normalizedLayout = layout.copy(name = uniqueName, mirrorCutouts = cutouts, mirrorConfigured = true)
         AppLog.d(TAG, "addLayout id=${normalizedLayout.id} name='${normalizedLayout.name}' to profile=${profile.id}")
         updateProfile(profile.copy(
             layouts = profile.layouts + normalizedLayout,
@@ -405,8 +409,9 @@ object MacroPadState {
     fun updateLayout(layout: PadLayout) {
         val profile = activeProfile.value ?: return
         AppLog.d(TAG, "updateLayout id=${layout.id} name='${layout.name}'")
+        val withConfigured = if (!layout.mirrorConfigured) layout.copy(mirrorConfigured = true) else layout
         updateProfile(profile.copy(
-            layouts = profile.layouts.map { if (it.id == layout.id) layout else it },
+            layouts = profile.layouts.map { if (it.id == withConfigured.id) withConfigured else it },
         ))
     }
 
@@ -721,7 +726,8 @@ object MacroPadState {
                         mirrorSavedScale = scale,
                         mirrorSavedOffsetX = offsetX,
                         mirrorSavedOffsetY = offsetY,
-                        mirrorCutouts = updatedCutouts
+                        mirrorCutouts = updatedCutouts,
+                        mirrorConfigured = true
                     )
                 }
             }
@@ -739,12 +745,12 @@ object MacroPadState {
             var profileChanged = false
             val updatedLayouts = profile.layouts.map { layout ->
                 if (layout.id != layoutId) return@map layout
-                if (layout.mirrorCutouts == cutouts) {
+                if (layout.mirrorCutouts == cutouts && layout.mirrorConfigured) {
                     layout
                 } else {
                     changed = true
                     profileChanged = true
-                    layout.copy(mirrorCutouts = cutouts)
+                    layout.copy(mirrorCutouts = cutouts, mirrorConfigured = true)
                 }
             }
             if (profileChanged) profile.copy(layouts = updatedLayouts) else profile

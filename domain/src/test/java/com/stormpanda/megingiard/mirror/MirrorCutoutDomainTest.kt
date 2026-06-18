@@ -160,4 +160,51 @@ class MirrorCutoutDomainTest {
         // Wait, let's verify if indicator position was set
         assertEquals(Pair(450f, 450f), controller.indicatorPos.value)
     }
+
+    @Test
+    fun `loadFrom migrates layouts with empty cutouts to default full screen when mirrorConfigured is false`() {
+        val layoutWithoutCutouts = PadLayout(
+            id = "test-layout-unconfigured",
+            name = "Unconfigured Layout",
+            mirrorCutouts = emptyList(),
+            mirrorConfigured = false
+        )
+        val profile = PadProfile(
+            id = "test-profile-unconfigured",
+            name = "Unconfigured Profile",
+            layouts = listOf(layoutWithoutCutouts),
+            activeLayoutId = "test-layout-unconfigured"
+        )
+
+        MacroPadState.loadFrom(listOf(profile), "test-profile-unconfigured")
+
+        val activeLayout = MacroPadState.activeLayout.value
+        assertNotNull(activeLayout)
+        assertEquals(1, activeLayout!!.mirrorCutouts.size)
+        assertTrue(activeLayout.mirrorConfigured)
+        assertEquals("Full Screen", activeLayout.mirrorCutouts.first().name)
+    }
+
+    @Test
+    fun `loadFrom does not migrate layouts with empty cutouts when mirrorConfigured is true`() {
+        val layoutIntentionallyEmpty = PadLayout(
+            id = "test-layout-empty-configured",
+            name = "Intentionally Empty Layout",
+            mirrorCutouts = emptyList(),
+            mirrorConfigured = true
+        )
+        val profile = PadProfile(
+            id = "test-profile-empty-configured",
+            name = "Empty Configured Profile",
+            layouts = listOf(layoutIntentionallyEmpty),
+            activeLayoutId = "test-layout-empty-configured"
+        )
+
+        MacroPadState.loadFrom(listOf(profile), "test-profile-empty-configured")
+
+        val activeLayout = MacroPadState.activeLayout.value
+        assertNotNull(activeLayout)
+        assertEquals(0, activeLayout!!.mirrorCutouts.size)
+        assertTrue(activeLayout.mirrorConfigured)
+    }
 }

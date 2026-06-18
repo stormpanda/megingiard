@@ -374,8 +374,17 @@ fun CutoutLayoutEditor(
                         color = colors.accent,
                         onClick = {
                             AppStateManager.setMultiCutoutEditMode(true)
-                            val selectedId = layout.mirrorCutouts.firstOrNull()?.id
-                            AppStateManager.setSelectedCutoutId(selectedId)
+                            val isDefaultSingle = layout.mirrorCutouts.size == 1 &&
+                                    layout.mirrorCutouts[0].destX == 0f &&
+                                    layout.mirrorCutouts[0].destY == 0f &&
+                                    layout.mirrorCutouts[0].destWidth == 1f &&
+                                    layout.mirrorCutouts[0].destHeight == 1f
+                            if (isDefaultSingle) {
+                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = emptyList()))
+                                AppStateManager.setSelectedCutoutId(null)
+                            } else {
+                                AppStateManager.setSelectedCutoutId(layout.mirrorCutouts.firstOrNull()?.id)
+                            }
                         }
                     )
                 } else {
@@ -428,7 +437,7 @@ fun CutoutLayoutEditor(
                     ToolbarButton(
                         text = stringResource(R.string.mirror_editor_delete_cutout),
                         color = colors.error,
-                        enabled = selectedCutoutId != null && layout.mirrorCutouts.size > 1,
+                        enabled = selectedCutoutId != null,
                         onClick = {
                             val targetId = selectedCutoutId ?: return@ToolbarButton
                             val remaining = layout.mirrorCutouts.filter { it.id != targetId }
