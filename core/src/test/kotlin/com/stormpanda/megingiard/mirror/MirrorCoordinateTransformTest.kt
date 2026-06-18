@@ -333,7 +333,27 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.3f, geom.y, EPS) // clamped to bottom edge of a
         assertEquals(0.25f, geom.w, EPS) // width remains 0.25f (x is 0.05f, not clamped)
     }
+
+    @Test
+    fun `clampCutoutResize clamps top-left drag past corner without snapping back`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.5f, destY = 0.45f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // Right cutout (b)
+            ScreenCutout("2", destX = 0.2f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // Left cutout (a)
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.TOP_LEFT,
+            originalX = 0.5f, originalY = 0.45f,
+            originalWidth = 0.2f, originalHeight = 0.2f,
+            targetX = 0.35f, targetY = 0.34f,
+            targetWidth = 0.35f, targetHeight = 0.31f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.35f, geom.x, EPS)
+        assertEquals(0.4f, geom.y, EPS)
+    }
 }
+
 
 
 

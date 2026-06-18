@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
+import kotlin.math.abs
+
 /**
  * Maps a raw touch position on the mirror surface back through the current zoom/pan
  * transform to obtain the normalised content coordinate [0, 1] that corresponds to
@@ -255,8 +257,8 @@ fun clampCutoutResize(
                     val expandingUp = ty < originalY
                     
                     if (expandingLeft && expandingUp) {
-                        val distX = (other.destX + other.destWidth) - tx
-                        val distY = (other.destY + other.destHeight) - ty
+                        val distX = abs(originalX - (other.destX + other.destWidth))
+                        val distY = abs(originalY - (other.destY + other.destHeight))
                         if (distX < distY) {
                             clampedX = maxOf(clampedX, other.destX + other.destWidth)
                         } else {
@@ -290,8 +292,8 @@ fun clampCutoutResize(
                     val expandingUp = ty < originalY
                     
                     if (expandingRight && expandingUp) {
-                        val distX = tr - other.destX
-                        val distY = (other.destY + other.destHeight) - ty
+                        val distX = abs(originalRight - other.destX)
+                        val distY = abs(originalY - (other.destY + other.destHeight))
                         if (distX < distY) {
                             clampedRight = minOf(clampedRight, other.destX)
                         } else {
@@ -326,8 +328,8 @@ fun clampCutoutResize(
                     val expandingDown = tb > originalBottom
                     
                     if (expandingLeft && expandingDown) {
-                        val distX = (other.destX + other.destWidth) - tx
-                        val distY = tb - other.destY
+                        val distX = abs(originalX - (other.destX + other.destWidth))
+                        val distY = abs(originalBottom - other.destY)
                         if (distX < distY) {
                             clampedX = maxOf(clampedX, other.destX + other.destWidth)
                         } else {
@@ -362,8 +364,8 @@ fun clampCutoutResize(
                     val expandingDown = tb > originalBottom
                     
                     if (expandingRight && expandingDown) {
-                        val distX = tr - other.destX
-                        val distY = tb - other.destY
+                        val distX = abs(originalRight - other.destX)
+                        val distY = abs(originalBottom - other.destY)
                         if (distX < distY) {
                             clampedRight = minOf(clampedRight, other.destX)
                         } else {
