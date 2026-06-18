@@ -267,6 +267,40 @@ class MirrorCoordinateTransformTest {
     }
 
     @Test
+    fun `adjustDestSizeToAspectRatio fits destination size correctly`() {
+        val (w, h) = adjustDestSizeToAspectRatio(
+            destX = 0f, destY = 0f,
+            destWidth = 0.3f, destHeight = 0.3f,
+            cropRatio = 16f / 9f,
+            screenW = 1280f, screenH = 960f
+        )
+        assertEquals(0.3f, w, EPS)
+        assertEquals(0.225f, h, EPS)
+    }
+
+    @Test
+    fun `clampCutoutResize maintains aspect ratio during collision`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
+            ScreenCutout("2", destX = 0.45f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.BOTTOM_RIGHT,
+            originalX = 0.1f, originalY = 0.1f,
+            originalWidth = 0.2f, originalHeight = 0.2f,
+            targetX = 0.1f, targetY = 0.1f,
+            targetWidth = 0.4f, targetHeight = 0.4f,
+            allCutouts = allCutouts,
+            keepAspectRatio = true,
+            cropRatio = 1f,
+            screenW = 1000f, screenH = 1000f
+        )
+        assertEquals(0.35f, geom.w, 0.002f)
+        assertEquals(0.35f, geom.h, 0.002f)
+    }
+
+    @Test
     fun `clampCutoutResize allows clear resize and clamps on collision`() {
         val allCutouts = listOf(
             ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),

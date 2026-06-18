@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.adjustDestSizeToAspectRatio
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 
@@ -59,6 +61,40 @@ fun CropSelectorOverlay(
     val currentCutoutState = rememberUpdatedState(cutout)
     val currentLayoutState = rememberUpdatedState(layout)
     val density = LocalDensity.current
+
+    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
+    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
+    val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
+    val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else 1080f
+    
+    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
+    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
+    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else 1280f
+    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else 960f
+
+    fun updateCutoutWithNewCrop(
+        cutout: ScreenCutout,
+        newX: Float,
+        newY: Float,
+        newW: Float,
+        newH: Float
+    ): ScreenCutout {
+        var updated = cutout.copy(srcX = newX, srcY = newY, srcWidth = newW, srcHeight = newH)
+        if (updated.keepAspectRatio) {
+            val cropRatio = (newW * srcWidth) / (newH * srcHeight)
+            val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
+                destX = updated.destX,
+                destY = updated.destY,
+                destWidth = updated.destWidth,
+                destHeight = updated.destHeight,
+                cropRatio = cropRatio,
+                screenW = secScreenW,
+                screenH = secScreenH
+            )
+            updated = updated.copy(destWidth = newDestW, destHeight = newDestH)
+        }
+        return updated
+    }
 
     BoxWithConstraints(
         modifier = Modifier
@@ -189,7 +225,7 @@ fun CropSelectorOverlay(
                 val newH = bottomEdge - newY
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) it.copy(srcX = newX, srcWidth = newW, srcY = newY, srcHeight = newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, newY, newW, newH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -218,7 +254,7 @@ fun CropSelectorOverlay(
                 val newH = bottomEdge - newY
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) it.copy(srcWidth = newW, srcY = newY, srcHeight = newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, newY, newW, newH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -247,7 +283,7 @@ fun CropSelectorOverlay(
                 val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) it.copy(srcX = newX, srcWidth = newW, srcHeight = newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, dragStartY, newW, newH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -273,7 +309,7 @@ fun CropSelectorOverlay(
                 val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) it.copy(srcWidth = newW, srcHeight = newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, dragStartY, newW, newH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }

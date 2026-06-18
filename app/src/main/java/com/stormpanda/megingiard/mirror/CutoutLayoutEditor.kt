@@ -66,6 +66,10 @@ fun CutoutLayoutEditor(
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
+    val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
+    val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
+    val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
+    val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else 1080f
 
     val layout = activeLayout ?: return
 
@@ -222,6 +226,7 @@ fun CutoutLayoutEditor(
                             val targetY = dragStartY + totalDy / screenH
                             val targetWidth = dragStartW - totalDx / screenW
                             val targetHeight = dragStartH - totalDy / screenH
+                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.TOP_LEFT,
@@ -233,7 +238,11 @@ fun CutoutLayoutEditor(
                                 targetY = targetY,
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts
+                                allCutouts = curLayout.mirrorCutouts,
+                                keepAspectRatio = curCutout.keepAspectRatio,
+                                cropRatio = cropRatio,
+                                screenW = screenW,
+                                screenH = screenH
                             )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
                                 AppLog.d(TAG, "Resize TOP_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
@@ -267,6 +276,7 @@ fun CutoutLayoutEditor(
                             val targetY = dragStartY + totalDy / screenH
                             val targetWidth = dragStartW + totalDx / screenW
                             val targetHeight = dragStartH - totalDy / screenH
+                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.TOP_RIGHT,
@@ -278,7 +288,11 @@ fun CutoutLayoutEditor(
                                 targetY = targetY,
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts
+                                allCutouts = curLayout.mirrorCutouts,
+                                keepAspectRatio = curCutout.keepAspectRatio,
+                                cropRatio = cropRatio,
+                                screenW = screenW,
+                                screenH = screenH
                             )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
                                 AppLog.d(TAG, "Resize TOP_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
@@ -312,6 +326,7 @@ fun CutoutLayoutEditor(
                             val targetY = dragStartY
                             val targetWidth = dragStartW - totalDx / screenW
                             val targetHeight = dragStartH + totalDy / screenH
+                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.BOTTOM_LEFT,
@@ -323,7 +338,11 @@ fun CutoutLayoutEditor(
                                 targetY = targetY,
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts
+                                allCutouts = curLayout.mirrorCutouts,
+                                keepAspectRatio = curCutout.keepAspectRatio,
+                                cropRatio = cropRatio,
+                                screenW = screenW,
+                                screenH = screenH
                             )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
                                 AppLog.d(TAG, "Resize BOTTOM_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
@@ -357,6 +376,7 @@ fun CutoutLayoutEditor(
                             val targetY = dragStartY
                             val targetWidth = dragStartW + totalDx / screenW
                             val targetHeight = dragStartH + totalDy / screenH
+                            val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
                             val geom = clampCutoutResize(
                                 cutoutId = curCutout.id,
                                 handle = ResizeHandle.BOTTOM_RIGHT,
@@ -368,7 +388,11 @@ fun CutoutLayoutEditor(
                                 targetY = targetY,
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts
+                                allCutouts = curLayout.mirrorCutouts,
+                                keepAspectRatio = curCutout.keepAspectRatio,
+                                cropRatio = cropRatio,
+                                screenW = screenW,
+                                screenH = screenH
                             )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
                                 AppLog.d(TAG, "Resize BOTTOM_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
@@ -450,6 +474,43 @@ fun CutoutLayoutEditor(
                             AppStateManager.setSelectedCutoutId(newId)
                         }
                     )
+
+                    selectedCutoutId?.let { cutoutId ->
+                        layout.mirrorCutouts.find { it.id == cutoutId }?.let { cutout ->
+                            val isLocked = cutout.keepAspectRatio
+                            ToolbarButton(
+                                text = if (isLocked) {
+                                    stringResource(R.string.mirror_editor_aspect_ratio_locked)
+                                } else {
+                                    stringResource(R.string.mirror_editor_aspect_ratio_free)
+                                },
+                                color = if (isLocked) colors.accent else colors.onSurfaceSecondary,
+                                onClick = {
+                                    val updated = layout.mirrorCutouts.map {
+                                        if (it.id == cutoutId) {
+                                            val nextLocked = !it.keepAspectRatio
+                                            var updatedCutout = it.copy(keepAspectRatio = nextLocked)
+                                            if (nextLocked) {
+                                                val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
+                                                val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
+                                                    destX = updatedCutout.destX,
+                                                    destY = updatedCutout.destY,
+                                                    destWidth = updatedCutout.destWidth,
+                                                    destHeight = updatedCutout.destHeight,
+                                                    cropRatio = cropRatio,
+                                                    screenW = screenW,
+                                                    screenH = screenH
+                                                )
+                                                updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
+                                            }
+                                            updatedCutout
+                                        } else it
+                                    }
+                                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+                                }
+                            )
+                        }
+                    }
 
                     // Edit Crop of selected
                     ToolbarButton(

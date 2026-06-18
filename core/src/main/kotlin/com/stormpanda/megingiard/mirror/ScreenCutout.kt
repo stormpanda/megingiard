@@ -35,4 +35,5 @@ data class ScreenCutout(
     val destWidth: Float,
     val destHeight: Float,
     val opacity: Float = 1.0f,
+    val keepAspectRatio: Boolean = false,
 )

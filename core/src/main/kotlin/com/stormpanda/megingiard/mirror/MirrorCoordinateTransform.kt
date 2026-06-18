@@ -244,6 +244,108 @@ fun clampCutoutDrag(
     return Pair(originalX, originalY)
 }
 
+fun adjustDestSizeToAspectRatio(
+    destX: Float,
+    destY: Float,
+    destWidth: Float,
+    destHeight: Float,
+    cropRatio: Float,
+    screenW: Float,
+    screenH: Float
+): Pair<Float, Float> {
+    if (screenW <= 0f || screenH <= 0f || cropRatio <= 0f) return Pair(destWidth, destHeight)
+    
+    val normRatio = cropRatio * (screenH / screenW)
+    var targetH = destWidth / normRatio
+    var targetW = destWidth
+    
+    val maxH = 1f - destY
+    if (targetH > maxH) {
+        targetH = maxH
+        targetW = targetH * normRatio
+    }
+    
+    val maxW = 1f - destX
+    if (targetW > maxW) {
+        targetW = maxW
+        targetH = targetW / normRatio
+    }
+    
+    return Pair(targetW, targetH)
+}
+
+private fun isGeometryValid(
+    x: Float,
+    y: Float,
+    w: Float,
+    h: Float,
+    others: List<ScreenCutout>
+): Boolean {
+    if (x < 0f || y < 0f || x + w > 1f || y + h > 1f) return false
+    if (w < MIN_CUTOUT_SIZE || h < MIN_CUTOUT_SIZE) return false
+    val overlaps = others.any { other ->
+        x < other.destX + other.destWidth - 0.001f && x + w > other.destX + 0.001f &&
+        y < other.destY + other.destHeight - 0.001f && y + h > other.destY + 0.001f
+    }
+    return !overlaps
+}
+
+fun getTargetGeometryWithAspectRatio(
+    handle: ResizeHandle,
+    originalX: Float,
+    originalY: Float,
+    originalWidth: Float,
+    originalHeight: Float,
+    targetX: Float,
+    targetY: Float,
+    targetWidth: Float,
+    targetHeight: Float,
+    cropRatio: Float,
+    screenW: Float,
+    screenH: Float
+): ScreenCutoutGeometry {
+    val dx = targetWidth - originalWidth
+    val dy = targetHeight - originalHeight
+    val normRatio = cropRatio * (screenH / screenW)
+    
+    val originalRight = originalX + originalWidth
+    val originalBottom = originalY + originalHeight
+    
+    var finalW = targetWidth
+    var finalH = targetHeight
+    var finalX = targetX
+    var finalY = targetY
+    
+    if (abs(dx) >= abs(dy * normRatio)) {
+        finalW = targetWidth.coerceIn(MIN_CUTOUT_SIZE, 1f)
+        finalH = finalW / normRatio
+    } else {
+        finalH = targetHeight.coerceIn(MIN_CUTOUT_SIZE, 1f)
+        finalW = finalH * normRatio
+    }
+    
+    when (handle) {
+        ResizeHandle.TOP_LEFT -> {
+            finalX = originalRight - finalW
+            finalY = originalBottom - finalH
+        }
+        ResizeHandle.TOP_RIGHT -> {
+            finalX = originalX
+            finalY = originalBottom - finalH
+        }
+        ResizeHandle.BOTTOM_LEFT -> {
+            finalX = originalRight - finalW
+            finalY = originalY
+        }
+        ResizeHandle.BOTTOM_RIGHT -> {
+            finalX = originalX
+            finalY = originalY
+        }
+    }
+    
+    return ScreenCutoutGeometry(finalX, finalY, finalW, finalH)
+}
+
 fun clampCutoutResize(
     cutoutId: String,
     handle: ResizeHandle,
@@ -255,9 +357,72 @@ fun clampCutoutResize(
     targetY: Float,
     targetWidth: Float,
     targetHeight: Float,
-    allCutouts: List<ScreenCutout>
+    allCutouts: List<ScreenCutout>,
+    keepAspectRatio: Boolean = false,
+    cropRatio: Float = 0f,
+    screenW: Float = 0f,
+    screenH: Float = 0f
 ): ScreenCutoutGeometry {
     val others = allCutouts.filter { it.id != cutoutId }
+    
+    if (keepAspectRatio && cropRatio > 0f && screenW > 0f && screenH > 0f) {
+        val targetGeom = getTargetGeometryWithAspectRatio(
+            handle = handle,
+            originalX = originalX,
+            originalY = originalY,
+            originalWidth = originalWidth,
+            originalHeight = originalHeight,
+            targetX = targetX,
+            targetY = targetY,
+            targetWidth = targetWidth,
+            targetHeight = targetHeight,
+            cropRatio = cropRatio,
+            screenW = screenW,
+            screenH = screenH
+        )
+        
+        val origGeom = ScreenCutoutGeometry(originalX, originalY, originalWidth, originalHeight)
+        
+        var low = 0f
+        var high = 1f
+        var bestGeom = origGeom
+        
+        for (i in 0 until 10) {
+            val mid = (low + high) / 2f
+            val w = originalWidth + mid * (targetGeom.w - originalWidth)
+            val h = originalHeight + mid * (targetGeom.h - originalHeight)
+            
+            var x = originalX
+            var y = originalY
+            when (handle) {
+                ResizeHandle.TOP_LEFT -> {
+                    x = (originalX + originalWidth) - w
+                    y = (originalY + originalHeight) - h
+                }
+                ResizeHandle.TOP_RIGHT -> {
+                    x = originalX
+                    y = (originalY + originalHeight) - h
+                }
+                ResizeHandle.BOTTOM_LEFT -> {
+                    x = (originalX + originalWidth) - w
+                    y = originalY
+                }
+                ResizeHandle.BOTTOM_RIGHT -> {
+                    x = originalX
+                    y = originalY
+                }
+            }
+            
+            if (isGeometryValid(x, y, w, h, others)) {
+                bestGeom = ScreenCutoutGeometry(x, y, w, h)
+                low = mid
+            } else {
+                high = mid
+            }
+        }
+        return bestGeom
+    }
+    
     val prevCutout = allCutouts.find { it.id == cutoutId }
     val prevX = prevCutout?.destX ?: originalX
     val prevY = prevCutout?.destY ?: originalY

@@ -108,6 +108,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - In multi-cutout mode, the user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts).
 - Toggling to multi-cutout mode from the default single full-screen viewport MUST start with an empty slate (0 cutouts) rather than keeping the default full-screen cutout, unless a custom layout (multiple cutouts or a non-default single cutout/viewport crop) was already configured.
 
+### FR-M12: Aspect Ratio Lock for Cutout Resizing
+
+- The user MUST be able to lock the aspect ratio of each cutout individually.
+- When locked, resizing gestures (dragging any of the corner resize handles) MUST scale the destination cutout bounds uniformly, preserving the exact aspect ratio of the corresponding source crop.
+- Boundary collisions during aspect-ratio-locked resizing MUST be resolved by scaling both axes uniformly to prevent stretching or overlap.
+- Changing the source crop boundaries of a cutout with a locked aspect ratio MUST automatically recalculate and adjust the destination dimensions to match the new crop's aspect ratio.
+- The state of the aspect ratio lock (`keepAspectRatio: Boolean`) MUST be saved and persisted inside the layout profile schema.
+
 ---
 
 ## Technical Implementation
@@ -346,6 +354,21 @@ Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from t
 - `LaunchedEffect(isTouchProjectionActive)` starts the injector with the `"MirrorPresentation"` token when projection is enabled, and stops it when disabled.
 - `DisposableEffect(Unit)` stops the injector with the `"MirrorPresentation"` token when `MirrorScreen` leaves composition (mode switch).
 - `resetMirrorSessionState()` resets `isLocked`, `isTouchProjectionActive`, and `isFrozen` atomically — called from the Stop button (after saving state).
+
+### Aspect-Ratio-Locked Resizing & Collision Clamping
+
+When resizing a cutout with `keepAspectRatio` enabled, the aspect ratio must be maintained perfectly. Standard axis-by-axis collision clamping would break the aspect ratio if only one axis is clamped. To resolve this, a binary search collision resolver is used:
+
+1. **Aspect Ratio Fitting on Init/Crop Change**:
+   When the source crop changes, `adjustDestSizeToAspectRatio` computes the target width and height to fit the new aspect ratio while respecting the screen boundaries and keeping the cutout within `[0, 1]`.
+2. **Dominant Axis Detection**:
+   In `getTargetGeometryWithAspectRatio`, we compare the horizontal delta (\(\Delta x\)) with the normalized vertical delta (\(\Delta y \times \text{aspectRatio}\)) to identify the dominant scaling axis dictated by the drag gesture. The non-dominant axis is scaled proportionally to match the dominant axis.
+3. **Binary Search Collision Resolution**:
+   In `clampCutoutResize`, if the target geometry overlaps with another cutout or goes off-screen, a binary search determines the maximum scaling factor \(t \in [0, 1]\) between the original geometry and the target geometry:
+   - For each iteration (10 steps total, providing sub-pixel precision), the intermediate geometry is computed at factor \(t = \frac{\text{low} + \text{high}}{2}\).
+   - If the intermediate geometry does not overlap with other cutouts and lies completely within the screen boundary (`isGeometryValid`), \(t\) is accepted as a valid intermediate state, and we set \(\text{low} = t\).
+   - If it overlaps or is invalid, we set \(\text{high} = t\).
+   - This ensures the aspect ratio is perfectly preserved throughout the entire resizing gesture and during any collisions.
 
 ### Session State Persistence
 
