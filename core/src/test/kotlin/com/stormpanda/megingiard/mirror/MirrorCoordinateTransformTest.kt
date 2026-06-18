@@ -224,12 +224,12 @@ class MirrorCoordinateTransformTest {
             width = 0.3f, height = 0.3f,
             allCutouts = allCutouts
         )
-        assertEquals(0.1f, x, EPS)
+        assertEquals(0.15f, x, EPS)
         assertEquals(0.15f, y, EPS)
     }
 
     @Test
-    fun `clampCutoutResize allows clear resize and reverts on collision`() {
+    fun `clampCutoutResize allows clear resize and clamps on collision`() {
         val allCutouts = listOf(
             ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
             ScreenCutout("2", destX = 0.5f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)
@@ -255,6 +255,6 @@ class MirrorCoordinateTransformTest {
             targetWidth = 0.45f, targetHeight = 0.3f,
             allCutouts = allCutouts
         )
-        assertEquals(0.3f, geomCollision.w, EPS)
+        assertEquals(0.4f, geomCollision.w, EPS)
     }
 }
