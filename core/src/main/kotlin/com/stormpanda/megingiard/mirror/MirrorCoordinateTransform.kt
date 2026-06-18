@@ -239,26 +239,32 @@ fun clampCutoutResize(
     var clampedY = targetY
     var finalWidth = clampedWidth
     var finalHeight = clampedHeight
-     when (handle) {
+    when (handle) {
         ResizeHandle.TOP_LEFT -> {
             val tx = targetX
             val ty = targetY
             clampedX = clampedX.coerceIn(0f, originalRight - MIN_CUTOUT_SIZE)
             clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
             
-            // Clamp against other cutouts
             for (other in others) {
-                // Check X limit: expanding left
-                if (tx < originalX) {
-                    val verticalOverlap = ty < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
-                    if (verticalOverlap) {
+                val xOverlaps = tx < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
+                val yOverlaps = ty < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
+                
+                if (xOverlaps && yOverlaps) {
+                    val expandingLeft = tx < originalX
+                    val expandingUp = ty < originalY
+                    
+                    if (expandingLeft && expandingUp) {
+                        val distX = (other.destX + other.destWidth) - tx
+                        val distY = (other.destY + other.destHeight) - ty
+                        if (distX < distY) {
+                            clampedX = maxOf(clampedX, other.destX + other.destWidth)
+                        } else {
+                            clampedY = maxOf(clampedY, other.destY + other.destHeight)
+                        }
+                    } else if (expandingLeft) {
                         clampedX = maxOf(clampedX, other.destX + other.destWidth)
-                    }
-                }
-                // Check Y limit: expanding up
-                if (ty < originalY) {
-                    val horizontalOverlap = tx < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
-                    if (horizontalOverlap) {
+                    } else if (expandingUp) {
                         clampedY = maxOf(clampedY, other.destY + other.destHeight)
                     }
                 }
@@ -276,18 +282,24 @@ fun clampCutoutResize(
             clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
             
             for (other in others) {
-                // Check right limit: expanding right
-                if (tr > originalRight) {
-                    val verticalOverlap = ty < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
-                    if (verticalOverlap) {
+                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && tr > other.destX + 0.001f
+                val yOverlaps = ty < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
+                
+                if (xOverlaps && yOverlaps) {
+                    val expandingRight = tr > originalRight
+                    val expandingUp = ty < originalY
+                    
+                    if (expandingRight && expandingUp) {
+                        val distX = tr - other.destX
+                        val distY = (other.destY + other.destHeight) - ty
+                        if (distX < distY) {
+                            clampedRight = minOf(clampedRight, other.destX)
+                        } else {
+                            clampedY = maxOf(clampedY, other.destY + other.destHeight)
+                        }
+                    } else if (expandingRight) {
                         clampedRight = minOf(clampedRight, other.destX)
-                    }
-                }
-
-                // Check Y limit: expanding up
-                if (ty < originalY) {
-                    val horizontalOverlap = originalX < other.destX + other.destWidth - 0.001f && tr > other.destX + 0.001f
-                    if (horizontalOverlap) {
+                    } else if (expandingUp) {
                         clampedY = maxOf(clampedY, other.destY + other.destHeight)
                     }
                 }
@@ -306,17 +318,24 @@ fun clampCutoutResize(
             var clampedBottom = (originalY + clampedHeight).coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
             
             for (other in others) {
-                // Check X limit: expanding left
-                if (tx < originalX) {
-                    val verticalOverlap = originalY < other.destY + other.destHeight - 0.001f && tb > other.destY + 0.001f
-                    if (verticalOverlap) {
+                val xOverlaps = tx < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
+                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && tb > other.destY + 0.001f
+                
+                if (xOverlaps && yOverlaps) {
+                    val expandingLeft = tx < originalX
+                    val expandingDown = tb > originalBottom
+                    
+                    if (expandingLeft && expandingDown) {
+                        val distX = (other.destX + other.destWidth) - tx
+                        val distY = tb - other.destY
+                        if (distX < distY) {
+                            clampedX = maxOf(clampedX, other.destX + other.destWidth)
+                        } else {
+                            clampedBottom = minOf(clampedBottom, other.destY)
+                        }
+                    } else if (expandingLeft) {
                         clampedX = maxOf(clampedX, other.destX + other.destWidth)
-                    }
-                }
-                // Check bottom limit: expanding down
-                if (tb > originalBottom) {
-                    val horizontalOverlap = tx < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
-                    if (horizontalOverlap) {
+                    } else if (expandingDown) {
                         clampedBottom = minOf(clampedBottom, other.destY)
                     }
                 }
@@ -335,17 +354,24 @@ fun clampCutoutResize(
             var clampedBottom = (originalY + clampedHeight).coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
             
             for (other in others) {
-                // Check right limit: expanding right
-                if (tr > originalRight) {
-                    val verticalOverlap = originalY < other.destY + other.destHeight - 0.001f && tb > other.destY + 0.001f
-                    if (verticalOverlap) {
+                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && tr > other.destX + 0.001f
+                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && tb > other.destY + 0.001f
+                
+                if (xOverlaps && yOverlaps) {
+                    val expandingRight = tr > originalRight
+                    val expandingDown = tb > originalBottom
+                    
+                    if (expandingRight && expandingDown) {
+                        val distX = tr - other.destX
+                        val distY = tb - other.destY
+                        if (distX < distY) {
+                            clampedRight = minOf(clampedRight, other.destX)
+                        } else {
+                            clampedBottom = minOf(clampedBottom, other.destY)
+                        }
+                    } else if (expandingRight) {
                         clampedRight = minOf(clampedRight, other.destX)
-                    }
-                }
-                // Check bottom limit: expanding down
-                if (tb > originalBottom) {
-                    val horizontalOverlap = originalX < other.destX + other.destWidth - 0.001f && tr > other.destX + 0.001f
-                    if (horizontalOverlap) {
+                    } else if (expandingDown) {
                         clampedBottom = minOf(clampedBottom, other.destY)
                     }
                 }

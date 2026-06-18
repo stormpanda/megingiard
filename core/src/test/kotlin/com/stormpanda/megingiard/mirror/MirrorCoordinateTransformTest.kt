@@ -295,5 +295,45 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.3f, geom.y, EPS)
         assertEquals(0.3f, geom.h, EPS)
     }
+
+    @Test
+    fun `clampCutoutResize clamps horizontal scaling when target is taller and vertically overlaps`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.5f, destY = 0.2f, destWidth = 0.2f, destHeight = 0.1f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // Right cutout (b)
+            ScreenCutout("2", destX = 0.2f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // Left cutout (a), right edge is 0.4, Y range [0.1, 0.4]
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.BOTTOM_LEFT,
+            originalX = 0.5f, originalY = 0.2f,
+            originalWidth = 0.2f, originalHeight = 0.1f,
+            targetX = 0.38f, targetY = 0.2f,
+            targetWidth = 0.32f, targetHeight = 0.15f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.4f, geom.x, EPS)
+        assertEquals(0.15f, geom.h, EPS)
+    }
+
+    @Test
+    fun `clampCutoutResize clamps vertical scaling when target is wider and horizontally overlaps`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.2f, destY = 0.4f, destWidth = 0.1f, destHeight = 0.1f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f), // Lower cutout (b)
+            ScreenCutout("2", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)  // Upper cutout (a), bottom is 0.3, X range [0.1, 0.4]
+        )
+        val geom = clampCutoutResize(
+            cutoutId = "1",
+            handle = ResizeHandle.TOP_LEFT,
+            originalX = 0.2f, originalY = 0.4f,
+            originalWidth = 0.1f, originalHeight = 0.1f,
+            targetX = 0.05f, targetY = 0.25f,
+            targetWidth = 0.25f, targetHeight = 0.25f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.3f, geom.y, EPS) // clamped to bottom edge of a
+        assertEquals(0.25f, geom.w, EPS) // width remains 0.25f (x is 0.05f, not clamped)
+    }
 }
+
+
 
