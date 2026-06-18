@@ -249,6 +249,24 @@ class MirrorCoordinateTransformTest {
     }
 
     @Test
+    fun `clampCutoutDrag handles drag past obstacle without snapping back to starting position`() {
+        val allCutouts = listOf(
+            ScreenCutout("1", destX = 0.51f, destY = 0.3f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
+            ScreenCutout("2", destX = 0.3f, destY = 0.4f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),
+            ScreenCutout("3", destX = 0.3f, destY = 0.1f, destWidth = 0.2f, destHeight = 0.2f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f)
+        )
+        val (x, y) = clampCutoutDrag(
+            cutoutId = "1",
+            originalX = 0.51f, originalY = 0.3f,
+            targetX = 0.49f, targetY = 0.3f,
+            width = 0.2f, height = 0.2f,
+            allCutouts = allCutouts
+        )
+        assertEquals(0.5f, x, EPS)
+        assertEquals(0.3f, y, EPS)
+    }
+
+    @Test
     fun `clampCutoutResize allows clear resize and clamps on collision`() {
         val allCutouts = listOf(
             ScreenCutout("1", destX = 0.1f, destY = 0.1f, destWidth = 0.3f, destHeight = 0.3f, srcX=0f, srcY=0f, srcWidth=1f, srcHeight=1f),

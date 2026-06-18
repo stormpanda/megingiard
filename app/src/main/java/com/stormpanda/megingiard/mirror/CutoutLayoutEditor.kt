@@ -161,8 +161,8 @@ fun CutoutLayoutEditor(
 
                                     val (clampedX, clampedY) = clampCutoutDrag(
                                         cutoutId = curCutout.id,
-                                        originalX = dragStartX,
-                                        originalY = dragStartY,
+                                        originalX = curCutout.destX,
+                                        originalY = curCutout.destY,
                                         targetX = targetX,
                                         targetY = targetY,
                                         width = curCutout.destWidth,
