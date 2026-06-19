@@ -53,7 +53,7 @@ import kotlin.math.roundToInt
 private const val TAG = "CropSelectorOverlay"
 private const val MIN_CROP_SIZE = 0.05f
 private val HANDLE_SIZE = 24.dp
-private val BORDER_WIDTH = 2.dp
+private val BORDER_WIDTH = 1.dp
 private val CARD_SHADOW = 8.dp
 private val CARD_CORNER = 12.dp
 
@@ -204,7 +204,7 @@ fun CropSelectorOverlay(
                     width = with(density) { cropW.toDp() },
                     height = with(density) { cropH.toDp() }
                 )
-                .border(BORDER_WIDTH, colors.accent)
+                .border(BORDER_WIDTH, colors.accent.copy(alpha = 0.5f))
                 .pointerInput(cutoutId) {
                     var dragStartX = 0f
                     var dragStartY = 0f
@@ -471,7 +471,7 @@ private fun ResizeHandleView(
         modifier = Modifier
             .offset { offset }
             .size(HANDLE_SIZE)
-            .background(color, RoundedCornerShape(4.dp))
+            .background(color.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
             .pointerInput(Unit) {
                 var accumulatedX = 0f
                 var accumulatedY = 0f

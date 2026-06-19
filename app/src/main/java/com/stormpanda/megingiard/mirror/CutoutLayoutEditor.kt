@@ -61,7 +61,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "CutoutLayoutEditor"
 private val HANDLE_SIZE = 20.dp
-private val BORDER_WIDTH = 2.dp
+private val BORDER_WIDTH = 1.dp
 private val TOOLBAR_SHADOW = 6.dp
 private val TOOLBAR_CORNER = 8.dp
 private val MP_EDGE_ZONE = 40.dp
@@ -145,7 +145,7 @@ fun CutoutLayoutEditor(
                         .background(if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f))
                         .border(
                             width = BORDER_WIDTH,
-                            color = if (isSelected) colors.accent else Color.White.copy(alpha = 0.3f),
+                            color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(4.dp)
                         )
                         .clickable {
@@ -619,7 +619,7 @@ private fun ResizeHandleView(
         modifier = Modifier
             .offset { offset }
             .size(HANDLE_SIZE)
-            .background(color, RoundedCornerShape(4.dp))
+            .background(color.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
             .pointerInput(Unit) {
                 var accumulatedX = 0f
                 var accumulatedY = 0f
