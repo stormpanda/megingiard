@@ -898,35 +898,50 @@ class MultiCutoutContainer(
 
 private class ThrottledTextureView(context: Context) : TextureView(context) {
     var maxFps: Int = 60
+        set(value) {
+            if (field != value) {
+                field = value
+                if (isScheduled) {
+                    removeCallbacks(invalidateRunnable)
+                    isScheduled = false
+                }
+                invalidate()
+            }
+        }
     private var lastInvalidateTime: Long = 0L
+    private var isScheduled = false
+    private val invalidateRunnable = Runnable {
+        isScheduled = false
+        invalidate()
+    }
 
     override fun invalidate() {
         val now = System.currentTimeMillis()
         val interval = if (maxFps >= 60) 0L else (1000L / maxFps)
         if (interval == 0L || now - lastInvalidateTime >= interval) {
+            if (isScheduled) {
+                removeCallbacks(invalidateRunnable)
+                isScheduled = false
+            }
             lastInvalidateTime = now
             super.invalidate()
+        } else {
+            if (!isScheduled) {
+                isScheduled = true
+                val delay = interval - (now - lastInvalidateTime)
+                postDelayed(invalidateRunnable, delay)
+            }
         }
     }
 
     @Deprecated("Deprecated in parent class")
     override fun invalidate(dirty: android.graphics.Rect?) {
-        val now = System.currentTimeMillis()
-        val interval = if (maxFps >= 60) 0L else (1000L / maxFps)
-        if (interval == 0L || now - lastInvalidateTime >= interval) {
-            lastInvalidateTime = now
-            super.invalidate(dirty)
-        }
+        invalidate()
     }
 
     @Deprecated("Deprecated in parent class")
     override fun invalidate(l: Int, t: Int, r: Int, b: Int) {
-        val now = System.currentTimeMillis()
-        val interval = if (maxFps >= 60) 0L else (1000L / maxFps)
-        if (interval == 0L || now - lastInvalidateTime >= interval) {
-            lastInvalidateTime = now
-            super.invalidate(l, t, r, b)
-        }
+        invalidate()
     }
 }
 
