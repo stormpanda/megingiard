@@ -197,6 +197,13 @@ class MirrorPresentation(
                 st.setDefaultBufferSize(srcWidth, srcHeight)
                 val surface = Surface(st)
                 masterSurface = surface
+                try {
+                    val fps = MirrorSettings.maxFps.value
+                    AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
+                    surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Error setting initial surface frame rate", e)
+                }
                 AppLog.d(TAG, "master TextureView surface available")
                 onSurfaceReady?.invoke(surface)
             }
@@ -220,6 +227,21 @@ class MirrorPresentation(
         scope.launch {
             MirrorSettings.crossfadeBlendWidthDp.collect {
                 mcc.invalidate()
+            }
+        }
+
+        scope.launch {
+            MirrorSettings.maxFps.collect { fps ->
+                masterSurface?.let { surface ->
+                    if (surface.isValid) {
+                        try {
+                            AppLog.i(TAG, "Setting surface frame rate to $fps FPS")
+                            surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Error setting surface frame rate", e)
+                        }
+                    }
+                }
             }
         }
 

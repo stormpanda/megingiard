@@ -44,6 +44,8 @@
     <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
     <string name="mirror_crossfade_label">Überblendung</string>
     <string name="mirror_crossfade_label_value">%1$d dp</string>
+    <string name="mirror_fps_label">FPS-Limit</string>
+    <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
     <string name="settings_mirror_auto_start">Spiegelung automatisch starten</string>

@@ -39,6 +39,8 @@
     <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
     <string name="mirror_crossfade_label">Crossfade</string>
     <string name="mirror_crossfade_label_value">%1$d dp</string>
+    <string name="mirror_fps_label">FPS Limit</string>
+    <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
     <string name="settings_mirror_auto_start">Auto-start mirroring</string>

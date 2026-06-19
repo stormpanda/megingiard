@@ -38,6 +38,9 @@ object MirrorSettings {
     private val _crossfadeBlendWidthDp = MutableStateFlow(0f)
     val crossfadeBlendWidthDp: StateFlow<Float> = _crossfadeBlendWidthDp.asStateFlow()
 
+    private val _maxFps = MutableStateFlow(60)
+    val maxFps: StateFlow<Int> = _maxFps.asStateFlow()
+
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
     val rememberViewport: StateFlow<Boolean> = _rememberViewport.asStateFlow()
@@ -56,6 +59,7 @@ object MirrorSettings {
     internal fun loadFrom(prefs: Preferences) {
         _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
         _crossfadeBlendWidthDp.value = prefs[KEY_CROSSFADE_BLEND_WIDTH_DP] ?: 0f
+        _maxFps.value = prefs[KEY_MIRROR_MAX_FPS] ?: 60
         _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
         _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
@@ -71,6 +75,12 @@ object MirrorSettings {
         AppLog.d(TAG, "setCrossfadeBlendWidthDp($value)")
         _crossfadeBlendWidthDp.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_CROSSFADE_BLEND_WIDTH_DP] = value } }
+    }
+
+    fun setMaxFps(value: Int) {
+        AppLog.d(TAG, "setMaxFps($value)")
+        _maxFps.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_MIRROR_MAX_FPS] = value } }
     }
 
     fun setRememberViewport(value: Boolean) {

@@ -125,6 +125,12 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
   - If a cutout edge touches or is adjacent to another cutout (within a configured tolerance), the fade MUST blend symmetrically *inside* both cutout boundaries so that their combined opacity in the overlap region is always exactly 1.0 (preventing dark or bright seams).
   - If a cutout edge faces the black background (does not touch another cutout), the cutout interior MUST remain 100% opaque, and the fade MUST only happen *outside* the cutout boundary (fading out into the background) to prevent the black background from bleeding into the cutout.
 
+### FR-M14: Mirror Refresh Rate (FPS) Limit
+
+- The user MUST be able to configure a frame rate (FPS) limit for the mirrored screens using a discrete slider (`FPS Limit` / `FPS-Limit`) in the layout-editor toolbar on the secondary display below the crossfade slider.
+- The slider MUST have discrete steps corresponding to options: `1`, `5`, `10`, `15`, `30`, and `60` FPS, with `60` FPS being the default.
+- The selected refresh rate limit MUST be persisted globally in DataStore and applied dynamically to the virtual display's destination surface.
+
 ---
 
 ## Technical Implementation
@@ -465,6 +471,17 @@ To allow seamless transitions between adjacent or independent cutouts, we implem
    - For background-facing edges (e.g. `touchesOtherLeft == false`), the gradient goes from `-leftExt` (TRANSPARENT) to `0f` (BLACK). Using `Shader.TileMode.CLAMP`, the interior of the cutout remains 100% opaque.
    - For touching edges (e.g. `touchesOtherLeft == true`), the gradient goes from `-leftExt` (TRANSPARENT) to `leftExt` (BLACK), creating a symmetric blend that extends `leftExt` inside the cutout boundary.
 3. **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their corresponding edge gradients ensures that overlapping areas have a combined opacity of exactly 1.0, eliminating dark rendering seams.
+
+### Mirror Refresh Rate (FPS) Limiting
+
+To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support limiting the refresh rate of the mirrored screens:
+
+1. **System-Level Throttling (`Surface.setFrameRate`)**:
+   In `MirrorPresentation`, when the target display surface becomes available, we invoke `Surface.setFrameRate(maxFps, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)`. This requests Android's system compositor (SurfaceFlinger) to pace the composition of the virtual display's frames.
+2. **Dynamic Updates**:
+   `MirrorPresentation` collects the `MirrorSettings.maxFps` flow within the presentation coroutine scope. Whenever the user adjusts the discrete slider in the layout editor, the frame rate limit of the active surface is updated in real-time.
+3. **App-Level Rendering Conservation**:
+   Because SurfaceFlinger paces the buffer enqueuing onto the target `SurfaceView` or `TextureView` surface, the app's `onSurfaceTextureUpdated` callbacks are throttled automatically. This matches the canvas redraw frequency to the specified FPS limit and directly avoids redundant draw calls.
 
 ### Source Files
 
