@@ -707,8 +707,8 @@ class MultiCutoutContainer(
 
         val drawingTime = drawingTime
         val blendWidthDp = MirrorSettings.crossfadeBlendWidthDp.value
-        val crossfade = blendWidthDp > 0f
-        val tolerance = 0.005f
+        val isMultiMode = AppStateManager.isMultiCutoutEditMode.value || cutouts.size > 1
+        val crossfade = blendWidthDp > 0f && isMultiMode
         val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
 
         for (cutout in cutouts) {
@@ -724,38 +724,10 @@ class MultiCutoutContainer(
 
             if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
 
-            var touchesLeft = false
-            var touchesRight = false
-            var touchesTop = false
-            var touchesBottom = false
-
-            if (crossfade && cutouts.size > 1) {
-                for (other in cutouts) {
-                    if (other == cutout) continue
-                    
-                    // Left-right touches
-                    val overlapsY = maxOf(cutout.destY, other.destY) < minOf(cutout.destY + cutout.destHeight, other.destY + other.destHeight) - tolerance
-                    if (overlapsY) {
-                        if (abs(cutout.destX - (other.destX + other.destWidth)) < tolerance) {
-                            touchesLeft = true
-                        }
-                        if (abs((cutout.destX + cutout.destWidth) - other.destX) < tolerance) {
-                            touchesRight = true
-                        }
-                    }
-                    
-                    // Top-bottom touches
-                    val overlapsX = maxOf(cutout.destX, other.destX) < minOf(cutout.destX + cutout.destWidth, other.destX + other.destWidth) - tolerance
-                    if (overlapsX) {
-                        if (abs(cutout.destY - (other.destY + other.destHeight)) < tolerance) {
-                            touchesTop = true
-                        }
-                        if (abs((cutout.destY + cutout.destHeight) - other.destY) < tolerance) {
-                            touchesBottom = true
-                        }
-                    }
-                }
-            }
+            val touchesLeft = crossfade
+            val touchesRight = crossfade
+            val touchesTop = crossfade
+            val touchesBottom = crossfade
 
             val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
             val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
