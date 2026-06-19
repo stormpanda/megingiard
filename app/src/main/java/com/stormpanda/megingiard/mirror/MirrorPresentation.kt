@@ -216,6 +216,12 @@ class MirrorPresentation(
         }
 
         scope.launch {
+            MirrorSettings.crossfadeBlendWidthDp.collect {
+                mcc.invalidate()
+            }
+        }
+
+        scope.launch {
             combine(
                 ScreenCaptureManager.scale,
                 ScreenCaptureManager.offsetX,
@@ -699,9 +705,10 @@ class MultiCutoutContainer(
         if (parentW <= 0f || parentH <= 0f) return
 
         val drawingTime = drawingTime
-        val crossfade = MirrorSettings.crossfadeTouchingBorders.value
+        val blendWidthDp = MirrorSettings.crossfadeBlendWidthDp.value
+        val crossfade = blendWidthDp > 0f
         val tolerance = 0.005f
-        val blendW = 16f * resources.displayMetrics.density
+        val blendW = blendWidthDp * resources.displayMetrics.density
 
         for (cutout in cutouts) {
             val dw = cutout.destWidth * parentW

@@ -85,7 +85,6 @@ fun GlobalSettingsScreen(
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
     val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
-    val crossfadeTouchingBorders by viewModel.crossfadeTouchingBorders.collectAsState()
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
@@ -201,13 +200,6 @@ fun GlobalSettingsScreen(
                             description = stringResource(R.string.settings_show_mirror_control_labels_desc),
                             checked = showMirrorControlLabels,
                             onCheckedChange = { viewModel.setShowMirrorControlLabels(it) },
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_crossfade_touching_borders),
-                            description = stringResource(R.string.settings_crossfade_touching_borders_desc),
-                            checked = crossfadeTouchingBorders,
-                            onCheckedChange = { viewModel.setCrossfadeTouchingBorders(it) },
                         )
                         AppDivider()
                         RememberSettingRow(

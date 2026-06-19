@@ -53,7 +53,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
-    val crossfadeTouchingBorders: StateFlow<Boolean> = MirrorSettings.crossfadeTouchingBorders
 
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
@@ -78,7 +77,6 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
-    fun setCrossfadeTouchingBorders(value: Boolean) = MirrorSettings.setCrossfadeTouchingBorders(value)
 
     // Privileged Mode actions
     /**

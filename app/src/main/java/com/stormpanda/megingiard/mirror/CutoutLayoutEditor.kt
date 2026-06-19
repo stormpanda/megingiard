@@ -35,6 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,10 +51,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -65,6 +69,10 @@ private val BORDER_WIDTH = 1.dp
 private val TOOLBAR_SHADOW = 6.dp
 private val TOOLBAR_CORNER = 8.dp
 private val MP_EDGE_ZONE = 40.dp
+private val TOOLBAR_SLIDER_ROW_WIDTH = 280.dp
+private val TOOLBAR_SLIDER_VALUE_WIDTH = 54.dp
+private const val SLIDER_VALUE_MIN = 0f
+private const val SLIDER_VALUE_MAX = 100f
 
 @Composable
 fun CutoutLayoutEditor(
@@ -75,6 +83,7 @@ fun CutoutLayoutEditor(
     var toolbarOffset by remember { mutableStateOf(IntOffset.Zero) }
     val isMultiCutoutEditMode by AppStateManager.isMultiCutoutEditMode.collectAsState()
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
+    val crossfadeBlendWidthDp by MirrorSettings.crossfadeBlendWidthDp.collectAsState()
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
@@ -461,11 +470,14 @@ fun CutoutLayoutEditor(
                     )
                 }
 
-                Row(
+                Column(
                     modifier = Modifier.padding(start = 40.dp), // clear drag handle (36dp + 4dp space)
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalAlignment = Alignment.Start
                 ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     if (!isMultiCutoutEditMode) {
                         // Mode Toggle Button (Single -> Multi)
                         ToolbarIconButton(
@@ -591,15 +603,50 @@ fun CutoutLayoutEditor(
                         )
                     }
 
-                    // Done / Exit button
-                    ToolbarIconButton(
-                        icon = Icons.Rounded.Check,
-                        contentDescription = stringResource(R.string.mirror_editor_done),
-                        color = colors.accent,
-                        onClick = {
-                            AppStateManager.setViewportEditActive(false)
+                        // Done / Exit button
+                        ToolbarIconButton(
+                            icon = Icons.Rounded.Check,
+                            contentDescription = stringResource(R.string.mirror_editor_done),
+                            color = colors.accent,
+                            onClick = {
+                                AppStateManager.setViewportEditActive(false)
+                            }
+                        )
+                    }
+
+                    if (isMultiCutoutEditMode) {
+                        Row(
+                            modifier = Modifier
+                                .width(TOOLBAR_SLIDER_ROW_WIDTH)
+                                .padding(top = 8.dp, bottom = 4.dp, start = 8.dp, end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.mirror_crossfade_label),
+                                color = colors.onSurface,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Slider(
+                                value = crossfadeBlendWidthDp,
+                                onValueChange = { MirrorSettings.setCrossfadeBlendWidthDp(it) },
+                                valueRange = SLIDER_VALUE_MIN..SLIDER_VALUE_MAX,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = colors.accent,
+                                    activeTrackColor = colors.accent,
+                                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.24f)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = stringResource(R.string.mirror_crossfade_label_value, crossfadeBlendWidthDp.roundToInt()),
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.width(TOOLBAR_SLIDER_VALUE_WIDTH),
+                                textAlign = TextAlign.End
+                            )
                         }
-                    )
+                    }
                 }
             }
         }
