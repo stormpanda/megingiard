@@ -98,6 +98,7 @@ private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
+private const val TOUCH_TOLERANCE = 0.005f
 
 class MirrorPresentation(
     context: Context, 
@@ -709,6 +710,7 @@ class MultiCutoutContainer(
         val blendWidthDp = MirrorSettings.crossfadeBlendWidthDp.value
         val isMultiMode = AppStateManager.isMultiCutoutEditMode.value || cutouts.size > 1
         val crossfade = blendWidthDp > 0f && isMultiMode
+        val tolerance = TOUCH_TOLERANCE
         val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
 
         for (cutout in cutouts) {
@@ -723,6 +725,39 @@ class MultiCutoutContainer(
             val sy = cutout.srcY * srcHeight
 
             if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
+
+            var touchesOtherLeft = false
+            var touchesOtherRight = false
+            var touchesOtherTop = false
+            var touchesOtherBottom = false
+
+            if (crossfade && cutouts.size > 1) {
+                for (other in cutouts) {
+                    if (other == cutout) continue
+                    
+                    // Left-right touches
+                    val overlapsY = maxOf(cutout.destY, other.destY) < minOf(cutout.destY + cutout.destHeight, other.destY + other.destHeight) - tolerance
+                    if (overlapsY) {
+                        if (abs(cutout.destX - (other.destX + other.destWidth)) < tolerance) {
+                            touchesOtherLeft = true
+                        }
+                        if (abs((cutout.destX + cutout.destWidth) - other.destX) < tolerance) {
+                            touchesOtherRight = true
+                        }
+                    }
+                    
+                    // Top-bottom touches
+                    val overlapsX = maxOf(cutout.destX, other.destX) < minOf(cutout.destX + cutout.destWidth, other.destX + other.destWidth) - tolerance
+                    if (overlapsX) {
+                        if (abs(cutout.destY - (other.destY + other.destHeight)) < tolerance) {
+                            touchesOtherTop = true
+                        }
+                        if (abs((cutout.destY + cutout.destHeight) - other.destY) < tolerance) {
+                            touchesOtherBottom = true
+                        }
+                    }
+                }
+            }
 
             val touchesLeft = crossfade
             val touchesRight = crossfade
@@ -799,25 +834,29 @@ class MultiCutoutContainer(
                 if (hasTouching) {
                     if (touchesLeft) {
                         val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                        val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                        val endX = if (touchesOtherLeft) leftExt else 0f
+                        val shader = LinearGradient(-leftExt, 0f, endX, 0f, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesRight) {
                         val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                        val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                        val startX = if (touchesOtherRight) dw - rightExt else dw
+                        val shader = LinearGradient(startX, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesTop) {
                         val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                        val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
+                        val endY = if (touchesOtherTop) topExt else 0f
+                        val shader = LinearGradient(0f, -topExt, 0f, endY, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesBottom) {
                         val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                        val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
+                        val startY = if (touchesOtherBottom) dh - bottomExt else dh
+                        val shader = LinearGradient(0f, startY, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }

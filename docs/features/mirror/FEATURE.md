@@ -116,6 +116,15 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Changing the source crop boundaries of a cutout with a locked aspect ratio MUST automatically recalculate and adjust the destination dimensions to match the new crop's aspect ratio.
 - The state of the aspect ratio lock (`keepAspectRatio: Boolean`) MUST be saved and persisted inside the layout profile schema.
 
+### FR-M13: Multi-Cutout Crossfade
+
+- The user MUST be able to configure a crossfade blend width using a slider (`Crossfade` / `Überblendung`) in the layout-editor toolbar on the secondary display below the button row.
+- The slider range MUST be `0` to `100 dp`. The slider is only visible in multi-cutout edit mode.
+- When a crossfade is configured (> 0 dp) and multiple cutouts are active:
+  - Fades MUST be applied to the edges of each cutout.
+  - If a cutout edge touches or is adjacent to another cutout (within a configured tolerance), the fade MUST blend symmetrically *inside* both cutout boundaries so that their combined opacity in the overlap region is always exactly 1.0 (preventing dark or bright seams).
+  - If a cutout edge faces the black background (does not touch another cutout), the cutout interior MUST remain 100% opaque, and the fade MUST only happen *outside* the cutout boundary (fading out into the background) to prevent the black background from bleeding into the cutout.
+
 ---
 
 ## Technical Implementation
@@ -446,6 +455,16 @@ isOnValidScreen && !promptInFlight && !isCapturing &&
 When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror strategy and either starts the privileged service (`ACTION_START_PRIVD`) or opens `CaptureRequestActivity` on the primary display. The flow re-evaluates on every layout switch, so switching to a layout whose remembered state is `true` (with global auto-start on and no active session) starts mirroring.
 
 **Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the global setting is off.
+
+### Multi-Cutout Crossfade Blending
+
+To allow seamless transitions between adjacent or independent cutouts, we implement a hybrid border gradient mask in `MirrorPresentation`'s `MultiCutoutContainer`:
+
+1. **Edge Touching Detection**: We check each of the four edges (left, right, top, bottom) of each cutout against all other cutouts. If the distance between their destination boundaries is within a tolerance (`TOUCH_TOLERANCE = 0.005f`), they are flagged as touching (`touchesOtherLeft`, etc.).
+2. **Hybrid Gradient Coordinates**:
+   - For background-facing edges (e.g. `touchesOtherLeft == false`), the gradient goes from `-leftExt` (TRANSPARENT) to `0f` (BLACK). Using `Shader.TileMode.CLAMP`, the interior of the cutout remains 100% opaque.
+   - For touching edges (e.g. `touchesOtherLeft == true`), the gradient goes from `-leftExt` (TRANSPARENT) to `leftExt` (BLACK), creating a symmetric blend that extends `leftExt` inside the cutout boundary.
+3. **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their corresponding edge gradients ensures that overlapping areas have a combined opacity of exactly 1.0, eliminating dark rendering seams.
 
 ### Source Files
 
