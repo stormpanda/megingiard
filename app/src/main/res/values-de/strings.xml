@@ -669,6 +669,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_crop_editor_title">Ausschnitt festlegen</string>
     <string name="mirror_crop_editor_subtitle">Ausschnitt: %1$s</string>
     <string name="mirror_crop_editor_done">Fertig</string>
+    <string name="mirror_crop_editor_cancel">Abbrechen</string>
+    <string name="cd_drag_toolbar">Ziehen, um die Symbolleiste zu verschieben</string>
 
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>

@@ -3,9 +3,12 @@ package com.stormpanda.megingiard.mirror
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -13,9 +16,15 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -58,9 +67,28 @@ fun CropSelectorOverlay(
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
     val cutout = layout.mirrorCutouts.find { it.id == cutoutId } ?: return
+    val initialCutout = remember(cutoutId) { cutout }
     val currentCutoutState = rememberUpdatedState(cutout)
     val currentLayoutState = rememberUpdatedState(layout)
     val density = LocalDensity.current
+
+    val onCancel = {
+        val curLayout = currentLayoutState.value
+        val updated = curLayout.mirrorCutouts.map {
+            if (it.id == cutoutId) {
+                it.copy(
+                    srcX = initialCutout.srcX,
+                    srcY = initialCutout.srcY,
+                    srcWidth = initialCutout.srcWidth,
+                    srcHeight = initialCutout.srcHeight,
+                    destWidth = initialCutout.destWidth,
+                    destHeight = initialCutout.destHeight
+                )
+            } else it
+        }
+        MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
+        onDismiss()
+    }
 
     val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
@@ -315,42 +343,89 @@ fun CropSelectorOverlay(
             }
         )
 
+        var toolbarOffset by remember { mutableStateOf(IntOffset.Zero) }
+
         // 4. Control panel card
-        Box(
+        Surface(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .offset { toolbarOffset }
                 .padding(bottom = 32.dp)
-                .shadow(CARD_SHADOW, RoundedCornerShape(CARD_CORNER))
-                .background(colors.surface, RoundedCornerShape(CARD_CORNER))
-                .border(BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(CARD_CORNER))
-                .padding(16.dp)
+                .shadow(CARD_SHADOW, RoundedCornerShape(CARD_CORNER)),
+            color = colors.surface.copy(alpha = 0.9f),
+            shape = RoundedCornerShape(CARD_CORNER),
+            border = androidx.compose.foundation.BorderStroke(1.dp, colors.controlOverlayBorder)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 8.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.mirror_crop_editor_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleMedium
+                // Drag handle at top-left
+                Icon(
+                    imageVector = Icons.Rounded.DragHandle,
+                    contentDescription = stringResource(R.string.cd_drag_toolbar),
+                    tint = colors.onSurfaceSecondary,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .size(20.dp)
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                toolbarOffset = IntOffset(
+                                    x = toolbarOffset.x + dragAmount.x.roundToInt(),
+                                    y = toolbarOffset.y + dragAmount.y.roundToInt()
+                                )
+                            }
+                        }
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.mirror_crop_editor_subtitle, cutout.name.ifBlank { "Cutout" }),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
+
+                // Row of buttons
+                Row(
+                    modifier = Modifier.padding(start = 24.dp), // clear drag handle
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = stringResource(R.string.mirror_crop_editor_done),
-                        color = colors.onAccent
+                    // Cancel button (X)
+                    ToolbarIconButton(
+                        icon = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.mirror_crop_editor_cancel),
+                        color = colors.error,
+                        onClick = onCancel
+                    )
+
+                    // Done button (Checkmark)
+                    ToolbarIconButton(
+                        icon = Icons.Rounded.Check,
+                        contentDescription = stringResource(R.string.mirror_crop_editor_done),
+                        color = colors.accent,
+                        onClick = onDismiss
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ToolbarIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    val colors = LocalAppColors.current
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(containerColor = color),
+        shape = RoundedCornerShape(4.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+        modifier = Modifier.height(32.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = colors.onAccent,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 

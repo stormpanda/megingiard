@@ -662,6 +662,8 @@ Open Settings to create a layout.</string>
     <string name="mirror_crop_editor_title">Define Crop Area</string>
     <string name="mirror_crop_editor_subtitle">Cutout: %1$s</string>
     <string name="mirror_crop_editor_done">Done</string>
+    <string name="mirror_crop_editor_cancel">Cancel</string>
+    <string name="cd_drag_toolbar">Drag to move toolbar</string>
 
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Add Cutout</string>
