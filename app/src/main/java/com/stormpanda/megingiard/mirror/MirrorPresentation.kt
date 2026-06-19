@@ -828,25 +828,25 @@ class MultiCutoutContainer(
                         val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
                         val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
-                        canvas.drawRect(-leftExt, -topExt, leftExt, dh + bottomExt, blendPaint)
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesRight) {
                         val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
                         val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
-                        canvas.drawRect(dw - rightExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesTop) {
                         val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
                         val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
-                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, topExt, blendPaint)
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesBottom) {
                         val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
                         val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
-                        canvas.drawRect(-leftExt, dh - bottomExt, dw + rightExt, dh + bottomExt, blendPaint)
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     blendPaint.shader = null
                 }
