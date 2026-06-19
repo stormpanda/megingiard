@@ -764,6 +764,11 @@ class MultiCutoutContainer(
 
             val saveCount = if (cutout.opacity < 1f || hasTouching) {
                 cutoutPaint.alpha = (cutout.opacity * 255).toInt()
+                if (hasTouching) {
+                    cutoutPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+                } else {
+                    cutoutPaint.xfermode = null
+                }
                 val clipLeft = dx - leftExt
                 val clipTop = dy - topExt
                 val clipRight = dx + dw + rightExt
