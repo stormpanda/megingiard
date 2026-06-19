@@ -35,6 +35,9 @@ object MirrorSettings {
     private val _pinchWhileProjecting = MutableStateFlow(false)
     val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
 
+    private val _crossfadeTouchingBorders = MutableStateFlow(false)
+    val crossfadeTouchingBorders: StateFlow<Boolean> = _crossfadeTouchingBorders.asStateFlow()
+
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
     val rememberViewport: StateFlow<Boolean> = _rememberViewport.asStateFlow()
@@ -52,6 +55,7 @@ object MirrorSettings {
 
     internal fun loadFrom(prefs: Preferences) {
         _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
+        _crossfadeTouchingBorders.value = prefs[KEY_CROSSFADE_TOUCHING_BORDERS] ?: false
         _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
         _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
@@ -61,6 +65,12 @@ object MirrorSettings {
         AppLog.d(TAG, "setPinchWhileProjecting($value)")
         _pinchWhileProjecting.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_PINCH_WHILE_PROJECTING] = value } }
+    }
+
+    fun setCrossfadeTouchingBorders(value: Boolean) {
+        AppLog.d(TAG, "setCrossfadeTouchingBorders($value)")
+        _crossfadeTouchingBorders.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_CROSSFADE_TOUCHING_BORDERS] = value } }
     }
 
     fun setRememberViewport(value: Boolean) {

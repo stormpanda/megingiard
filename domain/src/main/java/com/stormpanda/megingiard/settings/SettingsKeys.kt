@@ -28,6 +28,7 @@ internal val KEY_SHOW_FULLSCREEN_EXIT_HINTS = booleanPreferencesKey("show_fullsc
 
 // Mirror touch projection settings
 internal val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
+internal val KEY_CROSSFADE_TOUCHING_BORDERS = booleanPreferencesKey("mirror_crossfade_touching_borders")
 // Mirror session state persistence — "remember" flags
 internal val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
 internal val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
@@ -109,6 +110,7 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,
     KEY_REMEMBER_VIEWPORT, KEY_REMEMBER_LOCK, KEY_REMEMBER_PROJECTION,
+    KEY_CROSSFADE_TOUCHING_BORDERS,
 )
 private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_TOUCHPAD_USE_MOUSE, KEY_TOUCHPAD_TAP_TO_CLICK, KEY_TOUCHPAD_TWO_FINGER_TAP,

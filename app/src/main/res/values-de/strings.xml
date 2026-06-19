@@ -42,6 +42,8 @@
     <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
     <string name="settings_show_mirror_control_labels">Spiegelsteuerungsbeschriftungen anzeigen</string>
     <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
+    <string name="settings_crossfade_touching_borders">Berührende Ränder überblenden</string>
+    <string name="settings_crossfade_touching_borders_desc">Verbindet sich berührende Ausschnitte mit einem weichen Verlauf statt einer harten Kante</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
     <string name="settings_mirror_auto_start">Spiegelung automatisch starten</string>

@@ -15,6 +15,7 @@ import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
+    val crossfadeTouchingBorders: StateFlow<Boolean> = MirrorSettings.crossfadeTouchingBorders
 
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
@@ -76,6 +78,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
+    fun setCrossfadeTouchingBorders(value: Boolean) = MirrorSettings.setCrossfadeTouchingBorders(value)
 
     // Privileged Mode actions
     /**

@@ -51,7 +51,13 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
+import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.settings.SettingsManager
+import android.graphics.LinearGradient
+import android.graphics.Shader
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import kotlin.math.abs
 import java.util.Locale
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -653,6 +659,10 @@ class MultiCutoutContainer(
         }
 
     private val cutoutPaint = Paint()
+    private val blendPaint = Paint().apply {
+        isAntiAlias = true
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+    }
 
     init {
         clipChildren = true
@@ -689,6 +699,9 @@ class MultiCutoutContainer(
         if (parentW <= 0f || parentH <= 0f) return
 
         val drawingTime = drawingTime
+        val crossfade = MirrorSettings.crossfadeTouchingBorders.value
+        val tolerance = 0.005f
+        val blendW = 16f * resources.displayMetrics.density
 
         for (cutout in cutouts) {
             val dw = cutout.destWidth * parentW
@@ -703,9 +716,52 @@ class MultiCutoutContainer(
 
             if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
 
-            val saveCount = if (cutout.opacity < 1f) {
+            var touchesLeft = false
+            var touchesRight = false
+            var touchesTop = false
+            var touchesBottom = false
+
+            if (crossfade && cutouts.size > 1) {
+                for (other in cutouts) {
+                    if (other == cutout) continue
+                    
+                    // Left-right touches
+                    val overlapsY = maxOf(cutout.destY, other.destY) < minOf(cutout.destY + cutout.destHeight, other.destY + other.destHeight) - tolerance
+                    if (overlapsY) {
+                        if (abs(cutout.destX - (other.destX + other.destWidth)) < tolerance) {
+                            touchesLeft = true
+                        }
+                        if (abs((cutout.destX + cutout.destWidth) - other.destX) < tolerance) {
+                            touchesRight = true
+                        }
+                    }
+                    
+                    // Top-bottom touches
+                    val overlapsX = maxOf(cutout.destX, other.destX) < minOf(cutout.destX + cutout.destWidth, other.destX + other.destWidth) - tolerance
+                    if (overlapsX) {
+                        if (abs(cutout.destY - (other.destY + other.destHeight)) < tolerance) {
+                            touchesTop = true
+                        }
+                        if (abs((cutout.destY + cutout.destHeight) - other.destY) < tolerance) {
+                            touchesBottom = true
+                        }
+                    }
+                }
+            }
+
+            val leftExt = if (touchesLeft) blendW / 2f else 0f
+            val rightExt = if (touchesRight) blendW / 2f else 0f
+            val topExt = if (touchesTop) blendW / 2f else 0f
+            val bottomExt = if (touchesBottom) blendW / 2f else 0f
+            val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
+
+            val saveCount = if (cutout.opacity < 1f || hasTouching) {
                 cutoutPaint.alpha = (cutout.opacity * 255).toInt()
-                canvas.saveLayer(dx, dy, dx + dw, dy + dh, cutoutPaint)
+                val clipLeft = dx - leftExt
+                val clipTop = dy - topExt
+                val clipRight = dx + dw + rightExt
+                val clipBottom = dy + dh + bottomExt
+                canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
             } else {
                 canvas.save()
                 canvas.clipRect(dx, dy, dx + dw, dy + dh)
@@ -714,6 +770,7 @@ class MultiCutoutContainer(
 
             try {
                 canvas.translate(dx, dy)
+                val innerSaveCount = canvas.save()
                 
                 if (cutouts.size == 1 && !AppStateManager.isMultiCutoutEditMode.value) {
                     canvas.translate(viewportOffsetX, viewportOffsetY)
@@ -751,17 +808,46 @@ class MultiCutoutContainer(
                 } else if (masterView != null) {
                     drawChild(canvas, masterView, drawingTime)
                 }
+
+                canvas.restoreToCount(innerSaveCount)
+
+                if (hasTouching) {
+                    if (touchesLeft) {
+                        val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
+                        val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(-leftExt, -topExt, leftExt, dh + bottomExt, blendPaint)
+                    }
+                    if (touchesRight) {
+                        val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
+                        val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(dw - rightExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                    }
+                    if (touchesTop) {
+                        val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
+                        val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, topExt, blendPaint)
+                    }
+                    if (touchesBottom) {
+                        val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
+                        val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(-leftExt, dh - bottomExt, dw + rightExt, dh + bottomExt, blendPaint)
+                    }
+                    blendPaint.shader = null
+                }
             } finally {
-                if (cutout.opacity < 1f) {
+                if (cutout.opacity < 1f || hasTouching) {
                     canvas.restoreToCount(saveCount)
                 } else {
                     canvas.restore()
+                }
             }
         }
     }
 }
-}
-
 
 
 

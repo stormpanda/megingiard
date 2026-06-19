@@ -37,6 +37,8 @@
     <string name="settings_overlay_position">Place controls at bottom</string>
     <string name="settings_show_mirror_control_labels">Show mirror control labels</string>
     <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
+    <string name="settings_crossfade_touching_borders">Crossfade touching borders</string>
+    <string name="settings_crossfade_touching_borders_desc">Blend cutouts that touch each other with a smooth gradient instead of a sharp line</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
     <string name="settings_mirror_auto_start">Auto-start mirroring</string>
