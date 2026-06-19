@@ -58,6 +58,7 @@ import android.graphics.Shader
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import java.util.Locale
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -708,13 +709,13 @@ class MultiCutoutContainer(
         val blendWidthDp = MirrorSettings.crossfadeBlendWidthDp.value
         val crossfade = blendWidthDp > 0f
         val tolerance = 0.005f
-        val blendW = blendWidthDp * resources.displayMetrics.density
+        val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
 
         for (cutout in cutouts) {
-            val dw = cutout.destWidth * parentW
-            val dh = cutout.destHeight * parentH
-            val dx = cutout.destX * parentW
-            val dy = cutout.destY * parentH
+            val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
+            val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
+            val dx = (cutout.destX * parentW).roundToInt().toFloat()
+            val dy = (cutout.destY * parentH).roundToInt().toFloat()
             
             val sw = cutout.srcWidth * srcWidth
             val sh = cutout.srcHeight * srcHeight
@@ -756,10 +757,10 @@ class MultiCutoutContainer(
                 }
             }
 
-            val leftExt = if (touchesLeft) blendW / 2f else 0f
-            val rightExt = if (touchesRight) blendW / 2f else 0f
-            val topExt = if (touchesTop) blendW / 2f else 0f
-            val bottomExt = if (touchesBottom) blendW / 2f else 0f
+            val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
+            val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
+            val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
+            val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
             val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
 
             val saveCount = if (cutout.opacity < 1f || hasTouching) {
