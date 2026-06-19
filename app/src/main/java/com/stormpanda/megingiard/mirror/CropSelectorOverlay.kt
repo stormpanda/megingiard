@@ -105,11 +105,14 @@ fun CropSelectorOverlay(
         newX: Float,
         newY: Float,
         newW: Float,
-        newH: Float
+        newH: Float,
+        maxDestW: Float = 0f,
+        maxDestH: Float = 0f
     ): ScreenCutout {
         var updated = cutout.copy(srcX = newX, srcY = newY, srcWidth = newW, srcHeight = newH)
         if (updated.keepAspectRatio) {
             val cropRatio = (newW * srcWidth) / (newH * srcHeight)
+            val normRatio = cropRatio * (secScreenH / secScreenW)
             val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
                 destX = updated.destX,
                 destY = updated.destY,
@@ -119,7 +122,18 @@ fun CropSelectorOverlay(
                 screenW = secScreenW,
                 screenH = secScreenH
             )
-            updated = updated.copy(destWidth = newDestW, destHeight = newDestH)
+            
+            var finalW = newDestW
+            var finalH = newDestH
+            
+            if (maxDestW > 0f && maxDestH > 0f) {
+                val limitW = minOf(maxDestW, 1f - updated.destX)
+                val limitH = minOf(maxDestH, 1f - updated.destY)
+                finalW = minOf(limitW, limitH * normRatio)
+                finalH = minOf(limitH, limitW / normRatio)
+            }
+            
+            updated = updated.copy(destWidth = finalW, destHeight = finalH)
         }
         return updated
     }
@@ -227,6 +241,8 @@ fun CropSelectorOverlay(
         var dragStartY by remember(cutoutId) { mutableStateOf(0f) }
         var dragStartW by remember(cutoutId) { mutableStateOf(0f) }
         var dragStartH by remember(cutoutId) { mutableStateOf(0f) }
+        var gestureStartDestW by remember(cutoutId) { mutableStateOf(0f) }
+        var gestureStartDestH by remember(cutoutId) { mutableStateOf(0f) }
 
         // Top-Left handle
         ResizeHandleView(
@@ -241,6 +257,8 @@ fun CropSelectorOverlay(
                 dragStartY = curCutout.srcY
                 dragStartW = curCutout.srcWidth
                 dragStartH = curCutout.srcHeight
+                gestureStartDestW = curCutout.destWidth
+                gestureStartDestH = curCutout.destHeight
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
@@ -253,7 +271,7 @@ fun CropSelectorOverlay(
                 val newH = bottomEdge - newY
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, newY, newW, newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, newY, newW, newH, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -272,6 +290,8 @@ fun CropSelectorOverlay(
                 dragStartY = curCutout.srcY
                 dragStartW = curCutout.srcWidth
                 dragStartH = curCutout.srcHeight
+                gestureStartDestW = curCutout.destWidth
+                gestureStartDestH = curCutout.destHeight
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
@@ -282,7 +302,7 @@ fun CropSelectorOverlay(
                 val newH = bottomEdge - newY
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, newY, newW, newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, newY, newW, newH, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -301,6 +321,8 @@ fun CropSelectorOverlay(
                 dragStartY = curCutout.srcY
                 dragStartW = curCutout.srcWidth
                 dragStartH = curCutout.srcHeight
+                gestureStartDestW = curCutout.destWidth
+                gestureStartDestH = curCutout.destHeight
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
@@ -311,7 +333,7 @@ fun CropSelectorOverlay(
                 val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, dragStartY, newW, newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, dragStartY, newW, newH, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -330,6 +352,8 @@ fun CropSelectorOverlay(
                 dragStartY = curCutout.srcY
                 dragStartW = curCutout.srcWidth
                 dragStartH = curCutout.srcHeight
+                gestureStartDestW = curCutout.destWidth
+                gestureStartDestH = curCutout.destHeight
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
@@ -337,7 +361,7 @@ fun CropSelectorOverlay(
                 val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, dragStartY, newW, newH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, dragStartY, newW, newH, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
