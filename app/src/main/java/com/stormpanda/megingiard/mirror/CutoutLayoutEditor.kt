@@ -86,6 +86,7 @@ fun CutoutLayoutEditor(
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val crossfadeBlendWidthDp by MirrorSettings.crossfadeBlendWidthDp.collectAsState()
     val maxFps by MirrorSettings.maxFps.collectAsState()
+    val smoothingStrength by MirrorSettings.smoothingStrength.collectAsState()
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
@@ -695,6 +696,38 @@ fun CutoutLayoutEditor(
                             )
                             Text(
                                 text = stringResource(R.string.mirror_fps_value, maxFps),
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.width(TOOLBAR_SLIDER_VALUE_WIDTH),
+                                textAlign = TextAlign.End
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .width(TOOLBAR_SLIDER_ROW_WIDTH)
+                                .padding(top = 4.dp, bottom = 8.dp, start = 8.dp, end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.mirror_smoothing_strength_label),
+                                color = colors.onSurface,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Slider(
+                                value = smoothingStrength.toFloat(),
+                                onValueChange = { MirrorSettings.setSmoothingStrength(it.roundToInt()) },
+                                valueRange = 0f..100f,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = colors.accent,
+                                    activeTrackColor = colors.accent,
+                                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.24f)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = stringResource(R.string.mirror_smoothing_strength_value, smoothingStrength),
                                 color = colors.onSurfaceSecondary,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.width(TOOLBAR_SLIDER_VALUE_WIDTH),

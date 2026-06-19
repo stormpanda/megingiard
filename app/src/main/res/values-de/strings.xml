@@ -688,4 +688,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_aspect_ratio_free">Seitenverhältnis: Frei</string>
     <string name="mirror_editor_motion_smoothing">Glätten</string>
     <string name="cd_motion_smoothing">Bewegungsglättung für den ausgewählten Ausschnitt umschalten</string>
+    <string name="mirror_smoothing_strength_label">Glättung</string>
+    <string name="mirror_smoothing_strength_value">%1$d%%</string>
 </resources>

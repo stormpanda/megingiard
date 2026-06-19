@@ -751,7 +751,9 @@ class MultiCutoutContainer(
                         isAccumulatorInitialized = true
                     } else {
                         val blendPaintForAccum = Paint().apply {
-                            alpha = 38 // 15% opacity
+                            val strength = MirrorSettings.smoothingStrength.value
+                            val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
+                            alpha = (alphaPercent * 255f).roundToInt()
                             xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
                         }
                         accumCanvas.drawBitmap(temp, 0f, 0f, blendPaintForAccum)

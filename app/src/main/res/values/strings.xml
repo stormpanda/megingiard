@@ -681,4 +681,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_aspect_ratio_free">Aspect: Free</string>
     <string name="mirror_editor_motion_smoothing">Smooth</string>
     <string name="cd_motion_smoothing">Toggle motion smoothing for selected cutout</string>
+    <string name="mirror_smoothing_strength_label">Smoothing</string>
+    <string name="mirror_smoothing_strength_value">%1$d%%</string>
 </resources>
