@@ -24,7 +24,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Lock
@@ -438,13 +438,10 @@ fun CutoutLayoutEditor(
                 modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 8.dp)
             ) {
                 // Drag handle at top-left
-                Icon(
-                    imageVector = Icons.Rounded.DragHandle,
-                    contentDescription = stringResource(R.string.cd_drag_toolbar),
-                    tint = colors.onSurfaceSecondary,
+                Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .size(20.dp)
+                        .size(width = 36.dp, height = 32.dp)
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
@@ -453,11 +450,19 @@ fun CutoutLayoutEditor(
                                     y = toolbarOffset.y + dragAmount.y.roundToInt()
                                 )
                             }
-                        }
-                )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.DragIndicator,
+                        contentDescription = stringResource(R.string.cd_drag_toolbar),
+                        tint = colors.onSurfaceSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
 
                 Row(
-                    modifier = Modifier.padding(start = 24.dp), // clear drag handle
+                    modifier = Modifier.padding(start = 40.dp), // clear drag handle (36dp + 4dp space)
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -544,6 +549,21 @@ fun CutoutLayoutEditor(
                                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
                                     }
                                 )
+
+                                Box(
+                                    modifier = Modifier
+                                        .height(32.dp)
+                                        .background(colors.surface.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (isLocked) "1:1" else "1:X",
+                                        color = colors.onSurface,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                             }
                         }
 

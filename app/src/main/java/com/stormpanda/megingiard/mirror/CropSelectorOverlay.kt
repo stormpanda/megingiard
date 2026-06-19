@@ -19,7 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -360,13 +360,10 @@ fun CropSelectorOverlay(
                 modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 8.dp)
             ) {
                 // Drag handle at top-left
-                Icon(
-                    imageVector = Icons.Rounded.DragHandle,
-                    contentDescription = stringResource(R.string.cd_drag_toolbar),
-                    tint = colors.onSurfaceSecondary,
+                Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .size(20.dp)
+                        .size(width = 36.dp, height = 32.dp)
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
@@ -375,12 +372,20 @@ fun CropSelectorOverlay(
                                     y = toolbarOffset.y + dragAmount.y.roundToInt()
                                 )
                             }
-                        }
-                )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.DragIndicator,
+                        contentDescription = stringResource(R.string.cd_drag_toolbar),
+                        tint = colors.onSurfaceSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
 
                 // Row of buttons
                 Row(
-                    modifier = Modifier.padding(start = 24.dp), // clear drag handle
+                    modifier = Modifier.padding(start = 40.dp), // clear drag handle (36dp + 4dp space)
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
