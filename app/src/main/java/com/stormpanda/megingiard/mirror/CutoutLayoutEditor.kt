@@ -525,6 +525,7 @@ fun CutoutLayoutEditor(
                                         stringResource(R.string.mirror_editor_aspect_ratio_free)
                                     },
                                     color = if (isLocked) colors.accent else colors.onSurfaceSecondary,
+                                    label = if (isLocked) "1:1" else "1:X",
                                     onClick = {
                                         val updated = layout.mirrorCutouts.map {
                                             if (it.id == cutoutId) {
@@ -549,21 +550,6 @@ fun CutoutLayoutEditor(
                                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
                                     }
                                 )
-
-                                Box(
-                                    modifier = Modifier
-                                        .height(32.dp)
-                                        .background(colors.surface.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = if (isLocked) "1:1" else "1:X",
-                                        color = colors.onSurface,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                }
                             }
                         }
 
@@ -687,6 +673,7 @@ private fun ToolbarIconButton(
     contentDescription: String,
     color: Color,
     enabled: Boolean = true,
+    label: String? = null,
     onClick: () -> Unit
 ) {
     val colors = LocalAppColors.current
@@ -701,12 +688,24 @@ private fun ToolbarIconButton(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
         modifier = Modifier.height(32.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
-            modifier = Modifier.size(18.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp)
+            )
+            if (label != null) {
+                Text(
+                    text = label,
+                    color = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
     }
 }
 
