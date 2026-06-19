@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
@@ -559,6 +560,20 @@ fun CutoutLayoutEditor(
                                                 }
                                                 updatedCutout
                                             } else it
+                                        }
+                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+                                    }
+                                )
+
+                                val isSmooth = cutout.motionSmoothing
+                                ToolbarIconButton(
+                                    icon = Icons.Rounded.BlurOn,
+                                    contentDescription = stringResource(R.string.cd_motion_smoothing),
+                                    color = if (isSmooth) colors.accent else colors.onSurfaceSecondary,
+                                    label = stringResource(R.string.mirror_editor_motion_smoothing),
+                                    onClick = {
+                                        val updated = layout.mirrorCutouts.map {
+                                            if (it.id == cutoutId) it.copy(motionSmoothing = !it.motionSmoothing) else it
                                         }
                                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
                                     }

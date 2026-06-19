@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Test
 
 private const val EPS = 1e-3f
@@ -463,6 +465,43 @@ class MirrorCoordinateTransformTest {
         assertEquals(0.35f, geom.x, EPS)
         assertEquals(0.40f, geom.y, EPS) // clamped to A's bottom (0.40)
         assertEquals(0.30f, geom.w, EPS) // clamped to B's left (0.65), width is 0.65 - 0.35 = 0.30
+    }
+
+    @Test
+    fun `ScreenCutout serialization round-trip preserves motionSmoothing`() {
+        val original = ScreenCutout(
+            id = "c-test-smooth",
+            name = "Test Smooth",
+            srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
+            destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f,
+            motionSmoothing = true
+        )
+        val jsonString = Json.encodeToString(original)
+        val decoded = Json.decodeFromString<ScreenCutout>(jsonString)
+        assertEquals(original.id, decoded.id)
+        assertEquals(original.name, decoded.name)
+        assertTrue(decoded.motionSmoothing)
+    }
+
+    @Test
+    fun `ScreenCutout deserialization of legacy JSON defaults motionSmoothing to false`() {
+        val legacyJson = """
+            {
+                "id": "c-legacy",
+                "name": "Legacy Cutout",
+                "srcX": 0.0,
+                "srcY": 0.0,
+                "srcWidth": 1.0,
+                "srcHeight": 1.0,
+                "destX": 0.0,
+                "destY": 0.0,
+                "destWidth": 1.0,
+                "destHeight": 1.0
+            }
+        """.trimIndent()
+        val decoded = Json.decodeFromString<ScreenCutout>(legacyJson)
+        assertEquals("c-legacy", decoded.id)
+        assertTrue(!decoded.motionSmoothing)
     }
 }
 
