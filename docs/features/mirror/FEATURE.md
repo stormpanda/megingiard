@@ -480,8 +480,8 @@ To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support 
    In `MirrorPresentation`, when the target display surface becomes available, we invoke `Surface.setFrameRate(maxFps, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)`. This requests Android's system compositor (SurfaceFlinger) to pace the composition of the virtual display's frames.
 2. **Dynamic Updates**:
    `MirrorPresentation` collects the `MirrorSettings.maxFps` flow within the presentation coroutine scope. Whenever the user adjusts the discrete slider in the layout editor, the frame rate limit of the active surface is updated in real-time.
-3. **App-Level Rendering Conservation**:
-   Because SurfaceFlinger paces the buffer enqueuing onto the target `SurfaceView` or `TextureView` surface, the app's `onSurfaceTextureUpdated` callbacks are throttled automatically. This matches the canvas redraw frequency to the specified FPS limit and directly avoids redundant draw calls.
+3. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
+   Since Android's compositor (SurfaceFlinger) often ignores the `Surface.setFrameRate` hint for virtual displays and pushes frames as fast as they update, we enforce the limit in the application layer. We use `ThrottledTextureView` which overrides `invalidate()` to drop invalidation requests if they arrive faster than the configured `maxFps` interval. This prevents the view hierarchy from redrawing and avoids enqueuing new GPU textures too frequently, directly reducing rendering resource usage.
 
 ### Source Files
 

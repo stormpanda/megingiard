@@ -188,7 +188,7 @@ class MirrorPresentation(
         multiCutoutContainer = mcc
         container.addView(mcc)
 
-        val tv = TextureView(context)
+        val tv = ThrottledTextureView(context)
         masterTextureView = tv
         mcc.addView(tv)
 
@@ -232,6 +232,7 @@ class MirrorPresentation(
 
         scope.launch {
             MirrorSettings.maxFps.collect { fps ->
+                tv.maxFps = fps
                 masterSurface?.let { surface ->
                     if (surface.isValid) {
                         try {
@@ -891,6 +892,40 @@ class MultiCutoutContainer(
                     canvas.restore()
                 }
             }
+        }
+    }
+}
+
+private class ThrottledTextureView(context: Context) : TextureView(context) {
+    var maxFps: Int = 60
+    private var lastInvalidateTime: Long = 0L
+
+    override fun invalidate() {
+        val now = System.currentTimeMillis()
+        val interval = if (maxFps >= 60) 0L else (1000L / maxFps)
+        if (interval == 0L || now - lastInvalidateTime >= interval) {
+            lastInvalidateTime = now
+            super.invalidate()
+        }
+    }
+
+    @Deprecated("Deprecated in parent class")
+    override fun invalidate(dirty: android.graphics.Rect?) {
+        val now = System.currentTimeMillis()
+        val interval = if (maxFps >= 60) 0L else (1000L / maxFps)
+        if (interval == 0L || now - lastInvalidateTime >= interval) {
+            lastInvalidateTime = now
+            super.invalidate(dirty)
+        }
+    }
+
+    @Deprecated("Deprecated in parent class")
+    override fun invalidate(l: Int, t: Int, r: Int, b: Int) {
+        val now = System.currentTimeMillis()
+        val interval = if (maxFps >= 60) 0L else (1000L / maxFps)
+        if (interval == 0L || now - lastInvalidateTime >= interval) {
+            lastInvalidateTime = now
+            super.invalidate(l, t, r, b)
         }
     }
 }
