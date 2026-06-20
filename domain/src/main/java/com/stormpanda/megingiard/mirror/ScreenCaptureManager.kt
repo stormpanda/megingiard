@@ -66,8 +66,7 @@ object ScreenCaptureManager {
         scope.launch {
             MacroPadState.activeLayout.collect { layout ->
                 if (layout != null) {
-                    AppStateManager.setMultiCutoutEditMode(layout.mirrorMultiMode)
-                    if (layout.mirrorMultiMode) {
+                    if (layout.mirrorCutouts.isNotEmpty()) {
                         _cutouts.value = layout.mirrorCutouts
                     } else {
                         _cutouts.value = listOf(

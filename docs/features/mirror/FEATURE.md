@@ -99,14 +99,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M11: Multi-Cutout Screen Mirroring
 
-- Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen instead of just a single viewport.
+- Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen.
 - Multi-cutout mode is supported in both standard MediaProjection and Privileged modes. Both modes utilize a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
-- The multi-cutout mode is activated via a toggle button on the Viewport Edit overlay on the secondary display.
+- The app always defaults to and operates in multi-cutout mode. Single viewport mode is deleted, as it is treated as a special case of multi-cutout mode containing only one cutout.
 - Defining source crop boundaries is done via the `CropSelectorOverlay` hosted in `CropSelectorActivity` on the primary display.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
-- Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout`. Toggling between single-viewport and multi-viewport modes switches the active display mode (`mirrorMultiMode`) without overwriting or destroying the configuration of the other mode. Single-viewport mode dynamically generates the full-screen cutout at runtime.
-- In multi-cutout mode, the user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts).
-- Toggling to multi-cutout mode from the default single full-screen viewport MUST start with an empty slate (0 cutouts) rather than keeping the default full-screen cutout, unless a custom layout (multiple cutouts or a non-default single cutout/viewport crop) was already configured.
+- Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). If `mirrorCutouts` is empty at runtime, a default full-screen cutout is automatically populated.
+- The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts).
 
 ### FR-M12: Aspect Ratio Lock for Cutout Resizing
 

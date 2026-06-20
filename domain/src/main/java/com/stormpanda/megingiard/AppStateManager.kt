@@ -170,19 +170,11 @@ object AppStateManager {
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
 
-    private val _isMultiCutoutEditMode = MutableStateFlow(false)
-    val isMultiCutoutEditMode: StateFlow<Boolean> = _isMultiCutoutEditMode.asStateFlow()
-
     private val _activeCropCutoutId = MutableStateFlow<String?>(null)
     val activeCropCutoutId: StateFlow<String?> = _activeCropCutoutId.asStateFlow()
 
     private val _selectedCutoutId = MutableStateFlow<String?>(null)
     val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
-
-    fun setMultiCutoutEditMode(active: Boolean) {
-        AppLog.d(TAG, "setMultiCutoutEditMode($active)")
-        _isMultiCutoutEditMode.value = active
-    }
 
     fun setActiveCropCutoutId(id: String?) {
         AppLog.d(TAG, "setActiveCropCutoutId($id)")

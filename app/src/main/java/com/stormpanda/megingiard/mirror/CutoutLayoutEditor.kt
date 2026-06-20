@@ -22,11 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragIndicator
-import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.Button
@@ -80,8 +79,14 @@ fun CutoutLayoutEditor(
 ) {
     val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsState()
+    val layout = activeLayout ?: return
+
+    // Capture the initial state of the layout's mirror settings when the editor is opened.
+    val initialCutouts = remember { layout.mirrorCutouts }
+    val initialCrossfade = remember { MirrorSettings.crossfadeBlendWidthDp.value }
+    val initialSmoothing = remember { MirrorSettings.smoothingStrength.value }
+
     var toolbarOffset by remember { mutableStateOf(IntOffset.Zero) }
-    val isMultiCutoutEditMode by AppStateManager.isMultiCutoutEditMode.collectAsState()
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val crossfadeBlendWidthDp by MirrorSettings.crossfadeBlendWidthDp.collectAsState()
     val smoothingStrength by MirrorSettings.smoothingStrength.collectAsState()
@@ -92,8 +97,6 @@ fun CutoutLayoutEditor(
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else 1080f
-
-    val layout = activeLayout ?: return
 
     BoxWithConstraints(
         modifier = Modifier
@@ -116,22 +119,6 @@ fun CutoutLayoutEditor(
                 )
         ) {
 
-        if (!isMultiCutoutEditMode) {
-            // ── Single Viewport Edit Mode ──────────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            MirrorViewportController.applyZoomPan(
-                                zoom, pan.x, pan.y,
-                                ScreenCaptureManager.surfaceWidth.value,
-                                ScreenCaptureManager.surfaceHeight.value,
-                            )
-                        }
-                    }
-            )
-        } else {
             // ── Multi-Cutout Arrangement Mode ──────────────────────────────────────
             // Draw all active cutout destinations
             val handleSizePx = with(density) { HANDLE_SIZE.toPx() }
@@ -427,7 +414,6 @@ fun CutoutLayoutEditor(
                     )
                 }
             }
-        }
     }
 
         // ── Floating Toolbar Card ───────────────────────────────────────────────
@@ -479,19 +465,6 @@ fun CutoutLayoutEditor(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                    if (!isMultiCutoutEditMode) {
-                        // Mode Toggle Button (Single -> Multi)
-                        ToolbarIconButton(
-                            icon = Icons.Rounded.GridView,
-                            contentDescription = stringResource(R.string.mirror_editor_multi_mode),
-                            color = colors.accent,
-                            onClick = {
-                                AppStateManager.setMultiCutoutEditMode(true)
-                                MacroPadState.updateLayout(layout.copy(mirrorMultiMode = true))
-                                AppStateManager.setSelectedCutoutId(layout.mirrorCutouts.firstOrNull()?.id)
-                            }
-                        )
-                    } else {
                         // Add Cutout
                         ToolbarIconButton(
                             icon = Icons.Rounded.Add,
@@ -591,20 +564,7 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        // Mode Toggle Button (Multi -> Single)
-                        ToolbarIconButton(
-                            icon = Icons.Rounded.Fullscreen,
-                            contentDescription = stringResource(R.string.mirror_editor_single_mode),
-                            color = colors.onSurfaceSecondary,
-                            onClick = {
-                                AppStateManager.setMultiCutoutEditMode(false)
-                                MacroPadState.updateLayout(layout.copy(mirrorMultiMode = false))
-                                AppStateManager.setSelectedCutoutId(null)
-                            }
-                        )
-                    }
-
-                        // Done / Exit button
+                        // Done / Save button
                         ToolbarIconButton(
                             icon = Icons.Rounded.Check,
                             contentDescription = stringResource(R.string.mirror_editor_done),
@@ -613,9 +573,22 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setViewportEditActive(false)
                             }
                         )
+
+                        // Cancel / Revert button
+                        ToolbarIconButton(
+                            icon = Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.settings_color_cancel),
+                            color = colors.onSurfaceSecondary,
+                            onClick = {
+                                val updatedLayout = layout.copy(mirrorCutouts = initialCutouts)
+                                MirrorSettings.setCrossfadeBlendWidthDp(initialCrossfade)
+                                MirrorSettings.setSmoothingStrength(initialSmoothing)
+                                MacroPadState.updateLayout(updatedLayout)
+                                AppStateManager.setViewportEditActive(false)
+                            }
+                        )
                     }
 
-                    if (isMultiCutoutEditMode) {
                         Row(
                             modifier = Modifier
                                 .width(TOOLBAR_SLIDER_ROW_WIDTH)
@@ -716,7 +689,6 @@ fun CutoutLayoutEditor(
                                 )
                             }
                         }
-                    }
                 }
             }
         }

@@ -803,7 +803,7 @@ class MultiCutoutContainer(
 
         val drawingTime = drawingTime
         val blendWidthDp = MirrorSettings.crossfadeBlendWidthDp.value
-        val isMultiMode = AppStateManager.isMultiCutoutEditMode.value || cutouts.size > 1
+        val isMultiMode = cutouts.size > 1
         val crossfade = blendWidthDp > 0f && isMultiMode
         val tolerance = TOUCH_TOLERANCE
         val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
@@ -889,7 +889,8 @@ class MultiCutoutContainer(
                 canvas.translate(dx, dy)
                 val innerSaveCount = canvas.save()
                 
-                if (cutouts.size == 1 && !AppStateManager.isMultiCutoutEditMode.value) {
+                val isFollowActive = ScreenCaptureManager.isFollowActive.value
+                if (cutouts.size == 1 && isFollowActive) {
                     canvas.translate(viewportOffsetX, viewportOffsetY)
                     canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
 
