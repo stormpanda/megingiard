@@ -78,6 +78,7 @@ private val SLIDER_VALUE_WIDTH = 80.dp
 private val TOOLBAR_EXPANDED_WIDTH = 360.dp
 private const val SLIDER_VALUE_MIN = 0f
 private const val SLIDER_VALUE_MAX = 100f
+private val TOOLBAR_SAFE_MARGIN = 16.dp
 
 @Composable
 fun CutoutLayoutEditor(
@@ -424,29 +425,24 @@ fun CutoutLayoutEditor(
             }
     }
 
-        val topPaddingPx = with(density) {
-            (if (overlayAtBottom) 24.dp + MP_EDGE_ZONE else 24.dp).toPx()
-        }
-        val marginBottPx = with(density) {
-            (24.dp + MP_EDGE_ZONE).toPx()
-        }
+        val marginPx = with(density) { TOOLBAR_SAFE_MARGIN.toPx() }
 
         if (toolbarOffset == null && toolbarSize != IntSize.Zero) {
             val initialY = if (overlayAtBottom) {
-                0f
+                marginPx
             } else {
-                containerH - topPaddingPx - toolbarSize.height.toFloat() - marginBottPx
+                containerH - toolbarSize.height.toFloat() - marginPx
             }
             toolbarOffset = IntOffset(0, initialY.roundToInt())
         }
 
         val currentOffset = toolbarOffset ?: IntOffset.Zero
         val clampedOffset = if (toolbarSize != IntSize.Zero) {
-            val maxStartX = (containerW - toolbarSize.width) / 2f
+            val maxStartX = ((containerW - toolbarSize.width) / 2f - marginPx).coerceAtLeast(0f)
             val clampedX = currentOffset.x.toFloat().coerceIn(-maxStartX, maxStartX)
 
-            val minY = -topPaddingPx
-            val maxY = containerH - topPaddingPx - toolbarSize.height.toFloat() - marginBottPx
+            val minY = marginPx
+            val maxY = containerH - toolbarSize.height.toFloat() - marginPx
             val clampedY = currentOffset.y.toFloat().coerceIn(minY, maxY.coerceAtLeast(minY))
 
             IntOffset(clampedX.roundToInt(), clampedY.roundToInt())
@@ -454,15 +450,13 @@ fun CutoutLayoutEditor(
             currentOffset
         }
 
+        val currentClampedOffset by rememberUpdatedState(clampedOffset)
+
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .onGloballyPositioned { coords -> toolbarSize = coords.size }
                 .offset { clampedOffset }
-                .padding(
-                    top = if (overlayAtBottom) 24.dp + MP_EDGE_ZONE else 24.dp,
-                    bottom = if (overlayAtBottom) 24.dp else 24.dp + MP_EDGE_ZONE
-                )
                 .shadow(TOOLBAR_SHADOW, RoundedCornerShape(TOOLBAR_CORNER)),
             color = colors.surface.copy(alpha = 0.9f),
             shape = RoundedCornerShape(TOOLBAR_CORNER),
@@ -479,7 +473,7 @@ fun CutoutLayoutEditor(
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
-                                val cur = toolbarOffset ?: IntOffset.Zero
+                                val cur = currentClampedOffset
                                 toolbarOffset = IntOffset(
                                     x = cur.x + dragAmount.x.roundToInt(),
                                     y = cur.y + dragAmount.y.roundToInt()
