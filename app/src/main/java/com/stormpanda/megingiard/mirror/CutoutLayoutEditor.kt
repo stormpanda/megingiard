@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,8 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragIndicator
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.Button
@@ -68,8 +71,9 @@ private val BORDER_WIDTH = 1.dp
 private val TOOLBAR_SHADOW = 6.dp
 private val TOOLBAR_CORNER = 8.dp
 private val MP_EDGE_ZONE = 40.dp
-private val TOOLBAR_SLIDER_ROW_WIDTH = 280.dp
-private val TOOLBAR_SLIDER_VALUE_WIDTH = 54.dp
+private val SLIDER_LABEL_WIDTH = 100.dp
+private val SLIDER_VALUE_WIDTH = 80.dp
+private val TOOLBAR_EXPANDED_WIDTH = 360.dp
 private const val SLIDER_VALUE_MIN = 0f
 private const val SLIDER_VALUE_MAX = 100f
 
@@ -87,6 +91,7 @@ fun CutoutLayoutEditor(
     val initialSmoothing = remember { MirrorSettings.smoothingStrength.value }
 
     var toolbarOffset by remember { mutableStateOf(IntOffset.Zero) }
+    var isExpanded by remember { mutableStateOf(false) }
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val crossfadeBlendWidthDp by MirrorSettings.crossfadeBlendWidthDp.collectAsState()
     val smoothingStrength by MirrorSettings.smoothingStrength.collectAsState()
@@ -552,20 +557,6 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        // Delete Selected
-                        ToolbarIconButton(
-                            icon = Icons.Rounded.Delete,
-                            contentDescription = stringResource(R.string.mirror_editor_delete_cutout),
-                            color = colors.error,
-                            enabled = selectedCutoutId != null,
-                            onClick = {
-                                val targetId = selectedCutoutId ?: return@ToolbarIconButton
-                                val remaining = layout.mirrorCutouts.filter { it.id != targetId }
-                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = remaining))
-                                AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
-                            }
-                        )
-
                         // Done / Save button
                         ToolbarIconButton(
                             icon = Icons.Rounded.Check,
@@ -589,92 +580,43 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setViewportEditActive(false)
                             }
                         )
+
+                        // Expand / Collapse button
+                        ToolbarIconButton(
+                            icon = if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            contentDescription = stringResource(
+                                if (isExpanded) R.string.settings_section_collapse else R.string.settings_section_expand
+                            ),
+                            color = colors.onSurfaceSecondary,
+                            onClick = {
+                                isExpanded = !isExpanded
+                            }
+                        )
                     }
 
-                        Row(
+                    if (isExpanded) {
+                        Column(
                             modifier = Modifier
-                                .width(TOOLBAR_SLIDER_ROW_WIDTH)
-                                .padding(top = 8.dp, bottom = 4.dp, start = 8.dp, end = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .width(TOOLBAR_EXPANDED_WIDTH)
+                                .padding(top = 8.dp)
                         ) {
-                            Text(
-                                text = stringResource(R.string.mirror_crossfade_label),
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Slider(
-                                value = crossfadeBlendWidthDp,
-                                onValueChange = { MirrorSettings.setCrossfadeBlendWidthDp(it) },
-                                valueRange = SLIDER_VALUE_MIN..SLIDER_VALUE_MAX,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = colors.accent,
-                                    activeTrackColor = colors.accent,
-                                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.24f)
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = stringResource(R.string.mirror_crossfade_label_value, crossfadeBlendWidthDp.roundToInt()),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.width(TOOLBAR_SLIDER_VALUE_WIDTH),
-                                textAlign = TextAlign.End
-                            )
-                        }
-
-                        val selectedCutout = layout.mirrorCutouts.find { it.id == selectedCutoutId }
-                        if (selectedCutout != null) {
-                            val isSmoothingEnabled = selectedCutout.motionSmoothing
-                            val currentSliderIndex = if (!isSmoothingEnabled) {
-                                0
-                            } else {
-                                when (smoothingStrength) {
-                                    in 0..77 -> 1
-                                    in 78..82 -> 2
-                                    else -> 3
-                                }
-                            }
-                            val sliderValueText = when (currentSliderIndex) {
-                                0 -> stringResource(R.string.mirror_smoothing_strength_off)
-                                1 -> stringResource(R.string.mirror_smoothing_strength_light)
-                                2 -> stringResource(R.string.mirror_smoothing_strength_medium)
-                                else -> stringResource(R.string.mirror_smoothing_strength_strong)
-                            }
-
+                            // Crossfade Slider
                             Row(
                                 modifier = Modifier
-                                    .width(TOOLBAR_SLIDER_ROW_WIDTH)
-                                    .padding(top = 4.dp, bottom = 8.dp, start = 8.dp, end = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = stringResource(R.string.mirror_smoothing_strength_label),
+                                    text = stringResource(R.string.mirror_crossfade_label),
                                     color = colors.onSurface,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.width(SLIDER_LABEL_WIDTH)
                                 )
                                 Slider(
-                                    value = currentSliderIndex.toFloat(),
-                                    onValueChange = { indexFloat ->
-                                        val idx = indexFloat.roundToInt().coerceIn(0, 3)
-                                        val isSmooth = idx > 0
-                                        val strength = when (idx) {
-                                            1 -> 75
-                                            2 -> 80
-                                            3 -> 85
-                                            else -> 85 // fallback
-                                        }
-                                        if (isSmooth) {
-                                            MirrorSettings.setSmoothingStrength(strength)
-                                        }
-                                        val updated = layout.mirrorCutouts.map {
-                                            if (it.id == selectedCutoutId) it.copy(motionSmoothing = isSmooth) else it
-                                        }
-                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-                                    },
-                                    valueRange = 0f..3f,
-                                    steps = 2,
+                                    value = crossfadeBlendWidthDp,
+                                    onValueChange = { MirrorSettings.setCrossfadeBlendWidthDp(it) },
+                                    valueRange = SLIDER_VALUE_MIN..SLIDER_VALUE_MAX,
                                     colors = SliderDefaults.colors(
                                         thumbColor = colors.accent,
                                         activeTrackColor = colors.accent,
@@ -683,14 +625,105 @@ fun CutoutLayoutEditor(
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
-                                    text = sliderValueText,
+                                    text = stringResource(R.string.mirror_crossfade_label_value, crossfadeBlendWidthDp.roundToInt()),
                                     color = colors.onSurfaceSecondary,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.width(80.dp),
+                                    modifier = Modifier.width(SLIDER_VALUE_WIDTH),
                                     textAlign = TextAlign.End
                                 )
                             }
+
+                            val selectedCutout = layout.mirrorCutouts.find { it.id == selectedCutoutId }
+                            if (selectedCutout != null) {
+                                val isSmoothingEnabled = selectedCutout.motionSmoothing
+                                val currentSliderIndex = if (!isSmoothingEnabled) {
+                                    0
+                                } else {
+                                    when (smoothingStrength) {
+                                        in 0..77 -> 1
+                                        in 78..82 -> 2
+                                        else -> 3
+                                    }
+                                }
+                                val sliderValueText = when (currentSliderIndex) {
+                                    0 -> stringResource(R.string.mirror_smoothing_strength_off)
+                                    1 -> stringResource(R.string.mirror_smoothing_strength_light)
+                                    2 -> stringResource(R.string.mirror_smoothing_strength_medium)
+                                    else -> stringResource(R.string.mirror_smoothing_strength_strong)
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.mirror_smoothing_strength_label),
+                                        color = colors.onSurface,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.width(SLIDER_LABEL_WIDTH)
+                                    )
+                                    Slider(
+                                        value = currentSliderIndex.toFloat(),
+                                        onValueChange = { indexFloat ->
+                                            val idx = indexFloat.roundToInt().coerceIn(0, 3)
+                                            val isSmooth = idx > 0
+                                            val strength = when (idx) {
+                                                1 -> 75
+                                                2 -> 80
+                                                3 -> 85
+                                                else -> 85 // fallback
+                                            }
+                                            if (isSmooth) {
+                                                MirrorSettings.setSmoothingStrength(strength)
+                                            }
+                                            val updated = layout.mirrorCutouts.map {
+                                                if (it.id == selectedCutoutId) it.copy(motionSmoothing = isSmooth) else it
+                                            }
+                                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+                                        },
+                                        valueRange = 0f..3f,
+                                        steps = 2,
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = colors.accent,
+                                            activeTrackColor = colors.accent,
+                                            inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.24f)
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = sliderValueText,
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.width(SLIDER_VALUE_WIDTH),
+                                        textAlign = TextAlign.End
+                                    )
+                                }
+                            }
+
+                            // Delete button in the bottom right corner
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                ToolbarIconButton(
+                                    icon = Icons.Rounded.Delete,
+                                    contentDescription = stringResource(R.string.mirror_editor_delete_cutout),
+                                    color = colors.error,
+                                    enabled = selectedCutoutId != null,
+                                    onClick = {
+                                        val targetId = selectedCutoutId ?: return@ToolbarIconButton
+                                        val remaining = layout.mirrorCutouts.filter { it.id != targetId }
+                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = remaining))
+                                        AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
+                                    }
+                                )
+                            }
                         }
+                    }
                 }
             }
         }
