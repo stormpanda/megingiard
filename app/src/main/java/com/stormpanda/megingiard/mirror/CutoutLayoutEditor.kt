@@ -500,44 +500,46 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        selectedCutoutId?.let { cutoutId ->
-                            layout.mirrorCutouts.find { it.id == cutoutId }?.let { cutout ->
-                                val isLocked = cutout.keepAspectRatio
-                                ToolbarIconButton(
-                                    icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                                    contentDescription = if (isLocked) {
-                                        stringResource(R.string.mirror_editor_aspect_ratio_locked)
-                                    } else {
-                                        stringResource(R.string.mirror_editor_aspect_ratio_free)
-                                    },
-                                    color = if (isLocked) colors.accent else colors.onSurfaceSecondary,
-                                    label = if (isLocked) "1:1" else "1:X",
-                                    onClick = {
-                                        val updated = layout.mirrorCutouts.map {
-                                            if (it.id == cutoutId) {
-                                                val nextLocked = !it.keepAspectRatio
-                                                var updatedCutout = it.copy(keepAspectRatio = nextLocked)
-                                                if (nextLocked) {
-                                                    val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
-                                                    val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
-                                                        destX = updatedCutout.destX,
-                                                        destY = updatedCutout.destY,
-                                                        destWidth = updatedCutout.destWidth,
-                                                        destHeight = updatedCutout.destHeight,
-                                                        cropRatio = cropRatio,
-                                                        screenW = screenW,
-                                                        screenH = screenH
-                                                    )
-                                                    updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
-                                                }
-                                                updatedCutout
-                                            } else it
-                                        }
-                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-                                    }
-                                )
-                            }
+                        val selectedCutout = selectedCutoutId?.let { cutoutId ->
+                            layout.mirrorCutouts.find { it.id == cutoutId }
                         }
+                        val isLocked = selectedCutout?.keepAspectRatio ?: false
+
+                        ToolbarIconButton(
+                            icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                            contentDescription = if (isLocked) {
+                                stringResource(R.string.mirror_editor_aspect_ratio_locked)
+                            } else {
+                                stringResource(R.string.mirror_editor_aspect_ratio_free)
+                            },
+                            color = if (isLocked) colors.accent else colors.onSurfaceSecondary,
+                            label = if (isLocked) "1:1" else "1:X",
+                            enabled = selectedCutout != null,
+                            onClick = {
+                                val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
+                                val updated = layout.mirrorCutouts.map {
+                                    if (it.id == cutoutId) {
+                                        val nextLocked = !it.keepAspectRatio
+                                        var updatedCutout = it.copy(keepAspectRatio = nextLocked)
+                                        if (nextLocked) {
+                                            val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
+                                            val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
+                                                destX = updatedCutout.destX,
+                                                destY = updatedCutout.destY,
+                                                destWidth = updatedCutout.destWidth,
+                                                destHeight = updatedCutout.destHeight,
+                                                cropRatio = cropRatio,
+                                                screenW = screenW,
+                                                screenH = screenH
+                                            )
+                                            updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
+                                        }
+                                        updatedCutout
+                                    } else it
+                                }
+                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+                            }
+                        )
 
                         // Edit Crop of selected
                         ToolbarIconButton(
@@ -578,7 +580,7 @@ fun CutoutLayoutEditor(
                         ToolbarIconButton(
                             icon = Icons.Rounded.Close,
                             contentDescription = stringResource(R.string.settings_color_cancel),
-                            color = colors.onSurfaceSecondary,
+                            color = colors.error,
                             onClick = {
                                 val updatedLayout = layout.copy(mirrorCutouts = initialCutouts)
                                 MirrorSettings.setCrossfadeBlendWidthDp(initialCrossfade)
