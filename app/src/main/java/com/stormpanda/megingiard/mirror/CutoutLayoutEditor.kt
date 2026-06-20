@@ -636,6 +636,13 @@ fun CutoutLayoutEditor(
                                 .padding(top = 8.dp)
                         ) {
                             // Crossfade Slider
+                            val crossfadeValueText = when (crossfadeBlendWidthDp.roundToInt()) {
+                                in 0..12 -> stringResource(R.string.mirror_crossfade_strength_off)
+                                in 13..37 -> stringResource(R.string.mirror_crossfade_strength_light)
+                                in 38..62 -> stringResource(R.string.mirror_crossfade_strength_medium)
+                                in 63..87 -> stringResource(R.string.mirror_crossfade_strength_strong)
+                                else -> stringResource(R.string.mirror_crossfade_strength_max)
+                            }
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -650,8 +657,12 @@ fun CutoutLayoutEditor(
                                 )
                                 Slider(
                                     value = crossfadeBlendWidthDp,
-                                    onValueChange = { MirrorSettings.setCrossfadeBlendWidthDp(it) },
+                                    onValueChange = { value ->
+                                        val idx = (value / 25f).roundToInt().coerceIn(0, 4)
+                                        MirrorSettings.setCrossfadeBlendWidthDp(idx * 25f)
+                                    },
                                     valueRange = SLIDER_VALUE_MIN..SLIDER_VALUE_MAX,
+                                    steps = 3,
                                     colors = SliderDefaults.colors(
                                         thumbColor = colors.accent,
                                         activeTrackColor = colors.accent,
@@ -660,7 +671,7 @@ fun CutoutLayoutEditor(
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
-                                    text = stringResource(R.string.mirror_crossfade_label_value, crossfadeBlendWidthDp.roundToInt()),
+                                    text = crossfadeValueText,
                                     color = colors.onSurfaceSecondary,
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.width(SLIDER_VALUE_WIDTH),
