@@ -127,9 +127,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M14: Mirror Refresh Rate (FPS) Limit
 
-- The user MUST be able to configure a frame rate (FPS) limit for the mirrored screens using a discrete slider (`FPS Limit` / `FPS-Limit`) in the layout-editor toolbar on the secondary display below the crossfade slider.
-- The slider MUST have discrete steps corresponding to options: `1`, `5`, `10`, `15`, `30`, and `60` FPS, with `60` FPS being the default.
-- The selected refresh rate limit MUST be persisted globally in DataStore and applied dynamically to the virtual display's destination surface.
+- The frame rate (FPS) limit for the mirrored screens is persisted globally in DataStore and applied dynamically to the virtual display's destination surface.
+- While the underlying limiting capability and throttling layer (`ThrottledTextureView`) are fully functional, the layout-editor toolbar slider UI is currently hidden/removed.
 
 ### FR-M15: Motion Smoothing / Temporal Blending
 
@@ -481,12 +480,14 @@ To allow seamless transitions between adjacent or independent cutouts, we implem
 
 ### Mirror Refresh Rate (FPS) Limiting
 
+*(Note: The user-facing layout editor slider is currently hidden, but the system and app-level throttling pipeline remains active and functional based on the configured global setting).*
+
 To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support limiting the refresh rate of the mirrored screens:
 
 1. **System-Level Throttling (`Surface.setFrameRate`)**:
    In `MirrorPresentation`, when the target display surface becomes available, we invoke `Surface.setFrameRate(maxFps, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)`. This requests Android's system compositor (SurfaceFlinger) to pace the composition of the virtual display's frames.
 2. **Dynamic Updates**:
-   `MirrorPresentation` collects the `MirrorSettings.maxFps` flow within the presentation coroutine scope. Whenever the user adjusts the discrete slider in the layout editor, the frame rate limit of the active surface is updated in real-time.
+   `MirrorPresentation` collects the `MirrorSettings.maxFps` flow within the presentation coroutine scope. If the limit changes in settings, the frame rate limit of the active surface is updated in real-time.
 3. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
    Since Android's compositor (SurfaceFlinger) often ignores the `Surface.setFrameRate` hint for virtual displays and pushes frames as fast as they update, we enforce the limit in the application layer. We use `ThrottledTextureView` which overrides `invalidate()` to drop invalidation requests if they arrive faster than the configured `maxFps` interval. This prevents the view hierarchy from redrawing and avoids enqueuing new GPU textures too frequently, directly reducing rendering resource usage.
 

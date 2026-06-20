@@ -85,7 +85,6 @@ fun CutoutLayoutEditor(
     val isMultiCutoutEditMode by AppStateManager.isMultiCutoutEditMode.collectAsState()
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val crossfadeBlendWidthDp by MirrorSettings.crossfadeBlendWidthDp.collectAsState()
-    val maxFps by MirrorSettings.maxFps.collectAsState()
     val smoothingStrength by MirrorSettings.smoothingStrength.collectAsState()
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
@@ -657,45 +656,6 @@ fun CutoutLayoutEditor(
                             )
                             Text(
                                 text = stringResource(R.string.mirror_crossfade_label_value, crossfadeBlendWidthDp.roundToInt()),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.width(TOOLBAR_SLIDER_VALUE_WIDTH),
-                                textAlign = TextAlign.End
-                            )
-                        }
-
-                        val fpsOptions = listOf(1, 5, 10, 15, 30, 60)
-                        val currentFpsIndex = fpsOptions.indexOf(maxFps).coerceAtLeast(0)
-
-                        Row(
-                            modifier = Modifier
-                                .width(TOOLBAR_SLIDER_ROW_WIDTH)
-                                .padding(top = 4.dp, bottom = 8.dp, start = 8.dp, end = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.mirror_fps_label),
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Slider(
-                                value = currentFpsIndex.toFloat(),
-                                onValueChange = { indexFloat ->
-                                    val idx = indexFloat.roundToInt().coerceIn(0, fpsOptions.lastIndex)
-                                    MirrorSettings.setMaxFps(fpsOptions[idx])
-                                },
-                                valueRange = 0f..fpsOptions.lastIndex.toFloat(),
-                                steps = fpsOptions.size - 2,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = colors.accent,
-                                    activeTrackColor = colors.accent,
-                                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.24f)
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = stringResource(R.string.mirror_fps_value, maxFps),
                                 color = colors.onSurfaceSecondary,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.width(TOOLBAR_SLIDER_VALUE_WIDTH),
