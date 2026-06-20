@@ -54,7 +54,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -90,7 +92,8 @@ fun CutoutLayoutEditor(
     val initialCrossfade = remember { MirrorSettings.crossfadeBlendWidthDp.value }
     val initialSmoothing = remember { MirrorSettings.smoothingStrength.value }
 
-    var toolbarOffset by remember { mutableStateOf(IntOffset.Zero) }
+    var toolbarOffset by remember { mutableStateOf<IntOffset?>(null) }
+    var toolbarSize by remember { mutableStateOf(IntSize.Zero) }
     var isExpanded by remember { mutableStateOf(false) }
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val crossfadeBlendWidthDp by MirrorSettings.crossfadeBlendWidthDp.collectAsState()
@@ -421,11 +424,41 @@ fun CutoutLayoutEditor(
             }
     }
 
-        // ── Floating Toolbar Card ───────────────────────────────────────────────
+        val topPaddingPx = with(density) {
+            (if (overlayAtBottom) 24.dp + MP_EDGE_ZONE else 24.dp).toPx()
+        }
+        val marginBottPx = with(density) {
+            (24.dp + MP_EDGE_ZONE).toPx()
+        }
+
+        if (toolbarOffset == null && toolbarSize != IntSize.Zero) {
+            val initialY = if (overlayAtBottom) {
+                0f
+            } else {
+                containerH - topPaddingPx - toolbarSize.height.toFloat() - marginBottPx
+            }
+            toolbarOffset = IntOffset(0, initialY.roundToInt())
+        }
+
+        val currentOffset = toolbarOffset ?: IntOffset.Zero
+        val clampedOffset = if (toolbarSize != IntSize.Zero) {
+            val maxStartX = (containerW - toolbarSize.width) / 2f
+            val clampedX = currentOffset.x.toFloat().coerceIn(-maxStartX, maxStartX)
+
+            val minY = -topPaddingPx
+            val maxY = containerH - topPaddingPx - toolbarSize.height.toFloat() - marginBottPx
+            val clampedY = currentOffset.y.toFloat().coerceIn(minY, maxY.coerceAtLeast(minY))
+
+            IntOffset(clampedX.roundToInt(), clampedY.roundToInt())
+        } else {
+            currentOffset
+        }
+
         Surface(
             modifier = Modifier
-                .align(if (overlayAtBottom) Alignment.TopCenter else Alignment.BottomCenter)
-                .offset { toolbarOffset }
+                .align(Alignment.TopCenter)
+                .onGloballyPositioned { coords -> toolbarSize = coords.size }
+                .offset { clampedOffset }
                 .padding(
                     top = if (overlayAtBottom) 24.dp + MP_EDGE_ZONE else 24.dp,
                     bottom = if (overlayAtBottom) 24.dp else 24.dp + MP_EDGE_ZONE
@@ -446,9 +479,10 @@ fun CutoutLayoutEditor(
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
+                                val cur = toolbarOffset ?: IntOffset.Zero
                                 toolbarOffset = IntOffset(
-                                    x = toolbarOffset.x + dragAmount.x.roundToInt(),
-                                    y = toolbarOffset.y + dragAmount.y.roundToInt()
+                                    x = cur.x + dragAmount.x.roundToInt(),
+                                    y = cur.y + dragAmount.y.roundToInt()
                                 )
                             }
                         },
