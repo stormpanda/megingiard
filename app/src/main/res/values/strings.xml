@@ -38,7 +38,7 @@
     <string name="settings_show_mirror_control_labels">Show mirror control labels</string>
     <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
     <string name="mirror_crossfade_label">Crossfade</string>
-    <string name="mirror_crossfade_label_value">%1$d dp</string>
+    <string name="mirror_crossfade_label_value">%1$d</string>
     <string name="mirror_fps_label">FPS Limit</string>
     <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
@@ -683,4 +683,7 @@ Open Settings to create a layout.</string>
     <string name="cd_motion_smoothing">Toggle motion smoothing for selected cutout</string>
     <string name="mirror_smoothing_strength_label">Smoothing</string>
     <string name="mirror_smoothing_strength_value">%1$d%%</string>
+    <string name="mirror_smoothing_strength_light">Light (75%)</string>
+    <string name="mirror_smoothing_strength_medium">Medium (80%)</string>
+    <string name="mirror_smoothing_strength_strong">Strong (85%)</string>
 </resources>

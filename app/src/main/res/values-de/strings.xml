@@ -43,7 +43,7 @@
     <string name="settings_show_mirror_control_labels">Spiegelsteuerungsbeschriftungen anzeigen</string>
     <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
     <string name="mirror_crossfade_label">Überblendung</string>
-    <string name="mirror_crossfade_label_value">%1$d dp</string>
+    <string name="mirror_crossfade_label_value">%1$d</string>
     <string name="mirror_fps_label">FPS-Limit</string>
     <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
@@ -690,4 +690,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="cd_motion_smoothing">Bewegungsglättung für den ausgewählten Ausschnitt umschalten</string>
     <string name="mirror_smoothing_strength_label">Glättung</string>
     <string name="mirror_smoothing_strength_value">%1$d%%</string>
+    <string name="mirror_smoothing_strength_light">Leicht (75%)</string>
+    <string name="mirror_smoothing_strength_medium">Mittel (80%)</string>
+    <string name="mirror_smoothing_strength_strong">Stark (85%)</string>
 </resources>

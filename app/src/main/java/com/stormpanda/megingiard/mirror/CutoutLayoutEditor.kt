@@ -663,6 +663,17 @@ fun CutoutLayoutEditor(
                             )
                         }
 
+                        val currentSliderIndex = when (smoothingStrength) {
+                            in 0..77 -> 0
+                            in 78..82 -> 1
+                            else -> 2
+                        }
+                        val sliderValueText = when (currentSliderIndex) {
+                            0 -> stringResource(R.string.mirror_smoothing_strength_light)
+                            1 -> stringResource(R.string.mirror_smoothing_strength_medium)
+                            else -> stringResource(R.string.mirror_smoothing_strength_strong)
+                        }
+
                         Row(
                             modifier = Modifier
                                 .width(TOOLBAR_SLIDER_ROW_WIDTH)
@@ -676,9 +687,18 @@ fun CutoutLayoutEditor(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Slider(
-                                value = smoothingStrength.toFloat(),
-                                onValueChange = { MirrorSettings.setSmoothingStrength(it.roundToInt()) },
-                                valueRange = 0f..100f,
+                                value = currentSliderIndex.toFloat(),
+                                onValueChange = { indexFloat ->
+                                    val idx = indexFloat.roundToInt().coerceIn(0, 2)
+                                    val strength = when (idx) {
+                                        0 -> 75
+                                        1 -> 80
+                                        else -> 85
+                                    }
+                                    MirrorSettings.setSmoothingStrength(strength)
+                                },
+                                valueRange = 0f..2f,
+                                steps = 1,
                                 colors = SliderDefaults.colors(
                                     thumbColor = colors.accent,
                                     activeTrackColor = colors.accent,
@@ -687,10 +707,10 @@ fun CutoutLayoutEditor(
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                text = stringResource(R.string.mirror_smoothing_strength_value, smoothingStrength),
+                                text = sliderValueText,
                                 color = colors.onSurfaceSecondary,
                                 style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.width(TOOLBAR_SLIDER_VALUE_WIDTH),
+                                modifier = Modifier.width(80.dp),
                                 textAlign = TextAlign.End
                             )
                         }
