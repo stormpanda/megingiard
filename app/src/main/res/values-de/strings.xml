@@ -679,6 +679,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>
     <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
+    <string name="mirror_editor_delete_cutout_label">Ausschnitt löschen</string>
     <string name="mirror_editor_edit_crop">Ausschnitt wählen</string>
     <string name="mirror_editor_single_mode">Einzelner Viewport</string>
     <string name="mirror_editor_multi_mode">Mehrere Ausschnitte</string>

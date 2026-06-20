@@ -672,6 +672,7 @@ Open Settings to create a layout.</string>
     <!-- Cutout Layout Editor -->
     <string name="mirror_editor_add_cutout">Add Cutout</string>
     <string name="mirror_editor_delete_cutout">Delete Selected</string>
+    <string name="mirror_editor_delete_cutout_label">Delete cutout</string>
     <string name="mirror_editor_edit_crop">Edit Crop</string>
     <string name="mirror_editor_single_mode">Single Viewport</string>
     <string name="mirror_editor_multi_mode">Multi-Cutout</string>

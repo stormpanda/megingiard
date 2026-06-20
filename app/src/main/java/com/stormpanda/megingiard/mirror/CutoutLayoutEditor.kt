@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -610,22 +611,28 @@ fun CutoutLayoutEditor(
                         )
 
                         // Expand / Collapse button
-                        ToolbarIconButton(
-                            icon = if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                            contentDescription = stringResource(
-                                if (isExpanded) R.string.settings_section_collapse else R.string.settings_section_expand
-                            ),
-                            color = colors.onSurfaceSecondary,
-                            onClick = {
-                                isExpanded = !isExpanded
-                            }
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(width = 36.dp, height = 32.dp)
+                                .clickable { isExpanded = !isExpanded },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                contentDescription = stringResource(
+                                    if (isExpanded) R.string.settings_section_collapse else R.string.settings_section_expand
+                                ),
+                                tint = colors.accent,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     if (isExpanded) {
                         Column(
                             modifier = Modifier
-                                .width(TOOLBAR_EXPANDED_WIDTH)
+                                .widthIn(min = TOOLBAR_EXPANDED_WIDTH)
+                                .fillMaxWidth()
                                 .padding(top = 8.dp)
                         ) {
                             // Crossfade Slider
@@ -741,6 +748,7 @@ fun CutoutLayoutEditor(
                                     icon = Icons.Rounded.Delete,
                                     contentDescription = stringResource(R.string.mirror_editor_delete_cutout),
                                     color = colors.error,
+                                    label = stringResource(R.string.mirror_editor_delete_cutout_label),
                                     enabled = selectedCutoutId != null,
                                     onClick = {
                                         val targetId = selectedCutoutId ?: return@ToolbarIconButton
