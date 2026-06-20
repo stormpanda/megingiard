@@ -99,6 +99,10 @@ private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
+private const val DUMMY_CLIP_LEFT = 0f
+private const val DUMMY_CLIP_TOP = 0f
+private const val DUMMY_CLIP_RIGHT = 1f
+private const val DUMMY_CLIP_BOTTOM = 1f
 
 class MirrorPresentation(
     context: Context, 
@@ -804,6 +808,8 @@ class MultiCutoutContainer(
         val tolerance = TOUCH_TOLERANCE
         val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
 
+        var masterViewDrawn = false
+
         for (cutout in cutouts) {
             val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
             val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
@@ -920,6 +926,7 @@ class MultiCutoutContainer(
                     canvas.drawBitmap(accumulatedMasterBitmap!!, 0f, 0f, null)
                 } else if (masterView != null) {
                     drawChild(canvas, masterView, drawingTime)
+                    masterViewDrawn = true
                 }
 
                 canvas.restoreToCount(innerSaveCount)
@@ -962,6 +969,13 @@ class MultiCutoutContainer(
                     canvas.restore()
                 }
             }
+        }
+
+        if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
+            val saveCount = canvas.save()
+            canvas.clipRect(DUMMY_CLIP_LEFT, DUMMY_CLIP_TOP, DUMMY_CLIP_RIGHT, DUMMY_CLIP_BOTTOM)
+            drawChild(canvas, masterView, drawingTime)
+            canvas.restoreToCount(saveCount)
         }
     }
 }

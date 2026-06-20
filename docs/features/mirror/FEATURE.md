@@ -131,6 +131,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The slider MUST have discrete steps corresponding to options: `1`, `5`, `10`, `15`, `30`, and `60` FPS, with `60` FPS being the default.
 - The selected refresh rate limit MUST be persisted globally in DataStore and applied dynamically to the virtual display's destination surface.
 
+### FR-M15: Motion Smoothing / Temporal Blending
+
+- The user MUST be able to toggle "Motion Smoothing" on individual cutouts via a toolbar button in the layout-editor.
+- When enabled, the cutout frame MUST be temporally smoothed using exponential moving average (EMA) blending to stabilize UI elements.
+- The user MUST be able to configure the motion smoothing strength (from 0% to 100%) using a slider in the layout-editor toolbar.
+- Motion smoothing MUST function correctly when enabled on all cutouts, without freezing the mirror display rendering.
+
 ---
 
 ## Technical Implementation
@@ -482,6 +489,21 @@ To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support 
    `MirrorPresentation` collects the `MirrorSettings.maxFps` flow within the presentation coroutine scope. Whenever the user adjusts the discrete slider in the layout editor, the frame rate limit of the active surface is updated in real-time.
 3. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
    Since Android's compositor (SurfaceFlinger) often ignores the `Surface.setFrameRate` hint for virtual displays and pushes frames as fast as they update, we enforce the limit in the application layer. We use `ThrottledTextureView` which overrides `invalidate()` to drop invalidation requests if they arrive faster than the configured `maxFps` interval. This prevents the view hierarchy from redrawing and avoids enqueuing new GPU textures too frequently, directly reducing rendering resource usage.
+
+### Motion Smoothing / Temporal Blending
+
+To stabilize mirrored UI elements against fast-moving backgrounds, we support motion smoothing:
+
+1. **Temporal Accumulator**:
+   If any cutout has `motionSmoothing = true` enabled, `MultiCutoutContainer` creates and maintains two master bitmaps: `tempMasterBitmap` and `accumulatedMasterBitmap`. On every updated surface texture callback (`onSurfaceTextureUpdated`), the current frame of the `TextureView` is read into `tempMasterBitmap` and blended into `accumulatedMasterBitmap` using an Exponential Moving Average (EMA):
+   \[
+   B_{\text{accum}} = (1 - \alpha) B_{\text{accum}} + \alpha B_{\text{temp}}
+   \]
+   where \(\alpha = (100 - \text{strength}) / 100\).
+2. **Smooth Drawing**:
+   Cutouts with motion smoothing active draw directly from `accumulatedMasterBitmap` in `MultiCutoutContainer.dispatchDraw()`.
+3. **Active Rendering Loop (Freeze Prevention)**:
+   If all active cutouts have motion smoothing enabled, none of them draw `masterView` directly. To prevent the hardware renderer from skipping `masterView` (which would stall the `SurfaceTexture` queue and stop `onSurfaceTextureUpdated` updates), a dummy 1x1 draw of `masterView` is forced using a clipped canvas.
 
 ### Source Files
 
