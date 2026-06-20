@@ -132,9 +132,9 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M15: Motion Smoothing / Temporal Blending
 
-- The user MUST be able to toggle "Motion Smoothing" on individual cutouts via a toolbar button in the layout-editor.
+- When a cutout is selected in the layout-editor, the user MUST be able to configure its "Motion Smoothing" behavior using a 4-stop discrete slider (Off, Light at 75%, Medium at 80%, and Strong at 85% strength) in the editor panel.
+- Selecting "Off" disables motion smoothing for that cutout. Selecting "Light", "Medium", or "Strong" enables motion smoothing and applies the corresponding temporal blending strength.
 - When enabled, the cutout frame MUST be temporally smoothed using exponential moving average (EMA) blending to stabilize UI elements.
-- The user MUST be able to configure the motion smoothing strength using a 3-stop discrete slider (with levels: Light at 75%, Medium at 80%, and Strong at 85% strength) in the layout-editor toolbar.
 - Motion smoothing MUST function correctly when enabled on all cutouts, without freezing the mirror display rendering.
 
 ---
@@ -500,7 +500,7 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support mo
    \[
    B_{\text{accum}} = (1 - \alpha) B_{\text{accum}} + \alpha B_{\text{temp}}
    \]
-   where \(\alpha = (100 - \text{strength}) / 100\). The strength is configured via a 3-stop discrete slider in the layout-editor toolbar mapping to 75% (Light), 80% (Medium), and 85% (Strong) temporal blending strength respectively.
+   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the layout-editor toolbar mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength).
 2. **Smooth Drawing**:
    Cutouts with motion smoothing active draw directly from `accumulatedMasterBitmap` in `MultiCutoutContainer.dispatchDraw()`.
 3. **Active Rendering Loop (Freeze Prevention)**:

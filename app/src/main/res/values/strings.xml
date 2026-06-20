@@ -686,4 +686,5 @@ Open Settings to create a layout.</string>
     <string name="mirror_smoothing_strength_light">Light (75%)</string>
     <string name="mirror_smoothing_strength_medium">Medium (80%)</string>
     <string name="mirror_smoothing_strength_strong">Strong (85%)</string>
+    <string name="mirror_smoothing_strength_off">Off</string>
 </resources>

@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
@@ -564,20 +563,6 @@ fun CutoutLayoutEditor(
                                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
                                     }
                                 )
-
-                                val isSmooth = cutout.motionSmoothing
-                                ToolbarIconButton(
-                                    icon = Icons.Rounded.BlurOn,
-                                    contentDescription = stringResource(R.string.cd_motion_smoothing),
-                                    color = if (isSmooth) colors.accent else colors.onSurfaceSecondary,
-                                    label = stringResource(R.string.mirror_editor_motion_smoothing),
-                                    onClick = {
-                                        val updated = layout.mirrorCutouts.map {
-                                            if (it.id == cutoutId) it.copy(motionSmoothing = !it.motionSmoothing) else it
-                                        }
-                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-                                    }
-                                )
                             }
                         }
 
@@ -663,56 +648,73 @@ fun CutoutLayoutEditor(
                             )
                         }
 
-                        val currentSliderIndex = when (smoothingStrength) {
-                            in 0..77 -> 0
-                            in 78..82 -> 1
-                            else -> 2
-                        }
-                        val sliderValueText = when (currentSliderIndex) {
-                            0 -> stringResource(R.string.mirror_smoothing_strength_light)
-                            1 -> stringResource(R.string.mirror_smoothing_strength_medium)
-                            else -> stringResource(R.string.mirror_smoothing_strength_strong)
-                        }
+                        val selectedCutout = layout.mirrorCutouts.find { it.id == selectedCutoutId }
+                        if (selectedCutout != null) {
+                            val isSmoothingEnabled = selectedCutout.motionSmoothing
+                            val currentSliderIndex = if (!isSmoothingEnabled) {
+                                0
+                            } else {
+                                when (smoothingStrength) {
+                                    in 0..77 -> 1
+                                    in 78..82 -> 2
+                                    else -> 3
+                                }
+                            }
+                            val sliderValueText = when (currentSliderIndex) {
+                                0 -> stringResource(R.string.mirror_smoothing_strength_off)
+                                1 -> stringResource(R.string.mirror_smoothing_strength_light)
+                                2 -> stringResource(R.string.mirror_smoothing_strength_medium)
+                                else -> stringResource(R.string.mirror_smoothing_strength_strong)
+                            }
 
-                        Row(
-                            modifier = Modifier
-                                .width(TOOLBAR_SLIDER_ROW_WIDTH)
-                                .padding(top = 4.dp, bottom = 8.dp, start = 8.dp, end = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.mirror_smoothing_strength_label),
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Slider(
-                                value = currentSliderIndex.toFloat(),
-                                onValueChange = { indexFloat ->
-                                    val idx = indexFloat.roundToInt().coerceIn(0, 2)
-                                    val strength = when (idx) {
-                                        0 -> 75
-                                        1 -> 80
-                                        else -> 85
-                                    }
-                                    MirrorSettings.setSmoothingStrength(strength)
-                                },
-                                valueRange = 0f..2f,
-                                steps = 1,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = colors.accent,
-                                    activeTrackColor = colors.accent,
-                                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.24f)
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = sliderValueText,
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.width(80.dp),
-                                textAlign = TextAlign.End
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .width(TOOLBAR_SLIDER_ROW_WIDTH)
+                                    .padding(top = 4.dp, bottom = 8.dp, start = 8.dp, end = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.mirror_smoothing_strength_label),
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Slider(
+                                    value = currentSliderIndex.toFloat(),
+                                    onValueChange = { indexFloat ->
+                                        val idx = indexFloat.roundToInt().coerceIn(0, 3)
+                                        val isSmooth = idx > 0
+                                        val strength = when (idx) {
+                                            1 -> 75
+                                            2 -> 80
+                                            3 -> 85
+                                            else -> 85 // fallback
+                                        }
+                                        if (isSmooth) {
+                                            MirrorSettings.setSmoothingStrength(strength)
+                                        }
+                                        val updated = layout.mirrorCutouts.map {
+                                            if (it.id == selectedCutoutId) it.copy(motionSmoothing = isSmooth) else it
+                                        }
+                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+                                    },
+                                    valueRange = 0f..3f,
+                                    steps = 2,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = colors.accent,
+                                        activeTrackColor = colors.accent,
+                                        inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.24f)
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = sliderValueText,
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.width(80.dp),
+                                    textAlign = TextAlign.End
+                                )
+                            }
                         }
                     }
                 }
