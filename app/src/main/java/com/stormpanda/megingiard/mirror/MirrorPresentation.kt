@@ -55,6 +55,7 @@ import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import android.graphics.LinearGradient
+import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
@@ -940,7 +941,18 @@ class MultiCutoutContainer(
 
                 canvas.restoreToCount(innerSaveCount)
 
-                if (hasTouching) {
+                if (cutout.shape == CutoutShape.CIRCLE) {
+                    if (crossfade) {
+                        val r = min(dw, dh) / 2f
+                        val stop = maxOf(0f, r - blendW) / r
+                        val colors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
+                        val stops = floatArrayOf(0f, stop, 1f)
+                        val shader = RadialGradient(dw / 2f, dh / 2f, r, colors, stops, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(0f, 0f, dw, dh, blendPaint)
+                        blendPaint.shader = null
+                    }
+                } else if (hasTouching) {
                     if (touchesLeft) {
                         val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
                         val endX = if (touchesOtherLeft) leftExt else 0f
