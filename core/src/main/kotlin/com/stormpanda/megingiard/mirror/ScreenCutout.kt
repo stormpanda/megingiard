@@ -4,6 +4,12 @@ import kotlinx.serialization.Serializable
 
 private const val TAG = "ScreenCutout"
 
+@Serializable
+enum class CutoutShape {
+    RECTANGLE,
+    CIRCLE
+}
+
 /**
  * Represents a single cropped section of the primary display (source)
  * that is displayed and positioned on the secondary display (destination).
@@ -21,6 +27,7 @@ private const val TAG = "ScreenCutout"
  * @param destWidth   Normalized width of the destination bounds on the secondary screen.
  * @param destHeight  Normalized height of the destination bounds on the secondary screen.
  * @param opacity     Transparency level [0.0, 1.0] of this cutout.
+ * @param shape       The visual shape of this cutout (rectangle or circle).
  */
 @Serializable
 data class ScreenCutout(
@@ -37,4 +44,5 @@ data class ScreenCutout(
     val opacity: Float = 1.0f,
     val keepAspectRatio: Boolean = false,
     val motionSmoothing: Boolean = false,
+    val shape: CutoutShape = CutoutShape.RECTANGLE,
 )

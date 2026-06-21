@@ -136,6 +136,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - When enabled, the cutout frame MUST be temporally smoothed using exponential moving average (EMA) blending to stabilize UI elements.
 - Motion smoothing MUST function correctly when enabled on all cutouts, without freezing the mirror display rendering.
 
+### FR-M16: Cutout Shapes (Circular & Rectangular Rendering)
+
+- The user MUST be able to toggle each cutout shape individually between circular and rectangular via a shape toggle button in the layout-editor toolbar.
+- Internally, the cutout's dimensions and resize logic MUST remain rectangular to allow uniform resizing and placement operations.
+- When the shape is set to circular, the visual rendering of the cutout (both in the editor preview and on the secondary display's mirror presentation canvas) MUST be clipped to a perfect circle that fills as much space as possible inside the destination rectangle (`min(width, height)`).
+- The toggle button MUST look like the other buttons, switch between a rectangle and circle icon, and use the same active accent color in both states.
+- The Aspect Ratio lock button MUST also be updated to use the active accent color in both states.
+
 ---
 
 ## Technical Implementation
@@ -476,6 +484,12 @@ To allow seamless transitions between adjacent or independent cutouts, we implem
    - For background-facing edges (e.g. `touchesOtherLeft == false`), the gradient goes from `-leftExt` (TRANSPARENT) to `0f` (BLACK). Using `Shader.TileMode.CLAMP`, the interior of the cutout remains 100% opaque.
    - For touching edges (e.g. `touchesOtherLeft == true`), the gradient goes from `-leftExt` (TRANSPARENT) to `leftExt` (BLACK), creating a symmetric blend that extends `leftExt` inside the cutout boundary.
 3. **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their corresponding edge gradients ensures that overlapping areas have a combined opacity of exactly 1.0, eliminating dark rendering seams.
+
+### Cutout Shape Rendering (Circular Clipping)
+
+When a cutout's shape is set to `CIRCLE`:
+1. **Clipping in Presentation**: During `dispatchDraw` in `MirrorPresentation`, we translate the canvas to the cutout's destination coordinates `(dx, dy)`. If the shape is circular, we define a circular clipping path centered at `(dw / 2f, dh / 2f)` with a radius of `min(dw, dh) / 2f` (inscribing the circle perfectly within the destination bounds). We clip the canvas using `canvas.clipPath(path)` prior to drawing the source view/bitmap and any edge blending gradients.
+2. **Clipping in Editor Preview**: In `CutoutLayoutEditor.kt`, the editor uses standard Compose `Box` elements positioned and sized to the rectangular bounds of the cutout. If the cutout is configured as a circle, the editor displays an inner circular `Box` centered inside the layout container, using `shape = CircleShape` for background and borders. This allows the user to resize and position the cutout using rectangular handles while visualizing the exact circular crop area.
 
 ### Mirror Refresh Rate (FPS) Limiting
 

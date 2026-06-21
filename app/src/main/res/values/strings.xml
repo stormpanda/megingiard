@@ -693,4 +693,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_smoothing_strength_medium">Medium</string>
     <string name="mirror_smoothing_strength_strong">Strong</string>
     <string name="mirror_smoothing_strength_off">Off</string>
+    <string name="mirror_editor_shape_circle">Shape: Circle</string>
+    <string name="mirror_editor_shape_rectangle">Shape: Rectangle</string>
 </resources>

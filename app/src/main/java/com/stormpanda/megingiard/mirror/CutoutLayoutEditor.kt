@@ -21,12 +21,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Crop
+import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -67,7 +70,9 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
+import kotlin.math.min
 import kotlin.math.roundToInt
+
 
 private const val TAG = "CutoutLayoutEditor"
 private val HANDLE_SIZE = 20.dp
@@ -145,18 +150,13 @@ fun CutoutLayoutEditor(
                 val isSelected = cutout.id == selectedCutoutId
 
                 // Render destination bounding box
+                val isCircle = cutout.shape == CutoutShape.CIRCLE
                 Box(
                     modifier = Modifier
                         .offset { IntOffset(destLeft.roundToInt(), destTop.roundToInt()) }
                         .size(
                             width = with(density) { destW.toDp() },
                             height = with(density) { destH.toDp() }
-                        )
-                        .background(if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f))
-                        .border(
-                            width = BORDER_WIDTH,
-                            color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(4.dp)
                         )
                         .clickable {
                             AppStateManager.setSelectedCutoutId(cutout.id)
@@ -208,6 +208,37 @@ fun CutoutLayoutEditor(
                             )
                         }
                 ) {
+                    if (isCircle) {
+                        val diameterDp = with(density) { min(destW, destH).toDp() }
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(diameterDp)
+                                .background(
+                                    color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
+                                    shape = CircleShape
+                                )
+                                .border(
+                                    width = BORDER_WIDTH,
+                                    color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                                    shape = CircleShape
+                                )
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                                .border(
+                                    width = BORDER_WIDTH,
+                                    color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                        )
+                    }
                     Text(
                         text = cutout.name.ifBlank { "Cutout" },
                         color = if (isSelected) colors.accent else Color.White,
@@ -550,7 +581,7 @@ fun CutoutLayoutEditor(
                             } else {
                                 stringResource(R.string.mirror_editor_aspect_ratio_free)
                             },
-                            color = if (isLocked) colors.accent else colors.onSurfaceSecondary,
+                            color = colors.accent,
                             label = if (isLocked) "1:1" else "1:X",
                             enabled = selectedCutout != null,
                             onClick = {
@@ -573,6 +604,33 @@ fun CutoutLayoutEditor(
                                             updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
                                         }
                                         updatedCutout
+                                    } else it
+                                }
+                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+                            }
+                        )
+
+                        // Shape Toggle button (Rectangle / Circle)
+                        val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
+                        ToolbarIconButton(
+                            icon = if (isCircle) Icons.Rounded.Circle else Icons.Rounded.CropSquare,
+                            contentDescription = if (isCircle) {
+                                stringResource(R.string.mirror_editor_shape_circle)
+                            } else {
+                                stringResource(R.string.mirror_editor_shape_rectangle)
+                            },
+                            color = colors.accent,
+                            enabled = selectedCutout != null,
+                            onClick = {
+                                val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
+                                val updated = layout.mirrorCutouts.map {
+                                    if (it.id == cutoutId) {
+                                        val nextShape = if (it.shape == CutoutShape.CIRCLE) {
+                                            CutoutShape.RECTANGLE
+                                        } else {
+                                            CutoutShape.CIRCLE
+                                        }
+                                        it.copy(shape = nextShape)
                                     } else it
                                 }
                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))

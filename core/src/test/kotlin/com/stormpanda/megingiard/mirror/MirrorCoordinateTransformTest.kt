@@ -503,7 +503,45 @@ class MirrorCoordinateTransformTest {
         assertEquals("c-legacy", decoded.id)
         assertTrue(!decoded.motionSmoothing)
     }
+
+    @Test
+    fun `ScreenCutout serialization round-trip preserves shape`() {
+        val original = ScreenCutout(
+            id = "c-test-shape",
+            name = "Test Shape",
+            srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
+            destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f,
+            shape = CutoutShape.CIRCLE
+        )
+        val jsonString = Json.encodeToString(original)
+        val decoded = Json.decodeFromString<ScreenCutout>(jsonString)
+        assertEquals(original.id, decoded.id)
+        assertEquals(original.name, decoded.name)
+        assertEquals(CutoutShape.CIRCLE, decoded.shape)
+    }
+
+    @Test
+    fun `ScreenCutout deserialization of legacy JSON defaults shape to RECTANGLE`() {
+        val legacyJson = """
+            {
+                "id": "c-legacy",
+                "name": "Legacy Cutout",
+                "srcX": 0.0,
+                "srcY": 0.0,
+                "srcWidth": 1.0,
+                "srcHeight": 1.0,
+                "destX": 0.0,
+                "destY": 0.0,
+                "destWidth": 1.0,
+                "destHeight": 1.0
+            }
+        """.trimIndent()
+        val decoded = Json.decodeFromString<ScreenCutout>(legacyJson)
+        assertEquals("c-legacy", decoded.id)
+        assertEquals(CutoutShape.RECTANGLE, decoded.shape)
+    }
 }
+
 
 
 

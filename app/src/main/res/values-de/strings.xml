@@ -700,4 +700,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_smoothing_strength_medium">Mittel</string>
     <string name="mirror_smoothing_strength_strong">Stark</string>
     <string name="mirror_smoothing_strength_off">Aus</string>
+    <string name="mirror_editor_shape_circle">Form: Kreis</string>
+    <string name="mirror_editor_shape_rectangle">Form: Rechteck</string>
 </resources>

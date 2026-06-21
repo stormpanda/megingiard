@@ -17,6 +17,7 @@ import android.view.PixelCopy
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.SurfaceTexture
 import android.view.Surface
 import android.view.TextureView
@@ -58,6 +59,7 @@ import android.graphics.Shader
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.roundToInt
 import java.util.Locale
 import com.stormpanda.megingiard.ui.AppDimens
@@ -887,6 +889,13 @@ class MultiCutoutContainer(
 
             try {
                 canvas.translate(dx, dy)
+                if (cutout.shape == CutoutShape.CIRCLE) {
+                    val path = Path().apply {
+                        val r = min(dw, dh) / 2f
+                        addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
+                    }
+                    canvas.clipPath(path)
+                }
                 val innerSaveCount = canvas.save()
                 
                 val isFollowActive = ScreenCaptureManager.isFollowActive.value
