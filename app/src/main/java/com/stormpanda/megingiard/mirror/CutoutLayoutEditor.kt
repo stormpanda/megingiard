@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -492,7 +493,9 @@ fun CutoutLayoutEditor(
                 }
 
                 Column(
-                    modifier = Modifier.padding(start = 40.dp), // clear drag handle (36dp + 4dp space)
+                    modifier = Modifier
+                        .padding(start = 40.dp) // clear drag handle (36dp + 4dp space)
+                        .width(IntrinsicSize.Max),
                     horizontalAlignment = Alignment.Start
                 ) {
                     Row(
@@ -631,7 +634,6 @@ fun CutoutLayoutEditor(
                     if (isExpanded) {
                         Column(
                             modifier = Modifier
-                                .widthIn(min = TOOLBAR_EXPANDED_WIDTH)
                                 .fillMaxWidth()
                                 .padding(top = 8.dp)
                         ) {
