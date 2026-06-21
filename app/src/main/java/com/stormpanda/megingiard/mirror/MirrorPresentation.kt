@@ -805,8 +805,7 @@ class MultiCutoutContainer(
 
         val drawingTime = drawingTime
         val blendWidthDp = MirrorSettings.crossfadeBlendWidthDp.value
-        val isMultiMode = cutouts.size > 1
-        val crossfade = blendWidthDp > 0f && isMultiMode
+        val crossfade = blendWidthDp > 0f
         val tolerance = TOUCH_TOLERANCE
         val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
 

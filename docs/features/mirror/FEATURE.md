@@ -118,8 +118,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M13: Multi-Cutout Crossfade
 
 - The user MUST be able to configure a crossfade blend width using a slider (`Crossfade` / `Überblendung`) in the layout-editor toolbar on the secondary display below the button row.
-- The slider range MUST be `0` to `100 dp`. The slider is only visible in multi-cutout edit mode.
-- When a crossfade is configured (> 0 dp) and multiple cutouts are active:
+- The slider range MUST be `0` to `100 dp`. The slider is only visible in the layout editor panel.
+- When a crossfade is configured (> 0 dp):
   - Fades MUST be applied to the edges of each cutout.
   - If a cutout edge touches or is adjacent to another cutout (within a configured tolerance), the fade MUST blend symmetrically *inside* both cutout boundaries so that their combined opacity in the overlap region is always exactly 1.0 (preventing dark or bright seams).
   - If a cutout edge faces the black background (does not touch another cutout), the cutout interior MUST remain 100% opaque, and the fade MUST only happen *outside* the cutout boundary (fading out into the background) to prevent the black background from bleeding into the cutout.
