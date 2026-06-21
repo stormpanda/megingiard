@@ -81,6 +81,8 @@ private val TOOLBAR_EXPANDED_WIDTH = 360.dp
 private const val SLIDER_VALUE_MIN = 0f
 private const val SLIDER_VALUE_MAX = 100f
 private val TOOLBAR_SAFE_MARGIN = 16.dp
+private val HANDLE_INSET_THRESHOLD = 16.dp
+private val HANDLE_INSET_SHIFT = 8.dp
 
 @Composable
 fun CutoutLayoutEditor(
@@ -219,17 +221,19 @@ fun CutoutLayoutEditor(
 
                 // Show corner resize handles if selected
                 if (isSelected) {
+                    val insetThresholdPx = with(density) { HANDLE_INSET_THRESHOLD.toPx() }
+                    val insetShiftPx = with(density) { HANDLE_INSET_SHIFT.toPx() }
+
                     var dragStartX by remember(cutout.id) { mutableStateOf(0f) }
                     var dragStartY by remember(cutout.id) { mutableStateOf(0f) }
                     var dragStartW by remember(cutout.id) { mutableStateOf(0f) }
                     var dragStartH by remember(cutout.id) { mutableStateOf(0f) }
 
                     // Top-Left handle
+                    val topLeftX = destLeft + (if (destLeft < insetThresholdPx) insetShiftPx else 0f)
+                    val topLeftY = destTop + (if (destTop < insetThresholdPx) insetShiftPx else 0f)
                     ResizeHandleView(
-                        offset = IntOffset(
-                            destLeft.roundToInt(),
-                            destTop.roundToInt()
-                        ),
+                        offset = IntOffset(topLeftX.roundToInt(), topLeftY.roundToInt()),
                         color = colors.accent,
                         onDragStart = {
                             val curCutout = currentCutoutState.value
@@ -275,11 +279,10 @@ fun CutoutLayoutEditor(
                     )
 
                     // Top-Right handle
+                    val topRightX = destLeft + destW - handleSizePx - (if (destLeft + destW > screenW - insetThresholdPx) insetShiftPx else 0f)
+                    val topRightY = destTop + (if (destTop < insetThresholdPx) insetShiftPx else 0f)
                     ResizeHandleView(
-                        offset = IntOffset(
-                            (destLeft + destW - handleSizePx).roundToInt(),
-                            destTop.roundToInt()
-                        ),
+                        offset = IntOffset(topRightX.roundToInt(), topRightY.roundToInt()),
                         color = colors.accent,
                         onDragStart = {
                             val curCutout = currentCutoutState.value
@@ -325,11 +328,10 @@ fun CutoutLayoutEditor(
                     )
 
                     // Bottom-Left handle
+                    val bottomLeftX = destLeft + (if (destLeft < insetThresholdPx) insetShiftPx else 0f)
+                    val bottomLeftY = destTop + destH - handleSizePx - (if (destTop + destH > screenH - insetThresholdPx) insetShiftPx else 0f)
                     ResizeHandleView(
-                        offset = IntOffset(
-                            destLeft.roundToInt(),
-                            (destTop + destH - handleSizePx).roundToInt()
-                        ),
+                        offset = IntOffset(bottomLeftX.roundToInt(), bottomLeftY.roundToInt()),
                         color = colors.accent,
                         onDragStart = {
                             val curCutout = currentCutoutState.value
@@ -375,11 +377,10 @@ fun CutoutLayoutEditor(
                     )
 
                     // Bottom-Right handle
+                    val bottomRightX = destLeft + destW - handleSizePx - (if (destLeft + destW > screenW - insetThresholdPx) insetShiftPx else 0f)
+                    val bottomRightY = destTop + destH - handleSizePx - (if (destTop + destH > screenH - insetThresholdPx) insetShiftPx else 0f)
                     ResizeHandleView(
-                        offset = IntOffset(
-                            (destLeft + destW - handleSizePx).roundToInt(),
-                            (destTop + destH - handleSizePx).roundToInt()
-                        ),
+                        offset = IntOffset(bottomRightX.roundToInt(), bottomRightY.roundToInt()),
                         color = colors.accent,
                         onDragStart = {
                             val curCutout = currentCutoutState.value
