@@ -35,11 +35,7 @@ object MirrorSettings {
     private val _pinchWhileProjecting = MutableStateFlow(false)
     val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
 
-    private val _maxFps = MutableStateFlow(60)
-    val maxFps: StateFlow<Int> = _maxFps.asStateFlow()
 
-    private val _smoothingStrength = MutableStateFlow(85)
-    val smoothingStrength: StateFlow<Int> = _smoothingStrength.asStateFlow()
 
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
@@ -58,8 +54,7 @@ object MirrorSettings {
 
     internal fun loadFrom(prefs: Preferences) {
         _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
-        _maxFps.value = prefs[KEY_MIRROR_MAX_FPS] ?: 60
-        _smoothingStrength.value = prefs[KEY_MIRROR_SMOOTHING_STRENGTH] ?: 85
+
         _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
         _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
@@ -73,17 +68,7 @@ object MirrorSettings {
 
 
 
-    fun setMaxFps(value: Int) {
-        AppLog.d(TAG, "setMaxFps($value)")
-        _maxFps.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_MIRROR_MAX_FPS] = value } }
-    }
 
-    fun setSmoothingStrength(value: Int) {
-        AppLog.d(TAG, "setSmoothingStrength($value)")
-        _smoothingStrength.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_MIRROR_SMOOTHING_STRENGTH] = value } }
-    }
 
     fun setRememberViewport(value: Boolean) {
         AppLog.d(TAG, "setRememberViewport($value)")

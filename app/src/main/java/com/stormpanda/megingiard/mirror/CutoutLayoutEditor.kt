@@ -98,17 +98,16 @@ fun CutoutLayoutEditor(
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
 
-    // Capture the initial state of the layout's mirror settings when the editor is opened.
     val initialCutouts = remember(layout.id) { layout.mirrorCutouts }
     val initialCrossfade = remember(layout.id) { layout.mirrorCrossfadeBlendWidth }
-    val initialSmoothing = remember(layout.id) { MirrorSettings.smoothingStrength.value }
+    val initialSmoothing = remember(layout.id) { layout.mirrorSmoothingStrength }
 
     var toolbarOffset by remember { mutableStateOf<IntOffset?>(null) }
     var toolbarSize by remember { mutableStateOf(IntSize.Zero) }
     var isExpanded by remember { mutableStateOf(false) }
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
     val crossfadeBlendWidthDp = layout.mirrorCrossfadeBlendWidth
-    val smoothingStrength by MirrorSettings.smoothingStrength.collectAsState()
+    val smoothingStrength = layout.mirrorSmoothingStrength
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
     val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsState()
@@ -710,9 +709,9 @@ fun CutoutLayoutEditor(
                             onClick = {
                                 val updatedLayout = layout.copy(
                                     mirrorCutouts = initialCutouts,
-                                    mirrorCrossfadeBlendWidth = initialCrossfade
+                                    mirrorCrossfadeBlendWidth = initialCrossfade,
+                                    mirrorSmoothingStrength = initialSmoothing
                                 )
-                                MirrorSettings.setSmoothingStrength(initialSmoothing)
                                 MacroPadState.updateLayout(updatedLayout)
                                 AppStateManager.setViewportEditActive(false)
                             }
@@ -826,15 +825,17 @@ fun CutoutLayoutEditor(
                                                 1 -> 75
                                                 2 -> 80
                                                 3 -> 85
-                                                else -> 85 // fallback
-                                            }
-                                            if (isSmooth) {
-                                                MirrorSettings.setSmoothingStrength(strength)
+                                                else -> layout.mirrorSmoothingStrength
                                             }
                                             val updated = layout.mirrorCutouts.map {
                                                 if (it.id == selectedCutoutId) it.copy(motionSmoothing = isSmooth) else it
                                             }
-                                            MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+                                            MacroPadState.updateLayout(
+                                                layout.copy(
+                                                    mirrorCutouts = updated,
+                                                    mirrorSmoothingStrength = strength
+                                                )
+                                            )
                                         },
                                         valueRange = 0f..3f,
                                         steps = 2,

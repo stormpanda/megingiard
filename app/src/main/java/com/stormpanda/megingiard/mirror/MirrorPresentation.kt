@@ -205,7 +205,7 @@ class MirrorPresentation(
                 val surface = Surface(st)
                 masterSurface = surface
                 try {
-                    val fps = MirrorSettings.maxFps.value
+                    val fps = ScreenCaptureManager.maxFps.value
                     AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
                     surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
                 } catch (e: Exception) {
@@ -240,7 +240,7 @@ class MirrorPresentation(
         }
 
         scope.launch {
-            MirrorSettings.maxFps.collect { fps ->
+            ScreenCaptureManager.maxFps.collect { fps ->
                 tv.maxFps = fps
                 masterSurface?.let { surface ->
                     if (surface.isValid) {
@@ -758,7 +758,7 @@ class MultiCutoutContainer(
                         isAccumulatorInitialized = true
                     } else {
                         val blendPaintForAccum = Paint().apply {
-                            val strength = MirrorSettings.smoothingStrength.value
+                            val strength = ScreenCaptureManager.smoothingStrength.value
                             val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
                             alpha = (alphaPercent * 255f).roundToInt()
                             xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)

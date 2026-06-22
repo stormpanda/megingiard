@@ -497,14 +497,14 @@ When a cutout's shape is set to `CIRCLE`:
 
 ### Mirror Refresh Rate (FPS) Limiting
 
-*(Note: The user-facing layout editor slider is currently hidden, but the system and app-level throttling pipeline remains active and functional based on the configured global setting).*
+*(Note: The user-facing layout editor slider is currently hidden, but the system and app-level throttling pipeline remains active and functional based on the layout's configured setting).*
 
 To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support limiting the refresh rate of the mirrored screens:
 
 1. **System-Level Throttling (`Surface.setFrameRate`)**:
    In `MirrorPresentation`, when the target display surface becomes available, we invoke `Surface.setFrameRate(maxFps, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)`. This requests Android's system compositor (SurfaceFlinger) to pace the composition of the virtual display's frames.
 2. **Dynamic Updates**:
-   `MirrorPresentation` collects the `MirrorSettings.maxFps` flow within the presentation coroutine scope. If the limit changes in settings, the frame rate limit of the active surface is updated in real-time.
+   `MirrorPresentation` collects the `ScreenCaptureManager.maxFps` flow within the presentation coroutine scope. If the limit changes on the active layout, the frame rate limit of the active surface is updated in real-time.
 3. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
    Since Android's compositor (SurfaceFlinger) often ignores the `Surface.setFrameRate` hint for virtual displays and pushes frames as fast as they update, we enforce the limit in the application layer. We use `ThrottledTextureView` which overrides `invalidate()` to drop invalidation requests if they arrive faster than the configured `maxFps` interval. This prevents the view hierarchy from redrawing and avoids enqueuing new GPU textures too frequently, directly reducing rendering resource usage.
 
@@ -517,7 +517,7 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support mo
    \[
    B_{\text{accum}} = (1 - \alpha) B_{\text{accum}} + \alpha B_{\text{temp}}
    \]
-   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the layout-editor toolbar mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength).
+   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the layout-editor toolbar mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength). The strength parameter is saved in the active layout's `mirrorSmoothingStrength` property.
 2. **Smooth Drawing**:
    Cutouts with motion smoothing active draw directly from `accumulatedMasterBitmap` in `MultiCutoutContainer.dispatchDraw()`.
 3. **Active Rendering Loop (Freeze Prevention)**:

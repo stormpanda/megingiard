@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Test
+import com.stormpanda.megingiard.macropad.PadLayout
 
 private const val EPS = 1e-3f
 
@@ -596,6 +597,33 @@ class MirrorCoordinateTransformTest {
         val decodedFalse = Json.decodeFromString<ScreenCutout>(legacyJsonFalse)
         assertEquals("c-legacy-false", decodedFalse.id)
         assertEquals(AspectRatioMode.FREE, decodedFalse.aspectRatioMode)
+    }
+
+    @Test
+    fun `PadLayout serialization round-trip preserves mirrorMaxFps and mirrorSmoothingStrength`() {
+        val original = PadLayout(
+            id = "layout-test",
+            name = "Test Layout",
+            mirrorMaxFps = 45,
+            mirrorSmoothingStrength = 80
+        )
+        val jsonString = Json.encodeToString(original)
+        val decoded = Json.decodeFromString<PadLayout>(jsonString)
+        assertEquals(45, decoded.mirrorMaxFps)
+        assertEquals(80, decoded.mirrorSmoothingStrength)
+    }
+
+    @Test
+    fun `PadLayout deserialization of legacy JSON defaults mirrorMaxFps and mirrorSmoothingStrength`() {
+        val legacyJson = """
+            {
+                "id": "layout-legacy",
+                "name": "Legacy Layout"
+            }
+        """.trimIndent()
+        val decoded = Json.decodeFromString<PadLayout>(legacyJson)
+        assertEquals(60, decoded.mirrorMaxFps)
+        assertEquals(85, decoded.mirrorSmoothingStrength)
     }
 }
 
