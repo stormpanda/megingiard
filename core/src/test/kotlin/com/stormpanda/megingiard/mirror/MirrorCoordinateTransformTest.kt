@@ -596,7 +596,7 @@ class MirrorCoordinateTransformTest {
         """.trimIndent()
         val decodedFalse = Json.decodeFromString<ScreenCutout>(legacyJsonFalse)
         assertEquals("c-legacy-false", decodedFalse.id)
-        assertEquals(AspectRatioMode.FREE, decodedFalse.aspectRatioMode)
+        assertEquals(AspectRatioMode.BOTTOM, decodedFalse.aspectRatioMode)
     }
 
     @Test

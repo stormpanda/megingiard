@@ -53,5 +53,5 @@ data class ScreenCutout(
     val keepAspectRatio: Boolean = false,
     val motionSmoothing: Boolean = false,
     val shape: CutoutShape = CutoutShape.RECTANGLE,
-    val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.FREE,
+    val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.BOTTOM,
 )
