@@ -104,12 +104,12 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The app always defaults to and operates in multi-cutout mode. Single viewport mode is deleted, as it is treated as a special case of multi-cutout mode containing only one cutout.
 - Defining source crop boundaries is done via the `CropSelectorOverlay` hosted in `CropSelectorActivity` on the primary display.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
-- Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). If `mirrorCutouts` is empty at runtime, a default full-screen cutout is automatically populated.
-- The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts).
+- Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). New layouts start completely blank (with no default cutouts).
+- The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts), which renders a blank mirrored screen.
 
 ### FR-M12: Aspect Ratio Lock Modes (Free, Top, Bottom)
 
-- The user MUST be able to configure the aspect ratio locking mode of each cutout individually. There are three modes:
+- The user MUST be able to configure the aspect ratio locking mode of each cutout individually. Newly added cutouts default to **Bottom (`BOTTOM`)** mode. There are three modes:
   - **Free (`FREE`)**: Independent resizing/scaling on both source crop and destination bounds.
   - **Top (`TOP`)**: Locks the destination bounds' aspect ratio to the source crop's aspect ratio. Resizing destination bounds in the editor scales them uniformly. Changing the source crop automatically adjusts the destination dimensions to match.
   - **Bottom (`BOTTOM`)**: Locks the source crop's aspect ratio to the destination bounds' aspect ratio. Resizing destination bounds in the editor is free, but automatically scales/adjusts the source crop to match the destination's new aspect ratio. Resizing the source crop in the crop selector is locked to the destination aspect ratio.

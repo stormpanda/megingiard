@@ -590,7 +590,8 @@ fun CutoutLayoutEditor(
                                     id = newId,
                                     name = "Cutout ${layout.mirrorCutouts.size + 1}",
                                     srcX = 0.25f, srcY = 0.25f, srcWidth = 0.5f, srcHeight = 0.5f,
-                                    destX = foundX, destY = foundY, destWidth = 0.3f, destHeight = 0.3f
+                                    destX = foundX, destY = foundY, destWidth = 0.3f, destHeight = 0.3f,
+                                    aspectRatioMode = AspectRatioMode.BOTTOM
                                 )
                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = layout.mirrorCutouts + newCutout))
                                 AppStateManager.setSelectedCutoutId(newId)

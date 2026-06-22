@@ -78,19 +78,7 @@ object ScreenCaptureManager {
                     _crossfadeBlendWidthDp.value = layout.mirrorCrossfadeBlendWidth
                     _maxFps.value = layout.mirrorMaxFps
                     _smoothingStrength.value = layout.mirrorSmoothingStrength
-                    if (layout.mirrorCutouts.isNotEmpty()) {
-                        _cutouts.value = layout.mirrorCutouts
-                    } else {
-                        _cutouts.value = listOf(
-                            ScreenCutout(
-                                id = "single_viewport",
-                                name = "Full Screen",
-                                srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
-                                destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f,
-                                opacity = 1f
-                            )
-                        )
-                    }
+                    _cutouts.value = layout.mirrorCutouts
                 } else {
                     _crossfadeBlendWidthDp.value = 0f
                     _maxFps.value = 60

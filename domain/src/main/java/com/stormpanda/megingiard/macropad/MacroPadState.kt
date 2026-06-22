@@ -160,21 +160,7 @@ object MacroPadState {
                         PadLayout(
                             id = layoutId,
                             name = p.name,
-                            mirrorCutouts = listOf(
-                                ScreenCutout(
-                                    id = UUID.randomUUID().toString(),
-                                    name = "Full Screen",
-                                    srcX = 0f,
-                                    srcY = 0f,
-                                    srcWidth = 1f,
-                                    srcHeight = 1f,
-                                    destX = 0f,
-                                    destY = 0f,
-                                    destWidth = 1f,
-                                    destHeight = 1f,
-                                    opacity = 1f
-                                )
-                            ),
+                            mirrorCutouts = emptyList(),
                             mirrorConfigured = true
                         )
                     ),
@@ -360,25 +346,7 @@ object MacroPadState {
         if (uniqueName != desiredName) {
             AppLog.w(TAG, "addLayout: duplicate layout name '$desiredName' adjusted to '$uniqueName'")
         }
-        val cutouts = if (layout.mirrorCutouts.isEmpty()) {
-            listOf(
-                ScreenCutout(
-                    id = UUID.randomUUID().toString(),
-                    name = "Full Screen",
-                    srcX = 0f,
-                    srcY = 0f,
-                    srcWidth = 1f,
-                    srcHeight = 1f,
-                    destX = 0f,
-                    destY = 0f,
-                    destWidth = 1f,
-                    destHeight = 1f,
-                    opacity = 1f
-                )
-            )
-        } else {
-            layout.mirrorCutouts
-        }
+        val cutouts = layout.mirrorCutouts
         val normalizedLayout = layout.copy(name = uniqueName, mirrorCutouts = cutouts, mirrorConfigured = true)
         AppLog.d(TAG, "addLayout id=${normalizedLayout.id} name='${normalizedLayout.name}' to profile=${profile.id}")
         updateProfile(profile.copy(
