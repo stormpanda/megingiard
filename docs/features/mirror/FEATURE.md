@@ -107,13 +107,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). If `mirrorCutouts` is empty at runtime, a default full-screen cutout is automatically populated.
 - The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts).
 
-### FR-M12: Aspect Ratio Lock for Cutout Resizing
+### FR-M12: Aspect Ratio Lock Modes (Free, Top, Bottom)
 
-- The user MUST be able to lock the aspect ratio of each cutout individually.
-- When locked, resizing gestures (dragging any of the corner resize handles) MUST scale the destination cutout bounds uniformly, preserving the exact aspect ratio of the corresponding source crop.
+- The user MUST be able to configure the aspect ratio locking mode of each cutout individually. There are three modes:
+  - **Free (`FREE`)**: Independent resizing/scaling on both source crop and destination bounds.
+  - **Top (`TOP`)**: Locks the destination bounds' aspect ratio to the source crop's aspect ratio. Resizing destination bounds in the editor scales them uniformly. Changing the source crop automatically adjusts the destination dimensions to match.
+  - **Bottom (`BOTTOM`)**: Locks the source crop's aspect ratio to the destination bounds' aspect ratio. Resizing destination bounds in the editor is free, but automatically scales/adjusts the source crop to match the destination's new aspect ratio. Resizing the source crop in the crop selector is locked to the destination aspect ratio.
 - Boundary collisions during aspect-ratio-locked resizing MUST be resolved by scaling both axes uniformly to prevent stretching or overlap.
-- Changing the source crop boundaries of a cutout with a locked aspect ratio MUST automatically recalculate and adjust the destination dimensions to match the new crop's aspect ratio.
-- The state of the aspect ratio lock (`keepAspectRatio: Boolean`) MUST be saved and persisted inside the layout profile schema.
+- The aspect ratio mode (`aspectRatioMode: AspectRatioMode`) MUST be saved and persisted inside the layout profile schema. The legacy `keepAspectRatio: Boolean` is automatically migrated to the corresponding aspect ratio mode for backward compatibility.
 
 ### FR-M13: Multi-Cutout Crossfade
 
@@ -385,18 +386,17 @@ Both the Virtual Touchpad and Mirror Touch Projection use `TouchInjector` from t
 
 ### Aspect-Ratio-Locked Resizing & Collision Clamping
 
-When resizing a cutout with `keepAspectRatio` enabled, the aspect ratio must be maintained perfectly. Standard axis-by-axis collision clamping would break the aspect ratio if only one axis is clamped. To resolve this, a binary search collision resolver is used:
+Three modes govern aspect ratio relations (`FREE`, `TOP`, and `BOTTOM`):
 
-1. **Aspect Ratio Fitting on Init/Crop Change**:
-   When the source crop changes, `adjustDestSizeToAspectRatio` computes the target width and height to fit the new aspect ratio while respecting the screen boundaries and keeping the cutout within `[0, 1]`.
-2. **Dominant Axis Detection**:
-   In `getTargetGeometryWithAspectRatio`, we compare the horizontal delta (\(\Delta x\)) with the normalized vertical delta (\(\Delta y \times \text{aspectRatio}\)) to identify the dominant scaling axis dictated by the drag gesture. The non-dominant axis is scaled proportionally to match the dominant axis.
-3. **Binary Search Collision Resolution**:
-   In `clampCutoutResize`, if the target geometry overlaps with another cutout or goes off-screen, a binary search determines the maximum scaling factor \(t \in [0, 1]\) between the original geometry and the target geometry:
-   - For each iteration (10 steps total, providing sub-pixel precision), the intermediate geometry is computed at factor \(t = \frac{\text{low} + \text{high}}{2}\).
-   - If the intermediate geometry does not overlap with other cutouts and lies completely within the screen boundary (`isGeometryValid`), \(t\) is accepted as a valid intermediate state, and we set \(\text{low} = t\).
-   - If it overlaps or is invalid, we set \(\text{high} = t\).
-   - This ensures the aspect ratio is perfectly preserved throughout the entire resizing gesture and during any collisions.
+1. **Top Aspect Ratio Mode (`TOP`)**:
+   - Resizing destination bounds in the editor maintains their aspect ratio matching the source crop.
+   - Standard axis-by-axis collision clamping would break the aspect ratio if only one axis is clamped. To resolve this, a binary search collision resolver is used:
+     - **Aspect Ratio Fitting on Init/Crop Change**: When the source crop changes, `adjustDestSizeToAspectRatio` computes the target width and height to fit the new aspect ratio while respecting screen boundaries.
+     - **Dominant Axis Detection**: In `getTargetGeometryWithAspectRatio`, we compare the horizontal delta (\(\Delta x\)) with the normalized vertical delta (\(\Delta y \times \text{aspectRatio}\)) to identify the dominant scaling axis dictated by the drag gesture. The non-dominant axis is scaled proportionally to match the dominant axis.
+     - **Binary Search Collision Resolution**: In `clampCutoutResize`, if the target geometry overlaps with another cutout or goes off-screen, a binary search determines the maximum scaling factor \(t \in [0, 1]\) between the original and target geometry.
+2. **Bottom Aspect Ratio Mode (`BOTTOM`)**:
+   - Resizing destination bounds in the editor is free, but on every drag event, `adjustSourceCropToAspectRatio` scales the source crop normalized bounds to match the new destination aspect ratio, preserving the original crop center and shrinking/clamping the crop as needed to fit.
+   - Resizing the source crop in the crop selector is locked to the destination aspect ratio. In `CropSelectorOverlay`, when dragging corner handles, `adjustCropResizeToAspectRatio` matches the aspect ratio of the crop to the fixed destination aspect ratio, scaling the rectangle down if it hits screen boundaries.
 
 ### Session State Persistence
 

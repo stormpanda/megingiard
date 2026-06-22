@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
@@ -294,7 +295,7 @@ fun CutoutLayoutEditor(
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = curCutout.keepAspectRatio,
+                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
                                 cropRatio = cropRatio,
                                 screenW = screenW,
                                 screenH = screenH
@@ -303,7 +304,14 @@ fun CutoutLayoutEditor(
                                 AppLog.d(TAG, "Resize TOP_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
                             }
                             val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
+                                if (it.id == curCutout.id) {
+                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                    } else {
+                                        next
+                                    }
+                                } else it
                             }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                         }
@@ -343,7 +351,7 @@ fun CutoutLayoutEditor(
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = curCutout.keepAspectRatio,
+                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
                                 cropRatio = cropRatio,
                                 screenW = screenW,
                                 screenH = screenH
@@ -352,7 +360,14 @@ fun CutoutLayoutEditor(
                                 AppLog.d(TAG, "Resize TOP_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
                             }
                             val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
+                                if (it.id == curCutout.id) {
+                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                    } else {
+                                        next
+                                    }
+                                } else it
                             }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                         }
@@ -392,7 +407,7 @@ fun CutoutLayoutEditor(
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = curCutout.keepAspectRatio,
+                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
                                 cropRatio = cropRatio,
                                 screenW = screenW,
                                 screenH = screenH
@@ -401,7 +416,14 @@ fun CutoutLayoutEditor(
                                 AppLog.d(TAG, "Resize BOTTOM_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
                             }
                             val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
+                                if (it.id == curCutout.id) {
+                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                    } else {
+                                        next
+                                    }
+                                } else it
                             }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                         }
@@ -441,7 +463,7 @@ fun CutoutLayoutEditor(
                                 targetWidth = targetWidth,
                                 targetHeight = targetHeight,
                                 allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = curCutout.keepAspectRatio,
+                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
                                 cropRatio = cropRatio,
                                 screenW = screenW,
                                 screenH = screenH
@@ -450,7 +472,14 @@ fun CutoutLayoutEditor(
                                 AppLog.d(TAG, "Resize BOTTOM_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
                             }
                             val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h) else it
+                                if (it.id == curCutout.id) {
+                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                    } else {
+                                        next
+                                    }
+                                } else it
                             }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
                         }
@@ -572,25 +601,32 @@ fun CutoutLayoutEditor(
                         val selectedCutout = selectedCutoutId?.let { cutoutId ->
                             layout.mirrorCutouts.find { it.id == cutoutId }
                         }
-                        val isLocked = selectedCutout?.keepAspectRatio ?: false
+                        val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
 
                         ToolbarIconButton(
-                            icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                            contentDescription = if (isLocked) {
-                                stringResource(R.string.mirror_editor_aspect_ratio_locked)
-                            } else {
-                                stringResource(R.string.mirror_editor_aspect_ratio_free)
-                            },
+                            icon = Icons.Rounded.AspectRatio,
+                            contentDescription = stringResource(R.string.mirror_editor_aspect_ratio_mode),
                             color = colors.accent,
-                            label = if (isLocked) "1:1" else "1:X",
+                            label = when (currentMode) {
+                                AspectRatioMode.FREE -> stringResource(R.string.mirror_editor_aspect_ratio_free)
+                                AspectRatioMode.TOP -> stringResource(R.string.mirror_editor_aspect_ratio_top)
+                                AspectRatioMode.BOTTOM -> stringResource(R.string.mirror_editor_aspect_ratio_bottom)
+                            },
                             enabled = selectedCutout != null,
                             onClick = {
                                 val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
                                 val updated = layout.mirrorCutouts.map {
                                     if (it.id == cutoutId) {
-                                        val nextLocked = !it.keepAspectRatio
-                                        var updatedCutout = it.copy(keepAspectRatio = nextLocked)
-                                        if (nextLocked) {
+                                        val nextMode = when (it.aspectRatioMode) {
+                                            AspectRatioMode.FREE -> AspectRatioMode.TOP
+                                            AspectRatioMode.TOP -> AspectRatioMode.BOTTOM
+                                            AspectRatioMode.BOTTOM -> AspectRatioMode.FREE
+                                        }
+                                        var updatedCutout = it.copy(
+                                            aspectRatioMode = nextMode,
+                                            keepAspectRatio = (nextMode == AspectRatioMode.TOP)
+                                        )
+                                        if (nextMode == AspectRatioMode.TOP) {
                                             val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
                                             val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
                                                 destX = updatedCutout.destX,
@@ -602,6 +638,14 @@ fun CutoutLayoutEditor(
                                                 screenH = screenH
                                             )
                                             updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
+                                        } else if (nextMode == AspectRatioMode.BOTTOM) {
+                                            updatedCutout = adjustSourceCropToAspectRatio(
+                                                updatedCutout,
+                                                screenW = screenW,
+                                                screenH = screenH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight
+                                            )
                                         }
                                         updatedCutout
                                     } else it
@@ -944,3 +988,38 @@ private fun ToolbarIconButton(
 // Small helper since BorderStroke needs it
 @Composable
 private fun borderStrokeFor(color: Color) = androidx.compose.foundation.BorderStroke(1.dp, color)
+
+private fun adjustSourceCropToAspectRatio(
+    cutout: ScreenCutout,
+    screenW: Float,
+    screenH: Float,
+    srcW: Float,
+    srcH: Float
+): ScreenCutout {
+    val targetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
+    val factor = targetRatio * (srcH / srcW)
+
+    val centerX = cutout.srcX + cutout.srcWidth / 2f
+    val centerY = cutout.srcY + cutout.srcHeight / 2f
+
+    val newW: Float
+    val newH: Float
+
+    if (factor > cutout.srcWidth / cutout.srcHeight) {
+        newW = cutout.srcWidth
+        newH = newW / factor
+    } else {
+        newH = cutout.srcHeight
+        newW = newH * factor
+    }
+
+    val newX = (centerX - newW / 2f).coerceIn(0f, 1f - newW)
+    val newY = (centerY - newH / 2f).coerceIn(0f, 1f - newH)
+
+    return cutout.copy(
+        srcX = newX,
+        srcY = newY,
+        srcWidth = newW,
+        srcHeight = newH
+    )
+}

@@ -540,6 +540,63 @@ class MirrorCoordinateTransformTest {
         assertEquals("c-legacy", decoded.id)
         assertEquals(CutoutShape.RECTANGLE, decoded.shape)
     }
+
+    @Test
+    fun `ScreenCutout serialization round-trip preserves aspectRatioMode`() {
+        val original = ScreenCutout(
+            id = "c-test-aspect",
+            name = "Test Aspect",
+            srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
+            destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f,
+            aspectRatioMode = AspectRatioMode.BOTTOM
+        )
+        val jsonString = Json.encodeToString(original)
+        val decoded = Json.decodeFromString<ScreenCutout>(jsonString)
+        assertEquals(original.id, decoded.id)
+        assertEquals(original.name, decoded.name)
+        assertEquals(AspectRatioMode.BOTTOM, decoded.aspectRatioMode)
+    }
+
+    @Test
+    fun `ScreenCutout deserialization of legacy JSON migrates keepAspectRatio to aspectRatioMode`() {
+        val legacyJsonTrue = """
+            {
+                "id": "c-legacy-true",
+                "name": "Legacy Cutout True",
+                "srcX": 0.0,
+                "srcY": 0.0,
+                "srcWidth": 1.0,
+                "srcHeight": 1.0,
+                "destX": 0.0,
+                "destY": 0.0,
+                "destWidth": 1.0,
+                "destHeight": 1.0,
+                "keepAspectRatio": true
+            }
+        """.trimIndent()
+        val decodedTrue = Json.decodeFromString<ScreenCutout>(legacyJsonTrue)
+        assertEquals("c-legacy-true", decodedTrue.id)
+        assertEquals(AspectRatioMode.TOP, decodedTrue.aspectRatioMode)
+
+        val legacyJsonFalse = """
+            {
+                "id": "c-legacy-false",
+                "name": "Legacy Cutout False",
+                "srcX": 0.0,
+                "srcY": 0.0,
+                "srcWidth": 1.0,
+                "srcHeight": 1.0,
+                "destX": 0.0,
+                "destY": 0.0,
+                "destWidth": 1.0,
+                "destHeight": 1.0,
+                "keepAspectRatio": false
+            }
+        """.trimIndent()
+        val decodedFalse = Json.decodeFromString<ScreenCutout>(legacyJsonFalse)
+        assertEquals("c-legacy-false", decodedFalse.id)
+        assertEquals(AspectRatioMode.FREE, decodedFalse.aspectRatioMode)
+    }
 }
 
 

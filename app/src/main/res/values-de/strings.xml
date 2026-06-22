@@ -690,8 +690,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_multi_mode">Mehrere Ausschnitte</string>
     <string name="mirror_editor_done">Fertig</string>
     <string name="mirror_editor_multi_cutout_privileged_only">Mehrere Ausschnitte erfordern den Privilegierten Modus</string>
+    <string name="mirror_editor_aspect_ratio_mode">Seitenverhältnis-Modus</string>
     <string name="mirror_editor_aspect_ratio_locked">Seitenverhältnis: Gesperrt</string>
-    <string name="mirror_editor_aspect_ratio_free">Seitenverhältnis: Frei</string>
+    <string name="mirror_editor_aspect_ratio_free">Frei</string>
+    <string name="mirror_editor_aspect_ratio_top">Oben</string>
+    <string name="mirror_editor_aspect_ratio_bottom">Unten</string>
     <string name="mirror_editor_motion_smoothing">Glätten</string>
     <string name="cd_motion_smoothing">Bewegungsglättung für den ausgewählten Ausschnitt umschalten</string>
     <string name="mirror_smoothing_strength_label">Glättung</string>

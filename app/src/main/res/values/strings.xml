@@ -683,8 +683,11 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_multi_mode">Multi-Cutout</string>
     <string name="mirror_editor_done">Done</string>
     <string name="mirror_editor_multi_cutout_privileged_only">Multiple cutouts require Privileged Mode</string>
+    <string name="mirror_editor_aspect_ratio_mode">Aspect Ratio Mode</string>
     <string name="mirror_editor_aspect_ratio_locked">Aspect: Locked</string>
-    <string name="mirror_editor_aspect_ratio_free">Aspect: Free</string>
+    <string name="mirror_editor_aspect_ratio_free">Free</string>
+    <string name="mirror_editor_aspect_ratio_top">Top</string>
+    <string name="mirror_editor_aspect_ratio_bottom">Bottom</string>
     <string name="mirror_editor_motion_smoothing">Smooth</string>
     <string name="cd_motion_smoothing">Toggle motion smoothing for selected cutout</string>
     <string name="mirror_smoothing_strength_label">Smoothing</string>

@@ -10,6 +10,13 @@ enum class CutoutShape {
     CIRCLE
 }
 
+@Serializable
+enum class AspectRatioMode {
+    FREE,
+    TOP,
+    BOTTOM
+}
+
 /**
  * Represents a single cropped section of the primary display (source)
  * that is displayed and positioned on the secondary display (destination).
@@ -28,6 +35,7 @@ enum class CutoutShape {
  * @param destHeight  Normalized height of the destination bounds on the secondary screen.
  * @param opacity     Transparency level [0.0, 1.0] of this cutout.
  * @param shape       The visual shape of this cutout (rectangle or circle).
+ * @param aspectRatioMode The mode specifying how aspect ratio is locked between top crop and bottom bounds.
  */
 @Serializable
 data class ScreenCutout(
@@ -45,4 +53,5 @@ data class ScreenCutout(
     val keepAspectRatio: Boolean = false,
     val motionSmoothing: Boolean = false,
     val shape: CutoutShape = CutoutShape.RECTANGLE,
+    val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.FREE,
 )

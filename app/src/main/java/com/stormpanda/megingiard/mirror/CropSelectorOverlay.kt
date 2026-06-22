@@ -48,6 +48,8 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.adjustDestSizeToAspectRatio
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val TAG = "CropSelectorOverlay"
@@ -110,7 +112,7 @@ fun CropSelectorOverlay(
         maxDestH: Float = 0f
     ): ScreenCutout {
         var updated = cutout.copy(srcX = newX, srcY = newY, srcWidth = newW, srcHeight = newH)
-        if (updated.keepAspectRatio) {
+        if (updated.aspectRatioMode == AspectRatioMode.TOP) {
             val cropRatio = (newW * srcWidth) / (newH * srcHeight)
             val normRatio = cropRatio * (secScreenH / secScreenW)
             val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
@@ -262,16 +264,36 @@ fun CropSelectorOverlay(
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
+                val curCutout = currentCutoutState.value
                 val rightEdge = dragStartX + dragStartW
                 val bottomEdge = dragStartY + dragStartH
                 
-                val newX = (dragStartX + totalDx / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
-                val newW = rightEdge - newX
-                val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
-                val newH = bottomEdge - newY
+                val geom = if (curCutout.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                    val targetRatio = (curCutout.destWidth * secScreenW) / (curCutout.destHeight * secScreenH)
+                    val targetWidth = dragStartW - totalDx / screenW
+                    val targetHeight = dragStartH - totalDy / screenH
+                    adjustCropResizeToAspectRatio(
+                        handle = CropResizeHandle.TOP_LEFT,
+                        originalX = dragStartX,
+                        originalY = dragStartY,
+                        originalWidth = dragStartW,
+                        originalHeight = dragStartH,
+                        targetWidth = targetWidth,
+                        targetHeight = targetHeight,
+                        targetRatio = targetRatio,
+                        srcW = srcWidth,
+                        srcH = srcHeight
+                    )
+                } else {
+                    val newX = (dragStartX + totalDx / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
+                    val newW = rightEdge - newX
+                    val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
+                    val newH = bottomEdge - newY
+                    ScreenCutoutGeometry(newX, newY, newW, newH)
+                }
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, newY, newW, newH, gestureStartDestW, gestureStartDestH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, geom.x, geom.y, geom.w, geom.h, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -295,14 +317,34 @@ fun CropSelectorOverlay(
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
+                val curCutout = currentCutoutState.value
                 val bottomEdge = dragStartY + dragStartH
                 
-                val newW = (dragStartW + totalDx / screenW).coerceIn(MIN_CROP_SIZE, 1f - dragStartX)
-                val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
-                val newH = bottomEdge - newY
+                val geom = if (curCutout.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                    val targetRatio = (curCutout.destWidth * secScreenW) / (curCutout.destHeight * secScreenH)
+                    val targetWidth = dragStartW + totalDx / screenW
+                    val targetHeight = dragStartH - totalDy / screenH
+                    adjustCropResizeToAspectRatio(
+                        handle = CropResizeHandle.TOP_RIGHT,
+                        originalX = dragStartX,
+                        originalY = dragStartY,
+                        originalWidth = dragStartW,
+                        originalHeight = dragStartH,
+                        targetWidth = targetWidth,
+                        targetHeight = targetHeight,
+                        targetRatio = targetRatio,
+                        srcW = srcWidth,
+                        srcH = srcHeight
+                    )
+                } else {
+                    val newW = (dragStartW + totalDx / screenW).coerceIn(MIN_CROP_SIZE, 1f - dragStartX)
+                    val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottomEdge - MIN_CROP_SIZE)
+                    val newH = bottomEdge - newY
+                    ScreenCutoutGeometry(dragStartX, newY, newW, newH)
+                }
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, newY, newW, newH, gestureStartDestW, gestureStartDestH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, geom.x, geom.y, geom.w, geom.h, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -326,14 +368,34 @@ fun CropSelectorOverlay(
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
+                val curCutout = currentCutoutState.value
                 val rightEdge = dragStartX + dragStartW
                 
-                val newX = (dragStartX + totalDx / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
-                val newW = rightEdge - newX
-                val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
+                val geom = if (curCutout.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                    val targetRatio = (curCutout.destWidth * secScreenW) / (curCutout.destHeight * secScreenH)
+                    val targetWidth = dragStartW - totalDx / screenW
+                    val targetHeight = dragStartH + totalDy / screenH
+                    adjustCropResizeToAspectRatio(
+                        handle = CropResizeHandle.BOTTOM_LEFT,
+                        originalX = dragStartX,
+                        originalY = dragStartY,
+                        originalWidth = dragStartW,
+                        originalHeight = dragStartH,
+                        targetWidth = targetWidth,
+                        targetHeight = targetHeight,
+                        targetRatio = targetRatio,
+                        srcW = srcWidth,
+                        srcH = srcHeight
+                    )
+                } else {
+                    val newX = (dragStartX + totalDx / screenW).coerceIn(0f, rightEdge - MIN_CROP_SIZE)
+                    val newW = rightEdge - newX
+                    val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
+                    ScreenCutoutGeometry(newX, dragStartY, newW, newH)
+                }
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, newX, dragStartY, newW, newH, gestureStartDestW, gestureStartDestH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, geom.x, geom.y, geom.w, geom.h, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -357,11 +419,32 @@ fun CropSelectorOverlay(
             },
             onDrag = { totalDx, totalDy ->
                 val curLayout = currentLayoutState.value
-                val newW = (dragStartW + totalDx / screenW).coerceIn(MIN_CROP_SIZE, 1f - dragStartX)
-                val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
+                val curCutout = currentCutoutState.value
+                
+                val geom = if (curCutout.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                    val targetRatio = (curCutout.destWidth * secScreenW) / (curCutout.destHeight * secScreenH)
+                    val targetWidth = dragStartW + totalDx / screenW
+                    val targetHeight = dragStartH + totalDy / screenH
+                    adjustCropResizeToAspectRatio(
+                        handle = CropResizeHandle.BOTTOM_RIGHT,
+                        originalX = dragStartX,
+                        originalY = dragStartY,
+                        originalWidth = dragStartW,
+                        originalHeight = dragStartH,
+                        targetWidth = targetWidth,
+                        targetHeight = targetHeight,
+                        targetRatio = targetRatio,
+                        srcW = srcWidth,
+                        srcH = srcHeight
+                    )
+                } else {
+                    val newW = (dragStartW + totalDx / screenW).coerceIn(MIN_CROP_SIZE, 1f - dragStartX)
+                    val newH = (dragStartH + totalDy / screenH).coerceIn(MIN_CROP_SIZE, 1f - dragStartY)
+                    ScreenCutoutGeometry(dragStartX, dragStartY, newW, newH)
+                }
                 
                 val updated = curLayout.mirrorCutouts.map {
-                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, dragStartX, dragStartY, newW, newH, gestureStartDestW, gestureStartDestH) else it
+                    if (it.id == cutoutId) updateCutoutWithNewCrop(it, geom.x, geom.y, geom.w, geom.h, gestureStartDestW, gestureStartDestH) else it
                 }
                 MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
             }
@@ -490,4 +573,111 @@ private fun ResizeHandleView(
                 )
             }
     )
+}
+
+private enum class CropResizeHandle {
+    TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
+}
+
+private fun adjustCropResizeToAspectRatio(
+    handle: CropResizeHandle,
+    originalX: Float,
+    originalY: Float,
+    originalWidth: Float,
+    originalHeight: Float,
+    targetWidth: Float,
+    targetHeight: Float,
+    targetRatio: Float,
+    srcW: Float,
+    srcH: Float
+): ScreenCutoutGeometry {
+    val normRatio = targetRatio * (srcH / srcW)
+
+    val dx = targetWidth - originalWidth
+    val dy = targetHeight - originalHeight
+
+    var finalW = targetWidth
+    var finalH = targetHeight
+
+    if (abs(dx) >= abs(dy * normRatio)) {
+        finalW = targetWidth.coerceIn(MIN_CROP_SIZE, 1f)
+        finalH = finalW / normRatio
+    } else {
+        finalH = targetHeight.coerceIn(MIN_CROP_SIZE, 1f)
+        finalW = finalH * normRatio
+    }
+
+    val originalRight = originalX + originalWidth
+    val originalBottom = originalY + originalHeight
+
+    var finalX = originalX
+    var finalY = originalY
+
+    when (handle) {
+        CropResizeHandle.TOP_LEFT -> {
+            finalX = originalRight - finalW
+            finalY = originalBottom - finalH
+        }
+        CropResizeHandle.TOP_RIGHT -> {
+            finalX = originalX
+            finalY = originalBottom - finalH
+        }
+        CropResizeHandle.BOTTOM_LEFT -> {
+            finalX = originalRight - finalW
+            finalY = originalY
+        }
+        CropResizeHandle.BOTTOM_RIGHT -> {
+            finalX = originalX
+            finalY = originalY
+        }
+    }
+
+    var scale = 1f
+
+    if (finalX < 0f) {
+        val maxW = originalRight
+        scale = min(scale, maxW / finalW)
+    }
+    if (finalX + finalW > 1f) {
+        val maxW = 1f - originalX
+        scale = min(scale, maxW / finalW)
+    }
+
+    if (finalY < 0f) {
+        val maxH = originalBottom
+        scale = min(scale, maxH / finalH)
+    }
+    if (finalY + finalH > 1f) {
+        val maxH = 1f - originalY
+        scale = min(scale, maxH / finalH)
+    }
+
+    if (scale < 1f) {
+        finalW *= scale
+        finalH *= scale
+
+        when (handle) {
+            CropResizeHandle.TOP_LEFT -> {
+                finalX = originalRight - finalW
+                finalY = originalBottom - finalH
+            }
+            CropResizeHandle.TOP_RIGHT -> {
+                finalX = originalX
+                finalY = originalBottom - finalH
+            }
+            CropResizeHandle.BOTTOM_LEFT -> {
+                finalX = originalRight - finalW
+                finalY = originalY
+            }
+            CropResizeHandle.BOTTOM_RIGHT -> {
+                finalX = originalX
+                finalY = originalY
+            }
+        }
+    }
+
+    finalX = finalX.coerceIn(0f, 1f - finalW)
+    finalY = finalY.coerceIn(0f, 1f - finalH)
+
+    return ScreenCutoutGeometry(finalX, finalY, finalW, finalH)
 }
