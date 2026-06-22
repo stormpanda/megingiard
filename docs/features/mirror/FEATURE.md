@@ -120,6 +120,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - The user MUST be able to configure a crossfade blend width using a slider (`Crossfade` / `Überblendung`) in the layout-editor toolbar on the secondary display below the button row.
 - The slider range MUST be `0` to `100 dp`. The slider is only visible in the layout editor panel.
+- The crossfade blend width (`mirrorCrossfadeBlendWidth`) MUST be saved and persisted per-layout inside the layout configuration schema.
 - When a crossfade is configured (> 0 dp):
   - Fades MUST be applied to the edges of each cutout.
   - If a cutout edge touches or is adjacent to another cutout (within a configured tolerance), the fade MUST blend symmetrically *inside* both cutout boundaries so that their combined opacity in the overlap region is always exactly 1.0 (preventing dark or bright seams).
@@ -479,11 +480,13 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 
 To allow seamless transitions between adjacent or independent cutouts, we implement a hybrid border gradient mask in `MirrorPresentation`'s `MultiCutoutContainer`:
 
-1. **Edge Touching Detection**: We check each of the four edges (left, right, top, bottom) of each cutout against all other cutouts. If the distance between their destination boundaries is within a tolerance (`TOUCH_TOLERANCE = 0.005f`), they are flagged as touching (`touchesOtherLeft`, etc.).
-2. **Hybrid Gradient Coordinates**:
+- **Per-Layout Value Storage & Sync**: The crossfade blend width is defined per-layout via the `mirrorCrossfadeBlendWidth` property in `PadLayout`. At runtime, `ScreenCaptureManager` observes `activeLayout` and publishes updates via the read-only `crossfadeBlendWidthDp` state flow. `MirrorPresentation` collects this flow to invalidate drawing.
+- **Edge Touching Detection**: We check each of the four edges (left, right, top, bottom) of each cutout against all other cutouts. If the distance between their destination boundaries is within a tolerance (`TOUCH_TOLERANCE = 0.005f`), they are flagged as touching (`touchesOtherLeft`, etc.).
+- **Hybrid Gradient Coordinates**:
    - For background-facing edges (e.g. `touchesOtherLeft == false`), the gradient goes from `-leftExt` (TRANSPARENT) to `0f` (BLACK). Using `Shader.TileMode.CLAMP`, the interior of the cutout remains 100% opaque.
    - For touching edges (e.g. `touchesOtherLeft == true`), the gradient goes from `-leftExt` (TRANSPARENT) to `leftExt` (BLACK), creating a symmetric blend that extends `leftExt` inside the cutout boundary.
-3. **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their corresponding edge gradients ensures that overlapping areas have a combined opacity of exactly 1.0, eliminating dark rendering seams.
+- **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their corresponding edge gradients ensures that overlapping areas have a combined opacity of exactly 1.0, eliminating dark rendering seams.
+
 
 ### Cutout Shape Rendering (Circular Clipping & Crossfade)
 

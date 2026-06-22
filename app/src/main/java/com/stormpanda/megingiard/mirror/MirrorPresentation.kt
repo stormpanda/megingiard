@@ -234,7 +234,7 @@ class MirrorPresentation(
         }
 
         scope.launch {
-            MirrorSettings.crossfadeBlendWidthDp.collect {
+            ScreenCaptureManager.crossfadeBlendWidthDp.collect {
                 mcc.invalidate()
             }
         }
@@ -805,7 +805,7 @@ class MultiCutoutContainer(
         if (parentW <= 0f || parentH <= 0f) return
 
         val drawingTime = drawingTime
-        val blendWidthDp = MirrorSettings.crossfadeBlendWidthDp.value
+        val blendWidthDp = ScreenCaptureManager.crossfadeBlendWidthDp.value
         val crossfade = blendWidthDp > 0f
         val tolerance = TOUCH_TOLERANCE
         val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()

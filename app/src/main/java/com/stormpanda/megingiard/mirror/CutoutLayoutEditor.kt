@@ -100,14 +100,14 @@ fun CutoutLayoutEditor(
 
     // Capture the initial state of the layout's mirror settings when the editor is opened.
     val initialCutouts = remember(layout.id) { layout.mirrorCutouts }
-    val initialCrossfade = remember(layout.id) { MirrorSettings.crossfadeBlendWidthDp.value }
+    val initialCrossfade = remember(layout.id) { layout.mirrorCrossfadeBlendWidth }
     val initialSmoothing = remember(layout.id) { MirrorSettings.smoothingStrength.value }
 
     var toolbarOffset by remember { mutableStateOf<IntOffset?>(null) }
     var toolbarSize by remember { mutableStateOf(IntSize.Zero) }
     var isExpanded by remember { mutableStateOf(false) }
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsState()
-    val crossfadeBlendWidthDp by MirrorSettings.crossfadeBlendWidthDp.collectAsState()
+    val crossfadeBlendWidthDp = layout.mirrorCrossfadeBlendWidth
     val smoothingStrength by MirrorSettings.smoothingStrength.collectAsState()
     val density = LocalDensity.current
     val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsState()
@@ -708,8 +708,10 @@ fun CutoutLayoutEditor(
                             contentDescription = stringResource(R.string.settings_color_cancel),
                             color = colors.error,
                             onClick = {
-                                val updatedLayout = layout.copy(mirrorCutouts = initialCutouts)
-                                MirrorSettings.setCrossfadeBlendWidthDp(initialCrossfade)
+                                val updatedLayout = layout.copy(
+                                    mirrorCutouts = initialCutouts,
+                                    mirrorCrossfadeBlendWidth = initialCrossfade
+                                )
                                 MirrorSettings.setSmoothingStrength(initialSmoothing)
                                 MacroPadState.updateLayout(updatedLayout)
                                 AppStateManager.setViewportEditActive(false)
@@ -764,7 +766,7 @@ fun CutoutLayoutEditor(
                                     value = crossfadeBlendWidthDp,
                                     onValueChange = { value ->
                                         val idx = (value / 25f).roundToInt().coerceIn(0, 4)
-                                        MirrorSettings.setCrossfadeBlendWidthDp(idx * 25f)
+                                        MacroPadState.updateLayout(layout.copy(mirrorCrossfadeBlendWidth = idx * 25f))
                                     },
                                     valueRange = SLIDER_VALUE_MIN..SLIDER_VALUE_MAX,
                                     steps = 3,

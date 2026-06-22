@@ -42,6 +42,9 @@ object ScreenCaptureManager {
     private val _cutouts = MutableStateFlow<List<ScreenCutout>>(emptyList())
     val cutouts: StateFlow<List<ScreenCutout>> = _cutouts.asStateFlow()
 
+    private val _crossfadeBlendWidthDp = MutableStateFlow(0f)
+    val crossfadeBlendWidthDp: StateFlow<Float> = _crossfadeBlendWidthDp.asStateFlow()
+
     private val _isFrozen = MutableStateFlow(false)
     val isFrozen: StateFlow<Boolean> = _isFrozen.asStateFlow()
 
@@ -66,6 +69,7 @@ object ScreenCaptureManager {
         scope.launch {
             MacroPadState.activeLayout.collect { layout ->
                 if (layout != null) {
+                    _crossfadeBlendWidthDp.value = layout.mirrorCrossfadeBlendWidth
                     if (layout.mirrorCutouts.isNotEmpty()) {
                         _cutouts.value = layout.mirrorCutouts
                     } else {
@@ -80,6 +84,7 @@ object ScreenCaptureManager {
                         )
                     }
                 } else {
+                    _crossfadeBlendWidthDp.value = 0f
                     _cutouts.value = emptyList()
                 }
             }
