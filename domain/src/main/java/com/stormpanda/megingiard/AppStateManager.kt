@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
 
@@ -33,6 +34,21 @@ object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    init {
+        scope.launch {
+            var lastActiveLayoutId: String? = null
+            MacroPadState.activeLayout.collect { layout ->
+                val newId = layout?.id
+                if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
+                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
+                    closeActiveModal()
+                }
+                lastActiveLayoutId = newId
+            }
+        }
+    }
+
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 

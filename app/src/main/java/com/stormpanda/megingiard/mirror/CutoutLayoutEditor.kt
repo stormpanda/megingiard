@@ -98,9 +98,9 @@ fun CutoutLayoutEditor(
     val layout = activeLayout ?: return
 
     // Capture the initial state of the layout's mirror settings when the editor is opened.
-    val initialCutouts = remember { layout.mirrorCutouts }
-    val initialCrossfade = remember { MirrorSettings.crossfadeBlendWidthDp.value }
-    val initialSmoothing = remember { MirrorSettings.smoothingStrength.value }
+    val initialCutouts = remember(layout.id) { layout.mirrorCutouts }
+    val initialCrossfade = remember(layout.id) { MirrorSettings.crossfadeBlendWidthDp.value }
+    val initialSmoothing = remember(layout.id) { MirrorSettings.smoothingStrength.value }
 
     var toolbarOffset by remember { mutableStateOf<IntOffset?>(null) }
     var toolbarSize by remember { mutableStateOf(IntSize.Zero) }
