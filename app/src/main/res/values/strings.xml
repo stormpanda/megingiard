@@ -698,4 +698,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_smoothing_strength_off">Off</string>
     <string name="mirror_editor_shape_circle">Shape: Circle</string>
     <string name="mirror_editor_shape_rectangle">Shape: Rectangle</string>
+    <string name="mirror_editor_no_space">Not enough space for another cutout</string>
+    <string name="mirror_editor_max_cutouts">Maximum of 10 cutouts allowed</string>
 </resources>

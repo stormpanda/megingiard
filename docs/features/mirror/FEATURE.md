@@ -106,6 +106,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
 - Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). New layouts start completely blank (with no default cutouts).
 - The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts), which renders a blank mirrored screen.
+- A maximum limit of 10 cutouts is enforced per layout. Attempting to add more than 10 cutouts will trigger a Toast notification ("Maximum of 10 cutouts allowed").
+- Newly created cutouts are checked for layout destination overlap collisions. If there is no collision-free spot available for the new cutout, the cutout is not created, and a Toast notification ("Not enough space for another cutout") is displayed.
 
 ### FR-M12: Aspect Ratio Lock Modes (Free, Top, Bottom)
 

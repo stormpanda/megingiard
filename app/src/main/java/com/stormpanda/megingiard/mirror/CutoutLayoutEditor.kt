@@ -57,6 +57,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -97,6 +99,7 @@ fun CutoutLayoutEditor(
     val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
+    val context = LocalContext.current
 
     val initialCutouts = remember(layout.id) { layout.mirrorCutouts }
     val initialCrossfade = remember(layout.id) { layout.mirrorCrossfadeBlendWidth }
@@ -568,33 +571,41 @@ fun CutoutLayoutEditor(
                             contentDescription = stringResource(R.string.mirror_editor_add_cutout),
                             color = colors.accent,
                             onClick = {
-                                val newId = UUID.randomUUID().toString()
-                                var foundX = 0f
-                                var foundY = 0f
-                                var collides = true
-                                for (y in listOf(0f, 0.35f, 0.7f)) {
-                                    for (x in listOf(0f, 0.35f, 0.7f)) {
-                                        collides = layout.mirrorCutouts.any { other ->
-                                            x < other.destX + other.destWidth && x + 0.3f > other.destX &&
-                                            y < other.destY + other.destHeight && y + 0.3f > other.destY
+                                if (layout.mirrorCutouts.size >= 10) {
+                                    Toast.makeText(context, context.getString(R.string.mirror_editor_max_cutouts), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val newId = UUID.randomUUID().toString()
+                                    var foundX = 0f
+                                    var foundY = 0f
+                                    var collides = true
+                                    for (y in listOf(0f, 0.35f, 0.7f)) {
+                                        for (x in listOf(0f, 0.35f, 0.7f)) {
+                                            collides = layout.mirrorCutouts.any { other ->
+                                                x < other.destX + other.destWidth && x + 0.3f > other.destX &&
+                                                y < other.destY + other.destHeight && y + 0.3f > other.destY
+                                            }
+                                            if (!collides) {
+                                                foundX = x
+                                                foundY = y
+                                                break
+                                            }
                                         }
-                                        if (!collides) {
-                                            foundX = x
-                                            foundY = y
-                                            break
-                                        }
+                                        if (!collides) break
                                     }
-                                    if (!collides) break
+                                    if (collides) {
+                                        Toast.makeText(context, context.getString(R.string.mirror_editor_no_space), Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        val newCutout = ScreenCutout(
+                                            id = newId,
+                                            name = "Cutout ${layout.mirrorCutouts.size + 1}",
+                                            srcX = 0.25f, srcY = 0.25f, srcWidth = 0.5f, srcHeight = 0.5f,
+                                            destX = foundX, destY = foundY, destWidth = 0.3f, destHeight = 0.3f,
+                                            aspectRatioMode = AspectRatioMode.BOTTOM
+                                        )
+                                        MacroPadState.updateLayout(layout.copy(mirrorCutouts = layout.mirrorCutouts + newCutout))
+                                        AppStateManager.setSelectedCutoutId(newId)
+                                    }
                                 }
-                                val newCutout = ScreenCutout(
-                                    id = newId,
-                                    name = "Cutout ${layout.mirrorCutouts.size + 1}",
-                                    srcX = 0.25f, srcY = 0.25f, srcWidth = 0.5f, srcHeight = 0.5f,
-                                    destX = foundX, destY = foundY, destWidth = 0.3f, destHeight = 0.3f,
-                                    aspectRatioMode = AspectRatioMode.BOTTOM
-                                )
-                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = layout.mirrorCutouts + newCutout))
-                                AppStateManager.setSelectedCutoutId(newId)
                             }
                         )
 
