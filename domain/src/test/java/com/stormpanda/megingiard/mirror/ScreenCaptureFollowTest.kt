@@ -27,6 +27,7 @@ import org.junit.Test
 class ScreenCaptureFollowTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
+    private val cutoutId = "test-cutout-id"
 
     @Before
     fun setUp() {
@@ -40,8 +41,24 @@ class ScreenCaptureFollowTest {
             }
         }
         MirrorSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
+        
+        // Setup default layout with one follow-touch enabled cutout
         val layout = MacroPadState.activeLayout.value!!
-        MacroPadState.updateLayout(layout.copy(mirrorSmoothing = false, mirrorSavedScale = 5f))
+        val testCutout = ScreenCutout(
+            id = cutoutId,
+            name = "Test Cutout",
+            srcX = 0.25f,
+            srcY = 0.25f,
+            srcWidth = 0.5f,
+            srcHeight = 0.5f,
+            destX = 0f,
+            destY = 0f,
+            destWidth = 0.5f,
+            destHeight = 0.5f,
+            followTouch = true,
+            motionSmoothing = false
+        )
+        MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(testCutout)))
 
         ScreenCaptureManager.scope = CoroutineScope(SupervisorJob() + testDispatcher)
         ScreenCaptureManager.resetMirrorSessionState()
@@ -60,63 +77,71 @@ class ScreenCaptureFollowTest {
         assertFalse(ScreenCaptureManager.isFollowActive.value)
         ScreenCaptureManager.toggleFollow()
         assertTrue(ScreenCaptureManager.isFollowActive.value)
-        // Follow ON restores the saved viewport scale — no dedicated follow zoom
-        assertEquals(5f, ScreenCaptureManager.scale.value, 0.001f)
 
         ScreenCaptureManager.toggleFollow()
         assertFalse(ScreenCaptureManager.isFollowActive.value)
-        // Follow OFF also restores the saved viewport scale
-        assertEquals(5f, ScreenCaptureManager.scale.value, 0.001f)
     }
 
     @Test
-    fun `onTouchReceived centers correctly without clamping`() {
+    fun `onTouchReceived centers cutout crop correctly within bounds`() {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFollowActive(true)
 
-        // Center touch
+        // Center touch (0.5, 0.5)
+        // targetSrcX = 0.5 - 0.5/2 = 0.25f
+        // targetSrcY = 0.5 - 0.5/2 = 0.25f
         ScreenCaptureManager.onTouchReceived(0.5f, 0.5f)
-        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(0f, ScreenCaptureManager.offsetY.value, 0.001f)
+        val cutout1 = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.25f, cutout1.srcX, 0.001f)
+        assertEquals(0.25f, cutout1.srcY, 0.001f)
 
-        // Top-left touch -> should slide viewport to bottom-right to keep content in view
-        // nx = 0.2f, ny = 0.2f
-        // targetOffsetX = -(0.2 - 0.5) * 1920 * 5 = 0.3 * 9600 = 2880f
+        // Touch at (0.2f, 0.2f)
+        // targetSrcX = 0.2 - 0.25 = -0.05 -> coerced to 0f
+        // targetSrcY = 0.2 - 0.25 = -0.05 -> coerced to 0f
         ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
-        assertEquals(2880f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(1620f, ScreenCaptureManager.offsetY.value, 0.001f)
+        val cutout2 = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0f, cutout2.srcX, 0.001f)
+        assertEquals(0f, cutout2.srcY, 0.001f)
 
-        // Extrema touch -> should NOT be clamped to bounds, allowing black bars
-        // nx = 0.0f, ny = 0.0f
-        // targetOffsetX = -(0.0 - 0.5) * 1920 * 5 = 4800f
-        // targetOffsetY = -(0.0 - 0.5) * 1080 * 5 = 2700f
-        ScreenCaptureManager.onTouchReceived(0f, 0f)
-        assertEquals(4800f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(2700f, ScreenCaptureManager.offsetY.value, 0.001f)
+        // Touch at (0.9f, 0.9f)
+        // targetSrcX = 0.9 - 0.25 = 0.65 -> coerced to 0.5f (since 1.0 - srcWidth = 0.5)
+        // targetSrcY = 0.9 - 0.25 = 0.65 -> coerced to 0.5f
+        ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
+        val cutout3 = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.5f, cutout3.srcX, 0.001f)
+        assertEquals(0.5f, cutout3.srcY, 0.001f)
     }
 
     @Test
     fun `onTouchReceived with smoothing enabled performs exponential decay interpolation`() = runTest(testDispatcher) {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFollowActive(true)
+        
+        // Enable motion smoothing on the cutout
         val layout = MacroPadState.activeLayout.value!!
-        MacroPadState.updateLayout(layout.copy(mirrorSmoothing = true))
+        val testCutout = layout.mirrorCutouts.find { it.id == cutoutId }!!.copy(motionSmoothing = true)
+        MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(testCutout)))
+        
+        // Trigger capture manager collection updates
+        ScreenCaptureManager.setFollowActive(true)
 
-        // Initial position is at (0, 0)
-        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
+        // Initial position is at (0.25, 0.25)
+        var cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.25f, cutout.srcX, 0.001f)
 
-        // Move to target at top-left (nx=0.2f, ny=0.2f) -> targetOffsetX=2880f
-        ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
+        // Touch at (0.9f, 0.9f) -> targetSrcX = 0.5f
+        ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
 
         // Wait 100ms
         delay(100)
-        val intermediateX = ScreenCaptureManager.offsetX.value
-        assertTrue("intermediateX ($intermediateX) should have moved from 0", intermediateX > 0f)
-        assertTrue("intermediateX ($intermediateX) should be less than target 2880", intermediateX < 2880f)
+        cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertTrue("cutout.srcX (${cutout.srcX}) should have moved from 0.25", cutout.srcX > 0.25f)
+        assertTrue("cutout.srcX (${cutout.srcX}) should be less than target 0.5", cutout.srcX < 0.5f)
 
-        // Wait another 500ms to allow Lerp to snap (requires ~540ms total)
+        // Wait another 500ms to allow Lerp to snap
         delay(500)
-        assertEquals(2880f, ScreenCaptureManager.offsetX.value, 0.001f)
+        cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.5f, cutout.srcX, 0.001f)
     }
 
     @Test
@@ -156,29 +181,29 @@ class ScreenCaptureFollowTest {
         val layout = MacroPadState.activeLayout.value!!
         MacroPadState.updateLayout(layout.copy(mirrorFollowDisableDuringMacro = true))
 
-        // Initial offsets should be 0f
-        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(0f, ScreenCaptureManager.offsetY.value, 0.001f)
+        // Initial offsets should be 0.25f
+        var cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.25f, cutout.srcX, 0.001f)
 
         // Mock running macro
         MacroExecutor.setRunningMacroIdsForTest(setOf("test-macro-id"))
 
-        // Send touch event (0.2f, 0.2f)
-        ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
+        // Send touch event (0.9f, 0.9f)
+        ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
 
-        // Offsets should remain 0f (ignored)
-        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(0f, ScreenCaptureManager.offsetY.value, 0.001f)
+        // Offsets should remain 0.25f (ignored)
+        cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.25f, cutout.srcX, 0.001f)
 
         // Clear running macros
         MacroExecutor.setRunningMacroIdsForTest(emptySet())
 
         // Send touch event again
-        ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
+        ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
 
-        // Now it should center: targetOffsetX = -(0.2 - 0.5) * 1920 * 5 = 2880f
-        assertEquals(2880f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(1620f, ScreenCaptureManager.offsetY.value, 0.001f)
+        // Now it should center: targetSrcX = 0.5f
+        cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.5f, cutout.srcX, 0.001f)
     }
 
     @Test
@@ -190,19 +215,15 @@ class ScreenCaptureFollowTest {
         val layout = MacroPadState.activeLayout.value!!
         MacroPadState.updateLayout(layout.copy(mirrorFollowDisableDuringMacro = false))
 
-        // Initial offsets should be 0f
-        assertEquals(0f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(0f, ScreenCaptureManager.offsetY.value, 0.001f)
-
         // Mock running macro
         MacroExecutor.setRunningMacroIdsForTest(setOf("test-macro-id"))
 
-        // Send touch event
-        ScreenCaptureManager.onTouchReceived(0.2f, 0.2f)
+        // Send touch event (0.9f, 0.9f)
+        ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
 
-        // It should center as normal
-        assertEquals(2880f, ScreenCaptureManager.offsetX.value, 0.001f)
-        assertEquals(1620f, ScreenCaptureManager.offsetY.value, 0.001f)
+        // It should center as normal: targetSrcX = 0.5f
+        val cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
+        assertEquals(0.5f, cutout.srcX, 0.001f)
 
         // Clean up mock
         MacroExecutor.setRunningMacroIdsForTest(emptySet())

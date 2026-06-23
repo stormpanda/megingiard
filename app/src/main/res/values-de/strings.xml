@@ -256,6 +256,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_mirror_follow_smoothing_desc">Sanftes Verschieben des Ausschnitts mit exponentieller Glättung</string>
     <string name="settings_mirror_follow_disable_during_macro">Während Makroausführung deaktivieren</string>
     <string name="settings_mirror_follow_disable_during_macro_desc">Pausiert die Hintergrund-Verfolgung vorübergehend, solange ein Makro abgespielt wird, damit Touch-Eingaben im Makro den Ausschnitt nicht beeinflussen</string>
+    <string name="settings_section_cutouts">Ausschnitte</string>
+    <string name="settings_mirror_no_cutouts">Keine Ausschnitte definiert. Füge Ausschnitte im Viewport-Editor hinzu.</string>
+    <string name="settings_mirror_follow_touch_exclusivity_hint">Hinweis: Die Touch-Verfolgung kann nur für jeweils einen Ausschnitt aktiv sein.</string>
+
 
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
     <string name="settings_macropad_ambient_hint">Startet Bildschirmspiegelung automatisch (einmalige Berechtigung erforderlich)</string>

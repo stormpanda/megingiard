@@ -64,6 +64,9 @@ import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
+import androidx.compose.ui.text.style.TextAlign
+import kotlin.math.roundToInt
+
 
 private const val TAG = "BackgroundSettingsOverlay"
 
@@ -202,7 +205,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
                     AsoSectionHeader(text = stringResource(R.string.settings_section_general))
 
-                    // ── Dim slider ────────────────────────────────────────────
                     Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
                         AsoSliderRow(
                             label = labelDim,
@@ -224,86 +226,191 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 ))
                             },
                         )
-                    }
 
-                    AsoSectionHeader(text = stringResource(R.string.settings_section_background_following))
+                        AppDivider()
 
-                    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
                         AppSettingsRow {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = stringResource(R.string.settings_mirror_follow_touch),
+                                    text = stringResource(R.string.mirror_crossfade_label),
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                val crossfadeText = when (currentLayout.mirrorCrossfadeBlendWidth.roundToInt()) {
+                                    in 0..12 -> stringResource(R.string.mirror_crossfade_strength_off)
+                                    in 13..37 -> stringResource(R.string.mirror_crossfade_strength_light)
+                                    in 38..62 -> stringResource(R.string.mirror_crossfade_strength_medium)
+                                    in 63..87 -> stringResource(R.string.mirror_crossfade_strength_strong)
+                                    else -> stringResource(R.string.mirror_crossfade_strength_max)
+                                }
+                                Text(text = crossfadeText, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Slider(
+                                modifier = Modifier.weight(2f),
+                                value = currentLayout.mirrorCrossfadeBlendWidth,
+                                onValueChange = { value ->
+                                    val idx = (value / 25f).roundToInt().coerceIn(0, 4)
+                                    commitLayout { copy(mirrorCrossfadeBlendWidth = idx * 25f) }
+                                },
+                                valueRange = 0f..100f,
+                                steps = 3,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = colors.accent,
+                                    activeTrackColor = colors.accent,
+                                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
+                                ),
+                            )
+                        }
+
+                        AppDivider()
+
+                        AppSettingsRow {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_disable_during_macro),
                                     color = colors.onSurface,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                                 Text(
-                                    text = stringResource(R.string.settings_mirror_follow_touch_desc),
+                                    text = stringResource(R.string.settings_mirror_follow_disable_during_macro_desc),
                                     color = colors.onSurfaceSecondary,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
                             Switch(
-                                checked = currentLayout.mirrorFollowActive,
+                                checked = currentLayout.mirrorFollowDisableDuringMacro,
                                 onCheckedChange = {
-                                    AppLog.d(TAG, "mirrorFollowActive → $it")
-                                    commitLayout { copy(mirrorFollowActive = it) }
-                                    ScreenCaptureManager.setFollowActive(it, persist = false)
+                                    AppLog.d(TAG, "mirrorFollowDisableDuringMacro → $it")
+                                    commitLayout { copy(mirrorFollowDisableDuringMacro = it) }
                                 }
                             )
                         }
-                        if (currentLayout.mirrorFollowActive) {
-                            AppDivider()
-                            AppSettingsRow {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_smoothing),
-                                        color = colors.onSurface,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_smoothing_desc),
-                                        color = colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
+                    }
+
+                    AsoSectionHeader(text = stringResource(R.string.settings_section_cutouts))
+
+                    if (currentLayout.mirrorCutouts.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(colors.surface)
+                                .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_mirror_no_cutouts),
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
+                            currentLayout.mirrorCutouts.forEachIndexed { index, cutout ->
+                                if (index > 0) {
+                                    AppDivider()
                                 }
-                                Switch(
-                                    checked = currentLayout.mirrorSmoothing,
-                                    onCheckedChange = {
-                                        AppLog.d(TAG, "mirrorSmoothing → $it")
-                                        commitLayout { copy(mirrorSmoothing = it) }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V)
+                                ) {
+                                    Text(
+                                        text = cutout.name.ifBlank { "Cutout ${index + 1}" },
+                                        color = colors.onSurface,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+
+                                    // Follow Touch Switch
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_follow_touch),
+                                                color = colors.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_follow_touch_desc),
+                                                color = colors.onSurfaceSecondary,
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                        Switch(
+                                            checked = cutout.followTouch,
+                                            onCheckedChange = { isChecked ->
+                                                AppLog.d(TAG, "cutout '${cutout.name}' followTouch → $isChecked")
+                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                                    if (c.id == cutout.id) {
+                                                        c.copy(followTouch = isChecked)
+                                                    } else {
+                                                        c.copy(followTouch = false)
+                                                    }
+                                                }
+                                                commitLayout {
+                                                    copy(
+                                                        mirrorCutouts = updatedCutouts,
+                                                        mirrorFollowActive = isChecked
+                                                    )
+                                                }
+                                                ScreenCaptureManager.setFollowActive(isChecked, persist = false)
+                                            }
+                                        )
                                     }
-                                )
+
+                                    // Motion Smoothing Switch
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_follow_smoothing),
+                                                color = colors.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_follow_smoothing_desc),
+                                                color = colors.onSurfaceSecondary,
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                        Switch(
+                                            checked = cutout.motionSmoothing,
+                                            onCheckedChange = { isChecked ->
+                                                AppLog.d(TAG, "cutout '${cutout.name}' motionSmoothing → $isChecked")
+                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                                    if (c.id == cutout.id) c.copy(motionSmoothing = isChecked) else c
+                                                }
+                                                commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                                            }
+                                        )
+                                    }
+                                }
                             }
+
                             AppDivider()
-                            AppSettingsRow {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_disable_during_macro),
-                                        color = colors.onSurface,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_disable_during_macro_desc),
-                                        color = colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                                Switch(
-                                    checked = currentLayout.mirrorFollowDisableDuringMacro,
-                                    onCheckedChange = {
-                                        AppLog.d(TAG, "mirrorFollowDisableDuringMacro → $it")
-                                        commitLayout { copy(mirrorFollowDisableDuringMacro = it) }
-                                    }
+                            // Footer caption
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = ASO_ROW_PADDING_H, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_touch_exclusivity_hint),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
                                 )
                             }
                         }
                     }
-
-
                 }
             }
         }
-
     }
 }
 

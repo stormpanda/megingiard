@@ -173,34 +173,19 @@ object ScreenCaptureManager {
             }
         }
         val layout = MacroPadState.activeLayout.value
-        val firstCutout = layout?.mirrorCutouts?.firstOrNull()
-        val sw = _surfaceWidth.value
-        val sh = _surfaceHeight.value
-
-        val (s, ox, oy) = if (layout?.mirrorMultiMode == false) {
-            Triple(layout.mirrorSavedScale, layout.mirrorSavedOffsetX, layout.mirrorSavedOffsetY)
-        } else if (firstCutout != null && sw > 0f && sh > 0f) {
-            val scale = 1.0f / firstCutout.srcWidth
-            val offsetX = -(firstCutout.srcX - 0.5f + firstCutout.srcWidth / 2f) * (sw * scale)
-            val offsetY = -(firstCutout.srcY - 0.5f + firstCutout.srcHeight / 2f) * (sh * scale)
-            Triple(scale, offsetX, offsetY)
-        } else {
-            Triple(1f, 0f, 0f)
-        }
-
         if (active) {
-            setScale(s)
-            setOffsetX(ox)
-            setOffsetY(oy)
-            MirrorViewportController.setValues(s, ox, oy)
+            followAnimationJob?.cancel()
+            followAnimationJob = null
+            if (layout != null) {
+                _cutouts.value = layout.mirrorCutouts
+            }
             AppStateManager.setViewportEditActive(false)
         } else {
             followAnimationJob?.cancel()
             followAnimationJob = null
-            setScale(s)
-            setOffsetX(ox)
-            setOffsetY(oy)
-            MirrorViewportController.setValues(s, ox, oy)
+            if (layout != null) {
+                _cutouts.value = layout.mirrorCutouts
+            }
         }
     }
 
@@ -218,56 +203,63 @@ object ScreenCaptureManager {
     }
 
     private fun updateFollowCenter(nx: Float, ny: Float) {
-        val sw = _surfaceWidth.value
-        val sh = _surfaceHeight.value
-        if (sw <= 0f || sh <= 0f) return
+        val targetCutout = _cutouts.value.find { it.followTouch } ?: return
+        val targetSrcX = (nx - targetCutout.srcWidth / 2f).coerceIn(0f, 1f - targetCutout.srcWidth)
+        val targetSrcY = (ny - targetCutout.srcHeight / 2f).coerceIn(0f, 1f - targetCutout.srcHeight)
 
-        val currentScale = _scale.value
-        val targetOffsetX = -(nx - 0.5f) * sw * currentScale
-        val targetOffsetY = -(ny - 0.5f) * sh * currentScale
-
-        val layout = MacroPadState.activeLayout.value
-        val smoothing = layout?.mirrorSmoothing ?: true
+        val smoothing = targetCutout.motionSmoothing
         if (!smoothing) {
             followAnimationJob?.cancel()
             followAnimationJob = null
-            _offsetX.value = targetOffsetX
-            _offsetY.value = targetOffsetY
+            val updated = _cutouts.value.map {
+                if (it.id == targetCutout.id) it.copy(srcX = targetSrcX, srcY = targetSrcY) else it
+            }
+            _cutouts.value = updated
         } else {
-            targetFollowX = targetOffsetX
-            targetFollowY = targetOffsetY
-            ensureFollowAnimationRunning()
+            targetFollowX = targetSrcX
+            targetFollowY = targetSrcY
+            ensureFollowAnimationRunning(targetCutout.id)
         }
     }
 
-    private fun ensureFollowAnimationRunning() {
+    private fun ensureFollowAnimationRunning(cutoutId: String) {
         if (followAnimationJob?.isActive == true) return
         followAnimationJob = scope.launch {
             val lerpFactor = 0.15f
-            val epsilon = 0.5f // Stop loop when within 0.5 pixels to prevent endless calculations
+            val epsilon = 0.001f
 
             while (isActive) {
                 val currTargetX = targetFollowX
                 val currTargetY = targetFollowY
 
-                val curX = _offsetX.value
-                val curY = _offsetY.value
+                val list = _cutouts.value
+                val curCutout = list.find { it.id == cutoutId }
+                if (curCutout == null) break
+                val curX = curCutout.srcX
+                val curY = curCutout.srcY
 
                 val dx = currTargetX - curX
                 val dy = currTargetY - curY
 
-                if (abs(dx) < epsilon && abs(dy) < epsilon) {
-                    _offsetX.value = currTargetX
-                    _offsetY.value = currTargetY
+                if (kotlin.math.abs(dx) < epsilon && kotlin.math.abs(dy) < epsilon) {
+                    val updated = _cutouts.value.map {
+                        if (it.id == cutoutId) it.copy(srcX = currTargetX, srcY = currTargetY) else it
+                    }
+                    _cutouts.value = updated
                     break
                 } else {
-                    _offsetX.value = curX + dx * lerpFactor
-                    _offsetY.value = curY + dy * lerpFactor
+                    val nextX = curX + dx * lerpFactor
+                    val nextY = curY + dy * lerpFactor
+                    val updated = _cutouts.value.map {
+                        if (it.id == cutoutId) it.copy(srcX = nextX, srcY = nextY) else it
+                    }
+                    _cutouts.value = updated
                 }
                 delay(10)
             }
         }
     }
+
 
     fun setPrivilegedMirror(active: Boolean) {
         AppLog.d(TAG, "setPrivilegedMirror($active)")

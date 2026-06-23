@@ -89,13 +89,14 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M10: Follow Touch Mode
 
-- A **Background mirror follows touch** switch MUST be available in the dedicated **Background following** section of the background settings overlay.
-- When Follow Touch Mode is enabled, the screen mirror viewport MUST automatically center on the spot last touched on the primary screen, using the zoom level that is already saved in the layout's viewport configuration.
-- Activating Follow Touch Mode MUST restore the saved viewport (scale + offset) as the starting position. Deactivating it MUST restore the same saved viewport, discarding any panning drift accumulated during tracking. Follow Touch Mode MUST never write to the saved viewport.
-- A **Smoothing** switch (ON by default) MUST be dynamically displayed directly below the primary toggle only when Follow Touch Mode is active.
-- When Smoothing is enabled, the viewport panning MUST glide smoothly to target coordinates using exponential easing. When disabled, the panning MUST snap instantly.
-- A **Disable during macro execution** switch MUST be dynamically displayed directly below the Smoothing toggle when Follow Touch Mode is active. When enabled, touch tracking and viewport centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
-- Activating Viewport Edit Mode MUST automatically turn off Follow Touch Mode to prevent pan/zoom gesture and coordinate conflicts (mutual exclusion).
+- Touch tracking (Follow Touch) switches MUST be available for each individual cutout under the **Cutouts** section of the background settings overlay.
+- When Follow Touch Mode is enabled for a cutout, that cutout\'s crop viewport MUST automatically center on the spot last touched on the primary screen, using the source crop dimensions saved in the layout.
+- Activating Follow Touch Mode for a cutout restores the cutout\'s original crop coordinates when disabled, discarding any panning drift accumulated during tracking.
+- A **Smoothing** switch (ON by default) MUST be available for each individual cutout in the background settings overlay.
+- When Smoothing is enabled for a cutout, its crop viewport panning MUST glide smoothly to target coordinates using exponential easing. When disabled, the panning MUST snap instantly.
+- A **Disable during macro execution** switch MUST be available under the General section of the background settings overlay. When enabled, touch tracking and crop centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
+- Activating Viewport Edit Mode MUST automatically turn off Follow Touch Mode for all cutouts to prevent gesture and coordinate conflicts (mutual exclusion).
+
 
 ### FR-M11: Multi-Cutout Screen Mirroring
 
@@ -284,20 +285,21 @@ Overlay controls are rendered separately from the gesture surface so gesture det
 
 ### Follow Touch Mode
 
-Follow Touch Mode centers the viewport in real-time on the spot last touched on the primary screen, using the zoom level already saved in the layout's viewport configuration. It operates as follows:
+Follow Touch Mode centers the designated cutout's source crop viewport in real-time on the spot last touched on the primary screen. It operates as follows:
 
-1. **Viewport Restore on Toggle:** When Follow Touch Mode is activated, `ScreenCaptureManager.setFollowActive(true)` restores the layout's saved viewport (`mirrorSavedScale`, `mirrorSavedOffsetX`, `mirrorSavedOffsetY`) as the initial display state. When deactivated, the same saved viewport is restored — discarding any panning drift accumulated during tracking. Follow mode never writes to the saved viewport.
+1. **Viewport Restore on Toggle:** When Follow Touch Mode is activated or deactivated, `ScreenCaptureManager.setFollowActive` restores the original, un-drifted `mirrorCutouts` to `ScreenCaptureManager.cutouts` as the baseline. It never persists transient changes to layout storage.
 2. **Touchscreen Events Listening:** A background thread manages `TouchScreenObserver`, which directly opens the world-readable `/dev/input/event6` touchscreen node, parses raw Linux `input_event` structs, and maps absolute sensor coordinates to logical landscape positions:
    $$normalizedX = \frac{sensorY}{1920}$$
    $$normalizedY = 1.0 - \frac{sensorX}{1080}$$
-3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from touch, `ScreenCaptureManager` calculates the target panning offset to place the target coordinate perfectly in the center of the display, allowing the content to be panned into empty black space:
-   $$targetOffsetX = -(nx - 0.5) \times sw \times scale$$
-   $$targetOffsetY = -(ny - 0.5) \times sh \times scale$$
-4. **Smoothing:** When Smoothing is enabled in Background Settings, a coroutine-based loop running at 100fps smoothly interpolates the current viewport offsets towards the target offsets using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the camera glides by a percentage (15%) of the remaining distance to the target, ensuring tracking that naturally accelerates and decelerates:
+3. **Centering Mathematics:** Using the normalized landscape target `(nx, ny)` from touch, `ScreenCaptureManager` calculates the target source crop top-left `(targetSrcX, targetSrcY)` to place the touched coordinate at the center of the cutout's crop window:
+   $$targetSrcX = (nx - \frac{srcWidth}{2}).coerceIn(0.0, 1.0 - srcWidth)$$
+   $$targetSrcY = (ny - \frac{srcHeight}{2}).coerceIn(0.0, 1.0 - srcHeight)$$
+4. **Smoothing:** When Smoothing is enabled for the follow-touch cutout, a coroutine-based loop running at 100fps smoothly interpolates the cutout's `srcX` and `srcY` coordinates towards the target coordinates using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the coordinates glide by a percentage (15%) of the remaining distance to the target, ensuring tracking that naturally accelerates and decelerates:
    $$current = current + (target - current) \times 0.15$$
-   If Smoothing is disabled, the viewport snaps instantly to the target coordinates.
-5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid pan/zoom coordinate conflicts.
+   If Smoothing is disabled, the viewport coordinates snap instantly to the target coordinates.
+5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid coordinate conflicts.
 6. **Macro Execution Guard:** When the "Disable during macro execution" setting is active, `ScreenCaptureManager.onTouchReceived(nx, ny)` checks `MacroExecutor.runningMacroIds` before proceeding. If any macro is currently executing, it returns early without updating the target offsets, effectively pausing the camera tracking.
+
 
 ### Mode Switching: `show()` / `hide()` vs. `dismiss()`
 
