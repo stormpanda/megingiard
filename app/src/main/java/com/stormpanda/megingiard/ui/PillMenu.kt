@@ -127,7 +127,6 @@ fun PillMenu(
                     ),
                 onStart = {
                     AppStateManager.requestMirrorStart()
-                    onDismiss()
                 },
                 onStop = {
                     AppStateManager.requestMirrorStop()
