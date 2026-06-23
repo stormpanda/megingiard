@@ -487,13 +487,13 @@ To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support 
 To stabilize mirrored UI elements against fast-moving backgrounds, we support motion smoothing:
 
 1. **Temporal Accumulator**:
-   If any cutout has `motionSmoothing = true` enabled, `MultiCutoutContainer` creates and maintains two master bitmaps: `tempMasterBitmap` and `accumulatedMasterBitmap`. On every updated surface texture callback (`onSurfaceTextureUpdated`), the current frame of the `TextureView` is read into `tempMasterBitmap` and blended into `accumulatedMasterBitmap` using an Exponential Moving Average (EMA):
+   If any cutout has `motionSmoothing = true` enabled, `MultiCutoutContainer` creates and maintains a map of `Accumulator` instances for each unique active strength value. For each unique strength, a `temp` and `accumulated` master bitmap pair is allocated. On every updated surface texture callback (`onSurfaceTextureUpdated`), the current frame of the `TextureView` is read into the `temp` master bitmap and blended into the `accumulated` master bitmap using an Exponential Moving Average (EMA):
    \[
    B_{\text{accum}} = (1 - \alpha) B_{\text{accum}} + \alpha B_{\text{temp}}
    \]
-   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the Screen Mirroring settings menu mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength). The strength parameter is saved in the active layout's `mirrorSmoothingStrength` property.
+   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the Screen Mirroring settings menu mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength). The strength parameter is saved in the individual cutout's `motionSmoothingStrength` property.
 2. **Smooth Drawing**:
-   Cutouts with motion smoothing active draw directly from `accumulatedMasterBitmap` in `MultiCutoutContainer.dispatchDraw()`.
+   Cutouts with motion smoothing active draw directly from the `accumulated` bitmap of their respective strength in `MultiCutoutContainer.dispatchDraw()`.
 3. **Active Rendering Loop (Freeze Prevention)**:
    If all active cutouts have motion smoothing enabled, none of them draw `masterView` directly. To prevent the hardware renderer from skipping `masterView` (which would stall the `SurfaceTexture` queue and stop `onSurfaceTextureUpdated` updates), a dummy 1x1 draw of `masterView` is forced using a clipped canvas.
 

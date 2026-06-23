@@ -625,6 +625,34 @@ class MirrorCoordinateTransformTest {
         assertEquals(60, decoded.mirrorMaxFps)
         assertEquals(85, decoded.mirrorSmoothingStrength)
     }
+
+    @Test
+    fun `ScreenCutout serialization round-trip preserves motionSmoothingStrength`() {
+        val original = ScreenCutout(
+            id = "cutout-test",
+            name = "Test Cutout",
+            srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
+            destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f,
+            motionSmoothingStrength = 80
+        )
+        val jsonString = Json.encodeToString(original)
+        val decoded = Json.decodeFromString<ScreenCutout>(jsonString)
+        assertEquals(80, decoded.motionSmoothingStrength)
+    }
+
+    @Test
+    fun `ScreenCutout deserialization of legacy JSON defaults motionSmoothingStrength`() {
+        val legacyJson = """
+            {
+                "id": "cutout-legacy",
+                "name": "Legacy Cutout",
+                "srcX": 0.0, "srcY": 0.0, "srcWidth": 1.0, "srcHeight": 1.0,
+                "destX": 0.0, "destY": 0.0, "destWidth": 1.0, "destHeight": 1.0
+            }
+        """.trimIndent()
+        val decoded = Json.decodeFromString<ScreenCutout>(legacyJson)
+        assertEquals(85, decoded.motionSmoothingStrength)
+    }
 }
 
 

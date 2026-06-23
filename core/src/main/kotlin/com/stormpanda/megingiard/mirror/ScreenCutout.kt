@@ -52,6 +52,7 @@ data class ScreenCutout(
     val opacity: Float = 1.0f,
     val keepAspectRatio: Boolean = false,
     val motionSmoothing: Boolean = false,
+    val motionSmoothingStrength: Int = 85,
     val followTouch: Boolean = false,
     val touchProjectionEnabled: Boolean = false,
     val shape: CutoutShape = CutoutShape.RECTANGLE,

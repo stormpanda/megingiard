@@ -395,7 +395,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
                                             val sliderValue = if (cutout.motionSmoothing) {
-                                                when (currentLayout.mirrorSmoothingStrength) {
+                                                when (cutout.motionSmoothingStrength) {
                                                     ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
                                                     ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
                                                     ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
@@ -420,7 +420,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         Slider(
                                             modifier = Modifier.weight(1.5f),
                                             value = if (cutout.motionSmoothing) {
-                                                when (currentLayout.mirrorSmoothingStrength) {
+                                                when (cutout.motionSmoothingStrength) {
                                                     ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
                                                     ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
                                                     ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
@@ -436,17 +436,19 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                                     ASO_SMOOTHING_LIGHT.toInt() -> ASO_SMOOTHING_VAL_LIGHT
                                                     ASO_SMOOTHING_MEDIUM.toInt() -> ASO_SMOOTHING_VAL_MEDIUM
                                                     ASO_SMOOTHING_STRONG.toInt() -> ASO_SMOOTHING_VAL_STRONG
-                                                    else -> currentLayout.mirrorSmoothingStrength
+                                                    else -> cutout.motionSmoothingStrength
                                                 }
                                                 AppLog.d(TAG, "cutout '${cutout.name}' smoothing slider → $idx (strength: $strength)")
                                                 val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                                                    if (c.id == cutout.id) c.copy(motionSmoothing = isSmooth) else c
+                                                    if (c.id == cutout.id) {
+                                                        c.copy(
+                                                            motionSmoothing = isSmooth,
+                                                            motionSmoothingStrength = strength
+                                                        )
+                                                    } else c
                                                 }
                                                 commitLayout {
-                                                    copy(
-                                                        mirrorCutouts = updatedCutouts,
-                                                        mirrorSmoothingStrength = strength
-                                                    )
+                                                    copy(mirrorCutouts = updatedCutouts)
                                                 }
                                             },
                                             valueRange = ASO_SMOOTHING_OFF..ASO_SMOOTHING_STRONG,
