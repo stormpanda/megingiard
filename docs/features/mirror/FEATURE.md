@@ -17,29 +17,30 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The mirror MUST be DRM-free; it MUST NOT produce a black screen on hardware-secured content.
 - `ImageReader` and software bitmap-copy approaches are explicitly excluded due to latency and DRM interference.
 
-### FR-M2: Viewport Management (Pan & Zoom)
+### FR-M2: Cutout Layout Editor (Placement & Sizing)
 
-- Zoom and pan gestures MUST only be active when the user explicitly enters **Viewport Edit Mode** (`isViewportEditActive = true`) via the controls panel. Outside of Viewport Edit Mode, all pan and zoom gestures are locked.
-- While Viewport Edit Mode is active, users MUST be able to zoom into the mirrored image using a two-finger **Pinch-to-Zoom** gesture (range: 1× to 10×).
-- While Viewport Edit Mode is active, users MUST be able to pan the zoomed image by dragging with one finger.
-- Panning MUST be gallery-style constrained: the viewport MUST be hard-clamped to the exact image edges at the current zoom level — panning into empty/black space is prohibited.
-- A **Snap-Back** mechanic MUST restore the viewport to `scale = 1.0, offset = (0, 0)` automatically when:
-  - the user pinches out below the threshold of **1.15×**, or
-  - the user performs a **double-tap** on the screen.
-- Snap-back MUST animate smoothly (not jump).
+- Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the Pill Menu control card. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled.
+- While Screen Mirroring edit mode is active, users MUST be able to arrange cutout destination bounds on the secondary display:
+  - **Selection**: Tapping a cutout selects it.
+  - **Moving**: Dragging a cutout box moves it across the secondary display.
+  - **Resizing**: A selected cutout shows corner handles. Dragging these handles resizes the cutout destination rectangle.
+- Movement and resizing MUST enforce boundary collisions (no off-screen placements, sliding collision clamping, and Z-ordering overlap prevention).
+- Changing the primary display source crop area is configured by clicking the **Edit Crop** button in the layout editor toolbar, which launches `CropSelectorActivity` via `AppStateManager.setActiveCropCutoutId(...)`.
 
 ### FR-M3: Freeze Frame
 
 - A **Freeze** button MUST be available in the Mirror Control Card of the Pill Menu.
 - Activating Freeze MUST capture the current live frame as a high-resolution static image ("frozen frame").
-- The frozen frame MUST remain fully interactive: entering Viewport Edit Mode allows pan and zoom to work on the frozen frame identically to the live mode.
+- The frozen frame MUST remain fully interactive: entering Screen Mirroring edit mode allows moving and resizing the cutouts on the frozen frame identically to the live mode.
 - **Unfreezing** resumes the live mirror from the current live state.
 - The frozen frame serves as a reference (e.g. for in-game puzzles or map details) without consuming resources on the live stream.
 
 ### FR-M4: Controls Access & Pill Menu
 
-- All mirror controls (Play/Stop, Freeze/Unfreeze, and Edit Viewport) MUST reside inside the **Mirror Control Card** at the top of the **Pill Menu** overlay, while **Touch Projection** is configured on a per-cutout level in the layout settings overlay.
+- All mirror controls (Play/Stop, Freeze/Unfreeze, and Screen Mirroring edit button) MUST reside inside the **Mirror Control Card** at the top of the **Pill Menu** overlay, while **Touch Projection** is configured on a per-cutout level in the background settings overlay.
 - An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on pill position) over the idle pill indicator MUST show the **Pill Menu** overlay panel.
+- The **Mirror Control Card** hosts the Play/Stop and Freeze/Unfreeze icon buttons on the right, and the **Screen Mirroring** action button (with an Edit icon) on the left.
+- Clicking the **Screen Mirroring** button enters the Screen Mirroring edit mode (cutout layout editor). The layout editor toolbar contains a settings cogwheel button to open the background settings overlay (`BackgroundSettingsOverlay`).
 - There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Pill Menu overlay until it is manually dismissed by tapping the scrim or close elements.
 - Mirror control icon buttons in the Pill Menu MUST use ergonomic touch targets (minimum 48 dp).
 - Mirror control labels MAY be shown below icon buttons via a global setting to improve discoverability.
@@ -50,11 +51,10 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Stopping MUST release the `MediaProjection` (or privileged binder session) and cease all capture activity.
 - After stopping, the Pill Menu control card updates to show a "Play" button to re-initiate capture with a new consent/direct flow.
 
-### FR-M6: View Lock
+### FR-M6: View Lock (Legacy background-only state)
 
-- A **Lock** or **Unlock** mechanism is integrated into Viewport Edit and Touch Projection states.
-- Activating **Touch Projection** on any cutout automatically activates **View Lock** (zoom/pan gestures are disabled during touch projection to maintain mapping accuracy).
-- Unlocking the view automatically deactivates Touch Projection on all cutouts, restoring standard viewport operations.
+- View Lock (`isLocked` in `ScreenCaptureManager`) is a legacy background state flow that is maintained internally. It is no longer exposed as a user-facing toggle button or editing restriction.
+- Activating Touch Projection on any cutout internally sets `isLocked = true` to maintain mapping stability in background logic, but does not affect the layout editor.
 
 ### FR-M7: Touch Projection
 
@@ -63,10 +63,10 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, check if touch projection is enabled for that cutout, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them.
 - Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Pill Menu.
 - When the user's finger moves outside the visible content area of the matched cutout, an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
-- Enabling Touch Projection on any cutout MUST automatically activate View Lock (zoom/pan during forwarding is not supported).
+- Enabling Touch Projection on any cutout MUST automatically activate View Lock internally (preventing follow-touch and other background viewport mutations).
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
-- Touch Projection settings are stored persistently in the layout config but their runtime session state remains active until explicitly turned off in settings, the view is unlocked, or the mirror session is stopped.
+- Touch Projection settings are stored persistently in the layout config but their runtime session state remains active until explicitly turned off in settings or the mirror session is stopped.
 
 ### FR-M8: Auto-start Gating (Global + Per-Layout Memory)
 
@@ -89,13 +89,13 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M10: Follow Touch Mode
 
-- Touch tracking (Follow Touch) switches MUST be available for each individual cutout under the **Cutouts** section of the background settings overlay.
-- When Follow Touch Mode is enabled for a cutout, that cutout\'s crop viewport MUST automatically center on the spot last touched on the primary screen, using the source crop dimensions saved in the layout.
-- Activating Follow Touch Mode for a cutout restores the cutout\'s original crop coordinates when disabled, discarding any panning drift accumulated during tracking.
-- A **Smoothing** switch (ON by default) MUST be available for each individual cutout in the background settings overlay.
-- When Smoothing is enabled for a cutout, its crop viewport panning MUST glide smoothly to target coordinates using exponential easing. When disabled, the panning MUST snap instantly.
-- A **Disable during macro execution** switch MUST be available under the General section of the background settings overlay. When enabled, touch tracking and crop centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
-- Activating Viewport Edit Mode MUST automatically turn off Follow Touch Mode for all cutouts to prevent gesture and coordinate conflicts (mutual exclusion).
+- Touch tracking (Follow Touch) is configured via a dropdown selection in the General section of the background settings overlay. The dropdown contains "Off" and all cutouts defined in the active layout as options. If a cutout is deleted, the selection automatically falls back to "Off".
+- When Follow Touch Mode is active for a cutout, that cutout's crop viewport MUST center on the spot last touched on the primary screen, using the source crop dimensions saved in the layout.
+- Activating Follow Touch Mode for a cutout restores the cutout's original crop coordinates when disabled, discarding any panning drift accumulated during tracking.
+- A **Smoothing** setting MUST be available for each individual cutout in the background settings overlay, rendered as a 4-stop discrete slider (Off, Light, Medium, Strong).
+- When Smoothing is enabled (non-Off stops) for a cutout, its crop viewport panning MUST glide smoothly to target coordinates using exponential easing (blending strength dictated by the slider position). When set to "Off", the panning MUST snap instantly.
+- By default, touch tracking and crop centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
+- Entering Screen Mirroring edit mode (`isViewportEditActive = true`) MUST automatically suspend Follow Touch Mode to prevent gesture and coordinate conflicts (mutual exclusion).
 
 
 ### FR-M11: Multi-Cutout Screen Mirroring
@@ -136,8 +136,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M15: Motion Smoothing / Temporal Blending
 
-- When a cutout is selected in the layout-editor, the user MUST be able to configure its "Motion Smoothing" behavior using a 4-stop discrete slider (Off, Light at 75%, Medium at 80%, and Strong at 85% strength) in the editor panel.
-- Selecting "Off" disables motion smoothing for that cutout. Selecting "Light", "Medium", or "Strong" enables motion smoothing and applies the corresponding temporal blending strength.
+- The user MUST be able to configure the "Motion Smoothing" behavior of each individual cutout in the background settings overlay using a 4-stop discrete slider (Off, Light, Medium, and Strong stops, mapping to 75%, 80%, and 85% temporal blending strength respectively). The percentage values are hidden from the user interface.
+- Selecting "Off" disables motion smoothing for that cutout. Selecting "Light", "Medium", or "Strong" enables motion smoothing and applies the corresponding temporal blending strength layout-wide.
 - When enabled, the cutout frame MUST be temporally smoothed using exponential moving average (EMA) blending to stabilize UI elements.
 - Motion smoothing MUST function correctly when enabled on all cutouts, without freezing the mirror display rendering.
 
@@ -247,28 +247,14 @@ if (srcRatio > targetRatio) {
 
 The `SurfaceView` uses `setFixedSize(srcWidth, srcHeight)` so the hardware buffer allocation exactly matches the source resolution. The rendered display size is constrained via `FrameLayout.LayoutParams`.
 
-### Pan & Zoom
+### Cutout Layout Editor & Viewport Centering
 
-State flows through three layers:
+The layout editor (`CutoutLayoutEditor`) allows user interaction for moving and resizing cutouts, and crop configuration.
 
-| Layer              | Mechanism                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| Gesture capture    | `detectTapGestures` (tap, double-tap) + `detectTransformGestures` (loop) in `MirrorScreen` |
-| Animation          | Three `Animatable` instances: `animScale`, `animOffsetX`, `animOffsetY`                    |
-| Hardware transform | `ScreenCaptureManager` StateFlows → `SurfaceView.scaleX / translationX / translationY`     |
+For Follow Touch mode, viewport scale/offset are used to center the crop of the single follow-touch cutout.
+- **Viewport Restoration:** When a layout is loaded, `MirrorViewportController.restoreFromLayout()` computes the initial viewport scale/offset to center the crop of the first cutout, or restores from the layout's saved viewport values.
+- **Debounced Viewport Save:** During follow-touch tracking, viewport offsets mutate dynamically. `MirrorViewportController` debounce-saves the updated viewport parameters (`scale`, `offsetX`, `offsetY`) to the active layout when the "Remember viewport" setting is enabled.
 
-**Gallery-style boundary clamping:**
-
-```kotlin
-val maxX = (surfaceWidth  * (newScale - 1f)) / 2f
-val maxY = (surfaceHeight * (newScale - 1f)) / 2f
-animOffsetX.snapTo((animOffsetX.value + pan.x).coerceIn(-maxX, maxX))
-animOffsetY.snapTo((animOffsetY.value + pan.y).coerceIn(-maxY, maxY))
-```
-
-**State sync via `snapshotFlow`:** A single `LaunchedEffect(Unit)` uses `snapshotFlow { Triple(scale, offsetX, offsetY) }.collectLatest { }` to sync animated values to `ScreenCaptureManager` — avoiding a `LaunchedEffect` that restarts on every animation frame (see AGENTS.md §9.1).
-
-Overlay controls are rendered separately from the gesture surface so gesture detectors do not intercept menu interactions.
 
 ### Freeze Frame
 
@@ -296,9 +282,9 @@ Follow Touch Mode centers the designated cutout's source crop viewport in real-t
    $$targetSrcY = (ny - \frac{srcHeight}{2}).coerceIn(0.0, 1.0 - srcHeight)$$
 4. **Smoothing:** When Smoothing is enabled for the follow-touch cutout, a coroutine-based loop running at 100fps smoothly interpolates the cutout's `srcX` and `srcY` coordinates towards the target coordinates using stateless exponential decay (a frame-rate independent Lerp tween). Every 10ms, the coordinates glide by a percentage (15%) of the remaining distance to the target, ensuring tracking that naturally accelerates and decelerates:
    $$current = current + (target - current) \times 0.15$$
-   If Smoothing is disabled, the viewport coordinates snap instantly to the target coordinates.
-5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and manual Viewport Edit Mode are mutually exclusive to avoid coordinate conflicts.
-6. **Macro Execution Guard:** When the "Disable during macro execution" setting is active, `ScreenCaptureManager.onTouchReceived(nx, ny)` checks `MacroExecutor.runningMacroIds` before proceeding. If any macro is currently executing, it returns early without updating the target offsets, effectively pausing the camera tracking.
+   If Smoothing is set to "Off", the viewport coordinates snap instantly to the target coordinates.
+5. **Lifecycle and Mutual Exclusion:** The `TouchScreenObserver` background thread is started and stopped reactively via a Compose `LaunchedEffect` tied to `isFollowActive` and `capturing`. Follow Mode and Screen Mirroring edit mode are mutually exclusive to avoid coordinate conflicts.
+6. **Macro Execution Guard:** By default, `ScreenCaptureManager.onTouchReceived(nx, ny)` checks `MacroExecutor.runningMacroIds` before proceeding. If any macro is currently executing, it returns early without updating the target offsets, effectively pausing the camera tracking.
 
 
 ### Mode Switching: `show()` / `hide()` vs. `dismiss()`
@@ -417,7 +403,7 @@ Users can opt in to persisting specific mirror session states across restarts vi
 
 **Save flow:**
 
-- **Viewport (scale, offsetX, offsetY):** All gesture paths (main pan/zoom and viewport-edit overlay) route through `MirrorViewportController.applyZoomPan()` / `setValues()`. The controller combines `_scale/_offsetX/_offsetY` with `activeLayout.id`, forwards every change to `ScreenCaptureManager` (immediate), and after a **300 ms debounce** calls `MacroPadState.saveMirrorViewport(layoutId, scale, offsetX, offsetY)` — which writes to that exact layout and triggers `MacroPadSettings.saveMacroPadData()`.
+- **Viewport (scale, offsetX, offsetY):** During Follow Touch tracking, the viewport offsets are computed to center the target crop, which routes through `MirrorViewportController` to update the active layout's saved viewport parameters when the "Remember viewport" setting is enabled.
 - **Lock and touch-projection:** Tracked via `combine()` in a separate coroutine in `MirrorViewportController.startPersistence()`. **`distinctUntilChanged()`** prevents duplicate writes. **`drop(1)`** skips the initial emission. State is persisted immediately (no debounce) to `MirrorSettings.saveMirrorSessionState()`.
 - **On Stop:** `MirrorSettings.saveMirrorSessionState()` is called **before** `resetMirrorSessionState()` to ensure lock/projection state is persisted before the flows reset. Viewport is already persisted via the debounce path.
 
@@ -432,22 +418,6 @@ Users can opt in to persisting specific mirror session states across restarts vi
 
 **Layout-switch restore:** `MirrorViewportController.startPersistence()` also launches a coroutine that observes `MacroPadState.activeLayout.id`. When the layout changes while capturing, the controller first performs an immediate save of the previous layout (using its previous layout ID and current viewport values), then calls `restoreFromLayout()` for the new layout. This prevents cross-layout debounce bleed where a late debounce write could overwrite the next layout.
 
-**Viewport sync:** `MirrorScreen` contains a `LaunchedEffect(isCapturing)` that, when capturing starts, reads the current `ScreenCaptureManager` scale/offset values and calls `Animatable.snapTo()` to align the animation state with the restored values.
-
-### Pinch-to-Zoom While Projecting
-
-An optional setting ("Pinch-to-zoom while projecting", default off) allows the user to use two-finger pinch/pan gestures to adjust the viewport even while Touch Projection is active.
-
-**Behaviour:**
-
-- When enabled and Touch Projection is active, `pointerInput` Block 3 enters _multi-finger-only_ mode.
-- Events with **≥ 2 pressed pointers** are handled by Block 3 (zoom/pan applied, all changes consumed so Block 4 does not inject them).
-- Events with **1 pressed pointer** are **not consumed** by Block 3 and fall through to Block 4 for normal injection.
-- When a second finger lands while Block 4 has an active injection gesture, Block 4 gracefully sends a `UP` event to the target app — using the coordinates of the last successfully injected touch position (`lastInjectedNx`, `lastInjectedNy`) — before handing off to Block 3.
-- When fingers reduce from 2 → 1 → 0 after a pinch, Block 3 suppresses the lingering single-finger events to prevent a stray `DOWN` injection. After all fingers lift, snap-back logic runs as normal.
-- Two-finger touches are **never forwarded** to the primary display.
-
-**Setting storage:** `mirror_pinch_while_projecting` (`BooleanPreference`) in DataStore. Default: `false`.
 
 ### Auto-start Gating
 
