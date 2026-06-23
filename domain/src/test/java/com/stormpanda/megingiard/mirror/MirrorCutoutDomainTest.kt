@@ -179,4 +179,38 @@ class MirrorCutoutDomainTest {
         assertEquals(1, activeLayout.mirrorCutouts.size)
         assertEquals("c1", activeLayout.mirrorCutouts.first().id)
     }
+
+    @Test
+    fun `restoreFromLayout on layout with empty cutouts automatically populates it with default cutout`() {
+        val layoutWithEmptyCutouts = PadLayout(
+            id = "test-layout-empty-cutouts",
+            name = "Test Layout Empty Cutouts",
+            mirrorCutouts = emptyList()
+        )
+        val profile = PadProfile(
+            id = "test-profile-empty",
+            name = "Test Profile Empty",
+            layouts = listOf(layoutWithEmptyCutouts),
+            activeLayoutId = "test-layout-empty-cutouts"
+        )
+
+        MacroPadState.loadFrom(listOf(profile), "test-profile-empty")
+
+        // Set up capture source size and surface size in ScreenCaptureManager
+        ScreenCaptureManager.setCaptureSourceSize(1920, 1080)
+        ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
+
+        // Restore viewport / check layout - this should trigger the creation of a default cutout
+        MirrorViewportController.restoreFromLayout()
+
+        val activeLayout = MacroPadState.activeLayout.value
+        assertNotNull(activeLayout)
+        assertEquals(1, activeLayout!!.mirrorCutouts.size)
+        val defaultCutout = activeLayout.mirrorCutouts.first()
+        assertEquals(1f, defaultCutout.srcWidth, 0.001f)
+        assertEquals(1f, defaultCutout.srcHeight, 0.001f)
+        assertEquals(1f, defaultCutout.destWidth, 0.001f)
+        // Dest height = (1000 * 1080) / (1000 * 1920) = 1080 / 1920 = 0.5625f
+        assertEquals(0.5625f, defaultCutout.destHeight, 0.001f)
+    }
 }
