@@ -76,6 +76,7 @@ class TouchProjectionController(
 
         val cutouts = ScreenCaptureManager.cutouts.value
         for (cutout in cutouts) {
+            if (!cutout.touchProjectionEnabled) continue
             val destLeft = cutout.destX * boxW
             val destTop = cutout.destY * boxH
             val destWidth = cutout.destWidth * boxW

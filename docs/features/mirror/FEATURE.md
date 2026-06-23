@@ -38,7 +38,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M4: Controls Access & Pill Menu
 
-- All mirror controls (Play/Stop, Freeze/Unfreeze, Edit Viewport, and Touch Projection) MUST reside inside the **Mirror Control Card** at the top of the **Pill Menu** overlay.
+- All mirror controls (Play/Stop, Freeze/Unfreeze, and Edit Viewport) MUST reside inside the **Mirror Control Card** at the top of the **Pill Menu** overlay, while **Touch Projection** is configured on a per-cutout level in the layout settings overlay.
 - An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on pill position) over the idle pill indicator MUST show the **Pill Menu** overlay panel.
 - There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Pill Menu overlay until it is manually dismissed by tapping the scrim or close elements.
 - Mirror control icon buttons in the Pill Menu MUST use ergonomic touch targets (minimum 48 dp).
@@ -52,21 +52,21 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M6: View Lock
 
-- A **Lock** or **Unlock** mechanism is integrated into Touch Projection and Viewport Edit toggles.
-- Activating **Touch Projection** automatically activates **View Lock** (zoom/pan gestures are disabled during touch projection to maintain mapping accuracy).
-- Tapping to turn off/unlock **Touch Projection** MUST restore standard viewport operations (when Viewport Edit Mode is engaged).
+- A **Lock** or **Unlock** mechanism is integrated into Viewport Edit and Touch Projection states.
+- Activating **Touch Projection** on any cutout automatically activates **View Lock** (zoom/pan gestures are disabled during touch projection to maintain mapping accuracy).
+- Unlocking the view automatically deactivates Touch Projection on all cutouts, restoring standard viewport operations.
 
 ### FR-M7: Touch Projection
 
-- A **Touch Projection** button MUST be available inside the Mirror Control Card of the Pill Menu.
-- When active, all touch events on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
-- The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them.
+- Touch Projection is configured on a per-cutout level in the layout settings overlay.
+- When active for any cutout, touch events inside that cutout on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
+- The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, check if touch projection is enabled for that cutout, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them.
 - Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Pill Menu.
 - When the user's finger moves outside the visible content area of the matched cutout, an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
-- Activating Touch Projection MUST automatically activate View Lock (zoom/pan during forwarding is not supported).
+- Enabling Touch Projection on any cutout MUST automatically activate View Lock (zoom/pan during forwarding is not supported).
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
-- Touch Projection MUST NOT be automatically deactivated when the pill menu is accessed via edge-swipe. It remains active until explicitly turned off by the user (e.g. by tapping the Touch Projection button in the Pill Menu, stopping the mirror session, or switching to another layout/tool).
+- Touch Projection settings are stored persistently in the layout config but their runtime session state remains active until explicitly turned off in settings, the view is unlocked, or the mirror session is stopped.
 
 ### FR-M8: Auto-start Gating (Global + Per-Layout Memory)
 

@@ -87,6 +87,15 @@ object ScreenCaptureManager {
                 }
             }
         }
+        scope.launch {
+            _cutouts.collect { list ->
+                val touchActive = list.any { it.touchProjectionEnabled }
+                _isTouchProjectionActive.value = touchActive
+                if (touchActive) {
+                    _isLocked.value = true
+                }
+            }
+        }
     }
 
     private var targetFollowX = 0f
@@ -144,7 +153,11 @@ object ScreenCaptureManager {
      */
     fun setTouchProjectionActive(active: Boolean) {
         AppLog.i(TAG, "setTouchProjectionActive($active)${if (active) " → auto-enabling lock" else ""}")
-        _isTouchProjectionActive.value = active
+        val layout = MacroPadState.activeLayout.value
+        if (layout != null) {
+            val updated = layout.mirrorCutouts.map { it.copy(touchProjectionEnabled = active) }
+            MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+        }
         if (active) _isLocked.value = true
     }
 
@@ -156,7 +169,9 @@ object ScreenCaptureManager {
         val newLocked = !_isLocked.value
         AppLog.d(TAG, "toggleLocked → $newLocked${if (!newLocked && _isTouchProjectionActive.value) " (deactivating projection)" else ""}")
         _isLocked.value = newLocked
-        if (!newLocked) _isTouchProjectionActive.value = false
+        if (!newLocked) {
+            setTouchProjectionActive(false)
+        }
     }
 
     fun toggleTouchProjection() {

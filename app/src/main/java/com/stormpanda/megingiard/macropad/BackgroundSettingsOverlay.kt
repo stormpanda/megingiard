@@ -390,6 +390,38 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                             }
                                         )
                                     }
+
+                                    // Touch Projection Switch
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_touch_projection),
+                                                color = colors.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_touch_projection_desc),
+                                                color = colors.onSurfaceSecondary,
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                        Switch(
+                                            checked = cutout.touchProjectionEnabled,
+                                            onCheckedChange = { isChecked ->
+                                                AppLog.d(TAG, "cutout '${cutout.name}' touchProjectionEnabled → $isChecked")
+                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                                    if (c.id == cutout.id) c.copy(touchProjectionEnabled = isChecked) else c
+                                                }
+                                                commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                                                if (isChecked) {
+                                                    ScreenCaptureManager.setLocked(true)
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
 

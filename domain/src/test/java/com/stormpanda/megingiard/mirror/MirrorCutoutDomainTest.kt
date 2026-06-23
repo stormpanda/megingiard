@@ -107,7 +107,8 @@ class MirrorCutoutDomainTest {
             name = "Part 1",
             srcX = 0.1f, srcY = 0.2f, srcWidth = 0.4f, srcHeight = 0.4f,
             destX = 0.2f, destY = 0.2f, destWidth = 0.5f, destHeight = 0.5f,
-            opacity = 1f
+            opacity = 1f,
+            touchProjectionEnabled = true
         )
         val layout = PadLayout(
             id = "test-layout-proj",

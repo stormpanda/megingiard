@@ -17,7 +17,6 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,13 +43,11 @@ internal fun MirrorControlCard(
     isCapturing: Boolean,
     isFrozen: Boolean,
     isViewportEditActive: Boolean,
-    isTouchProjectionActive: Boolean,
     modifier: Modifier = Modifier,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
     onToggleViewportEdit: () -> Unit,
-    onToggleTouchProjection: () -> Unit,
     showLabels: Boolean,
 ) {
     Row(
@@ -137,19 +134,6 @@ internal fun MirrorControlCard(
             showLabel = showLabels,
             colors = colors,
             onClick = onToggleFreeze,
-        )
-        MirrorControlIconButton(
-            icon = Icons.Rounded.TouchApp,
-            contentDescription = stringResource(
-                if (isTouchProjectionActive) R.string.cd_touch_projection_on
-                else R.string.cd_touch_projection_off,
-            ),
-            label = stringResource(R.string.mirror_control_label_projection),
-            tint = if (isTouchProjectionActive) colors.accent else colors.onControlOverlay,
-            enabled = isCapturing,
-            showLabel = showLabels,
-            colors = colors,
-            onClick = onToggleTouchProjection,
         )
     }
 }
