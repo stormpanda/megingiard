@@ -554,7 +554,6 @@ fun CutoutLayoutEditor(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
-                    val buttonWidth = 140.dp
                     val selectedCutout = selectedCutoutId?.let { cutoutId ->
                         layout.mirrorCutouts.find { it.id == cutoutId }
                     }
@@ -563,6 +562,7 @@ fun CutoutLayoutEditor(
 
                     // Row 1: Add Cutout | Settings
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -571,7 +571,7 @@ fun CutoutLayoutEditor(
                             contentDescription = stringResource(R.string.mirror_editor_add_cutout),
                             color = colors.accent,
                             label = stringResource(R.string.mirror_editor_toolbar_add),
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 if (layout.mirrorCutouts.size >= 10) {
                                     Toast.makeText(context, context.getString(R.string.mirror_editor_max_cutouts), Toast.LENGTH_SHORT).show()
@@ -623,7 +623,7 @@ fun CutoutLayoutEditor(
                             contentDescription = stringResource(R.string.pill_menu_ambient_settings),
                             color = colors.accent,
                             label = stringResource(R.string.mirror_editor_toolbar_settings),
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 AppStateManager.setBackgroundSettingsActive(true)
                             }
@@ -632,6 +632,7 @@ fun CutoutLayoutEditor(
 
                     // Row 2: Aspect Ratio | Shape Toggle
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -645,7 +646,7 @@ fun CutoutLayoutEditor(
                                 AspectRatioMode.BOTTOM -> stringResource(R.string.mirror_editor_aspect_ratio_bottom)
                             },
                             enabled = selectedCutout != null,
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
                                 val updated = layout.mirrorCutouts.map {
@@ -701,7 +702,7 @@ fun CutoutLayoutEditor(
                                 stringResource(R.string.mirror_editor_toolbar_shape_rect)
                             },
                             enabled = selectedCutout != null,
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
                                 val updated = layout.mirrorCutouts.map {
@@ -721,6 +722,7 @@ fun CutoutLayoutEditor(
 
                     // Row 3: Edit Crop | Delete Selected
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -730,7 +732,7 @@ fun CutoutLayoutEditor(
                             color = colors.accent,
                             label = stringResource(R.string.mirror_editor_toolbar_crop),
                             enabled = selectedCutoutId != null,
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 AppStateManager.setActiveCropCutoutId(selectedCutoutId)
                             }
@@ -742,7 +744,7 @@ fun CutoutLayoutEditor(
                             color = colors.error,
                             label = stringResource(R.string.mirror_editor_toolbar_delete),
                             enabled = selectedCutoutId != null,
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 val targetId = selectedCutoutId ?: return@ToolbarIconButton
                                 val remaining = layout.mirrorCutouts.filter { it.id != targetId }
@@ -754,6 +756,7 @@ fun CutoutLayoutEditor(
 
                     // Row 4: Done / Save | Cancel / Revert
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -762,7 +765,7 @@ fun CutoutLayoutEditor(
                             contentDescription = stringResource(R.string.mirror_editor_done),
                             color = colors.accent,
                             label = stringResource(R.string.mirror_editor_toolbar_done),
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 AppStateManager.setViewportEditActive(false)
                             }
@@ -773,7 +776,7 @@ fun CutoutLayoutEditor(
                             contentDescription = stringResource(R.string.settings_color_cancel),
                             color = colors.error,
                             label = stringResource(R.string.mirror_editor_toolbar_cancel),
-                            modifier = Modifier.width(buttonWidth),
+                            modifier = Modifier.weight(1f),
                             onClick = {
                                 val updatedLayout = layout.copy(
                                     mirrorCutouts = initialCutouts
