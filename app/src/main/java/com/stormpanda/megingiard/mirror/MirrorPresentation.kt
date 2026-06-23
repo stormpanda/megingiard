@@ -200,6 +200,8 @@ class MirrorPresentation(
         mcc.addView(tv)
 
         tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            private var lastUpdateTime = 0L
+
             override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
                 st.setDefaultBufferSize(srcWidth, srcHeight)
                 val surface = Surface(st)
@@ -223,7 +225,13 @@ class MirrorPresentation(
                 return true
             }
             override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
-                mcc.updateAccumulator(tv)
+                val now = System.currentTimeMillis()
+                val fps = ScreenCaptureManager.maxFps.value.coerceIn(10, 60)
+                val interval = 1000L / fps
+                if (now - lastUpdateTime >= interval) {
+                    mcc.updateAccumulator(tv)
+                    lastUpdateTime = now
+                }
             }
         }
 
@@ -261,10 +269,10 @@ class MirrorPresentation(
                 ScreenCaptureManager.offsetX,
                 ScreenCaptureManager.offsetY,
             ) { s, ox, oy -> Triple(s, ox, oy) }
-            .collect { (scale, offsetX, offsetY) ->
-                mcc.viewportScale = scale
-                mcc.viewportOffsetX = offsetX
-                mcc.viewportOffsetY = offsetY
+            .collect { triple ->
+                mcc.viewportScale = triple.first
+                mcc.viewportOffsetX = triple.second
+                mcc.viewportOffsetY = triple.third
             }
         }
 
@@ -892,7 +900,8 @@ class MultiCutoutContainer(
                 val innerSaveCount = canvas.save()
                 
                 val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                if (cutouts.size == 1 && isFollowActive) {
+                val isUncropped = cutout.srcWidth >= 0.999f && cutout.srcHeight >= 0.999f
+                if (cutouts.size == 1 && isFollowActive && isUncropped) {
                     canvas.translate(viewportOffsetX, viewportOffsetY)
                     canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
 

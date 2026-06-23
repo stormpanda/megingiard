@@ -277,6 +277,11 @@ class ScreenCaptureService : Service() {
                     }
                 }
             }
+            presentation.onSurfaceDestroyed = {
+                mirrorSurface = null
+                mirrorVirtualDisplay?.setSurface(null)
+                AppLog.d(TAG, "VirtualDisplay surface detached after surface destroyed (hide())")
+            }
 
             // Start viewport persistence coroutines in the service scope so they are
             // alive for the entire capture session regardless of which UI composable is

@@ -453,11 +453,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                             },
                                             valueRange = ASO_SMOOTHING_OFF..ASO_SMOOTHING_STRONG,
                                             steps = 2,
-                                            colors = SliderDefaults.colors(
-                                                thumbColor = colors.accent,
-                                                activeTrackColor = colors.accent,
-                                                inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
-                                            )
                                         )
                                     }
 
@@ -597,11 +592,6 @@ private fun AsoSliderRow(
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = accentColor,
-                inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
-            ),
         )
         IconButton(
             onClick = onPreviewClick,
@@ -666,11 +656,6 @@ internal fun AsoPreviewBar(
                 value = value,
                 onValueChange = onValueChange,
                 valueRange = valueRange,
-                colors = SliderDefaults.colors(
-                    thumbColor = accentColor,
-                    activeTrackColor = accentColor,
-                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
-                ),
             )
             IconButton(onClick = onConfirm) {
                 Icon(
