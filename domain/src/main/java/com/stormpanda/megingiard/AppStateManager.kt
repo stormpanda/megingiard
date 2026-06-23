@@ -288,6 +288,8 @@ object AppStateManager {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
+        } else {
+            _isViewportEditActive.value = true
         }
         _isBackgroundSettingsActive.value = active
     }

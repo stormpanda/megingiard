@@ -30,6 +30,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -155,8 +156,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val labelDim              = stringResource(R.string.settings_macropad_dim)
     val labelEdgeBlending     = stringResource(R.string.mirror_edge_blend_label)
 
-    // Back: exit preview first; the system Back then closes ambient settings.
-    BackHandler(enabled = isInPreview) {
+    // Back: exit preview first; otherwise close background settings.
+    BackHandler(enabled = true) {
         if (isInPreview) {
             val config = previewConfig!!
             AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
@@ -167,6 +168,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                 }
             }
             AppStateManager.setAmbientPreviewConfig(null)
+        } else {
+            onDone()
         }
     }
 
@@ -504,54 +507,51 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
     if (renamingCutout != null) {
         val targetCutout = renamingCutout!!
-        AlertDialog(
-            containerColor = colors.surface,
-            onDismissRequest = { renamingCutout = null },
-            title = {
-                Text(
-                    text = stringResource(R.string.mirror_editor_rename_cutout),
-                    color = colors.onSurface
-                )
-            },
-            text = {
-                AppTextField(
-                    value = renameText,
-                    onValueChange = { renameText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.mirror_editor_cutout_name_hint),
-                            color = colors.onSurfaceSecondary
-                        )
-                    }
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val newName = renameText.trim()
-                        val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                            if (c.id == targetCutout.id) c.copy(name = newName) else c
-                        }
-                        commitLayout { copy(mirrorCutouts = updatedCutouts) }
-                        renamingCutout = null
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_confirm),
-                        color = colors.accent
-                    )
-                }
-            },
-            dismissButton = {
+        InlineDialogOverlay(
+            title = stringResource(R.string.mirror_editor_rename_cutout),
+            onDismiss = { renamingCutout = null },
+            widthFraction = 0.8f,
+            buttonsRow = {
                 TextButton(onClick = { renamingCutout = null }) {
                     Text(
                         text = stringResource(R.string.macropad_editor_cancel),
                         color = colors.onSurfaceSecondary
                     )
                 }
+                val newName = renameText.trim()
+                val isError = newName.isEmpty()
+                TextButton(
+                    onClick = {
+                        if (!isError) {
+                            val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                if (c.id == targetCutout.id) c.copy(name = newName) else c
+                            }
+                            commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                            renamingCutout = null
+                        }
+                    },
+                    enabled = !isError
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_done),
+                        color = if (!isError) colors.accent else colors.onSurfaceSecondary
+                    )
+                }
             }
-        )
+        ) {
+            AppTextField(
+                value = renameText,
+                onValueChange = { renameText = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.mirror_editor_cutout_name_hint),
+                        color = colors.onSurfaceSecondary
+                    )
+                }
+            )
+        }
     }
 }
 
