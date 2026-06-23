@@ -328,7 +328,6 @@ data class PadLayout(
     val mirrorSavedOffsetY: Float = 0f,
     val mirrorAutoStart: Boolean = false,
     val mirrorFollowActive: Boolean = false,
-    val mirrorFollowDisableDuringMacro: Boolean = false,
     val mirrorSmoothing: Boolean = true,
     val mirrorCutouts: List<ScreenCutout> = emptyList(),
     val mirrorConfigured: Boolean = false,

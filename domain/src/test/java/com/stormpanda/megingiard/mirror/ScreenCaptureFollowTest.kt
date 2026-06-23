@@ -173,13 +173,9 @@ class ScreenCaptureFollowTest {
     }
 
     @Test
-    fun `onTouchReceived ignores touch when mirrorFollowDisableDuringMacro is true and macro is running`() {
+    fun `onTouchReceived ignores touch when a macro is running`() {
         ScreenCaptureManager.setCapturing(true)
         ScreenCaptureManager.setFollowActive(true)
-
-        // Enable mirrorFollowDisableDuringMacro on active layout
-        val layout = MacroPadState.activeLayout.value!!
-        MacroPadState.updateLayout(layout.copy(mirrorFollowDisableDuringMacro = true))
 
         // Initial offsets should be 0.25f
         var cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
@@ -204,28 +200,5 @@ class ScreenCaptureFollowTest {
         // Now it should center: targetSrcX = 0.5f
         cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
         assertEquals(0.5f, cutout.srcX, 0.001f)
-    }
-
-    @Test
-    fun `onTouchReceived processes touch when mirrorFollowDisableDuringMacro is false even if macro is running`() {
-        ScreenCaptureManager.setCapturing(true)
-        ScreenCaptureManager.setFollowActive(true)
-
-        // Disable mirrorFollowDisableDuringMacro on active layout
-        val layout = MacroPadState.activeLayout.value!!
-        MacroPadState.updateLayout(layout.copy(mirrorFollowDisableDuringMacro = false))
-
-        // Mock running macro
-        MacroExecutor.setRunningMacroIdsForTest(setOf("test-macro-id"))
-
-        // Send touch event (0.9f, 0.9f)
-        ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
-
-        // It should center as normal: targetSrcX = 0.5f
-        val cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
-        assertEquals(0.5f, cutout.srcX, 0.001f)
-
-        // Clean up mock
-        MacroExecutor.setRunningMacroIdsForTest(emptySet())
     }
 }

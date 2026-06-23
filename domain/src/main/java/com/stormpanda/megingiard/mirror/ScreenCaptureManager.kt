@@ -210,8 +210,7 @@ object ScreenCaptureManager {
 
     fun onTouchReceived(nx: Float, ny: Float) {
         if (!_isCapturing.value || !_isFollowActive.value) return
-        val layout = MacroPadState.activeLayout.value
-        if (layout != null && layout.mirrorFollowDisableDuringMacro && MacroExecutor.runningMacroIds.value.isNotEmpty()) {
+        if (MacroExecutor.runningMacroIds.value.isNotEmpty()) {
             return
         }
         updateFollowCenter(nx, ny)
