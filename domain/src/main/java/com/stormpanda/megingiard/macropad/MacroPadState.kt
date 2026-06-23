@@ -402,10 +402,15 @@ object MacroPadState {
             btn.copy(id = UUID.randomUUID().toString())
         }
         
+        val copiedCutouts = layout.mirrorCutouts.map { cutout ->
+            cutout.copy(id = UUID.randomUUID().toString())
+        }
+        
         val duplicatedLayout = layout.copy(
             id = UUID.randomUUID().toString(),
             name = uniqueName,
-            buttons = copiedButtons
+            buttons = copiedButtons,
+            mirrorCutouts = copiedCutouts
         )
         
         AppLog.d(TAG, "duplicateLayout layoutId=$layoutId newId=${duplicatedLayout.id} name='$uniqueName' in profile=${profile.id}")
@@ -536,10 +541,15 @@ object MacroPadState {
             }
         }
 
+        val copiedCutouts = layout.mirrorCutouts.map { cutout ->
+            cutout.copy(id = UUID.randomUUID().toString())
+        }
+
         val copiedLayout = layout.copy(
             id = UUID.randomUUID().toString(),
             name = uniqueName,
-            buttons = layout.buttons.cloneWithMacroMapping(macroMapping)
+            buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
+            mirrorCutouts = copiedCutouts
         )
 
         AppLog.d(TAG, "copyLayoutToProfile layoutId=${layout.id} name='$uniqueName' to profileId=$targetProfileId")
