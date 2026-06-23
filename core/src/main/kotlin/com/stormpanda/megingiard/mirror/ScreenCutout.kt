@@ -58,11 +58,14 @@ data class ScreenCutout(
     val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.BOTTOM,
 ) {
     companion object {
-        fun createDefault(srcWidth: Float = 1920f, srcHeight: Float = 1080f): ScreenCutout {
-            val bottomW = 1920f
-            val bottomH = 1080f
+        fun createDefault(
+            srcWidth: Float = 1920f,
+            srcHeight: Float = 1080f,
+            bottomWidth: Float = 4f,
+            bottomHeight: Float = 3f
+        ): ScreenCutout {
             val destWidth = 1f
-            val destHeight = (bottomW * srcHeight) / (bottomH * srcWidth)
+            val destHeight = (bottomWidth * srcHeight) / (bottomHeight * srcWidth)
             val destX = 0f
             val destY = (1f - destHeight) / 2f
             return ScreenCutout(

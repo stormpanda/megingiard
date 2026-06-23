@@ -285,7 +285,13 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 onConfirm   = { name, templateButtons, templateCutouts ->
                     val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
                     val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
-                    val defaultCutout = ScreenCutout.createDefault(sourceW, sourceH)
+                    val bottomW = ScreenCaptureManager.surfaceWidth.value
+                    val bottomH = ScreenCaptureManager.surfaceHeight.value
+                    val defaultCutout = if (bottomW > 0f && bottomH > 0f) {
+                        ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
+                    } else {
+                        ScreenCutout.createDefault(sourceW, sourceH)
+                    }
                     val newLayout = PadLayout(
                         id      = UUID.randomUUID().toString(),
                         name    = name.ifBlank { defaultLayoutName },

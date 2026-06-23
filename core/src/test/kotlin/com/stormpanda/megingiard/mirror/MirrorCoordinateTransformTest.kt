@@ -657,7 +657,7 @@ class MirrorCoordinateTransformTest {
 
     @Test
     fun `ScreenCutout createDefault creates a centered full screen aspect locked cutout`() {
-        val cutout = ScreenCutout.createDefault(srcWidth = 1920f, srcHeight = 1080f)
+        val cutout = ScreenCutout.createDefault(srcWidth = 1920f, srcHeight = 1080f, bottomWidth = 1920f, bottomHeight = 1080f)
         assertEquals(0f, cutout.srcX)
         assertEquals(0f, cutout.srcY)
         assertEquals(1f, cutout.srcWidth)
@@ -668,12 +668,24 @@ class MirrorCoordinateTransformTest {
         assertEquals(0f, cutout.destY)
         assertEquals(AspectRatioMode.TOP, cutout.aspectRatioMode)
 
-        // Test with portrait source (1080x1920)
+        // Test with 4:3 bottom screen (default parameters)
+        val defaultThorCutout = ScreenCutout.createDefault(srcWidth = 1920f, srcHeight = 1080f)
+        assertEquals(0f, defaultThorCutout.srcX)
+        assertEquals(0f, defaultThorCutout.srcY)
+        assertEquals(1f, defaultThorCutout.srcWidth)
+        assertEquals(1f, defaultThorCutout.srcHeight)
+        assertEquals(0f, defaultThorCutout.destX)
+        assertEquals(1f, defaultThorCutout.destWidth)
+        assertEquals(0.75f, defaultThorCutout.destHeight, EPS)
+        assertEquals(0.125f, defaultThorCutout.destY, EPS)
+        assertEquals(AspectRatioMode.TOP, defaultThorCutout.aspectRatioMode)
+
+        // Test with portrait source (1080x1920) on 4:3 bottom screen
         val portraitCutout = ScreenCutout.createDefault(srcWidth = 1080f, srcHeight = 1920f)
         assertEquals(1f, portraitCutout.destWidth)
         assertEquals(0f, portraitCutout.destX)
         assertTrue(portraitCutout.destHeight > 1f)
-        assertEquals((1f - portraitCutout.destHeight) / 2f, portraitCutout.destY)
+        assertEquals((1f - portraitCutout.destHeight) / 2f, portraitCutout.destY, EPS)
     }
 }
 
