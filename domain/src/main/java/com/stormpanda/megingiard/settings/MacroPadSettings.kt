@@ -49,6 +49,7 @@ object MacroPadSettings {
 
     private var lastLoadedProfilesJson: String? = null
     private var lastLoadedActiveProfileId: String? = null
+    private var hasLoadedOnce = false
 
     private val _skipTouchRecordDialog = MutableStateFlow(false)
     val skipTouchRecordDialog: StateFlow<Boolean> = _skipTouchRecordDialog.asStateFlow()
@@ -118,9 +119,10 @@ object MacroPadSettings {
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
         val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
-        if (macropadProfilesJson == lastLoadedProfilesJson && activeId == lastLoadedActiveProfileId) {
+        if (hasLoadedOnce && macropadProfilesJson == lastLoadedProfilesJson && activeId == lastLoadedActiveProfileId) {
             return
         }
+        hasLoadedOnce = true
         lastLoadedProfilesJson = macropadProfilesJson
         lastLoadedActiveProfileId = activeId
 

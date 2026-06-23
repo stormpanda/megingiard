@@ -89,6 +89,7 @@ private val ASO_ROW_PADDING_H = 16.dp
 private val ASO_ROW_PADDING_V = 12.dp
 private val ASO_EDIT_ICON_SIZE = 28.dp
 private val ASO_EDIT_ICON_INNER_SIZE = 18.dp
+private val ASO_SPACING_8 = 8.dp
 
 private const val ASO_SMOOTHING_OFF = 0f
 private const val ASO_SMOOTHING_LIGHT = 1f
@@ -290,7 +291,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                         AppDivider()
 
                         AppSettingsRow {
-                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = ASO_SPACING_8)) {
                                 Text(
                                     text = stringResource(R.string.settings_mirror_follow_touch),
                                     color = colors.onSurface,
@@ -365,7 +366,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = ASO_SPACING_8)
                                     ) {
                                         Text(
                                             text = cutout.name.ifBlank { stringResource(R.string.settings_mirror_cutout_default_name_fmt, index + 1) },
@@ -402,7 +403,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                             ASO_SMOOTHING_OFF
                                         }
                                         val sliderValue = localSmoothingValues[cutout.id] ?: cutoutValue
-                                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                        Column(modifier = Modifier.weight(1f).padding(end = ASO_SPACING_8)) {
                                             Text(
                                                 text = stringResource(R.string.settings_mirror_follow_smoothing),
                                                 color = colors.onSurface,

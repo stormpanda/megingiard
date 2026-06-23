@@ -128,8 +128,12 @@ class TouchProjectionController(
         if (gestureInEdgeZone || !gestureStarted) return false
         if (pointerId != activePointerId) return false
 
-        // If consumed by pinch-zoom (Block 3), send UP at last known position
-        if (isConsumed) {
+        val cutoutId = activeCutoutId
+        val cutout = if (cutoutId != null) {
+            ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
+        } else null
+
+        if (cutoutId == null || cutout == null) {
             _indicatorPos.value = null
             TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
             gestureStarted = false
@@ -137,9 +141,6 @@ class TouchProjectionController(
             activeCutoutId = null
             return false
         }
-
-        val cutoutId = activeCutoutId ?: return false
-        val cutout = ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId } ?: return false
 
         val destLeft = cutout.destX * boxW
         val destTop = cutout.destY * boxH

@@ -682,10 +682,10 @@ class MirrorCoordinateTransformTest {
 
         // Test with portrait source (1080x1920) on 4:3 bottom screen
         val portraitCutout = ScreenCutout.createDefault(srcPixelWidth = 1080f, srcPixelHeight = 1920f)
-        assertEquals(1f, portraitCutout.destWidth)
-        assertEquals(0f, portraitCutout.destX)
-        assertTrue(portraitCutout.destHeight > 1f)
-        assertEquals((1f - portraitCutout.destHeight) / 2f, portraitCutout.destY, EPS)
+        assertEquals(0.421875f, portraitCutout.destWidth, EPS)
+        assertEquals(0.2890625f, portraitCutout.destX, EPS)
+        assertEquals(1f, portraitCutout.destHeight, EPS)
+        assertEquals(0f, portraitCutout.destY, EPS)
     }
 }
 

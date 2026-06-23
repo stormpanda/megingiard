@@ -37,7 +37,6 @@ const val ACTION_STOP = "STOP"
 
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
-    private var recordingVirtualDisplay: VirtualDisplay? = null
     private var mirrorVirtualDisplay: VirtualDisplay? = null
     private var mirrorSurface: Surface? = null
     private var mirrorPresentation: MirrorPresentation? = null
@@ -525,8 +524,6 @@ class ScreenCaptureService : Service() {
         mirrorVirtualDisplay?.release()
         mirrorVirtualDisplay = null
         mirrorSurface = null
-        recordingVirtualDisplay?.release()
-        recordingVirtualDisplay = null
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()

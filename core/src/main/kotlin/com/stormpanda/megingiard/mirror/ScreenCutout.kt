@@ -64,10 +64,27 @@ data class ScreenCutout(
             bottomPixelWidth: Float = 4f,
             bottomPixelHeight: Float = 3f
         ): ScreenCutout {
-            val destWidth = 1f
-            val destHeight = (bottomPixelWidth * srcPixelHeight) / (bottomPixelHeight * srcPixelWidth)
-            val destX = 0f
-            val destY = (1f - destHeight) / 2f
+            val srcRatio = srcPixelWidth / srcPixelHeight
+            val destRatio = bottomPixelWidth / bottomPixelHeight
+            val destWidth: Float
+            val destHeight: Float
+            val destX: Float
+            val destY: Float
+
+            if (srcRatio > destRatio) {
+                // Fit-to-width
+                destWidth = 1f
+                destHeight = (bottomPixelWidth * srcPixelHeight) / (bottomPixelHeight * srcPixelWidth)
+                destX = 0f
+                destY = (1f - destHeight) / 2f
+            } else {
+                // Fit-to-height
+                destHeight = 1f
+                destWidth = (bottomPixelHeight * srcPixelWidth) / (bottomPixelWidth * srcPixelHeight)
+                destX = (1f - destWidth) / 2f
+                destY = 0f
+            }
+
             return ScreenCutout(
                 id = UUID.randomUUID().toString(),
                 name = "",

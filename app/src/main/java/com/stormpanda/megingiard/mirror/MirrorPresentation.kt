@@ -718,9 +718,10 @@ class MultiCutoutContainer(
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
     }
 
+    private var scratchBitmap: Bitmap? = null
+
     private class Accumulator(val strength: Int, width: Int, height: Int) {
         var accumulated: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        var temp: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         var initialized: Boolean = false
 
         val blendPaint = Paint().apply {
@@ -732,8 +733,6 @@ class MultiCutoutContainer(
         fun recycle() {
             accumulated?.recycle()
             accumulated = null
-            temp?.recycle()
-            temp = null
         }
     }
 
@@ -752,6 +751,8 @@ class MultiCutoutContainer(
     fun releaseAccumulator() {
         accumulators.values.forEach { it.recycle() }
         accumulators.clear()
+        scratchBitmap?.recycle()
+        scratchBitmap = null
     }
 
     fun updateAccumulator(textureView: TextureView) {
@@ -772,9 +773,7 @@ class MultiCutoutContainer(
                 val existing = accumulators[strength]
                 if (existing != null) {
                     val acc = existing.accumulated
-                    val tmp = existing.temp
-                    if (acc == null || acc.width != srcWidth || acc.height != srcHeight ||
-                        tmp == null || tmp.width != srcWidth || tmp.height != srcHeight) {
+                    if (acc == null || acc.width != srcWidth || acc.height != srcHeight) {
                         existing.recycle()
                         accumulators[strength] = Accumulator(strength, srcWidth, srcHeight)
                     }
@@ -783,20 +782,35 @@ class MultiCutoutContainer(
                 }
             }
 
-            // 3. Update each active accumulator with current frame
+            // 3. Ensure a valid single scratch bitmap exists
+            val currentScratch = scratchBitmap
+            val scratch = if (currentScratch == null || currentScratch.width != srcWidth || currentScratch.height != srcHeight) {
+                currentScratch?.recycle()
+                Bitmap.createBitmap(srcWidth, srcHeight, Bitmap.Config.ARGB_8888).also { scratchBitmap = it }
+            } else {
+                currentScratch
+            }
+
+            // 4. Capture TextureView frame once
+            try {
+                textureView.getBitmap(scratch)
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Error getting TextureView bitmap for motion smoothing", e)
+                return
+            }
+
+            // 5. Update each active accumulator with the captured frame
             for (strength in activeStrengths) {
                 val acc = accumulators[strength] ?: continue
-                val temp = acc.temp
                 val accum = acc.accumulated
-                if (accum != null && temp != null) {
+                if (accum != null) {
                     try {
-                        textureView.getBitmap(temp)
                         val accumCanvas = Canvas(accum)
                         if (!acc.initialized) {
-                            accumCanvas.drawBitmap(temp, 0f, 0f, null)
+                            accumCanvas.drawBitmap(scratch, 0f, 0f, null)
                             acc.initialized = true
                         } else {
-                            accumCanvas.drawBitmap(temp, 0f, 0f, acc.blendPaint)
+                            accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
                         }
                     } catch (e: Exception) {
                         AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
