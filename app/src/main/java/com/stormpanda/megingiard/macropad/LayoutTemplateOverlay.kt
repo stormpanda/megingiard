@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -40,6 +41,7 @@ internal data class TemplateOption(
     val profileName: String,
     val layoutName: String,
     val buttons: List<PadButton>,
+    val mirrorCutouts: List<ScreenCutout>,
 )
 
 /**
@@ -51,7 +53,7 @@ internal fun NewLayoutOverlay(
     profiles:    List<PadProfile>,
     existingLayoutNames: List<String>,
     accentColor: Color,
-    onConfirm:   (name: String, templateButtons: List<PadButton>) -> Unit,
+    onConfirm:   (name: String, templateButtons: List<PadButton>, templateCutouts: List<ScreenCutout>?) -> Unit,
     onDismiss:   () -> Unit,
 ) {
     var text             by remember { mutableStateOf("") }
@@ -69,6 +71,7 @@ internal fun NewLayoutOverlay(
                     profileName = profile.name,
                     layoutName  = layout.name,
                     buttons     = layout.buttons,
+                    mirrorCutouts = layout.mirrorCutouts,
                 )
             }
         }
@@ -149,7 +152,10 @@ internal fun NewLayoutOverlay(
                         val buttons = selectedTemplate?.buttons?.map {
                             it.copy(id = UUID.randomUUID().toString())
                         } ?: emptyList()
-                        onConfirm(normalizedName, buttons)
+                        val cutouts = selectedTemplate?.mirrorCutouts?.map {
+                            it.copy(id = UUID.randomUUID().toString())
+                        }
+                        onConfirm(normalizedName, buttons, cutouts)
                     },
                     enabled = !hasError,
                 ) {

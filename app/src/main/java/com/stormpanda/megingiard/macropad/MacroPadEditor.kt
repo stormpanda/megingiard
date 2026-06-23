@@ -48,6 +48,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -280,11 +282,15 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 profiles    = profiles,
                 existingLayoutNames = profile.layouts.map { it.name },
                 accentColor = colors.accent,
-                onConfirm   = { name, templateButtons ->
+                onConfirm   = { name, templateButtons, templateCutouts ->
+                    val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
+                    val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
+                    val defaultCutout = ScreenCutout.createDefault(sourceW, sourceH)
                     val newLayout = PadLayout(
                         id      = UUID.randomUUID().toString(),
                         name    = name.ifBlank { defaultLayoutName },
                         buttons = templateButtons,
+                        mirrorCutouts = templateCutouts ?: listOf(defaultCutout),
                     )
                     MacroPadState.addLayout(newLayout)
                     showNewLayoutDialog = false

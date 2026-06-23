@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 private const val TAG = "ScreenCutout"
 
@@ -57,5 +58,29 @@ data class ScreenCutout(
     val touchProjectionEnabled: Boolean = false,
     val shape: CutoutShape = CutoutShape.RECTANGLE,
     val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.BOTTOM,
-)
+) {
+    companion object {
+        fun createDefault(srcWidth: Float = 1920f, srcHeight: Float = 1080f): ScreenCutout {
+            val bottomW = 1920f
+            val bottomH = 1080f
+            val destWidth = 1f
+            val destHeight = (bottomW * srcHeight) / (bottomH * srcWidth)
+            val destX = 0f
+            val destY = (1f - destHeight) / 2f
+            return ScreenCutout(
+                id = UUID.randomUUID().toString(),
+                name = "",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = destX,
+                destY = destY,
+                destWidth = destWidth,
+                destHeight = destHeight,
+                aspectRatioMode = AspectRatioMode.TOP
+            )
+        }
+    }
+}
 

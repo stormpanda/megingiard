@@ -653,6 +653,27 @@ class MirrorCoordinateTransformTest {
         val decoded = Json.decodeFromString<ScreenCutout>(legacyJson)
         assertEquals(85, decoded.motionSmoothingStrength)
     }
+
+    @Test
+    fun `ScreenCutout createDefault creates a centered full screen aspect locked cutout`() {
+        val cutout = ScreenCutout.createDefault(srcWidth = 1920f, srcHeight = 1080f)
+        assertEquals(0f, cutout.srcX)
+        assertEquals(0f, cutout.srcY)
+        assertEquals(1f, cutout.srcWidth)
+        assertEquals(1f, cutout.srcHeight)
+        assertEquals(0f, cutout.destX)
+        assertEquals(1f, cutout.destWidth)
+        assertEquals(1f, cutout.destHeight)
+        assertEquals(0f, cutout.destY)
+        assertEquals(AspectRatioMode.TOP, cutout.aspectRatioMode)
+
+        // Test with portrait source (1080x1920)
+        val portraitCutout = ScreenCutout.createDefault(srcWidth = 1080f, srcHeight = 1920f)
+        assertEquals(1f, portraitCutout.destWidth)
+        assertEquals(0f, portraitCutout.destX)
+        assertTrue(portraitCutout.destHeight > 1f)
+        assertEquals((1f - portraitCutout.destHeight) / 2f, portraitCutout.destY)
+    }
 }
 
 
