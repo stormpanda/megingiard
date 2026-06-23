@@ -63,7 +63,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, check if touch projection is enabled for that cutout, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them.
 - Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Pill Menu.
 - When the user's finger moves outside the visible content area of the matched cutout, an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
-- Enabling Touch Projection on any cutout MUST automatically activate View Lock internally (preventing follow-touch and other background viewport mutations).
+- Enabling Touch Projection on any cutout MUST automatically activate View Lock internally (preventing manual viewport zoom/pan gestures in background logic while maintaining support for follow-touch tracking).
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
 - Touch Projection settings are stored persistently in the layout config but their runtime session state remains active until explicitly turned off in settings or the mirror session is stopped.
