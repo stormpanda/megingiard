@@ -58,10 +58,15 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppTextField
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 import androidx.compose.ui.text.style.TextAlign
@@ -83,6 +88,8 @@ private val ASO_SECTION_HEADER_PADDING_H = 16.dp
 private val ASO_SECTION_HEADER_PADDING_V = 10.dp
 private val ASO_ROW_PADDING_H = 16.dp
 private val ASO_ROW_PADDING_V = 12.dp
+private val ASO_EDIT_ICON_SIZE = 28.dp
+private val ASO_EDIT_ICON_INNER_SIZE = 18.dp
 
 private const val ASO_SMOOTHING_OFF = 0f
 private const val ASO_SMOOTHING_LIGHT = 1f
@@ -131,6 +138,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     // Local slider state for smooth dragging — committed on finger up via updateLayout.
     var dimAlpha by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientDim) }
     var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }
+    var renamingCutout by remember { mutableStateOf<ScreenCutout?>(null) }
+    var renameText by remember(renamingCutout) { mutableStateOf(renamingCutout?.name ?: "") }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
@@ -351,12 +360,28 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         .fillMaxWidth()
                                         .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V)
                                 ) {
-                                    Text(
-                                        text = cutout.name.ifBlank { "Cutout ${index + 1}" },
-                                        color = colors.onSurface,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier.padding(bottom = 8.dp)
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = cutout.name.ifBlank { "Cutout ${index + 1}" },
+                                            color = colors.onSurface,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(
+                                            onClick = { renamingCutout = cutout },
+                                            modifier = Modifier.size(ASO_EDIT_ICON_SIZE)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Edit,
+                                                contentDescription = stringResource(R.string.macropad_editor_rename),
+                                                tint = colors.accent,
+                                                modifier = Modifier.size(ASO_EDIT_ICON_INNER_SIZE)
+                                            )
+                                        }
+                                    }
 
                                     // Motion Smoothing Slider Row
                                     Row(
@@ -381,9 +406,9 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                             }
                                             val strengthText = when (sliderValue.roundToInt()) {
                                                 ASO_SMOOTHING_OFF.toInt() -> stringResource(R.string.mirror_smoothing_strength_off)
-                                                ASO_SMOOTHING_LIGHT.toInt() -> "${stringResource(R.string.mirror_smoothing_strength_light)} (${stringResource(R.string.mirror_smoothing_strength_value, ASO_SMOOTHING_VAL_LIGHT)})"
-                                                ASO_SMOOTHING_MEDIUM.toInt() -> "${stringResource(R.string.mirror_smoothing_strength_medium)} (${stringResource(R.string.mirror_smoothing_strength_value, ASO_SMOOTHING_VAL_MEDIUM)})"
-                                                ASO_SMOOTHING_STRONG.toInt() -> "${stringResource(R.string.mirror_smoothing_strength_strong)} (${stringResource(R.string.mirror_smoothing_strength_value, ASO_SMOOTHING_VAL_STRONG)})"
+                                                ASO_SMOOTHING_LIGHT.toInt() -> stringResource(R.string.mirror_smoothing_strength_light)
+                                                ASO_SMOOTHING_MEDIUM.toInt() -> stringResource(R.string.mirror_smoothing_strength_medium)
+                                                ASO_SMOOTHING_STRONG.toInt() -> stringResource(R.string.mirror_smoothing_strength_strong)
                                                 else -> stringResource(R.string.mirror_smoothing_strength_off)
                                             }
                                             Text(
@@ -472,6 +497,58 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (renamingCutout != null) {
+        val targetCutout = renamingCutout!!
+        AlertDialog(
+            containerColor = colors.surface,
+            onDismissRequest = { renamingCutout = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.mirror_editor_rename_cutout),
+                    color = colors.onSurface
+                )
+            },
+            text = {
+                AppTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.mirror_editor_cutout_name_hint),
+                            color = colors.onSurfaceSecondary
+                        )
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val newName = renameText.trim()
+                        val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                            if (c.id == targetCutout.id) c.copy(name = newName) else c
+                        }
+                        commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                        renamingCutout = null
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_confirm),
+                        color = colors.accent
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renamingCutout = null }) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_cancel),
+                        color = colors.onSurfaceSecondary
+                    )
+                }
+            }
+        )
     }
 }
 

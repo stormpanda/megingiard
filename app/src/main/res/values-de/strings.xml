@@ -696,6 +696,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_shape_rectangle">Form: Rechteck</string>
     <string name="mirror_editor_no_space">Kein Platz für einen weiteren Ausschnitt</string>
     <string name="mirror_editor_max_cutouts">Maximale Anzahl von 10 Ausschnitten erreicht</string>
+    <string name="mirror_editor_rename_cutout">Ausschnitt umbenennen</string>
+    <string name="mirror_editor_cutout_name_hint">Ausschnitt-Name</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Hinzufügen</string>

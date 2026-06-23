@@ -690,6 +690,8 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_shape_rectangle">Shape: Rectangle</string>
     <string name="mirror_editor_no_space">Not enough space for another cutout</string>
     <string name="mirror_editor_max_cutouts">Maximum of 10 cutouts allowed</string>
+    <string name="mirror_editor_rename_cutout">Rename Cutout</string>
+    <string name="mirror_editor_cutout_name_hint">Cutout Name</string>
 
     <!-- Cutout Layout Editor Toolbar Short Labels -->
     <string name="mirror_editor_toolbar_add">Add</string>
