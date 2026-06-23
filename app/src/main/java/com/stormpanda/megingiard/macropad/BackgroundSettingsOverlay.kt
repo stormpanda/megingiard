@@ -84,6 +84,15 @@ private val ASO_SECTION_HEADER_PADDING_V = 10.dp
 private val ASO_ROW_PADDING_H = 16.dp
 private val ASO_ROW_PADDING_V = 12.dp
 
+private const val ASO_SMOOTHING_OFF = 0f
+private const val ASO_SMOOTHING_LIGHT = 1f
+private const val ASO_SMOOTHING_MEDIUM = 2f
+private const val ASO_SMOOTHING_STRONG = 3f
+
+private const val ASO_SMOOTHING_VAL_LIGHT = 75
+private const val ASO_SMOOTHING_VAL_MEDIUM = 80
+private const val ASO_SMOOTHING_VAL_STRONG = 85
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
@@ -349,32 +358,79 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         modifier = Modifier.padding(bottom = 8.dp)
                                     )
 
-                                    // Motion Smoothing Switch
+                                    // Motion Smoothing Slider Row
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(modifier = Modifier.weight(1f)) {
+                                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                             Text(
                                                 text = stringResource(R.string.settings_mirror_follow_smoothing),
                                                 color = colors.onSurface,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
+                                            val sliderValue = if (cutout.motionSmoothing) {
+                                                when (currentLayout.mirrorSmoothingStrength) {
+                                                    ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
+                                                    ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
+                                                    ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
+                                                    else -> ASO_SMOOTHING_STRONG
+                                                }
+                                            } else {
+                                                ASO_SMOOTHING_OFF
+                                            }
+                                            val strengthText = when (sliderValue.roundToInt()) {
+                                                ASO_SMOOTHING_OFF.toInt() -> stringResource(R.string.mirror_smoothing_strength_off)
+                                                ASO_SMOOTHING_LIGHT.toInt() -> "${stringResource(R.string.mirror_smoothing_strength_light)} (${stringResource(R.string.mirror_smoothing_strength_value, ASO_SMOOTHING_VAL_LIGHT)})"
+                                                ASO_SMOOTHING_MEDIUM.toInt() -> "${stringResource(R.string.mirror_smoothing_strength_medium)} (${stringResource(R.string.mirror_smoothing_strength_value, ASO_SMOOTHING_VAL_MEDIUM)})"
+                                                ASO_SMOOTHING_STRONG.toInt() -> "${stringResource(R.string.mirror_smoothing_strength_strong)} (${stringResource(R.string.mirror_smoothing_strength_value, ASO_SMOOTHING_VAL_STRONG)})"
+                                                else -> stringResource(R.string.mirror_smoothing_strength_off)
+                                            }
                                             Text(
-                                                text = stringResource(R.string.settings_mirror_follow_smoothing_desc),
+                                                text = strengthText,
                                                 color = colors.onSurfaceSecondary,
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
                                         }
-                                        Switch(
-                                            checked = cutout.motionSmoothing,
-                                            onCheckedChange = { isChecked ->
-                                                AppLog.d(TAG, "cutout '${cutout.name}' motionSmoothing → $isChecked")
-                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                                                    if (c.id == cutout.id) c.copy(motionSmoothing = isChecked) else c
+                                        Slider(
+                                            modifier = Modifier.weight(1.5f),
+                                            value = if (cutout.motionSmoothing) {
+                                                when (currentLayout.mirrorSmoothingStrength) {
+                                                    ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
+                                                    ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
+                                                    ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
+                                                    else -> ASO_SMOOTHING_STRONG
                                                 }
-                                                commitLayout { copy(mirrorCutouts = updatedCutouts) }
-                                            }
+                                            } else {
+                                                ASO_SMOOTHING_OFF
+                                            },
+                                            onValueChange = { newValue ->
+                                                val idx = newValue.roundToInt().coerceIn(ASO_SMOOTHING_OFF.toInt(), ASO_SMOOTHING_STRONG.toInt())
+                                                val isSmooth = idx > 0
+                                                val strength = when (idx) {
+                                                    ASO_SMOOTHING_LIGHT.toInt() -> ASO_SMOOTHING_VAL_LIGHT
+                                                    ASO_SMOOTHING_MEDIUM.toInt() -> ASO_SMOOTHING_VAL_MEDIUM
+                                                    ASO_SMOOTHING_STRONG.toInt() -> ASO_SMOOTHING_VAL_STRONG
+                                                    else -> currentLayout.mirrorSmoothingStrength
+                                                }
+                                                AppLog.d(TAG, "cutout '${cutout.name}' smoothing slider → $idx (strength: $strength)")
+                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                                    if (c.id == cutout.id) c.copy(motionSmoothing = isSmooth) else c
+                                                }
+                                                commitLayout {
+                                                    copy(
+                                                        mirrorCutouts = updatedCutouts,
+                                                        mirrorSmoothingStrength = strength
+                                                    )
+                                                }
+                                            },
+                                            valueRange = ASO_SMOOTHING_OFF..ASO_SMOOTHING_STRONG,
+                                            steps = 2,
+                                            colors = SliderDefaults.colors(
+                                                thumbColor = colors.accent,
+                                                activeTrackColor = colors.accent,
+                                                inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
+                                            )
                                         )
                                     }
 

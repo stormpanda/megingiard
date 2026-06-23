@@ -521,7 +521,7 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support mo
    \[
    B_{\text{accum}} = (1 - \alpha) B_{\text{accum}} + \alpha B_{\text{temp}}
    \]
-   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the layout-editor toolbar mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength). The strength parameter is saved in the active layout's `mirrorSmoothingStrength` property.
+   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the Screen Mirroring settings menu mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength). The strength parameter is saved in the active layout's `mirrorSmoothingStrength` property.
 2. **Smooth Drawing**:
    Cutouts with motion smoothing active draw directly from `accumulatedMasterBitmap` in `MultiCutoutContainer.dispatchDraw()`.
 3. **Active Rendering Loop (Freeze Prevention)**:
