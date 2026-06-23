@@ -85,15 +85,6 @@ private val ASO_ROW_PADDING_V = 12.dp
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
-private fun VignetteShape.labelResId(): Int = when (this) {
-    VignetteShape.RADIAL    -> R.string.settings_macropad_vignette_shape_radial
-    VignetteShape.LETTERBOX -> R.string.settings_macropad_vignette_shape_letterbox
-    VignetteShape.PILLARBOX -> R.string.settings_macropad_vignette_shape_pillarbox
-    VignetteShape.TOP       -> R.string.settings_macropad_vignette_shape_top
-    VignetteShape.BOTTOM    -> R.string.settings_macropad_vignette_shape_bottom
-    VignetteShape.LEFT      -> R.string.settings_macropad_vignette_shape_left
-    VignetteShape.RIGHT     -> R.string.settings_macropad_vignette_shape_right
-}
 
 /**
  * Full-screen overlay for per-layout ambient display settings.
@@ -127,51 +118,29 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
     // Local slider state for smooth dragging — committed on finger up via updateLayout.
     var dimAlpha by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientDim) }
-    var vignetteEnabled by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteEnabled) }
-    var vignetteShape by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteShape) }
-    var vignetteVisibleArea by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteVisibleArea) }
-    var vignetteTransition by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteTransition) }
-    var vignetteOpacity by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteOpacity) }
-    var vignetteColorInt by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteColor) }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
     val isInPreview = previewConfig != null
-    // Color picker state hoisted to top level so ColorWheelPicker renders as a
-    // full-screen sibling of the main settings Box (not nested inside the scroll column).
-    var showColorPicker by remember { mutableStateOf(false) }
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
         val updated = MacroPadState.activeLayout.value ?: return
         MacroPadState.updateLayout(updated.block())
     }
 
-    val labelSoft = stringResource(R.string.settings_macropad_vignette_transition_soft)
-    val labelHard = stringResource(R.string.settings_macropad_vignette_transition_hard)
     // Pre-captured for use inside onPreviewClick lambdas (non-composable context).
     val labelDim              = stringResource(R.string.settings_macropad_dim)
-    val labelVignetteArea     = stringResource(R.string.settings_macropad_vignette_visible_area)
-    val labelVignetteTransition = stringResource(R.string.settings_macropad_vignette_transition)
-    val labelVignetteOpacity  = stringResource(R.string.settings_macropad_vignette_opacity)
 
-    // Back: exit preview / color picker first; the system Back then closes ambient settings.
-    BackHandler(enabled = isInPreview || showColorPicker) {
-        when {
-            isInPreview -> {
-                val config = previewConfig!!
-                AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
-                commitLayout {
-                    when (config.type) {
-                        AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
-                    }
-                }
-                AppStateManager.setAmbientPreviewConfig(null)
+    // Back: exit preview first; the system Back then closes ambient settings.
+    BackHandler(enabled = isInPreview) {
+        if (isInPreview) {
+            val config = previewConfig!!
+            AppLog.d(TAG, "preview ${config.type} cancelled \u2192 restoring ${config.originalValue}")
+            commitLayout {
+                copy(ambientDim = config.originalValue)
             }
-            showColorPicker -> showColorPicker = false
+            AppStateManager.setAmbientPreviewConfig(null)
         }
     }
 
@@ -181,9 +150,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         if (!isInPreview) {
             val l = MacroPadState.activeLayout.value ?: return@LaunchedEffect
             dimAlpha = l.ambientDim
-            vignetteVisibleArea = l.ambientVignetteVisibleArea
-            vignetteTransition = l.ambientVignetteTransition
-            vignetteOpacity = l.ambientVignetteOpacity
         }
     }
 
@@ -193,8 +159,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             .blockPointerEvents(),
     ) {
 
-        // ── Main settings panel — hidden while previewing or picking a color ──
-        if (!isInPreview && !showColorPicker) {
+        // ── Main settings panel — hidden while previewing ──
+        if (!isInPreview) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -333,138 +299,11 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                         }
                     }
 
-                    AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))
 
-                    // ── Vignette toggle ───────────────────────────────────────
-                    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
-                        AppSettingsRow {
-                            Text(
-                                text = stringResource(R.string.settings_macropad_vignette),
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Switch(
-                                checked = vignetteEnabled,
-                                onCheckedChange = {
-                                    vignetteEnabled = it
-                                    AppLog.d(TAG, "vignette enabled → $it")
-                                    commitLayout { copy(ambientVignetteEnabled = it) }
-                                },
-                            )
-                        }
-
-                        if (vignetteEnabled) {
-                            AppDivider()
-                            // Shape dropdown
-                            AsoShapeRow(
-                                currentShape = vignetteShape,
-                                accentColor = colors.accent,
-                                onShapeSelected = {
-                                    vignetteShape = it
-                                    AppLog.d(TAG, "vignette shape → $it")
-                                    commitLayout { copy(ambientVignetteShape = it) }
-                                },
-                            )
-                            AppDivider()
-                            // Visible Area slider
-                            AsoSliderRow(
-                                label = labelVignetteArea,
-                                value = vignetteVisibleArea,
-                                valueRange = 0f..1f,
-                                formatLabel = { "${(it * ASO_PERCENT_DIVISOR).toInt()}%" },
-                                accentColor = colors.accent,
-                                onValueChange = { vignetteVisibleArea = it },
-                                onValueChangeFinished = {
-                                    AppLog.d(TAG, "vignette visibleArea → $vignetteVisibleArea")
-                                    commitLayout { copy(ambientVignetteVisibleArea = vignetteVisibleArea) }
-                                },
-                                onPreviewClick = {
-                                    AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                        type = AmbientPreviewType.VIGNETTE_AREA,
-                                        label = labelVignetteArea,
-                                        originalValue = vignetteVisibleArea,
-                                        valueRange = 0f..1f,
-                                    ))
-                                },
-                            )
-                            AppDivider()
-                            // Transition slider
-                            AsoSliderRow(
-                                label = labelVignetteTransition,
-                                value = vignetteTransition,
-                                valueRange = 0f..1f,
-                                formatLabel = { v ->
-                                    when {
-                                        v <= 0f -> labelSoft
-                                        v >= 1f -> labelHard
-                                        else    -> "${(v * ASO_PERCENT_DIVISOR).toInt()}%"
-                                    }
-                                },
-                                accentColor = colors.accent,
-                                onValueChange = { vignetteTransition = it },
-                                onValueChangeFinished = {
-                                    AppLog.d(TAG, "vignette transition → $vignetteTransition")
-                                    commitLayout { copy(ambientVignetteTransition = vignetteTransition) }
-                                },
-                                onPreviewClick = {
-                                    AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                        type = AmbientPreviewType.VIGNETTE_TRANSITION,
-                                        label = labelVignetteTransition,
-                                        originalValue = vignetteTransition,
-                                        valueRange = 0f..1f,
-                                    ))
-                                },
-                            )
-                            AppDivider()
-                            // Opacity slider
-                            AsoSliderRow(
-                                label = labelVignetteOpacity,
-                                value = vignetteOpacity,
-                                valueRange = 0f..1f,
-                                formatLabel = { "${(it * ASO_PERCENT_DIVISOR).toInt()}%" },
-                                accentColor = colors.accent,
-                                onValueChange = { vignetteOpacity = it },
-                                onValueChangeFinished = {
-                                    AppLog.d(TAG, "vignette opacity → $vignetteOpacity")
-                                    commitLayout { copy(ambientVignetteOpacity = vignetteOpacity) }
-                                },
-                                onPreviewClick = {
-                                    AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                        type = AmbientPreviewType.VIGNETTE_OPACITY,
-                                        label = labelVignetteOpacity,
-                                        originalValue = vignetteOpacity,
-                                        valueRange = 0f..1f,
-                                    ))
-                                },
-                            )
-                            AppDivider()
-                            // Color picker row — opens full-screen overlay (see below)
-                            AsoColorRow(
-                                vignetteColorInt = vignetteColorInt,
-                                accentColor = colors.accent,
-                                onShowPicker = { showColorPicker = true },
-                            )
-                        }
-                    }
                 }
             }
         }
 
-        // ── Color picker — full-screen in-tree overlay ────────────────────────
-        // Rendered as a sibling of the main settings Box so it truly fills the screen.
-        if (showColorPicker) {
-            ColorWheelPicker(
-                initialColor = Color(vignetteColorInt),
-                onColorSelected = { color ->
-                    vignetteColorInt = color.toArgb()
-                    AppLog.d(TAG, "vignette color → 0x${Integer.toHexString(vignetteColorInt)}")
-                    commitLayout { copy(ambientVignetteColor = color.toArgb()) }
-                    showColorPicker = false
-                },
-                onDismiss = { showColorPicker = false },
-            )
-        }
     }
 }
 
@@ -600,60 +439,4 @@ internal fun AsoPreviewBar(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shape dropdown
-// ─────────────────────────────────────────────────────────────────────────────
 
-@Composable
-private fun AsoShapeRow(
-    currentShape: VignetteShape,
-    accentColor: Color,
-    onShapeSelected: (VignetteShape) -> Unit,
-) {
-    val colors = LocalAppColors.current
-
-    AppSettingsRow {
-        Text(
-            text = stringResource(R.string.settings_macropad_vignette_shape),
-            color = colors.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        AppDropdown(
-            selected          = currentShape,
-            options           = VignetteShape.entries,
-            optionText        = { shape -> stringResource(shape.labelResId()) },
-            onSelected        = onShapeSelected,
-            horizontalPadding = ASO_DROPDOWN_H_PADDING,
-            verticalPadding   = ASO_DROPDOWN_V_PADDING,
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Color picker row
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun AsoColorRow(
-    vignetteColorInt: Int,
-    accentColor: Color,
-    onShowPicker: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    AppSettingsRow(onClick = onShowPicker) {
-        Text(
-            text = stringResource(R.string.settings_macropad_vignette_color),
-            color = colors.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        Box(
-            modifier = Modifier
-                .size(ASO_SWATCH_SIZE)
-                .clip(CircleShape)
-                .background(Color(vignetteColorInt))
-                .border(1.dp, colors.accentBorder, CircleShape),
-        )
-    }
-}

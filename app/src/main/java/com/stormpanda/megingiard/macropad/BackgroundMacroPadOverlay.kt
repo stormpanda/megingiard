@@ -60,8 +60,7 @@ private val AM_SWIPE_EDGE_ZONE = 40.dp
 private val AM_SWIPE_THRESHOLD = 25.dp
 private val AM_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val AM_PERCENT_DIVISOR = 100f
-// Minimum gap between gradient color stops to prevent duplicate-stop artifacts.
-private const val VIGNETTE_MIN_STOP_GAP = 0.001f
+
 
 /** Mirrors MacroPadViewModel.INJECTOR_RESTART_DEBOUNCE_MS — absorbs rapid modal transitions. */
 private const val AM_INJECTOR_RESTART_DEBOUNCE_MS = 150L
@@ -85,19 +84,13 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     val colors = LocalAppColors.current
 
     val dimAlpha = layout?.ambientDim ?: 0f
-    val vignetteEnabled = layout?.ambientVignetteEnabled ?: false
-    val vignetteVisibleArea = layout?.ambientVignetteVisibleArea ?: 0.7f
-    val vignetteTransition = layout?.ambientVignetteTransition ?: 0.5f
-    val vignetteOpacity = layout?.ambientVignetteOpacity ?: 0.6f
-    val vignetteColorInt = layout?.ambientVignetteColor ?: 0xFF000000.toInt()
-    val vignetteShape = layout?.ambientVignetteShape ?: VignetteShape.RADIAL
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
     // When touch projection or freeze is active, hide pad content entirely.
-    // Viewport edit is handled separately: vignette stays, buttons go semi-transparent.
+    // Viewport edit is handled separately: buttons go semi-transparent.
     val hideContent = isTouchProjectionActive || isFrozen
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
@@ -108,9 +101,8 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
         SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, pillZoneWidthPx)
     }
 
-    // Effective dim/vignette: overridden to 0 when peeking
+    // Effective dim: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
-    val effectiveVignetteOpacity = if (isPeekActive) 0f else vignetteOpacity
 
     // Single watcher: stop injectors according to overlay state, restart when all closed.
     // Mirrors MacroPadViewModel.watchInjectorLifecycle() — must use the same combine()+
@@ -228,27 +220,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
             )
         }
 
-        // Layer 3: Vignette overlay (shape-specific gradient darkening the edges)
-        // Shown in normal mode AND during viewport edit (intentionally retained so the
-        // user can judge where the vignette sits relative to the chosen viewport).
-        if (!hideContent && vignetteEnabled && effectiveVignetteOpacity > 0f) {
-            val vColor = Color(vignetteColorInt)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawBehind {
-                        when (vignetteShape) {
-                            VignetteShape.RADIAL     -> drawRadialVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
-                            VignetteShape.LETTERBOX  -> drawLetterboxVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
-                            VignetteShape.PILLARBOX  -> drawPillarboxVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
-                            VignetteShape.TOP        -> drawTopVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
-                            VignetteShape.BOTTOM     -> drawBottomVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
-                            VignetteShape.LEFT       -> drawLeftVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
-                            VignetteShape.RIGHT      -> drawRightVignette(vColor, vignetteVisibleArea, vignetteTransition, effectiveVignetteOpacity)
-                        }
-                    }
-            )
-        }
+
 
         // Layer 4: MacroPad buttons
         // During touch projection / freeze: fully hidden.
@@ -301,24 +273,8 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
         val pc = previewConfig
         val pl = layout
         if (pc != null && pl != null) {
-            val labelSoft = stringResource(R.string.settings_macropad_vignette_transition_soft)
-            val labelHard = stringResource(R.string.settings_macropad_vignette_transition_hard)
-            val previewValue = when (pc.type) {
-                AmbientPreviewType.DIM                 -> pl.ambientDim
-                AmbientPreviewType.VIGNETTE_AREA       -> pl.ambientVignetteVisibleArea
-                AmbientPreviewType.VIGNETTE_TRANSITION -> pl.ambientVignetteTransition
-                AmbientPreviewType.VIGNETTE_OPACITY    -> pl.ambientVignetteOpacity
-            }
-            val formatPreviewLabel: (Float) -> String = when (pc.type) {
-                AmbientPreviewType.VIGNETTE_TRANSITION -> { v ->
-                    when {
-                        v <= 0f -> labelSoft
-                        v >= 1f -> labelHard
-                        else    -> "${(v * AM_PERCENT_DIVISOR).toInt()}%"
-                    }
-                }
-                else -> { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
-            }
+            val previewValue = pl.ambientDim
+            val formatPreviewLabel: (Float) -> String = { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -332,22 +288,12 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                     formatLabel = formatPreviewLabel,
                     accentColor = colors.accent,
                     onValueChange = { v ->
-                        val updated = when (pc.type) {
-                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = v)
-                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = v)
-                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = v)
-                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = v)
-                        }
+                        val updated = pl.copy(ambientDim = v)
                         MacroPadState.updateLayout(updated)
                     },
                     onCancel = {
                         AppLog.d(TAG, "ambient preview ${pc.type} cancelled")
-                        val restored = when (pc.type) {
-                            AmbientPreviewType.DIM                 -> pl.copy(ambientDim = pc.originalValue)
-                            AmbientPreviewType.VIGNETTE_AREA       -> pl.copy(ambientVignetteVisibleArea = pc.originalValue)
-                            AmbientPreviewType.VIGNETTE_TRANSITION -> pl.copy(ambientVignetteTransition = pc.originalValue)
-                            AmbientPreviewType.VIGNETTE_OPACITY    -> pl.copy(ambientVignetteOpacity = pc.originalValue)
-                        }
+                        val restored = pl.copy(ambientDim = pc.originalValue)
                         MacroPadState.updateLayout(restored)
                         AppStateManager.setAmbientPreviewConfig(null)
                     },
@@ -363,197 +309,4 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Vignette DrawScope helpers
-//
-// visibleArea: 0 = full effect, 1 = effect off-screen (nothing covered)
-// transition:  0 = soft (full gradient), 1 = hard (instant cut)
-// opacity:     alpha applied to the vignetteColor
-// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Radial vignette: transparent circle in the center, colored edges.
- * At visibleArea = 1.0, inner radius equals the half-diagonal (corners just reached).
- */
-private fun DrawScope.drawRadialVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-) {
-    if (visibleArea >= 1f) return
-    val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
-    val innerFrac = visibleArea                                        // transparent zone [0..halfDiag)
-    // Quadratic Ease-Out für weicheren Übergang
-    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
-    val easedTransition = easeOutQuad(1f - transition)
-    val outerFrac = minOf(1f, maxOf(innerFrac + VIGNETTE_MIN_STOP_GAP,
-        innerFrac + (1f - innerFrac) * easedTransition))            // gradient end fraction
-    val vColor = vignetteColor.copy(alpha = opacity)
-    val stops = buildList {
-        add(0f to Color.Transparent)
-        if (innerFrac > 0f) add(innerFrac to Color.Transparent)
-        add(outerFrac to vColor)
-        if (outerFrac < 1f) add(1f to vColor)
-    }.toTypedArray()
-    drawRect(
-        brush = Brush.radialGradient(
-            colorStops = stops,
-            center = Offset(size.width / 2f, size.height / 2f),
-            radius = halfDiag,
-        )
-    )
-}
-
-/**
- * Letterbox vignette: dark bands at top and bottom, transparent center strip.
- * visibleArea controls the height of the transparent center strip (1 = full height, 0 = none).
- */
-private fun DrawScope.drawLetterboxVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-) {
-    val innerFrac = (1f - visibleArea) / 2f   // fraction of height that is dark band (each side)
-    if (innerFrac <= 0f) return
-    // When visibleArea=0 both gradient stops land at 0.5f (same position) → Brush crash.
-    // Full-coverage case: just fill solid.
-    if (innerFrac >= 0.5f) { drawRect(color = vignetteColor.copy(alpha = opacity)); return }
-    // Quadratic Ease-Out für weicheren Übergang
-    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
-    val easedTransition = easeOutQuad(1f - transition)
-    val transitionFrac = innerFrac * easedTransition
-    val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
-    val vColor = vignetteColor.copy(alpha = opacity)
-    val stops = buildList {
-        add(0f to vColor)
-        if (gradStart > 0f) add(gradStart to vColor)
-        add(innerFrac to Color.Transparent)
-        add((1f - innerFrac) to Color.Transparent)
-        if (gradStart > 0f) add((1f - gradStart) to vColor)
-        add(1f to vColor)
-    }.toTypedArray()
-    drawRect(brush = Brush.verticalGradient(colorStops = stops))
-}
-
-/**
- * Pillarbox vignette: dark bands at left and right, transparent center strip.
- * visibleArea controls the width of the transparent center strip (1 = full width, 0 = none).
- */
-private fun DrawScope.drawPillarboxVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-) {
-    val innerFrac = (1f - visibleArea) / 2f   // fraction of width that is dark band (each side)
-    if (innerFrac <= 0f) return
-    // When visibleArea=0 both gradient stops land at 0.5f (same position) → Brush crash.
-    // Full-coverage case: just fill solid.
-    if (innerFrac >= 0.5f) { drawRect(color = vignetteColor.copy(alpha = opacity)); return }
-    // Quadratic Ease-Out für weicheren Übergang
-    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
-    val easedTransition = easeOutQuad(1f - transition)
-    val transitionFrac = innerFrac * easedTransition
-    val gradStart = maxOf(0f, minOf(innerFrac - VIGNETTE_MIN_STOP_GAP, innerFrac - transitionFrac))
-    val vColor = vignetteColor.copy(alpha = opacity)
-    val stops = buildList {
-        add(0f to vColor)
-        if (gradStart > 0f) add(gradStart to vColor)
-        add(innerFrac to Color.Transparent)
-        add((1f - innerFrac) to Color.Transparent)
-        if (gradStart > 0f) add((1f - gradStart) to vColor)
-        add(1f to vColor)
-    }.toTypedArray()
-    drawRect(brush = Brush.horizontalGradient(colorStops = stops))
-}
-
-/**
- * Directional vignette: darkens from one edge inward, leaving the rest transparent.
- * visibleArea controls the fraction of the screen that remains transparent.
- */
-private fun DrawScope.drawEdgeVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-    vertical: Boolean,
-    fromStart: Boolean,
-) {
-    val coveredFrac = 1f - visibleArea
-    if (coveredFrac <= 0f) return
-    if (coveredFrac >= 1f) {
-        drawRect(color = vignetteColor.copy(alpha = opacity))
-        return
-    }
-    fun easeOutQuad(x: Float): Float = 1f - (1f - x) * (1f - x)
-    val easedTransition = easeOutQuad(1f - transition)
-    val transitionFrac = coveredFrac * easedTransition
-    val vColor = vignetteColor.copy(alpha = opacity)
-    val stops = if (fromStart) {
-        val transparentStart = maxOf(
-            VIGNETTE_MIN_STOP_GAP,
-            minOf(coveredFrac, coveredFrac - transitionFrac),
-        )
-        buildList {
-            add(0f to vColor)
-            if (transparentStart > 0f) add(transparentStart to vColor)
-            add(coveredFrac to Color.Transparent)
-            add(1f to Color.Transparent)
-        }.toTypedArray()
-    } else {
-        val coloredStart = minOf(
-            1f - VIGNETTE_MIN_STOP_GAP,
-            maxOf(1f - coveredFrac, 1f - coveredFrac + transitionFrac),
-        )
-        buildList {
-            add(0f to Color.Transparent)
-            add((1f - coveredFrac) to Color.Transparent)
-            if (coloredStart < 1f) add(coloredStart to vColor)
-            add(1f to vColor)
-        }.toTypedArray()
-    }
-    val brush = if (vertical) {
-        Brush.verticalGradient(colorStops = stops)
-    } else {
-        Brush.horizontalGradient(colorStops = stops)
-    }
-    drawRect(brush = brush)
-}
-
-private fun DrawScope.drawTopVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-) {
-    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = true, fromStart = true)
-}
-
-private fun DrawScope.drawBottomVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-) {
-    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = true, fromStart = false)
-}
-
-private fun DrawScope.drawLeftVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-) {
-    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = false, fromStart = true)
-}
-
-private fun DrawScope.drawRightVignette(
-    vignetteColor: Color,
-    visibleArea: Float,
-    transition: Float,
-    opacity: Float,
-) {
-    drawEdgeVignette(vignetteColor, visibleArea, transition, opacity, vertical = false, fromStart = false)
-}

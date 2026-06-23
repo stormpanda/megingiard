@@ -308,22 +308,9 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_ambient_apply_theme">Apply theme to background display</string>
     <string name="settings_macropad_ambient_apply_theme_hint">When disabled, all buttons appear in neutral grey style</string>
     <string name="settings_macropad_dim">Dimming</string>
-    <string name="settings_macropad_vignette">Vignette</string>
-    <string name="settings_macropad_vignette_visible_area">Visible Area</string>
-    <string name="settings_macropad_vignette_transition">Transition</string>
-    <string name="settings_macropad_vignette_transition_soft">Soft</string>
-    <string name="settings_macropad_vignette_transition_hard">Hard</string>
-    <string name="settings_macropad_vignette_opacity">Opacity</string>
-    <string name="settings_macropad_vignette_color">Color</string>
+
     <string name="ambient_preview">Preview</string>
-    <string name="settings_macropad_vignette_shape">Shape</string>
-    <string name="settings_macropad_vignette_shape_radial">Radial</string>
-    <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
-    <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
-    <string name="settings_macropad_vignette_shape_top">From Top</string>
-    <string name="settings_macropad_vignette_shape_bottom">From Bottom</string>
-    <string name="settings_macropad_vignette_shape_left">From Left</string>
-    <string name="settings_macropad_vignette_shape_right">From Right</string>
+
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>
