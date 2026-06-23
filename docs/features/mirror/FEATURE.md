@@ -119,12 +119,12 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Boundary collisions during aspect-ratio-locked resizing MUST be resolved by scaling both axes uniformly to prevent stretching or overlap.
 - The aspect ratio mode (`aspectRatioMode: AspectRatioMode`) MUST be saved and persisted inside the layout profile schema. The legacy `keepAspectRatio: Boolean` is automatically migrated to the corresponding aspect ratio mode for backward compatibility.
 
-### FR-M13: Multi-Cutout Crossfade
+### FR-M13: Multi-Cutout Edge Blending
 
-- The user MUST be able to configure a crossfade blend width using a slider (`Crossfade` / `Überblendung`) in the background settings overlay.
-- The slider range MUST be `0` to `100 dp`. The slider is visible in the background settings overlay panel.
-- The crossfade blend width (`mirrorCrossfadeBlendWidth`) MUST be saved and persisted per-layout inside the layout configuration schema.
-- When a crossfade is configured (> 0 dp):
+- The user MUST be able to configure an edge blending width using a slider with a live preview button (`Edge blending` / `Kantenübergänge`) in the background settings overlay.
+- The slider range MUST be `0` to `100 dp`. Clicking the preview icon displays a live preview bar at the bottom of the secondary screen, allowing real-time adjustment with visual feedback.
+- The edge blending width (`mirrorEdgeBlendWidth`) MUST be saved and persisted per-layout inside the layout configuration schema.
+- When edge blending is configured (> 0 dp):
   - Fades MUST be applied to the edges of each cutout.
   - If a cutout edge touches or is adjacent to another cutout (within a configured tolerance), the fade MUST blend symmetrically *inside* both cutout boundaries so that their combined opacity in the overlap region is always exactly 1.0 (preventing dark or bright seams).
   - If a cutout edge faces the black background (does not touch another cutout), the cutout interior MUST remain 100% opaque, and the fade MUST only happen *outside* the cutout boundary (fading out into the background) to prevent the black background from bleeding into the cutout.
@@ -480,11 +480,11 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 
 **Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the global setting is off.
 
-### Multi-Cutout Crossfade Blending
+### Multi-Cutout Edge Blending
 
 To allow seamless transitions between adjacent or independent cutouts, we implement a hybrid border gradient mask in `MirrorPresentation`'s `MultiCutoutContainer`:
 
-- **Per-Layout Value Storage & Sync**: The crossfade blend width is defined per-layout via the `mirrorCrossfadeBlendWidth` property in `PadLayout`. At runtime, `ScreenCaptureManager` observes `activeLayout` and publishes updates via the read-only `crossfadeBlendWidthDp` state flow. `MirrorPresentation` collects this flow to invalidate drawing.
+- **Per-Layout Value Storage & Sync**: The edge blending width is defined per-layout via the `mirrorEdgeBlendWidth` property in `PadLayout`. At runtime, `ScreenCaptureManager` observes `activeLayout` and publishes updates via the read-only `edgeBlendWidthDp` state flow. `MirrorPresentation` collects this flow to invalidate drawing.
 - **Edge Touching Detection**: We check each of the four edges (left, right, top, bottom) of each cutout against all other cutouts. If the distance between their destination boundaries is within a tolerance (`TOUCH_TOLERANCE = 0.005f`), they are flagged as touching (`touchesOtherLeft`, etc.).
 - **Hybrid Gradient Coordinates**:
    - For background-facing edges (e.g. `touchesOtherLeft == false`), the gradient goes from `-leftExt` (TRANSPARENT) to `0f` (BLACK). Using `Shader.TileMode.CLAMP`, the interior of the cutout remains 100% opaque.
@@ -492,11 +492,11 @@ To allow seamless transitions between adjacent or independent cutouts, we implem
 - **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their corresponding edge gradients ensures that overlapping areas have a combined opacity of exactly 1.0, eliminating dark rendering seams.
 
 
-### Cutout Shape Rendering (Circular Clipping & Crossfade)
+### Cutout Shape Rendering (Circular Clipping & Edge Blending)
 
 When a cutout's shape is set to `CIRCLE`:
 1. **Clipping in Presentation**: During `dispatchDraw` in `MirrorPresentation`, we translate the canvas to the cutout's destination coordinates `(dx, dy)`. If the shape is circular, we define a circular clipping path centered at `(dw / 2f, dh / 2f)` with a radius of `min(dw, dh) / 2f` (inscribing the circle perfectly within the destination bounds). We clip the canvas using `canvas.clipPath(path)` prior to drawing the source view/bitmap.
-2. **Circular Crossfade**: If crossfade blending is active, instead of rectangular edge gradients, a radial gradient is applied. We construct a `RadialGradient` centered at the circle's center with a radius of `r`. The gradient transitions from opaque (`BLACK`) at the inner boundary (`r - blendW`) to transparent (`TRANSPARENT`) at the outer boundary (`r`). Applying this shader with `PorterDuff.Mode.DST_IN` creates a feathered, soft boundary for the circular cutout.
+2. **Circular Edge Blending**: If edge blending is active, instead of rectangular edge gradients, a radial gradient is applied. We construct a `RadialGradient` centered at the circle's center with a radius of `r`. The gradient transitions from opaque (`BLACK`) at the inner boundary (`r - blendW`) to transparent (`TRANSPARENT`) at the outer boundary (`r`). Applying this shader with `PorterDuff.Mode.DST_IN` creates a feathered, soft boundary for the circular cutout.
 3. **Clipping in Editor Preview**: In `CutoutLayoutEditor.kt`, the editor uses standard Compose `Box` elements positioned and sized to the rectangular bounds of the cutout. If the cutout is configured as a circle, the editor displays an inner circular `Box` centered inside the layout container, using `shape = CircleShape` for background and borders. This allows the user to resize and position the cutout using rectangular handles while visualizing the exact circular crop area.
 
 ### Mirror Refresh Rate (FPS) Limiting

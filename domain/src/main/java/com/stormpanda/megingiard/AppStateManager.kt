@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 private const val TAG = "AppStateManager"
 
 /** Type of value being live-previewed in ambient settings preview mode. */
-enum class AmbientPreviewType { DIM }
+enum class AmbientPreviewType { DIM, EDGE_BLENDING }
 
 /**
  * Shared between [BackgroundSettingsOverlay] (primary screen) and [BackgroundMacroPadOverlay]

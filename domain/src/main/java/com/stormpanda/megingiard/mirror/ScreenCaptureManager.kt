@@ -42,8 +42,8 @@ object ScreenCaptureManager {
     private val _cutouts = MutableStateFlow<List<ScreenCutout>>(emptyList())
     val cutouts: StateFlow<List<ScreenCutout>> = _cutouts.asStateFlow()
 
-    private val _crossfadeBlendWidthDp = MutableStateFlow(0f)
-    val crossfadeBlendWidthDp: StateFlow<Float> = _crossfadeBlendWidthDp.asStateFlow()
+    private val _edgeBlendWidthDp = MutableStateFlow(0f)
+    val edgeBlendWidthDp: StateFlow<Float> = _edgeBlendWidthDp.asStateFlow()
 
     private val _maxFps = MutableStateFlow(60)
     val maxFps: StateFlow<Int> = _maxFps.asStateFlow()
@@ -75,12 +75,12 @@ object ScreenCaptureManager {
         scope.launch {
             MacroPadState.activeLayout.collect { layout ->
                 if (layout != null) {
-                    _crossfadeBlendWidthDp.value = layout.mirrorCrossfadeBlendWidth
+                    _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
                     _maxFps.value = layout.mirrorMaxFps
                     _smoothingStrength.value = layout.mirrorSmoothingStrength
                     _cutouts.value = layout.mirrorCutouts
                 } else {
-                    _crossfadeBlendWidthDp.value = 0f
+                    _edgeBlendWidthDp.value = 0f
                     _maxFps.value = 60
                     _smoothingStrength.value = 85
                     _cutouts.value = emptyList()

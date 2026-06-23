@@ -234,7 +234,7 @@ class MirrorPresentation(
         }
 
         scope.launch {
-            ScreenCaptureManager.crossfadeBlendWidthDp.collect {
+            ScreenCaptureManager.edgeBlendWidthDp.collect {
                 mcc.invalidate()
             }
         }
@@ -805,8 +805,8 @@ class MultiCutoutContainer(
         if (parentW <= 0f || parentH <= 0f) return
 
         val drawingTime = drawingTime
-        val blendWidthDp = ScreenCaptureManager.crossfadeBlendWidthDp.value
-        val crossfade = blendWidthDp > 0f
+        val blendWidthDp = ScreenCaptureManager.edgeBlendWidthDp.value
+        val edgeBlending = blendWidthDp > 0f
         val tolerance = TOUCH_TOLERANCE
         val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
 
@@ -830,7 +830,7 @@ class MultiCutoutContainer(
             var touchesOtherTop = false
             var touchesOtherBottom = false
 
-            if (crossfade && cutouts.size > 1) {
+            if (edgeBlending && cutouts.size > 1) {
                 for (other in cutouts) {
                     if (other == cutout) continue
                     
@@ -858,10 +858,10 @@ class MultiCutoutContainer(
                 }
             }
 
-            val touchesLeft = crossfade
-            val touchesRight = crossfade
-            val touchesTop = crossfade
-            val touchesBottom = crossfade
+            val touchesLeft = edgeBlending
+            val touchesRight = edgeBlending
+            val touchesTop = edgeBlending
+            val touchesBottom = edgeBlending
 
             val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
             val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
@@ -942,7 +942,7 @@ class MultiCutoutContainer(
                 canvas.restoreToCount(innerSaveCount)
 
                 if (cutout.shape == CutoutShape.CIRCLE) {
-                    if (crossfade) {
+                    if (edgeBlending) {
                         val r = min(dw, dh) / 2f
                         val stop = maxOf(0f, r - blendW) / r
                         val colors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)

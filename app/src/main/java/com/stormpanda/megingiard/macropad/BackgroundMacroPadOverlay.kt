@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import kotlin.math.sqrt
+import kotlin.math.roundToInt
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -273,8 +274,23 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
         val pc = previewConfig
         val pl = layout
         if (pc != null && pl != null) {
-            val previewValue = pl.ambientDim
-            val formatPreviewLabel: (Float) -> String = { v -> "${(v * AM_PERCENT_DIVISOR).toInt()}%" }
+            val previewValue = when (pc.type) {
+                AmbientPreviewType.DIM -> pl.ambientDim
+                AmbientPreviewType.EDGE_BLENDING -> pl.mirrorEdgeBlendWidth
+            }
+            val formatPreviewLabel: (Float) -> String = { v ->
+                if (pc.type == AmbientPreviewType.DIM) {
+                    "${(v * AM_PERCENT_DIVISOR).toInt()}%"
+                } else {
+                    when (v.roundToInt()) {
+                        in 0..12 -> context.getString(R.string.mirror_edge_blend_strength_off)
+                        in 13..37 -> context.getString(R.string.mirror_edge_blend_strength_light)
+                        in 38..62 -> context.getString(R.string.mirror_edge_blend_strength_medium)
+                        in 63..87 -> context.getString(R.string.mirror_edge_blend_strength_strong)
+                        else -> context.getString(R.string.mirror_edge_blend_strength_max)
+                    }
+                }
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -288,12 +304,18 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                     formatLabel = formatPreviewLabel,
                     accentColor = colors.accent,
                     onValueChange = { v ->
-                        val updated = pl.copy(ambientDim = v)
+                        val updated = when (pc.type) {
+                            AmbientPreviewType.DIM -> pl.copy(ambientDim = v)
+                            AmbientPreviewType.EDGE_BLENDING -> pl.copy(mirrorEdgeBlendWidth = v)
+                        }
                         MacroPadState.updateLayout(updated)
                     },
                     onCancel = {
                         AppLog.d(TAG, "ambient preview ${pc.type} cancelled")
-                        val restored = pl.copy(ambientDim = pc.originalValue)
+                        val restored = when (pc.type) {
+                            AmbientPreviewType.DIM -> pl.copy(ambientDim = pc.originalValue)
+                            AmbientPreviewType.EDGE_BLENDING -> pl.copy(mirrorEdgeBlendWidth = pc.originalValue)
+                        }
                         MacroPadState.updateLayout(restored)
                         AppStateManager.setAmbientPreviewConfig(null)
                     },

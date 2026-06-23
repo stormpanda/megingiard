@@ -121,6 +121,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
     // Local slider state for smooth dragging — committed on finger up via updateLayout.
     var dimAlpha by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientDim) }
+    var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
@@ -134,14 +135,18 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
     // Pre-captured for use inside onPreviewClick lambdas (non-composable context).
     val labelDim              = stringResource(R.string.settings_macropad_dim)
+    val labelEdgeBlending     = stringResource(R.string.mirror_edge_blend_label)
 
     // Back: exit preview first; the system Back then closes ambient settings.
     BackHandler(enabled = isInPreview) {
         if (isInPreview) {
             val config = previewConfig!!
-            AppLog.d(TAG, "preview ${config.type} cancelled \u2192 restoring ${config.originalValue}")
+            AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
             commitLayout {
-                copy(ambientDim = config.originalValue)
+                when (config.type) {
+                    AmbientPreviewType.DIM -> copy(ambientDim = config.originalValue)
+                    AmbientPreviewType.EDGE_BLENDING -> copy(mirrorEdgeBlendWidth = config.originalValue)
+                }
             }
             AppStateManager.setAmbientPreviewConfig(null)
         }
@@ -153,6 +158,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         if (!isInPreview) {
             val l = MacroPadState.activeLayout.value ?: return@LaunchedEffect
             dimAlpha = l.ambientDim
+            edgeBlendWidth = l.mirrorEdgeBlendWidth
         }
     }
 
@@ -229,38 +235,37 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
                         AppDivider()
 
-                        AppSettingsRow {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.mirror_crossfade_label),
-                                    color = colors.onSurface,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                val crossfadeText = when (currentLayout.mirrorCrossfadeBlendWidth.roundToInt()) {
-                                    in 0..12 -> stringResource(R.string.mirror_crossfade_strength_off)
-                                    in 13..37 -> stringResource(R.string.mirror_crossfade_strength_light)
-                                    in 38..62 -> stringResource(R.string.mirror_crossfade_strength_medium)
-                                    in 63..87 -> stringResource(R.string.mirror_crossfade_strength_strong)
-                                    else -> stringResource(R.string.mirror_crossfade_strength_max)
+                        AsoSliderRow(
+                            label = labelEdgeBlending,
+                            value = edgeBlendWidth,
+                            valueRange = 0f..100f,
+                            formatLabel = { v ->
+                                when (v.roundToInt()) {
+                                    in 0..12 -> context.getString(R.string.mirror_edge_blend_strength_off)
+                                    in 13..37 -> context.getString(R.string.mirror_edge_blend_strength_light)
+                                    in 38..62 -> context.getString(R.string.mirror_edge_blend_strength_medium)
+                                    in 63..87 -> context.getString(R.string.mirror_edge_blend_strength_strong)
+                                    else -> context.getString(R.string.mirror_edge_blend_strength_max)
                                 }
-                                Text(text = crossfadeText, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-                            }
-                            Slider(
-                                modifier = Modifier.weight(2f),
-                                value = currentLayout.mirrorCrossfadeBlendWidth,
-                                onValueChange = { value ->
-                                    val idx = (value / 25f).roundToInt().coerceIn(0, 4)
-                                    commitLayout { copy(mirrorCrossfadeBlendWidth = idx * 25f) }
-                                },
-                                valueRange = 0f..100f,
-                                steps = 3,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = colors.accent,
-                                    activeTrackColor = colors.accent,
-                                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
-                                ),
-                            )
-                        }
+                            },
+                            accentColor = colors.accent,
+                            onValueChange = { value ->
+                                val idx = (value / 25f).roundToInt().coerceIn(0, 4)
+                                edgeBlendWidth = idx * 25f
+                            },
+                            onValueChangeFinished = {
+                                AppLog.d(TAG, "edge blend → $edgeBlendWidth")
+                                commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
+                            },
+                            onPreviewClick = {
+                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                    type = AmbientPreviewType.EDGE_BLENDING,
+                                    label = labelEdgeBlending,
+                                    originalValue = edgeBlendWidth,
+                                    valueRange = 0f..100f,
+                                ))
+                            },
+                        )
 
                         AppDivider()
 
