@@ -38,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,14 +61,11 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppTextField
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 import androidx.compose.ui.text.style.TextAlign
@@ -141,6 +139,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }
     var renamingCutout by remember { mutableStateOf<ScreenCutout?>(null) }
     var renameText by remember(renamingCutout) { mutableStateOf(renamingCutout?.name ?: "") }
+    val localSmoothingValues = remember(currentLayout.id) { mutableStateMapOf<String, Float>() }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
@@ -392,22 +391,23 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        val cutoutValue = if (cutout.motionSmoothing) {
+                                            when (cutout.motionSmoothingStrength) {
+                                                ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
+                                                ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
+                                                ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
+                                                else -> ASO_SMOOTHING_STRONG
+                                            }
+                                        } else {
+                                            ASO_SMOOTHING_OFF
+                                        }
+                                        val sliderValue = localSmoothingValues[cutout.id] ?: cutoutValue
                                         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                             Text(
                                                 text = stringResource(R.string.settings_mirror_follow_smoothing),
                                                 color = colors.onSurface,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
-                                            val sliderValue = if (cutout.motionSmoothing) {
-                                                when (cutout.motionSmoothingStrength) {
-                                                    ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
-                                                    ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
-                                                    ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
-                                                    else -> ASO_SMOOTHING_STRONG
-                                                }
-                                            } else {
-                                                ASO_SMOOTHING_OFF
-                                            }
                                             val strengthText = when (sliderValue.roundToInt()) {
                                                 ASO_SMOOTHING_OFF.toInt() -> stringResource(R.string.mirror_smoothing_strength_off)
                                                 ASO_SMOOTHING_LIGHT.toInt() -> stringResource(R.string.mirror_smoothing_strength_light)
@@ -423,18 +423,14 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         }
                                         Slider(
                                             modifier = Modifier.weight(1.5f),
-                                            value = if (cutout.motionSmoothing) {
-                                                when (cutout.motionSmoothingStrength) {
-                                                    ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
-                                                    ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
-                                                    ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
-                                                    else -> ASO_SMOOTHING_STRONG
-                                                }
-                                            } else {
-                                                ASO_SMOOTHING_OFF
-                                            },
+                                            value = sliderValue,
                                             onValueChange = { newValue ->
                                                 val idx = newValue.roundToInt().coerceIn(ASO_SMOOTHING_OFF.toInt(), ASO_SMOOTHING_STRONG.toInt())
+                                                localSmoothingValues[cutout.id] = idx.toFloat()
+                                            },
+                                            onValueChangeFinished = {
+                                                val valFloat = localSmoothingValues[cutout.id] ?: cutoutValue
+                                                val idx = valFloat.roundToInt().coerceIn(ASO_SMOOTHING_OFF.toInt(), ASO_SMOOTHING_STRONG.toInt())
                                                 val isSmooth = idx > 0
                                                 val strength = when (idx) {
                                                     ASO_SMOOTHING_LIGHT.toInt() -> ASO_SMOOTHING_VAL_LIGHT
@@ -442,7 +438,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                                     ASO_SMOOTHING_STRONG.toInt() -> ASO_SMOOTHING_VAL_STRONG
                                                     else -> cutout.motionSmoothingStrength
                                                 }
-                                                AppLog.d(TAG, "cutout '${cutout.name}' smoothing slider → $idx (strength: $strength)")
+                                                AppLog.d(TAG, "cutout '${cutout.name}' smoothing slider finished → $idx (strength: $strength)")
                                                 val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
                                                     if (c.id == cutout.id) {
                                                         c.copy(

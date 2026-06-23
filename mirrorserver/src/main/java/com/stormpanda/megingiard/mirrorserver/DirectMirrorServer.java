@@ -145,15 +145,32 @@ public final class DirectMirrorServer {
                     Surface surface = Surface.CREATOR.createFromParcel(data);
                     if (surface == null || !surface.isValid()) {
                         System.err.println("DirectMirrorServer: surface at index " + i + " is invalid");
+                        if (surface != null) {
+                            try { surface.release(); } catch (Throwable ignored) {}
+                        }
                         continue;
                     }
 
-                    IBinder displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-" + i, false);
-                    Rect rect = new Rect(0, 0, w, h);
-                    SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
-                    
-                    activeDisplayTokens.add(displayToken);
-                    activeSurfaces.add(surface);
+                    if (w <= 0 || h <= 0) {
+                        System.err.println("DirectMirrorServer: surface at index " + i + " has invalid dimensions: " + w + "x" + h);
+                        try { surface.release(); } catch (Throwable ignored) {}
+                        continue;
+                    }
+
+                    IBinder displayToken = null;
+                    try {
+                        displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-" + i, false);
+                        Rect rect = new Rect(0, 0, w, h);
+                        SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
+                        activeDisplayTokens.add(displayToken);
+                        activeSurfaces.add(surface);
+                    } catch (Throwable t) {
+                        System.err.println("DirectMirrorServer: failed to configure display for surface index " + i + ": " + t);
+                        if (displayToken != null) {
+                            try { SurfaceControlReflect.destroyDisplay(displayToken); } catch (Throwable ignored) {}
+                        }
+                        try { surface.release(); } catch (Throwable ignored) {}
+                    }
                 }
 
                 if (activeDisplayTokens.isEmpty()) {

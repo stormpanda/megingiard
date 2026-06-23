@@ -3,8 +3,6 @@ package com.stormpanda.megingiard.mirror
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
-private const val TAG = "ScreenCutout"
-
 @Serializable
 enum class CutoutShape {
     RECTANGLE,
