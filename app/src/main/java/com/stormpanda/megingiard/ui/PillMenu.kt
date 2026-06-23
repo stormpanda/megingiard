@@ -127,10 +127,6 @@ fun PillMenu(
                         enter = slideInVertically { -it },
                         exit  = slideOutVertically { -it },
                     ),
-                onBackgroundSettings = {
-                    AppStateManager.setBackgroundSettingsActive(true)
-                    onDismiss()
-                },
                 onStart = {
                     AppStateManager.requestMirrorStart()
                     onDismiss()

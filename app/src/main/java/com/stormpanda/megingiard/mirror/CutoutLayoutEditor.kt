@@ -33,10 +33,7 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragIndicator
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -525,10 +522,10 @@ fun CutoutLayoutEditor(
             Box(
                 modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 8.dp)
             ) {
-                // Drag handle at top-left
+                // Drag handle centered vertically on the left
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.CenterStart)
                         .size(width = 36.dp, height = 32.dp)
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
@@ -552,19 +549,29 @@ fun CutoutLayoutEditor(
 
                 Column(
                     modifier = Modifier
-                        .padding(start = 40.dp) // clear drag handle (36dp + 4dp space)
+                        .padding(start = 40.dp, top = 4.dp, bottom = 4.dp, end = 4.dp) // clear drag handle (36dp + 4dp space)
                         .width(IntrinsicSize.Max),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
+                    val buttonWidth = 140.dp
+                    val selectedCutout = selectedCutoutId?.let { cutoutId ->
+                        layout.mirrorCutouts.find { it.id == cutoutId }
+                    }
+                    val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
+                    val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
+
+                    // Row 1: Add Cutout | Settings
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Add Cutout
                         ToolbarIconButton(
                             icon = Icons.Rounded.Add,
                             contentDescription = stringResource(R.string.mirror_editor_add_cutout),
                             color = colors.accent,
+                            label = stringResource(R.string.mirror_editor_toolbar_add),
+                            modifier = Modifier.width(buttonWidth),
                             onClick = {
                                 if (layout.mirrorCutouts.size >= 10) {
                                     Toast.makeText(context, context.getString(R.string.mirror_editor_max_cutouts), Toast.LENGTH_SHORT).show()
@@ -611,11 +618,23 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        val selectedCutout = selectedCutoutId?.let { cutoutId ->
-                            layout.mirrorCutouts.find { it.id == cutoutId }
-                        }
-                        val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
+                        ToolbarIconButton(
+                            icon = Icons.Rounded.Settings,
+                            contentDescription = stringResource(R.string.pill_menu_ambient_settings),
+                            color = colors.accent,
+                            label = stringResource(R.string.mirror_editor_toolbar_settings),
+                            modifier = Modifier.width(buttonWidth),
+                            onClick = {
+                                AppStateManager.setBackgroundSettingsActive(true)
+                            }
+                        )
+                    }
 
+                    // Row 2: Aspect Ratio | Shape Toggle
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         ToolbarIconButton(
                             icon = Icons.Rounded.AspectRatio,
                             contentDescription = stringResource(R.string.mirror_editor_aspect_ratio_mode),
@@ -626,6 +645,7 @@ fun CutoutLayoutEditor(
                                 AspectRatioMode.BOTTOM -> stringResource(R.string.mirror_editor_aspect_ratio_bottom)
                             },
                             enabled = selectedCutout != null,
+                            modifier = Modifier.width(buttonWidth),
                             onClick = {
                                 val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
                                 val updated = layout.mirrorCutouts.map {
@@ -667,8 +687,6 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        // Shape Toggle button (Rectangle / Circle)
-                        val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
                         ToolbarIconButton(
                             icon = if (isCircle) Icons.Rounded.Circle else Icons.Rounded.CropSquare,
                             contentDescription = if (isCircle) {
@@ -677,7 +695,13 @@ fun CutoutLayoutEditor(
                                 stringResource(R.string.mirror_editor_shape_rectangle)
                             },
                             color = colors.accent,
+                            label = if (isCircle) {
+                                stringResource(R.string.mirror_editor_toolbar_shape_circle)
+                            } else {
+                                stringResource(R.string.mirror_editor_toolbar_shape_rect)
+                            },
                             enabled = selectedCutout != null,
+                            modifier = Modifier.width(buttonWidth),
                             onClick = {
                                 val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
                                 val updated = layout.mirrorCutouts.map {
@@ -693,25 +717,32 @@ fun CutoutLayoutEditor(
                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
                             }
                         )
+                    }
 
-                        // Edit Crop of selected
-                                          // Edit Crop of selected
+                    // Row 3: Edit Crop | Delete Selected
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         ToolbarIconButton(
                             icon = Icons.Rounded.Crop,
                             contentDescription = stringResource(R.string.mirror_editor_edit_crop),
                             color = colors.accent,
+                            label = stringResource(R.string.mirror_editor_toolbar_crop),
                             enabled = selectedCutoutId != null,
+                            modifier = Modifier.width(buttonWidth),
                             onClick = {
                                 AppStateManager.setActiveCropCutoutId(selectedCutoutId)
                             }
                         )
 
-                        // Delete button
                         ToolbarIconButton(
                             icon = Icons.Rounded.Delete,
                             contentDescription = stringResource(R.string.mirror_editor_delete_cutout),
                             color = colors.error,
+                            label = stringResource(R.string.mirror_editor_toolbar_delete),
                             enabled = selectedCutoutId != null,
+                            modifier = Modifier.width(buttonWidth),
                             onClick = {
                                 val targetId = selectedCutoutId ?: return@ToolbarIconButton
                                 val remaining = layout.mirrorCutouts.filter { it.id != targetId }
@@ -719,22 +750,30 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
                             }
                         )
+                    }
 
-                        // Done / Save button
+                    // Row 4: Done / Save | Cancel / Revert
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         ToolbarIconButton(
                             icon = Icons.Rounded.Check,
                             contentDescription = stringResource(R.string.mirror_editor_done),
                             color = colors.accent,
+                            label = stringResource(R.string.mirror_editor_toolbar_done),
+                            modifier = Modifier.width(buttonWidth),
                             onClick = {
                                 AppStateManager.setViewportEditActive(false)
                             }
                         )
 
-                        // Cancel / Revert button
                         ToolbarIconButton(
                             icon = Icons.Rounded.Close,
                             contentDescription = stringResource(R.string.settings_color_cancel),
                             color = colors.error,
+                            label = stringResource(R.string.mirror_editor_toolbar_cancel),
+                            modifier = Modifier.width(buttonWidth),
                             onClick = {
                                 val updatedLayout = layout.copy(
                                     mirrorCutouts = initialCutouts
@@ -818,6 +857,7 @@ private fun ToolbarIconButton(
     color: Color,
     enabled: Boolean = true,
     label: String? = null,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val colors = LocalAppColors.current
@@ -830,7 +870,7 @@ private fun ToolbarIconButton(
         ),
         shape = RoundedCornerShape(4.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-        modifier = Modifier.height(32.dp)
+        modifier = modifier.height(32.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

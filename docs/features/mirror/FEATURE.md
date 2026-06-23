@@ -121,8 +121,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M13: Multi-Cutout Crossfade
 
-- The user MUST be able to configure a crossfade blend width using a slider (`Crossfade` / `Überblendung`) in the layout-editor toolbar on the secondary display below the button row.
-- The slider range MUST be `0` to `100 dp`. The slider is only visible in the layout editor panel.
+- The user MUST be able to configure a crossfade blend width using a slider (`Crossfade` / `Überblendung`) in the background settings overlay.
+- The slider range MUST be `0` to `100 dp`. The slider is visible in the background settings overlay panel.
 - The crossfade blend width (`mirrorCrossfadeBlendWidth`) MUST be saved and persisted per-layout inside the layout configuration schema.
 - When a crossfade is configured (> 0 dp):
   - Fades MUST be applied to the edges of each cutout.

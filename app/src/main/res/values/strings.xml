@@ -614,6 +614,7 @@ Open Settings to create a layout.</string>
     <string name="pill_menu_new_layout">New Layout</string>
     <string name="pill_menu_edit_layout">Edit Profile/Layout</string>
     <string name="pill_menu_ambient_settings">Background Settings</string>
+    <string name="pill_menu_screen_mirroring">Screen Mirroring</string>
     <string name="pill_menu_global_settings">Global Settings</string>
     <string name="pill_menu_dismiss_dialog">Dismiss dialog</string>
     <string name="pill_menu_profile_name_hint">Profile name</string>
@@ -691,4 +692,14 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_shape_rectangle">Shape: Rectangle</string>
     <string name="mirror_editor_no_space">Not enough space for another cutout</string>
     <string name="mirror_editor_max_cutouts">Maximum of 10 cutouts allowed</string>
+
+    <!-- Cutout Layout Editor Toolbar Short Labels -->
+    <string name="mirror_editor_toolbar_add">Add</string>
+    <string name="mirror_editor_toolbar_settings">Settings</string>
+    <string name="mirror_editor_toolbar_delete">Delete</string>
+    <string name="mirror_editor_toolbar_crop">Crop</string>
+    <string name="mirror_editor_toolbar_done">Done</string>
+    <string name="mirror_editor_toolbar_cancel">Cancel</string>
+    <string name="mirror_editor_toolbar_shape_circle">Circle</string>
+    <string name="mirror_editor_toolbar_shape_rect">Rectangle</string>
 </resources>
