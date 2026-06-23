@@ -254,6 +254,10 @@ fun CutoutLayoutEditor(
                     var dragStartY by remember(cutout.id) { mutableStateOf(0f) }
                     var dragStartW by remember(cutout.id) { mutableStateOf(0f) }
                     var dragStartH by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartSrcX by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartSrcY by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartSrcW by remember(cutout.id) { mutableStateOf(0f) }
+                    var dragStartSrcH by remember(cutout.id) { mutableStateOf(0f) }
 
                     // Top-Left handle
                     val topLeftX = destLeft + (if (destLeft < insetThresholdPx) insetShiftPx else 0f)
@@ -267,6 +271,10 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            dragStartSrcX = curCutout.srcX
+                            dragStartSrcY = curCutout.srcY
+                            dragStartSrcW = curCutout.srcWidth
+                            dragStartSrcH = curCutout.srcHeight
                             AppLog.d(TAG, "Resize start TOP_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
@@ -301,7 +309,17 @@ fun CutoutLayoutEditor(
                                 if (it.id == curCutout.id) {
                                     val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
                                     if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                        adjustSourceCropToAspectRatio(
+                                            next,
+                                            screenW = screenW,
+                                            screenH = screenH,
+                                            srcW = srcWidth,
+                                            srcH = srcHeight,
+                                            baseSrcX = dragStartSrcX,
+                                            baseSrcY = dragStartSrcY,
+                                            baseSrcW = dragStartSrcW,
+                                            baseSrcH = dragStartSrcH
+                                        )
                                     } else {
                                         next
                                     }
@@ -323,6 +341,10 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            dragStartSrcX = curCutout.srcX
+                            dragStartSrcY = curCutout.srcY
+                            dragStartSrcW = curCutout.srcWidth
+                            dragStartSrcH = curCutout.srcHeight
                             AppLog.d(TAG, "Resize start TOP_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
@@ -357,7 +379,17 @@ fun CutoutLayoutEditor(
                                 if (it.id == curCutout.id) {
                                     val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
                                     if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                        adjustSourceCropToAspectRatio(
+                                            next,
+                                            screenW = screenW,
+                                            screenH = screenH,
+                                            srcW = srcWidth,
+                                            srcH = srcHeight,
+                                            baseSrcX = dragStartSrcX,
+                                            baseSrcY = dragStartSrcY,
+                                            baseSrcW = dragStartSrcW,
+                                            baseSrcH = dragStartSrcH
+                                        )
                                     } else {
                                         next
                                     }
@@ -379,6 +411,10 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            dragStartSrcX = curCutout.srcX
+                            dragStartSrcY = curCutout.srcY
+                            dragStartSrcW = curCutout.srcWidth
+                            dragStartSrcH = curCutout.srcHeight
                             AppLog.d(TAG, "Resize start BOTTOM_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
@@ -413,7 +449,17 @@ fun CutoutLayoutEditor(
                                 if (it.id == curCutout.id) {
                                     val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
                                     if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                        adjustSourceCropToAspectRatio(
+                                            next,
+                                            screenW = screenW,
+                                            screenH = screenH,
+                                            srcW = srcWidth,
+                                            srcH = srcHeight,
+                                            baseSrcX = dragStartSrcX,
+                                            baseSrcY = dragStartSrcY,
+                                            baseSrcW = dragStartSrcW,
+                                            baseSrcH = dragStartSrcH
+                                        )
                                     } else {
                                         next
                                     }
@@ -435,6 +481,10 @@ fun CutoutLayoutEditor(
                             dragStartY = curCutout.destY
                             dragStartW = curCutout.destWidth
                             dragStartH = curCutout.destHeight
+                            dragStartSrcX = curCutout.srcX
+                            dragStartSrcY = curCutout.srcY
+                            dragStartSrcW = curCutout.srcWidth
+                            dragStartSrcH = curCutout.srcHeight
                             AppLog.d(TAG, "Resize start BOTTOM_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
                         },
                         onDrag = { totalDx, totalDy ->
@@ -469,7 +519,17 @@ fun CutoutLayoutEditor(
                                 if (it.id == curCutout.id) {
                                     val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
                                     if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(next, screenW = screenW, screenH = screenH, srcW = srcWidth, srcH = srcHeight)
+                                        adjustSourceCropToAspectRatio(
+                                            next,
+                                            screenW = screenW,
+                                            screenH = screenH,
+                                            srcW = srcWidth,
+                                            srcH = srcHeight,
+                                            baseSrcX = dragStartSrcX,
+                                            baseSrcY = dragStartSrcY,
+                                            baseSrcW = dragStartSrcW,
+                                            baseSrcH = dragStartSrcH
+                                        )
                                     } else {
                                         next
                                     }
@@ -913,22 +973,26 @@ private fun adjustSourceCropToAspectRatio(
     screenW: Float,
     screenH: Float,
     srcW: Float,
-    srcH: Float
+    srcH: Float,
+    baseSrcX: Float = cutout.srcX,
+    baseSrcY: Float = cutout.srcY,
+    baseSrcW: Float = cutout.srcWidth,
+    baseSrcH: Float = cutout.srcHeight
 ): ScreenCutout {
     val targetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
     val factor = targetRatio * (srcH / srcW)
 
-    val centerX = cutout.srcX + cutout.srcWidth / 2f
-    val centerY = cutout.srcY + cutout.srcHeight / 2f
+    val centerX = baseSrcX + baseSrcW / 2f
+    val centerY = baseSrcY + baseSrcH / 2f
 
     val newW: Float
     val newH: Float
 
-    if (factor > cutout.srcWidth / cutout.srcHeight) {
-        newW = cutout.srcWidth
+    if (factor > baseSrcW / baseSrcH) {
+        newW = baseSrcW
         newH = newW / factor
     } else {
-        newH = cutout.srcHeight
+        newH = baseSrcH
         newW = newH * factor
     }
 

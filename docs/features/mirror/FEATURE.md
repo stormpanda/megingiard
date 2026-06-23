@@ -386,7 +386,7 @@ Three modes govern aspect ratio relations (`FREE`, `TOP`, and `BOTTOM`):
      - **Dominant Axis Detection**: In `getTargetGeometryWithAspectRatio`, we compare the horizontal delta (\(\Delta x\)) with the normalized vertical delta (\(\Delta y \times \text{aspectRatio}\)) to identify the dominant scaling axis dictated by the drag gesture. The non-dominant axis is scaled proportionally to match the dominant axis.
      - **Binary Search Collision Resolution**: In `clampCutoutResize`, if the target geometry overlaps with another cutout or goes off-screen, a binary search determines the maximum scaling factor \(t \in [0, 1]\) between the original and target geometry.
 2. **Bottom Aspect Ratio Mode (`BOTTOM`)**:
-   - Resizing destination bounds in the editor is free, but on every drag event, `adjustSourceCropToAspectRatio` scales the source crop normalized bounds to match the new destination aspect ratio, preserving the original crop center and shrinking/clamping the crop as needed to fit.
+   - Resizing destination bounds in the editor is free, but on every drag event, `adjustSourceCropToAspectRatio` scales the source crop normalized bounds to match the new destination aspect ratio, preserving the original crop center and making the best use of the original size it had when editing started.
    - Resizing the source crop in the crop selector is locked to the destination aspect ratio. In `CropSelectorOverlay`, when dragging corner handles, `adjustCropResizeToAspectRatio` matches the aspect ratio of the crop to the fixed destination aspect ratio, scaling the rectangle down if it hits screen boundaries.
 
 ### Session State Persistence
