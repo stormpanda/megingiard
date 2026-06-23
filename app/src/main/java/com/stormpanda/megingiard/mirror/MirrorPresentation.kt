@@ -715,6 +715,12 @@ class MultiCutoutContainer(
         var temp: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         var initialized: Boolean = false
 
+        val blendPaint = Paint().apply {
+            val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
+            alpha = (alphaPercent * 255f).roundToInt()
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
+        }
+
         fun recycle() {
             accumulated?.recycle()
             accumulated = null
@@ -782,15 +788,10 @@ class MultiCutoutContainer(
                             accumCanvas.drawBitmap(temp, 0f, 0f, null)
                             acc.initialized = true
                         } else {
-                            val blendPaintForAccum = Paint().apply {
-                                val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
-                                alpha = (alphaPercent * 255f).roundToInt()
-                                xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
-                            }
-                            accumCanvas.drawBitmap(temp, 0f, 0f, blendPaintForAccum)
+                            accumCanvas.drawBitmap(temp, 0f, 0f, acc.blendPaint)
                         }
                     } catch (e: Exception) {
-                        AppLog.e("MultiCutoutContainer", "Error updating motion smoothing accumulator for strength $strength", e)
+                        AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
                     }
                 }
             }
@@ -829,7 +830,7 @@ class MultiCutoutContainer(
         val parentH = height.toFloat()
         if (parentW <= 0f || parentH <= 0f) return
 
-        val drawingTime = drawingTime
+        val drawTime = this.drawingTime
         val blendWidthDp = ScreenCaptureManager.edgeBlendWidthDp.value
         val edgeBlending = blendWidthDp > 0f
         val tolerance = TOUCH_TOLERANCE
@@ -850,43 +851,10 @@ class MultiCutoutContainer(
 
             if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
 
-            var touchesOtherLeft = false
-            var touchesOtherRight = false
-            var touchesOtherTop = false
-            var touchesOtherBottom = false
-
-            if (edgeBlending && cutouts.size > 1) {
-                for (other in cutouts) {
-                    if (other == cutout) continue
-                    
-                    // Left-right touches
-                    val overlapsY = maxOf(cutout.destY, other.destY) < minOf(cutout.destY + cutout.destHeight, other.destY + other.destHeight) - tolerance
-                    if (overlapsY) {
-                        if (abs(cutout.destX - (other.destX + other.destWidth)) < tolerance) {
-                            touchesOtherLeft = true
-                        }
-                        if (abs((cutout.destX + cutout.destWidth) - other.destX) < tolerance) {
-                            touchesOtherRight = true
-                        }
-                    }
-                    
-                    // Top-bottom touches
-                    val overlapsX = maxOf(cutout.destX, other.destX) < minOf(cutout.destX + cutout.destWidth, other.destX + other.destWidth) - tolerance
-                    if (overlapsX) {
-                        if (abs(cutout.destY - (other.destY + other.destHeight)) < tolerance) {
-                            touchesOtherTop = true
-                        }
-                        if (abs((cutout.destY + cutout.destHeight) - other.destY) < tolerance) {
-                            touchesOtherBottom = true
-                        }
-                    }
-                }
-            }
-
-            val touchesLeft = edgeBlending
-            val touchesRight = edgeBlending
-            val touchesTop = edgeBlending
-            val touchesBottom = edgeBlending
+            val touchesLeft = edgeBlending && (cutout.destX > tolerance)
+            val touchesRight = edgeBlending && (cutout.destX + cutout.destWidth < 1.0f - tolerance)
+            val touchesTop = edgeBlending && (cutout.destY > tolerance)
+            val touchesBottom = edgeBlending && (cutout.destY + cutout.destHeight < 1.0f - tolerance)
 
             val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
             val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
@@ -960,7 +928,7 @@ class MultiCutoutContainer(
                 } else if (cutout.motionSmoothing && accumulators[cutout.motionSmoothingStrength]?.accumulated != null) {
                     canvas.drawBitmap(accumulators[cutout.motionSmoothingStrength]!!.accumulated!!, 0f, 0f, null)
                 } else if (masterView != null) {
-                    drawChild(canvas, masterView, drawingTime)
+                    drawChild(canvas, masterView, drawTime)
                     masterViewDrawn = true
                 }
 
@@ -980,29 +948,25 @@ class MultiCutoutContainer(
                 } else if (hasTouching) {
                     if (touchesLeft) {
                         val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                        val endX = if (touchesOtherLeft) leftExt else 0f
-                        val shader = LinearGradient(-leftExt, 0f, endX, 0f, colors, null, Shader.TileMode.CLAMP)
+                        val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesRight) {
                         val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                        val startX = if (touchesOtherRight) dw - rightExt else dw
-                        val shader = LinearGradient(startX, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                        val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesTop) {
                         val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                        val endY = if (touchesOtherTop) topExt else 0f
-                        val shader = LinearGradient(0f, -topExt, 0f, endY, colors, null, Shader.TileMode.CLAMP)
+                        val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
                     if (touchesBottom) {
                         val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                        val startY = if (touchesOtherBottom) dh - bottomExt else dh
-                        val shader = LinearGradient(0f, startY, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
+                        val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
                         blendPaint.shader = shader
                         canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                     }
@@ -1020,7 +984,7 @@ class MultiCutoutContainer(
         if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
             val saveCount = canvas.save()
             canvas.clipRect(DUMMY_CLIP_LEFT, DUMMY_CLIP_TOP, DUMMY_CLIP_RIGHT, DUMMY_CLIP_BOTTOM)
-            drawChild(canvas, masterView, drawingTime)
+            drawChild(canvas, masterView, drawTime)
             canvas.restoreToCount(saveCount)
         }
     }

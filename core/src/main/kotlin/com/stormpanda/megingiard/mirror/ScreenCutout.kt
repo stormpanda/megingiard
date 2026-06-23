@@ -59,13 +59,13 @@ data class ScreenCutout(
 ) {
     companion object {
         fun createDefault(
-            srcWidth: Float = 1920f,
-            srcHeight: Float = 1080f,
-            bottomWidth: Float = 4f,
-            bottomHeight: Float = 3f
+            srcPixelWidth: Float = 1920f,
+            srcPixelHeight: Float = 1080f,
+            bottomPixelWidth: Float = 4f,
+            bottomPixelHeight: Float = 3f
         ): ScreenCutout {
             val destWidth = 1f
-            val destHeight = (bottomWidth * srcHeight) / (bottomHeight * srcWidth)
+            val destHeight = (bottomPixelWidth * srcPixelHeight) / (bottomPixelHeight * srcPixelWidth)
             val destX = 0f
             val destY = (1f - destHeight) / 2f
             return ScreenCutout(

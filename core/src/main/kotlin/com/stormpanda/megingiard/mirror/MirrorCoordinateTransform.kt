@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.mirror
 import kotlin.math.abs
 
 private const val OVERLAP_TOLERANCE: Float = 0.001f
+private const val BINARY_SEARCH_STEPS = 10
 
 /**
  * Maps a raw touch position on the mirror surface back through the current zoom/pan
@@ -389,7 +390,7 @@ fun clampCutoutResize(
         var high = 1f
         var bestGeom = origGeom
         
-        for (i in 0 until 10) {
+        for (i in 0 until BINARY_SEARCH_STEPS) {
             val mid = (low + high) / 2f
             val w = originalWidth + mid * (targetGeom.w - originalWidth)
             val h = originalHeight + mid * (targetGeom.h - originalHeight)

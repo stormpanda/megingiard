@@ -167,6 +167,7 @@ object ScreenCaptureManager {
             val updated = layout.mirrorCutouts.map { it.copy(touchProjectionEnabled = active) }
             MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
         }
+        _isTouchProjectionActive.value = active
         if (active) _isLocked.value = true
     }
 

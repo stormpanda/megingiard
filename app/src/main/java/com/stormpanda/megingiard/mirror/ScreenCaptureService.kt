@@ -254,11 +254,6 @@ class ScreenCaptureService : Service() {
             val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
             mirrorPresentation = presentation
 
-            presentation.onSurfaceDestroyed = {
-                mirrorSurface = null
-                mirrorVirtualDisplay?.setSurface(null)
-            }
-
             presentation.onSurfaceReady = { surface ->
                 mirrorSurface = surface
                 val isFrozen = ScreenCaptureManager.isFrozen.value
