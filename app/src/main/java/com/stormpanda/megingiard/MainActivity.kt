@@ -270,9 +270,11 @@ class MainActivity : ComponentActivity() {
             }
         }
         lifecycleScope.launch {
+            var lastLaunchedId: String? = null
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 AppStateManager.activeCropCutoutId.collect { id ->
-                    if (id != null) {
+                    if (id != null && id != lastLaunchedId) {
+                        lastLaunchedId = id
                         AppLog.i(TAG, "activeCropCutoutId=$id -> launching CropSelectorActivity on primary display")
                         val options = ActivityOptions.makeBasic()
                         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
@@ -280,6 +282,8 @@ class MainActivity : ComponentActivity() {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
                         }
                         startActivity(intent, options.toBundle())
+                    } else if (id == null) {
+                        lastLaunchedId = null
                     }
                 }
             }

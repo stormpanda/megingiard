@@ -256,8 +256,7 @@ class ScreenCaptureService : Service() {
 
             presentation.onSurfaceDestroyed = {
                 mirrorSurface = null
-                mirrorVirtualDisplay?.release()
-                mirrorVirtualDisplay = null
+                mirrorVirtualDisplay?.setSurface(null)
             }
 
             presentation.onSurfaceReady = { surface ->

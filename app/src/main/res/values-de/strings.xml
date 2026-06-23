@@ -710,4 +710,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_editor_toolbar_shape_rect">Rechteck</string>
     <string name="settings_mirror_touch_projection">Touch-Projektion</string>
     <string name="settings_mirror_touch_projection_desc">Berührungen innerhalb dieses Ausschnitts an den Hauptbildschirm weiterleiten</string>
+    <string name="settings_mirror_cutout_default">Ausschnitt</string>
+    <string name="settings_mirror_cutout_default_name_fmt">Ausschnitt %1$d</string>
 </resources>

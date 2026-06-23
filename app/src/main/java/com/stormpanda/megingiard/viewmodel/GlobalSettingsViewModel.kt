@@ -15,7 +15,6 @@ import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
-import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import kotlinx.coroutines.Dispatchers

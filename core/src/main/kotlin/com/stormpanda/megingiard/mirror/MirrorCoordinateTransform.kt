@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.mirror
 
 import kotlin.math.abs
 
+private const val OVERLAP_TOLERANCE: Float = 0.001f
+
 /**
  * Maps a raw touch position on the mirror surface back through the current zoom/pan
  * transform to obtain the normalised content coordinate [0, 1] that corresponds to
@@ -118,15 +120,15 @@ fun clampMoveX(originalX: Float, targetX: Float, y: Float, width: Float, height:
     val movingRight = clampedTargetX > originalX
     
     for (other in others) {
-        val verticalOverlap = y < other.destY + other.destHeight - 0.001f && y + height > other.destY + 0.001f
+        val verticalOverlap = y < other.destY + other.destHeight - OVERLAP_TOLERANCE && y + height > other.destY + OVERLAP_TOLERANCE
         if (!verticalOverlap) continue
         
         if (movingRight) {
-            if (other.destX >= originalX + width - 0.001f) {
+            if (other.destX >= originalX + width - OVERLAP_TOLERANCE) {
                 limitX = minOf(limitX, other.destX - width)
             }
         } else {
-            if (other.destX + other.destWidth <= originalX + 0.001f) {
+            if (other.destX + other.destWidth <= originalX + OVERLAP_TOLERANCE) {
                 limitX = maxOf(limitX, other.destX + other.destWidth)
             }
         }
@@ -142,15 +144,15 @@ fun clampMoveY(originalY: Float, targetY: Float, x: Float, width: Float, height:
     val movingDown = clampedTargetY > originalY
     
     for (other in others) {
-        val horizontalOverlap = x < other.destX + other.destWidth - 0.001f && x + width > other.destX + 0.001f
+        val horizontalOverlap = x < other.destX + other.destWidth - OVERLAP_TOLERANCE && x + width > other.destX + OVERLAP_TOLERANCE
         if (!horizontalOverlap) continue
         
         if (movingDown) {
-            if (other.destY >= originalY + height - 0.001f) {
+            if (other.destY >= originalY + height - OVERLAP_TOLERANCE) {
                 limitY = minOf(limitY, other.destY - height)
             }
         } else {
-            if (other.destY + other.destHeight <= originalY + 0.001f) {
+            if (other.destY + other.destHeight <= originalY + OVERLAP_TOLERANCE) {
                 limitY = maxOf(limitY, other.destY + other.destHeight)
             }
         }
@@ -174,8 +176,8 @@ fun clampCutoutDrag(
     val clampedY = targetY.coerceIn(0f, 1f - height)
     
     val overlapsFull = others.any { other ->
-        clampedX < other.destX + other.destWidth - 0.001f && clampedX + width > other.destX + 0.001f &&
-        clampedY < other.destY + other.destHeight - 0.001f && clampedY + height > other.destY + 0.001f
+        clampedX < other.destX + other.destWidth - OVERLAP_TOLERANCE && clampedX + width > other.destX + OVERLAP_TOLERANCE &&
+        clampedY < other.destY + other.destHeight - OVERLAP_TOLERANCE && clampedY + height > other.destY + OVERLAP_TOLERANCE
     }
     if (!overlapsFull) {
         return Pair(clampedX, clampedY)
@@ -187,14 +189,14 @@ fun clampCutoutDrag(
     
     // Check Candidate 1: Clamp X, keep target Y
     val overlapsCand1 = others.any { other ->
-        slideX < other.destX + other.destWidth - 0.001f && slideX + width > other.destX + 0.001f &&
-        clampedY < other.destY + other.destHeight - 0.001f && clampedY + height > other.destY + 0.001f
+        slideX < other.destX + other.destWidth - OVERLAP_TOLERANCE && slideX + width > other.destX + OVERLAP_TOLERANCE &&
+        clampedY < other.destY + other.destHeight - OVERLAP_TOLERANCE && clampedY + height > other.destY + OVERLAP_TOLERANCE
     }
     
     // Check Candidate 2: Keep target X, clamp Y
     val overlapsCand2 = others.any { other ->
-        clampedX < other.destX + other.destWidth - 0.001f && clampedX + width > other.destX + 0.001f &&
-        slideY < other.destY + other.destHeight - 0.001f && slideY + height > other.destY + 0.001f
+        clampedX < other.destX + other.destWidth - OVERLAP_TOLERANCE && clampedX + width > other.destX + OVERLAP_TOLERANCE &&
+        slideY < other.destY + other.destHeight - OVERLAP_TOLERANCE && slideY + height > other.destY + OVERLAP_TOLERANCE
     }
     
     if (!overlapsCand1 && !overlapsCand2) {
@@ -214,8 +216,8 @@ fun clampCutoutDrag(
     
     // Fallback to both clamped
     val overlapsBothSlide = others.any { other ->
-        slideX < other.destX + other.destWidth - 0.001f && slideX + width > other.destX + 0.001f &&
-        slideY < other.destY + other.destHeight - 0.001f && slideY + height > other.destY + 0.001f
+        slideX < other.destX + other.destWidth - OVERLAP_TOLERANCE && slideX + width > other.destX + OVERLAP_TOLERANCE &&
+        slideY < other.destY + other.destHeight - OVERLAP_TOLERANCE && slideY + height > other.destY + OVERLAP_TOLERANCE
     }
     if (!overlapsBothSlide) {
         return Pair(slideX, slideY)
@@ -224,8 +226,8 @@ fun clampCutoutDrag(
     // Fallback 1: Try X-only slide with original Y
     val slideXOnly = clampMoveX(originalX, clampedX, originalY, width, height, others)
     val overlapsXOnly = others.any { other ->
-        slideXOnly < other.destX + other.destWidth - 0.001f && slideXOnly + width > other.destX + 0.001f &&
-        originalY < other.destY + other.destHeight - 0.001f && originalY + height > other.destY + 0.001f
+        slideXOnly < other.destX + other.destWidth - OVERLAP_TOLERANCE && slideXOnly + width > other.destX + OVERLAP_TOLERANCE &&
+        originalY < other.destY + other.destHeight - OVERLAP_TOLERANCE && originalY + height > other.destY + OVERLAP_TOLERANCE
     }
     if (!overlapsXOnly) {
         return Pair(slideXOnly, originalY)
@@ -234,8 +236,8 @@ fun clampCutoutDrag(
     // Fallback 2: Try Y-only slide with original X
     val slideYOnly = clampMoveY(originalY, clampedY, originalX, width, height, others)
     val overlapsYOnly = others.any { other ->
-        originalX < other.destX + other.destWidth - 0.001f && originalX + width > other.destX + 0.001f &&
-        slideYOnly < other.destY + other.destHeight - 0.001f && slideYOnly + height > other.destY + 0.001f
+        originalX < other.destX + other.destWidth - OVERLAP_TOLERANCE && originalX + width > other.destX + OVERLAP_TOLERANCE &&
+        slideYOnly < other.destY + other.destHeight - OVERLAP_TOLERANCE && slideYOnly + height > other.destY + OVERLAP_TOLERANCE
     }
     if (!overlapsYOnly) {
         return Pair(originalX, slideYOnly)
@@ -284,8 +286,8 @@ private fun isGeometryValid(
     if (x < 0f || y < 0f || x + w > 1f || y + h > 1f) return false
     if (w < MIN_CUTOUT_SIZE || h < MIN_CUTOUT_SIZE) return false
     val overlaps = others.any { other ->
-        x < other.destX + other.destWidth - 0.001f && x + w > other.destX + 0.001f &&
-        y < other.destY + other.destHeight - 0.001f && y + h > other.destY + 0.001f
+        x < other.destX + other.destWidth - OVERLAP_TOLERANCE && x + w > other.destX + OVERLAP_TOLERANCE &&
+        y < other.destY + other.destHeight - OVERLAP_TOLERANCE && y + h > other.destY + OVERLAP_TOLERANCE
     }
     return !overlaps
 }
@@ -447,15 +449,15 @@ fun clampCutoutResize(
             clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
             
             for (other in others) {
-                val xOverlaps = clampedX < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
-                val yOverlaps = clampedY < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
+                val xOverlaps = clampedX < other.destX + other.destWidth - OVERLAP_TOLERANCE && originalRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps = clampedY < other.destY + other.destHeight - OVERLAP_TOLERANCE && originalBottom > other.destY + OVERLAP_TOLERANCE
                 
                 if (xOverlaps && yOverlaps) {
                     val candX = other.destX + other.destWidth
                     val candY = other.destY + other.destHeight
                     
-                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
-                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - OVERLAP_TOLERANCE && prevRight > other.destX + OVERLAP_TOLERANCE
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - OVERLAP_TOLERANCE && prevBottom > other.destY + OVERLAP_TOLERANCE
                     
                     if (prevYOverlaps && !prevXOverlaps) {
                         clampedX = maxOf(clampedX, candX)
@@ -483,15 +485,15 @@ fun clampCutoutResize(
             clampedY = clampedY.coerceIn(0f, originalBottom - MIN_CUTOUT_SIZE)
             
             for (other in others) {
-                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && clampedRight > other.destX + 0.001f
-                val yOverlaps = clampedY < other.destY + other.destHeight - 0.001f && originalBottom > other.destY + 0.001f
+                val xOverlaps = originalX < other.destX + other.destWidth - OVERLAP_TOLERANCE && clampedRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps = clampedY < other.destY + other.destHeight - OVERLAP_TOLERANCE && originalBottom > other.destY + OVERLAP_TOLERANCE
                 
                 if (xOverlaps && yOverlaps) {
                     val candRight = other.destX
                     val candY = other.destY + other.destHeight
                     
-                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
-                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - OVERLAP_TOLERANCE && prevRight > other.destX + OVERLAP_TOLERANCE
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - OVERLAP_TOLERANCE && prevBottom > other.destY + OVERLAP_TOLERANCE
                     
                     if (prevYOverlaps && !prevXOverlaps) {
                         clampedRight = minOf(clampedRight, candRight)
@@ -520,15 +522,15 @@ fun clampCutoutResize(
             var clampedBottom = (originalY + clampedHeight).coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
             
             for (other in others) {
-                val xOverlaps = clampedX < other.destX + other.destWidth - 0.001f && originalRight > other.destX + 0.001f
-                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && clampedBottom > other.destY + 0.001f
+                val xOverlaps = clampedX < other.destX + other.destWidth - OVERLAP_TOLERANCE && originalRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps = originalY < other.destY + other.destHeight - OVERLAP_TOLERANCE && clampedBottom > other.destY + OVERLAP_TOLERANCE
                 
                 if (xOverlaps && yOverlaps) {
                     val candX = other.destX + other.destWidth
                     val candBottom = other.destY
                     
-                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
-                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - OVERLAP_TOLERANCE && prevRight > other.destX + OVERLAP_TOLERANCE
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - OVERLAP_TOLERANCE && prevBottom > other.destY + OVERLAP_TOLERANCE
                     
                     if (prevYOverlaps && !prevXOverlaps) {
                         clampedX = maxOf(clampedX, candX)
@@ -557,15 +559,15 @@ fun clampCutoutResize(
             var clampedBottom = (originalY + clampedHeight).coerceIn(originalY + MIN_CUTOUT_SIZE, 1f)
             
             for (other in others) {
-                val xOverlaps = originalX < other.destX + other.destWidth - 0.001f && clampedRight > other.destX + 0.001f
-                val yOverlaps = originalY < other.destY + other.destHeight - 0.001f && clampedBottom > other.destY + 0.001f
+                val xOverlaps = originalX < other.destX + other.destWidth - OVERLAP_TOLERANCE && clampedRight > other.destX + OVERLAP_TOLERANCE
+                val yOverlaps = originalY < other.destY + other.destHeight - OVERLAP_TOLERANCE && clampedBottom > other.destY + OVERLAP_TOLERANCE
                 
                 if (xOverlaps && yOverlaps) {
                     val candRight = other.destX
                     val candBottom = other.destY
                     
-                    val prevXOverlaps = prevX < other.destX + other.destWidth - 0.001f && prevRight > other.destX + 0.001f
-                    val prevYOverlaps = prevY < other.destY + other.destHeight - 0.001f && prevBottom > other.destY + 0.001f
+                    val prevXOverlaps = prevX < other.destX + other.destWidth - OVERLAP_TOLERANCE && prevRight > other.destX + OVERLAP_TOLERANCE
+                    val prevYOverlaps = prevY < other.destY + other.destHeight - OVERLAP_TOLERANCE && prevBottom > other.destY + OVERLAP_TOLERANCE
                     
                     if (prevYOverlaps && !prevXOverlaps) {
                         clampedRight = minOf(clampedRight, candRight)

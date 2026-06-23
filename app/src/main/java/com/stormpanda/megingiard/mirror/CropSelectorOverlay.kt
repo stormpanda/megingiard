@@ -163,7 +163,7 @@ fun CropSelectorOverlay(
                     width = this@BoxWithConstraints.maxWidth,
                     height = with(density) { cropTop.toDp() }
                 )
-                .background(Color.Black.copy(alpha = 0.7f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
         )
         // Left scrim
         Box(
@@ -173,7 +173,7 @@ fun CropSelectorOverlay(
                     width = with(density) { cropLeft.toDp() },
                     height = with(density) { cropH.toDp() }
                 )
-                .background(Color.Black.copy(alpha = 0.7f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
         )
         // Right scrim
         Box(
@@ -183,7 +183,7 @@ fun CropSelectorOverlay(
                     width = this@BoxWithConstraints.maxWidth - with(density) { (cropLeft + cropW).toDp() },
                     height = with(density) { cropH.toDp() }
                 )
-                .background(Color.Black.copy(alpha = 0.7f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
         )
         // Bottom scrim
         Box(
@@ -193,7 +193,7 @@ fun CropSelectorOverlay(
                     width = this@BoxWithConstraints.maxWidth,
                     height = this@BoxWithConstraints.maxHeight - with(density) { (cropTop + cropH).toDp() }
                 )
-                .background(Color.Black.copy(alpha = 0.7f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
         )
 
         val handleSizePx = with(density) { HANDLE_SIZE.toPx() }

@@ -311,7 +311,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                     if (id == null) {
                                         stringResource(R.string.settings_mirror_follow_touch_off)
                                     } else {
-                                        currentLayout.mirrorCutouts.find { it.id == id }?.name?.ifBlank { "Cutout" } ?: "Cutout"
+                                        val defaultName = stringResource(R.string.settings_mirror_cutout_default)
+                                        currentLayout.mirrorCutouts.find { it.id == id }?.name?.ifBlank { defaultName } ?: defaultName
                                     }
                                 },
                                 onSelected = { id ->
@@ -365,7 +366,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                                     ) {
                                         Text(
-                                            text = cutout.name.ifBlank { "Cutout ${index + 1}" },
+                                            text = cutout.name.ifBlank { stringResource(R.string.settings_mirror_cutout_default_name_fmt, index + 1) },
                                             color = colors.onSurface,
                                             style = MaterialTheme.typography.titleMedium,
                                             modifier = Modifier.weight(1f)

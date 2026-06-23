@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
-import java.util.UUID
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
@@ -66,10 +65,24 @@ object ScreenCaptureManager {
     private val _isPrivilegedMirror = MutableStateFlow(false)
     val isPrivilegedMirror: StateFlow<Boolean> = _isPrivilegedMirror.asStateFlow()
 
+    private var activeLayoutJob: Job? = null
+    private var activeCutoutsJob: Job? = null
+
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        set(value) {
+            field = value
+            restartCollectors()
+        }
 
     init {
-        scope.launch {
+        restartCollectors()
+    }
+
+    private fun restartCollectors() {
+        activeLayoutJob?.cancel()
+        activeCutoutsJob?.cancel()
+
+        activeLayoutJob = scope.launch {
             MacroPadState.activeLayout.collect { layout ->
                 if (layout != null) {
                     _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
@@ -82,7 +95,8 @@ object ScreenCaptureManager {
                 }
             }
         }
-        scope.launch {
+
+        activeCutoutsJob = scope.launch {
             _cutouts.collect { list ->
                 val touchActive = list.any { it.touchProjectionEnabled }
                 _isTouchProjectionActive.value = touchActive
@@ -250,7 +264,7 @@ object ScreenCaptureManager {
                 val dx = currTargetX - curX
                 val dy = currTargetY - curY
 
-                if (kotlin.math.abs(dx) < epsilon && kotlin.math.abs(dy) < epsilon) {
+                if (abs(dx) < epsilon && abs(dy) < epsilon) {
                     val updated = _cutouts.value.map {
                         if (it.id == cutoutId) it.copy(srcX = currTargetX, srcY = currTargetY) else it
                     }

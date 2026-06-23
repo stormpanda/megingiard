@@ -704,4 +704,6 @@ Open Settings to create a layout.</string>
     <string name="mirror_editor_toolbar_shape_rect">Rectangle</string>
     <string name="settings_mirror_touch_projection">Touch Projection</string>
     <string name="settings_mirror_touch_projection_desc">Forward touch inputs inside this cutout to the primary screen</string>
+    <string name="settings_mirror_cutout_default">Cutout</string>
+    <string name="settings_mirror_cutout_default_name_fmt">Cutout %1$d</string>
 </resources>

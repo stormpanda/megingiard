@@ -131,7 +131,7 @@ public final class DirectMirrorServer {
                 if (numSurfaces == 0) {
                     System.err.println("DirectMirrorServer: app sent 0 surfaces");
                     reply.writeNoException();
-                    reply.writeInt(1);
+                    reply.writeInt(0);
                     return true;
                 }
 
@@ -156,8 +156,15 @@ public final class DirectMirrorServer {
                     activeSurfaces.add(surface);
                 }
 
+                if (activeDisplayTokens.isEmpty()) {
+                    System.err.println("DirectMirrorServer: no valid surfaces accepted");
+                    reply.writeNoException();
+                    reply.writeInt(0);
+                    return true;
+                }
+
                 surfaceDelivered.countDown();
-                System.err.println("DirectMirrorServer: " + activeDisplayTokens.size() + " surfaces panned & configured");
+                System.err.println("DirectMirrorServer: " + activeDisplayTokens.size() + " surfaces parsed & configured");
                 reply.writeNoException();
                 reply.writeInt(1);
                 return true;
