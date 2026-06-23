@@ -254,9 +254,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_mirror_follow_touch_desc">Zentriert den gespiegelten Bildausschnitt auf der zuletzt berührten Stelle des Hauptbildschirms.</string>
     <string name="settings_mirror_follow_smoothing">Glättung</string>
     <string name="settings_mirror_follow_smoothing_desc">Sanftes Verschieben des Ausschnitts mit exponentieller Glättung</string>
+    <string name="settings_mirror_follow_touch_off">Aus</string>
     <string name="settings_section_cutouts">Ausschnitte</string>
     <string name="settings_mirror_no_cutouts">Keine Ausschnitte definiert. Füge Ausschnitte im Viewport-Editor hinzu.</string>
-    <string name="settings_mirror_follow_touch_exclusivity_hint">Hinweis: Die Touch-Verfolgung kann nur für jeweils einen Ausschnitt aktiv sein.</string>
 
 
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>

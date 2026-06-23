@@ -261,6 +261,51 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 ),
                             )
                         }
+
+                        AppDivider()
+
+                        AppSettingsRow {
+                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_touch),
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_follow_touch_desc),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            val selectedCutoutId = currentLayout.mirrorCutouts.find { it.followTouch }?.id
+                            val dropdownOptions = remember(currentLayout.mirrorCutouts) {
+                                listOf<String?>(null) + currentLayout.mirrorCutouts.map { it.id }
+                            }
+                            AppDropdown(
+                                selected = selectedCutoutId,
+                                options = dropdownOptions,
+                                optionText = { id ->
+                                    if (id == null) {
+                                        stringResource(R.string.settings_mirror_follow_touch_off)
+                                    } else {
+                                        currentLayout.mirrorCutouts.find { it.id == id }?.name?.ifBlank { "Cutout" } ?: "Cutout"
+                                    }
+                                },
+                                onSelected = { id ->
+                                    AppLog.d(TAG, "mirrorFollowCutoutId → $id")
+                                    val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                        c.copy(followTouch = (c.id == id))
+                                    }
+                                    commitLayout {
+                                        copy(
+                                            mirrorCutouts = updatedCutouts,
+                                            mirrorFollowActive = (id != null)
+                                        )
+                                    }
+                                    ScreenCaptureManager.setFollowActive(id != null, persist = false)
+                                }
+                            )
+                        }
                     }
 
                     AsoSectionHeader(text = stringResource(R.string.settings_section_cutouts))
@@ -298,45 +343,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         style = MaterialTheme.typography.titleMedium,
                                         modifier = Modifier.padding(bottom = 8.dp)
                                     )
-
-                                    // Follow Touch Switch
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = stringResource(R.string.settings_mirror_follow_touch),
-                                                color = colors.onSurface,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.settings_mirror_follow_touch_desc),
-                                                color = colors.onSurfaceSecondary,
-                                                style = MaterialTheme.typography.bodySmall,
-                                            )
-                                        }
-                                        Switch(
-                                            checked = cutout.followTouch,
-                                            onCheckedChange = { isChecked ->
-                                                AppLog.d(TAG, "cutout '${cutout.name}' followTouch → $isChecked")
-                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                                                    if (c.id == cutout.id) {
-                                                        c.copy(followTouch = isChecked)
-                                                    } else {
-                                                        c.copy(followTouch = false)
-                                                    }
-                                                }
-                                                commitLayout {
-                                                    copy(
-                                                        mirrorCutouts = updatedCutouts,
-                                                        mirrorFollowActive = isChecked
-                                                    )
-                                                }
-                                                ScreenCaptureManager.setFollowActive(isChecked, persist = false)
-                                            }
-                                        )
-                                    }
 
                                     // Motion Smoothing Switch
                                     Row(
@@ -399,20 +405,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         )
                                     }
                                 }
-                            }
-
-                            AppDivider()
-                            // Footer caption
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = ASO_ROW_PADDING_H, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.settings_mirror_follow_touch_exclusivity_hint),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
                             }
                         }
                     }

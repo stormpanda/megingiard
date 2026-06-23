@@ -748,7 +748,15 @@ fun CutoutLayoutEditor(
                             onClick = {
                                 val targetId = selectedCutoutId ?: return@ToolbarIconButton
                                 val remaining = layout.mirrorCutouts.filter { it.id != targetId }
-                                MacroPadState.updateLayout(layout.copy(mirrorCutouts = remaining))
+                                val wasFollowing = layout.mirrorCutouts.find { it.id == targetId }?.followTouch == true
+                                val newFollowActive = if (wasFollowing) false else layout.mirrorFollowActive
+                                MacroPadState.updateLayout(layout.copy(
+                                    mirrorCutouts = remaining,
+                                    mirrorFollowActive = newFollowActive
+                                ))
+                                if (wasFollowing) {
+                                    ScreenCaptureManager.setFollowActive(false, persist = false)
+                                }
                                 AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
                             }
                         )
