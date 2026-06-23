@@ -48,9 +48,6 @@ object ScreenCaptureManager {
     private val _maxFps = MutableStateFlow(60)
     val maxFps: StateFlow<Int> = _maxFps.asStateFlow()
 
-    private val _smoothingStrength = MutableStateFlow(85)
-    val smoothingStrength: StateFlow<Int> = _smoothingStrength.asStateFlow()
-
     private val _isFrozen = MutableStateFlow(false)
     val isFrozen: StateFlow<Boolean> = _isFrozen.asStateFlow()
 
@@ -77,12 +74,10 @@ object ScreenCaptureManager {
                 if (layout != null) {
                     _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
                     _maxFps.value = layout.mirrorMaxFps
-                    _smoothingStrength.value = layout.mirrorSmoothingStrength
                     _cutouts.value = layout.mirrorCutouts
                 } else {
                     _edgeBlendWidthDp.value = 0f
                     _maxFps.value = 60
-                    _smoothingStrength.value = 85
                     _cutouts.value = emptyList()
                 }
             }
