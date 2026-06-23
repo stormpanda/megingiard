@@ -85,9 +85,9 @@ internal fun MirrorControlCard(
                 imageVector = Icons.Rounded.Edit,
                 contentDescription = stringResource(R.string.cd_viewport_edit),
                 tint = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(PM_SCREEN_MIRRORING_ICON_SIZE)
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(PM_SCREEN_MIRRORING_SPACER_W))
             Text(
                 text  = stringResource(R.string.pill_menu_screen_mirroring),
                 color = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),

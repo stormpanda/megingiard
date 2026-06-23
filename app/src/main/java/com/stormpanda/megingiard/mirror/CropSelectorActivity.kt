@@ -103,8 +103,11 @@ class CropSelectorActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: isFinishing=$isFinishing")
-        if (isFinishing && !wasFrozenInitially) {
-            ScreenCaptureManager.setFrozen(false)
+        if (isFinishing) {
+            AppStateManager.setActiveCropCutoutId(null)
+            if (!wasFrozenInitially) {
+                ScreenCaptureManager.setFrozen(false)
+            }
         }
     }
 }

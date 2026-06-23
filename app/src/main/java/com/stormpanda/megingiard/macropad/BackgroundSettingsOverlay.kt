@@ -90,6 +90,7 @@ private val ASO_ROW_PADDING_V = 12.dp
 private val ASO_EDIT_ICON_SIZE = 28.dp
 private val ASO_EDIT_ICON_INNER_SIZE = 18.dp
 private val ASO_SPACING_8 = 8.dp
+private val ASO_CUTOUT_ROW_V_PADDING = 4.dp
 
 private const val ASO_SMOOTHING_OFF = 0f
 private const val ASO_SMOOTHING_LIGHT = 1f
@@ -389,7 +390,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
                                     // Motion Smoothing Slider Row
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = ASO_CUTOUT_ROW_V_PADDING),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         val cutoutValue = if (cutout.motionSmoothing) {
@@ -459,7 +460,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
                                     // Touch Projection Switch
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = ASO_CUTOUT_ROW_V_PADDING),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {

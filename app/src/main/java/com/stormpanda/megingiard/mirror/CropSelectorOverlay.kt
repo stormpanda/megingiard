@@ -54,10 +54,25 @@ import kotlin.math.roundToInt
 
 private const val TAG = "CropSelectorOverlay"
 private const val MIN_CROP_SIZE = 0.05f
-private val HANDLE_SIZE = 24.dp
-private val BORDER_WIDTH = 1.dp
-private val CARD_SHADOW = 8.dp
-private val CARD_CORNER = 12.dp
+private val CS_HANDLE_SIZE = 24.dp
+private val CS_BORDER_WIDTH = 1.dp
+private val CS_CARD_SHADOW = 8.dp
+private val CS_CARD_CORNER = 12.dp
+private val CS_BOTTOM_PADDING = 32.dp
+private val CS_CONTAINER_BORDER = 1.dp
+private val CS_ROW_PADDING_V = 4.dp
+private val CS_ROW_PADDING_E = 8.dp
+private val CS_DRAG_HANDLE_W = 36.dp
+private val CS_DRAG_HANDLE_H = 32.dp
+private val CS_DRAG_HANDLE_ICON_SIZE = 20.dp
+private val CS_DRAG_HANDLE_START_PADDING = 40.dp
+private val CS_SPACING_8 = 8.dp
+private val CS_BUTTON_CORNER = 4.dp
+private val CS_BUTTON_PADDING_H = 8.dp
+private val CS_BUTTON_PADDING_V = 6.dp
+private val CS_BUTTON_HEIGHT = 32.dp
+private val CS_BUTTON_ICON_SIZE = 18.dp
+private val CS_INDICATOR_CORNER = 4.dp
 
 @Composable
 fun CropSelectorOverlay(
@@ -196,7 +211,7 @@ fun CropSelectorOverlay(
                 .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
         )
 
-        val handleSizePx = with(density) { HANDLE_SIZE.toPx() }
+        val handleSizePx = with(density) { CS_HANDLE_SIZE.toPx() }
 
         // 2. Crop rectangle border and drag area
         Box(
@@ -206,7 +221,7 @@ fun CropSelectorOverlay(
                     width = with(density) { cropW.toDp() },
                     height = with(density) { cropH.toDp() }
                 )
-                .border(BORDER_WIDTH, colors.accent.copy(alpha = 0.5f))
+                .border(CS_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f))
                 .pointerInput(cutoutId) {
                     var dragStartX = 0f
                     var dragStartY = 0f
@@ -457,20 +472,20 @@ fun CropSelectorOverlay(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .offset { toolbarOffset }
-                .padding(bottom = 32.dp)
-                .shadow(CARD_SHADOW, RoundedCornerShape(CARD_CORNER)),
+                .padding(bottom = CS_BOTTOM_PADDING)
+                .shadow(CS_CARD_SHADOW, RoundedCornerShape(CS_CARD_CORNER)),
             color = colors.surface.copy(alpha = 0.9f),
-            shape = RoundedCornerShape(CARD_CORNER),
-            border = androidx.compose.foundation.BorderStroke(1.dp, colors.controlOverlayBorder)
+            shape = RoundedCornerShape(CS_CARD_CORNER),
+            border = androidx.compose.foundation.BorderStroke(CS_CONTAINER_BORDER, colors.controlOverlayBorder)
         ) {
             Box(
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 8.dp)
+                modifier = Modifier.padding(top = CS_ROW_PADDING_V, bottom = CS_ROW_PADDING_V, start = CS_ROW_PADDING_V, end = CS_ROW_PADDING_E)
             ) {
                 // Drag handle at top-left
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .size(width = 36.dp, height = 32.dp)
+                        .size(width = CS_DRAG_HANDLE_W, height = CS_DRAG_HANDLE_H)
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
@@ -486,14 +501,14 @@ fun CropSelectorOverlay(
                         imageVector = Icons.Rounded.DragIndicator,
                         contentDescription = stringResource(R.string.cd_drag_toolbar),
                         tint = colors.onSurfaceSecondary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(CS_DRAG_HANDLE_ICON_SIZE)
                     )
                 }
 
                 // Row of buttons
                 Row(
-                    modifier = Modifier.padding(start = 40.dp), // clear drag handle (36dp + 4dp space)
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(start = CS_DRAG_HANDLE_START_PADDING), // clear drag handle (36dp + 4dp space)
+                    horizontalArrangement = Arrangement.spacedBy(CS_SPACING_8),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Cancel button (X)
@@ -528,15 +543,15 @@ private fun ToolbarIconButton(
     Button(
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(containerColor = color),
-        shape = RoundedCornerShape(4.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-        modifier = Modifier.height(32.dp)
+        shape = RoundedCornerShape(CS_BUTTON_CORNER),
+        contentPadding = PaddingValues(horizontal = CS_BUTTON_PADDING_H, vertical = CS_BUTTON_PADDING_V),
+        modifier = Modifier.height(CS_BUTTON_HEIGHT)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = colors.onAccent,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(CS_BUTTON_ICON_SIZE)
         )
     }
 }
@@ -553,8 +568,8 @@ private fun ResizeHandleView(
     Box(
         modifier = Modifier
             .offset { offset }
-            .size(HANDLE_SIZE)
-            .background(color.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+            .size(CS_HANDLE_SIZE)
+            .background(color.copy(alpha = 0.5f), RoundedCornerShape(CS_INDICATOR_CORNER))
             .pointerInput(Unit) {
                 var accumulatedX = 0f
                 var accumulatedY = 0f
