@@ -204,6 +204,7 @@ object AppStateManager {
 
     private val _isBackgroundSettingsActive = MutableStateFlow(false)
     val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
+    private var wasViewportEditActiveBeforeSettings = false
 
     /**
      * Configuration for the ambient preview slider, shared between [BackgroundSettingsOverlay]
@@ -285,11 +286,12 @@ object AppStateManager {
     fun setBackgroundSettingsActive(active: Boolean) {
         AppLog.i(TAG, "setBackgroundSettingsActive($active)")
         if (active) {
+            wasViewportEditActiveBeforeSettings = _isViewportEditActive.value
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
         } else {
-            _isViewportEditActive.value = true
+            _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
         }
         _isBackgroundSettingsActive.value = active
     }
@@ -310,6 +312,7 @@ object AppStateManager {
         _ambientPreviewConfig.value = null
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
+        wasViewportEditActiveBeforeSettings = false
         MacroPadState.resetPeek()
     }
 

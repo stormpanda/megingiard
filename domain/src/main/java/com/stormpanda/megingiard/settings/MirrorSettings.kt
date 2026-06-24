@@ -35,8 +35,6 @@ object MirrorSettings {
     private val _pinchWhileProjecting = MutableStateFlow(false)
     val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
 
-
-
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
     val rememberViewport: StateFlow<Boolean> = _rememberViewport.asStateFlow()
@@ -65,10 +63,6 @@ object MirrorSettings {
         _pinchWhileProjecting.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_PINCH_WHILE_PROJECTING] = value } }
     }
-
-
-
-
 
     fun setRememberViewport(value: Boolean) {
         AppLog.d(TAG, "setRememberViewport($value)")

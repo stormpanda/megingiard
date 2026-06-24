@@ -201,4 +201,43 @@ class ScreenCaptureFollowTest {
         cutout = ScreenCaptureManager.cutouts.value.find { it.id == cutoutId }!!
         assertEquals(0.5f, cutout.srcX, 0.001f)
     }
+
+    @Test
+    fun `ensureFollowAnimationRunning cancels previous job when follow cutout target changes`() = runTest(testDispatcher) {
+        ScreenCaptureManager.setCapturing(true)
+        ScreenCaptureManager.setFollowActive(true)
+
+        val layout = MacroPadState.activeLayout.value!!
+        val testCutout1 = layout.mirrorCutouts[0].copy(id = "cutout-1", followTouch = true, motionSmoothing = true)
+        val testCutout2 = layout.mirrorCutouts[0].copy(id = "cutout-2", followTouch = false, motionSmoothing = true)
+        MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(testCutout1, testCutout2)))
+
+        ScreenCaptureManager.setFollowActive(true)
+        ScreenCaptureManager.onTouchReceived(0.9f, 0.9f)
+
+        delay(50)
+        val list1 = ScreenCaptureManager.cutouts.value
+        val c1 = list1.find { it.id == "cutout-1" }!!
+        assertTrue("cutout-1 should have started animating", c1.srcX > 0.25f)
+
+        val updatedLayout = MacroPadState.activeLayout.value!!
+        val updatedCutout1 = testCutout1.copy(followTouch = false)
+        val updatedCutout2 = testCutout2.copy(followTouch = true)
+        MacroPadState.updateLayout(updatedLayout.copy(mirrorCutouts = listOf(updatedCutout1, updatedCutout2)))
+
+        ScreenCaptureManager.onTouchReceived(0.1f, 0.1f)
+
+        delay(50)
+        val list2 = ScreenCaptureManager.cutouts.value
+        val c1Final = list2.find { it.id == "cutout-1" }!!
+        val c2Final = list2.find { it.id == "cutout-2" }!!
+
+        assertTrue("cutout-2 should have animated from 0.25f", c2Final.srcX < 0.25f)
+        
+        val c1XBefore = c1Final.srcX
+        delay(100)
+        val list3 = ScreenCaptureManager.cutouts.value
+        val c1XAfter = list3.find { it.id == "cutout-1" }!!.srcX
+        assertEquals("cutout-1 animation should have stopped", c1XBefore, c1XAfter, 0.001f)
+    }
 }

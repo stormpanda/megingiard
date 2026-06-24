@@ -13,9 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.Gravity
-import android.view.PixelCopy
 import android.graphics.Canvas
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.SurfaceTexture
@@ -52,14 +50,12 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
-import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import android.graphics.LinearGradient
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
-import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import java.util.Locale
@@ -1034,7 +1030,8 @@ private class ThrottledTextureView(context: Context) : TextureView(context) {
 
     override fun invalidate() {
         val now = System.currentTimeMillis()
-        val interval = if (maxFps >= 60) 0L else (1000L / maxFps)
+        val fps = maxFps.coerceAtLeast(1)
+        val interval = if (fps >= 60) 0L else (1000L / fps)
         if (interval == 0L || now - lastInvalidateTime >= interval) {
             if (isScheduled) {
                 removeCallbacks(invalidateRunnable)

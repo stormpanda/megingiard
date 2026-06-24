@@ -110,6 +110,7 @@ object ScreenCaptureManager {
     private var targetFollowX = 0f
     private var targetFollowY = 0f
     private var followAnimationJob: Job? = null
+    private var followAnimationCutoutId: String? = null
 
     private val _captureSourceWidth = MutableStateFlow(0)
     val captureSourceWidth: StateFlow<Int> = _captureSourceWidth.asStateFlow()
@@ -201,6 +202,7 @@ object ScreenCaptureManager {
         if (active) {
             followAnimationJob?.cancel()
             followAnimationJob = null
+            followAnimationCutoutId = null
             if (layout != null) {
                 _cutouts.value = layout.mirrorCutouts
             }
@@ -208,6 +210,7 @@ object ScreenCaptureManager {
         } else {
             followAnimationJob?.cancel()
             followAnimationJob = null
+            followAnimationCutoutId = null
             if (layout != null) {
                 _cutouts.value = layout.mirrorCutouts
             }
@@ -235,6 +238,7 @@ object ScreenCaptureManager {
         if (!smoothing) {
             followAnimationJob?.cancel()
             followAnimationJob = null
+            followAnimationCutoutId = null
             val updated = _cutouts.value.map {
                 if (it.id == targetCutout.id) it.copy(srcX = targetSrcX, srcY = targetSrcY) else it
             }
@@ -247,7 +251,9 @@ object ScreenCaptureManager {
     }
 
     private fun ensureFollowAnimationRunning(cutoutId: String) {
-        if (followAnimationJob?.isActive == true) return
+        if (followAnimationJob?.isActive == true && followAnimationCutoutId == cutoutId) return
+        followAnimationJob?.cancel()
+        followAnimationCutoutId = cutoutId
         followAnimationJob = scope.launch {
             val lerpFactor = 0.15f
             val epsilon = 0.001f

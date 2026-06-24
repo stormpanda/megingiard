@@ -222,8 +222,6 @@ fun MainAppScreen() {
                 )
             }
 
-
-
             // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
             // are open because those modals render their own full-screen chrome.
             if (!isEditorActive && !isBackgroundSettingsActive) {
