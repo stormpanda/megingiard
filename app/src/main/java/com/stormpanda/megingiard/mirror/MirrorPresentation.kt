@@ -98,10 +98,6 @@ private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
-private const val DUMMY_CLIP_LEFT = 0f
-private const val DUMMY_CLIP_TOP = 0f
-private const val DUMMY_CLIP_RIGHT = 1f
-private const val DUMMY_CLIP_BOTTOM = 1f
 
 class MirrorPresentation(
     context: Context, 
@@ -999,7 +995,7 @@ class MultiCutoutContainer(
 
         if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
             val saveCount = canvas.save()
-            canvas.clipRect(DUMMY_CLIP_LEFT, DUMMY_CLIP_TOP, DUMMY_CLIP_RIGHT, DUMMY_CLIP_BOTTOM)
+            canvas.clipRect(0f, 0f, 0f, 0f)
             drawChild(canvas, masterView, drawTime)
             canvas.restoreToCount(saveCount)
         }

@@ -69,9 +69,14 @@ internal fun MirrorControlCard(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .background(if (isViewportEditActive) colors.accent.copy(alpha = 0.15f) else Color.Transparent)
                 .border(
                     width = PM_BORDER_WIDTH,
-                    color = if (isCapturing) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f),
+                    color = if (isViewportEditActive) {
+                        colors.accent
+                    } else {
+                        if (isCapturing) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f)
+                    },
                     shape = RoundedCornerShape(PM_ACTION_BUTTON_CORNER)
                 )
                 .clickable(

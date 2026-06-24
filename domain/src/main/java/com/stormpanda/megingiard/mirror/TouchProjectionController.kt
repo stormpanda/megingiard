@@ -128,6 +128,15 @@ class TouchProjectionController(
         if (gestureInEdgeZone || !gestureStarted) return false
         if (pointerId != activePointerId) return false
 
+        if (isConsumed) {
+            _indicatorPos.value = null
+            TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
+            gestureStarted = false
+            activePointerId = -1L
+            activeCutoutId = null
+            return false
+        }
+
         val cutoutId = activeCutoutId
         val cutout = if (cutoutId != null) {
             ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
