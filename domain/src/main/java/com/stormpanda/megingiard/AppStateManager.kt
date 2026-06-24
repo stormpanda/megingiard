@@ -12,11 +12,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
 
 /** Type of value being live-previewed in ambient settings preview mode. */
-enum class AmbientPreviewType { DIM, VIGNETTE_AREA, VIGNETTE_TRANSITION, VIGNETTE_OPACITY }
+enum class AmbientPreviewType { DIM, EDGE_BLENDING }
 
 /**
  * Shared between [BackgroundSettingsOverlay] (primary screen) and [BackgroundMacroPadOverlay]
@@ -33,6 +34,21 @@ object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    init {
+        scope.launch {
+            var lastActiveLayoutId: String? = null
+            MacroPadState.activeLayout.collect { layout ->
+                val newId = layout?.id
+                if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
+                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
+                    closeActiveModal()
+                }
+                lastActiveLayoutId = newId
+            }
+        }
+    }
+
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -170,8 +186,25 @@ object AppStateManager {
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
 
+    private val _activeCropCutoutId = MutableStateFlow<String?>(null)
+    val activeCropCutoutId: StateFlow<String?> = _activeCropCutoutId.asStateFlow()
+
+    private val _selectedCutoutId = MutableStateFlow<String?>(null)
+    val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
+
+    fun setActiveCropCutoutId(id: String?) {
+        AppLog.d(TAG, "setActiveCropCutoutId($id)")
+        _activeCropCutoutId.value = id
+    }
+
+    fun setSelectedCutoutId(id: String?) {
+        AppLog.d(TAG, "setSelectedCutoutId($id)")
+        _selectedCutoutId.value = id
+    }
+
     private val _isBackgroundSettingsActive = MutableStateFlow(false)
     val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
+    private var wasViewportEditActiveBeforeSettings = false
 
     /**
      * Configuration for the ambient preview slider, shared between [BackgroundSettingsOverlay]
@@ -253,9 +286,12 @@ object AppStateManager {
     fun setBackgroundSettingsActive(active: Boolean) {
         AppLog.i(TAG, "setBackgroundSettingsActive($active)")
         if (active) {
+            wasViewportEditActiveBeforeSettings = _isViewportEditActive.value
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
+        } else {
+            _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
         }
         _isBackgroundSettingsActive.value = active
     }
@@ -274,6 +310,9 @@ object AppStateManager {
         _isBackgroundSettingsActive.value = false
         _isAmbientPreviewActive.value = false
         _ambientPreviewConfig.value = null
+        _activeCropCutoutId.value = null
+        _selectedCutoutId.value = null
+        wasViewportEditActiveBeforeSettings = false
         MacroPadState.resetPeek()
     }
 

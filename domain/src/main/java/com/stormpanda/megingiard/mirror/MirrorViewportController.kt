@@ -104,12 +104,35 @@ object MirrorViewportController {
      * and when the active layout changes while capturing.
      */
     fun restoreFromLayout() {
-        val layout = MacroPadState.activeLayout.value
-        val s = layout?.mirrorSavedScale ?: 1f
-        val ox = layout?.mirrorSavedOffsetX ?: 0f
-        val oy = layout?.mirrorSavedOffsetY ?: 0f
-        val follow = layout?.mirrorFollowActive ?: false
-        AppLog.d(TAG, "restoreFromLayout layoutId=${layout?.id} scale=$s offset=($ox,$oy) follow=$follow")
+        val layout = MacroPadState.activeLayout.value ?: return
+        val sw = ScreenCaptureManager.surfaceWidth.value
+        val sh = ScreenCaptureManager.surfaceHeight.value
+
+        if (layout.mirrorCutouts.isEmpty()) {
+            val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
+            val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
+            val defaultCutout = if (sw > 0f && sh > 0f) {
+                ScreenCutout.createDefault(sourceW, sourceH, sw, sh)
+            } else {
+                ScreenCutout.createDefault(sourceW, sourceH)
+            }
+            AppLog.i(TAG, "restoreFromLayout: cutout list is empty, creating default cutout source=${sourceW}x${sourceH} surface=${sw}x${sh}")
+            MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
+            return
+        }
+
+        val firstCutout = layout.mirrorCutouts.firstOrNull()
+        val (s, ox, oy) = if (firstCutout != null && sw > 0f && sh > 0f) {
+            val scale = 1.0f / firstCutout.srcWidth
+            val offsetX = -(firstCutout.srcX - 0.5f + firstCutout.srcWidth / 2f) * (sw * scale)
+            val offsetY = -(firstCutout.srcY - 0.5f + firstCutout.srcHeight / 2f) * (sh * scale)
+            Triple(scale, offsetX, offsetY)
+        } else {
+            Triple(layout.mirrorSavedScale, layout.mirrorSavedOffsetX, layout.mirrorSavedOffsetY)
+        }
+
+        val follow = layout.mirrorFollowActive
+        AppLog.d(TAG, "restoreFromLayout layoutId=${layout.id} scale=$s offset=($ox,$oy) follow=$follow")
         _scale.value = s
         _offsetX.value = ox
         _offsetY.value = oy

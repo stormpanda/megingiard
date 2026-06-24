@@ -37,6 +37,15 @@
     <string name="settings_overlay_position">Place controls at bottom</string>
     <string name="settings_show_mirror_control_labels">Show mirror control labels</string>
     <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
+    <string name="mirror_edge_blend_label">Edge blending</string>
+    <string name="mirror_edge_blend_label_value">%1$d</string>
+    <string name="mirror_edge_blend_strength_off">Off</string>
+    <string name="mirror_edge_blend_strength_light">Light</string>
+    <string name="mirror_edge_blend_strength_medium">Medium</string>
+    <string name="mirror_edge_blend_strength_strong">Strong</string>
+    <string name="mirror_edge_blend_strength_max">Max</string>
+    <string name="mirror_fps_label">FPS Limit</string>
+    <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
     <string name="settings_mirror_auto_start">Auto-start mirroring</string>
@@ -289,8 +298,10 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_follow_touch_desc">Centers the mirrored viewport on the spot you last touched on the primary screen.</string>
     <string name="settings_mirror_follow_smoothing">Smoothing</string>
     <string name="settings_mirror_follow_smoothing_desc">Smooth viewport panning using exponential decay</string>
-    <string name="settings_mirror_follow_disable_during_macro">Disable during macro execution</string>
-    <string name="settings_mirror_follow_disable_during_macro_desc">Temporarily pause touch following while a macro is playing, so that touch inputs in the macro do not affect the viewport</string>
+    <string name="settings_mirror_follow_touch_off">Off</string>
+    <string name="settings_section_cutouts">Cutouts</string>
+    <string name="settings_mirror_no_cutouts">No cutouts defined. Add cutouts in the Viewport Editor.</string>
+
 
     <string name="settings_macropad_ambient">Background Display</string>
     <string name="settings_macropad_ambient_hint">Starts Screen Mirror automatically (permission required on first use)</string>
@@ -299,22 +310,9 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_ambient_apply_theme">Apply theme to background display</string>
     <string name="settings_macropad_ambient_apply_theme_hint">When disabled, all buttons appear in neutral grey style</string>
     <string name="settings_macropad_dim">Dimming</string>
-    <string name="settings_macropad_vignette">Vignette</string>
-    <string name="settings_macropad_vignette_visible_area">Visible Area</string>
-    <string name="settings_macropad_vignette_transition">Transition</string>
-    <string name="settings_macropad_vignette_transition_soft">Soft</string>
-    <string name="settings_macropad_vignette_transition_hard">Hard</string>
-    <string name="settings_macropad_vignette_opacity">Opacity</string>
-    <string name="settings_macropad_vignette_color">Color</string>
+
     <string name="ambient_preview">Preview</string>
-    <string name="settings_macropad_vignette_shape">Shape</string>
-    <string name="settings_macropad_vignette_shape_radial">Radial</string>
-    <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
-    <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
-    <string name="settings_macropad_vignette_shape_top">From Top</string>
-    <string name="settings_macropad_vignette_shape_bottom">From Bottom</string>
-    <string name="settings_macropad_vignette_shape_left">From Left</string>
-    <string name="settings_macropad_vignette_shape_right">From Right</string>
+
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
     <string name="macropad_display_keyboard_key">Key: %s</string>
@@ -613,7 +611,8 @@ Open Settings to create a layout.</string>
     <string name="pill_menu_new_profile">New Profile</string>
     <string name="pill_menu_new_layout">New Layout</string>
     <string name="pill_menu_edit_layout">Edit Profile/Layout</string>
-    <string name="pill_menu_ambient_settings">Background Settings</string>
+    <string name="pill_menu_ambient_settings">Screen Mirroring Settings</string>
+    <string name="pill_menu_screen_mirroring">Screen Mirroring</string>
     <string name="pill_menu_global_settings">Global Settings</string>
     <string name="pill_menu_dismiss_dialog">Dismiss dialog</string>
     <string name="pill_menu_profile_name_hint">Profile name</string>
@@ -657,4 +656,54 @@ Open Settings to create a layout.</string>
     <string name="macropad_duplicate_layout">Duplicate Layout</string>
     <string name="macropad_copy_no_profiles_available">No other profiles available.</string>
     <string name="macropad_copy_no_layouts_available">No other layouts available.</string>
+
+    <!-- Crop editor -->
+    <string name="mirror_crop_editor_title">Define Crop Area</string>
+    <string name="mirror_crop_editor_subtitle">Cutout: %1$s</string>
+    <string name="mirror_crop_editor_done">Done</string>
+    <string name="mirror_crop_editor_cancel">Cancel</string>
+    <string name="cd_drag_toolbar">Drag to move toolbar</string>
+
+    <!-- Cutout Layout Editor -->
+    <string name="mirror_editor_add_cutout">Add Cutout</string>
+    <string name="mirror_editor_delete_cutout">Delete Selected</string>
+    <string name="mirror_editor_delete_cutout_label">Delete cutout</string>
+    <string name="mirror_editor_edit_crop">Edit Crop</string>
+    <string name="mirror_editor_single_mode">Single Viewport</string>
+    <string name="mirror_editor_multi_mode">Multi-Cutout</string>
+    <string name="mirror_editor_done">Done</string>
+    <string name="mirror_editor_multi_cutout_privileged_only">Multiple cutouts require Privileged Mode</string>
+    <string name="mirror_editor_aspect_ratio_mode">Aspect Ratio Mode</string>
+    <string name="mirror_editor_aspect_ratio_locked">Aspect: Locked</string>
+    <string name="mirror_editor_aspect_ratio_free">Free</string>
+    <string name="mirror_editor_aspect_ratio_top">Top</string>
+    <string name="mirror_editor_aspect_ratio_bottom">Bottom</string>
+    <string name="mirror_editor_motion_smoothing">Smooth</string>
+    <string name="cd_motion_smoothing">Toggle motion smoothing for selected cutout</string>
+    <string name="mirror_smoothing_strength_label">Smoothing</string>
+    <string name="mirror_smoothing_strength_value">%1$d%%</string>
+    <string name="mirror_smoothing_strength_light">Light</string>
+    <string name="mirror_smoothing_strength_medium">Medium</string>
+    <string name="mirror_smoothing_strength_strong">Strong</string>
+    <string name="mirror_smoothing_strength_off">Off</string>
+    <string name="mirror_editor_shape_circle">Shape: Circle</string>
+    <string name="mirror_editor_shape_rectangle">Shape: Rectangle</string>
+    <string name="mirror_editor_no_space">Not enough space for another cutout</string>
+    <string name="mirror_editor_max_cutouts">Maximum of 10 cutouts allowed</string>
+    <string name="mirror_editor_rename_cutout">Rename Cutout</string>
+    <string name="mirror_editor_cutout_name_hint">Cutout Name</string>
+
+    <!-- Cutout Layout Editor Toolbar Short Labels -->
+    <string name="mirror_editor_toolbar_add">Add</string>
+    <string name="mirror_editor_toolbar_settings">Settings</string>
+    <string name="mirror_editor_toolbar_delete">Delete</string>
+    <string name="mirror_editor_toolbar_crop">Crop</string>
+    <string name="mirror_editor_toolbar_done">Done</string>
+    <string name="mirror_editor_toolbar_cancel">Cancel</string>
+    <string name="mirror_editor_toolbar_shape_circle">Circle</string>
+    <string name="mirror_editor_toolbar_shape_rect">Rectangle</string>
+    <string name="settings_mirror_touch_projection">Touch Projection</string>
+    <string name="settings_mirror_touch_projection_desc">Forward touch inputs inside this cutout to the primary screen</string>
+    <string name="settings_mirror_cutout_default">Cutout</string>
+    <string name="settings_mirror_cutout_default_name_fmt">Cutout %1$d</string>
 </resources>

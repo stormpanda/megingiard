@@ -9,9 +9,11 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.util.UUID
+import com.stormpanda.megingiard.mirror.ScreenCutout
 
 /**
  * Unit tests for [MacroPadState] — specifically focusing on [MacroPadState.loadFrom]
@@ -447,7 +449,22 @@ class MacroPadStateTest {
             posY = 0.5f,
             action = PadAction.KeyboardKey(65, "A")
         )
-        val l1 = PadLayout(id = "layout-1", name = "Lay1", buttons = listOf(btn))
+        val cutout = ScreenCutout(
+            id = "cutout-1",
+            srcX = 0f, srcY = 0f, srcWidth = 1f, srcHeight = 1f,
+            destX = 0f, destY = 0f, destWidth = 1f, destHeight = 1f,
+            followTouch = true,
+            touchProjectionEnabled = true,
+            motionSmoothing = true,
+            motionSmoothingStrength = 75
+        )
+        val l1 = PadLayout(
+            id = "layout-1",
+            name = "Lay1",
+            buttons = listOf(btn),
+            mirrorEdgeBlendWidth = 25f,
+            mirrorCutouts = listOf(cutout)
+        )
         val p1 = PadProfile(
             id = p1Id,
             name = "P1",
@@ -466,6 +483,16 @@ class MacroPadStateTest {
         val dupBtn = duplicated.buttons.first()
         assertEquals("B", dupBtn.label)
         assertNotEquals("btn-1", dupBtn.id)
+
+        // Assert screen mirror settings copied & cutout IDs remapped
+        assertEquals(25f, duplicated.mirrorEdgeBlendWidth)
+        assertEquals(1, duplicated.mirrorCutouts.size)
+        val dupCutout = duplicated.mirrorCutouts.first()
+        assertNotEquals("cutout-1", dupCutout.id)
+        assertTrue(dupCutout.followTouch)
+        assertTrue(dupCutout.touchProjectionEnabled)
+        assertTrue(dupCutout.motionSmoothing)
+        assertEquals(75, dupCutout.motionSmoothingStrength)
     }
 
     @Test

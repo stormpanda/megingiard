@@ -69,20 +69,15 @@ Pill the universal "go back" mechanism throughout the app.
 
 - The top card slides in from the top of the screen and is **always shown** when the Pill Menu is
   open (it is not conditional on mirroring being active). It contains:
-  - **Background Settings** button (left side): renders as "Background Settings" on screen (resource
-    `R.string.pill_menu_ambient_settings`) and opens `BackgroundSettingsOverlay` by setting
-    `AppStateManager.isBackgroundSettingsActive = true`, then dismisses the Pill Menu.
+  - **Screen Mirroring** action button (left side): renders as "Screen Mirroring" on screen (resource
+    `R.string.pill_menu_screen_mirroring`) with an Edit icon, and opens Screen Mirroring edit mode (layout editor)
+    by setting `AppStateManager.setViewportEditActive(true)`. Disabled when not capturing.
   - **Start / Stop** icon button: starts mirroring via `AppStateManager.requestMirrorStart()` or
     stops it via `requestMirrorStop()`. Shows a Play icon when not capturing, a Stop icon when
     capturing.
   - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
     icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
     with `colors.accent` when frozen. Disabled when not capturing.
-  - **Viewport Edit** icon button: sets `AppStateManager.setViewportEditActive(true)` and dismisses
-    the menu, entering pan/zoom editing mode. Tinted with `colors.accent` when active. Disabled when
-    not capturing.
-  - **Touch Projection** icon button: toggles `ScreenCaptureManager.toggleTouchProjection()`.
-    Tinted with `colors.accent` when projection is active. Disabled when not capturing.
 - All icon buttons in this card MUST have a minimum touch target of **48 dp**.
 - When `SettingsManager.showMirrorControlLabels` is enabled, a short text label is rendered below
   each icon button.
@@ -161,10 +156,10 @@ which routes to open, close, or modal-dismiss as appropriate.
 | ---------------------------------------------- | ---------------------- | ------------------------------- |
 | `AppStateManager.isPillMenuOpen`               | `AppStateManager`      | `handleEdgeSwipe()` / scrim tap |
 | `AppStateManager.isEditorActive`               | `AppStateManager`      | "Edit Layout" button            |
-| `AppStateManager.isBackgroundSettingsActive`   | `AppStateManager`      | "Background Settings" button    |
-| `AppStateManager.isViewportEditActive`         | `AppStateManager`      | "Viewport Edit" button          |
+| `AppStateManager.isBackgroundSettingsActive`   | `AppStateManager`      | Cogwheel settings button in layout editor toolbar |
+| `AppStateManager.isViewportEditActive`         | `AppStateManager`      | "Screen Mirroring" action button in Pill Menu    |
 | `ScreenCaptureManager.isFrozen`                | `ScreenCaptureManager` | "Freeze/Unfreeze" button        |
-| `ScreenCaptureManager.isTouchProjectionActive` | `ScreenCaptureManager` | "Touch Projection" button       |
+| `ScreenCaptureManager.isTouchProjectionActive` | `ScreenCaptureManager` | Cutout layout settings          |
 | `MacroPadState.activeProfile`                  | `MacroPadState`        | Profile chip tap / new profile  |
 | `MacroPadState.activeLayout`                   | `MacroPadState`        | Layout chip tap / new layout    |
 

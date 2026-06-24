@@ -47,6 +47,10 @@ object MacroPadSettings {
 
     private val macropadJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    private var lastLoadedProfilesJson: String? = null
+    private var lastLoadedActiveProfileId: String? = null
+    private var hasLoadedOnce = false
+
     private val _skipTouchRecordDialog = MutableStateFlow(false)
     val skipTouchRecordDialog: StateFlow<Boolean> = _skipTouchRecordDialog.asStateFlow()
 
@@ -114,6 +118,14 @@ object MacroPadSettings {
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
+        val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
+        if (hasLoadedOnce && macropadProfilesJson == lastLoadedProfilesJson && activeId == lastLoadedActiveProfileId) {
+            return
+        }
+        hasLoadedOnce = true
+        lastLoadedProfilesJson = macropadProfilesJson
+        lastLoadedActiveProfileId = activeId
+
         val profiles = if (macropadProfilesJson != null) {
             runCatching {
                 macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
@@ -121,7 +133,6 @@ object MacroPadSettings {
         } else {
             emptyList()
         }
-        val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
         MacroPadState.loadFrom(profiles, activeId)
     }
 
@@ -192,13 +203,16 @@ object MacroPadSettings {
     private suspend fun writeMacroPadDataNow() {
         val profiles = MacroPadState.profiles.value
         val activeId = MacroPadState.activeProfileId.value
+        val json = macropadJson.encodeToString(profiles)
         dataStore.edit { prefs ->
-            prefs[KEY_MACROPAD_PROFILES] = macropadJson.encodeToString(profiles)
+            prefs[KEY_MACROPAD_PROFILES] = json
             if (activeId != null) {
                 prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID] = activeId
             } else {
                 prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
             }
         }
+        lastLoadedProfilesJson = json
+        lastLoadedActiveProfileId = activeId
     }
 }

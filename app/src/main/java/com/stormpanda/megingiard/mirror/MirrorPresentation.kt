@@ -13,10 +13,12 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.Gravity
-import android.view.PixelCopy
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.SurfaceTexture
 import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.SurfaceView
+import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -49,6 +51,13 @@ import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
+import android.graphics.LinearGradient
+import android.graphics.RadialGradient
+import android.graphics.Shader
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import kotlin.math.min
+import kotlin.math.roundToInt
 import java.util.Locale
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -88,6 +97,7 @@ private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
+private const val TOUCH_TOLERANCE = 0.005f
 
 class MirrorPresentation(
     context: Context, 
@@ -97,7 +107,10 @@ class MirrorPresentation(
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
     var onSurfaceReady: ((Surface) -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
-    private var surfaceView: SurfaceView? = null
+    
+    private var masterTextureView: TextureView? = null
+    private var masterSurface: Surface? = null
+    private var multiCutoutContainer: MultiCutoutContainer? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // OnBackPressedDispatcher provided to the Compose tree. Needs to be a class
@@ -152,21 +165,7 @@ class MirrorPresentation(
         val targetWidth = targetBounds.width()
         val targetHeight = targetBounds.height()
 
-        val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-        val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()
-
-        var finalWidth = targetWidth
-        var finalHeight = targetHeight
-
-        if (srcRatio > targetRatio) {
-            // Source is wider than target. Fit width, calculate height to maintain ratio.
-            finalHeight = (targetWidth / srcRatio).toInt()
-        } else {
-            // Source is taller than target. Fit height, calculate width.
-            finalWidth = (targetHeight * srcRatio).toInt()
-        }
-
-        ScreenCaptureManager.setSurfaceSize(finalWidth.toFloat(), finalHeight.toFloat())
+        ScreenCaptureManager.setSurfaceSize(targetWidth.toFloat(), targetHeight.toFloat())
 
         val container = FrameLayout(context).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -176,15 +175,95 @@ class MirrorPresentation(
             setBackgroundColor(Color.BLACK)
         }
 
-        val sv = SurfaceView(context).apply {
-            layoutParams = FrameLayout.LayoutParams(finalWidth, finalHeight, Gravity.CENTER)
-            setZOrderMediaOverlay(true)
+        val mcc = MultiCutoutContainer(context, srcWidth, srcHeight).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
         }
-        // Force the hardware buffer memory allocation to match the raw screen pixel coordinates
-        sv.holder.setFixedSize(srcWidth, srcHeight)
-        surfaceView = sv
+        multiCutoutContainer = mcc
+        container.addView(mcc)
 
-        container.addView(sv)
+        val tv = ThrottledTextureView(context)
+        masterTextureView = tv
+        mcc.addView(tv)
+
+        tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+            private var lastUpdateTime = 0L
+
+            override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
+                st.setDefaultBufferSize(srcWidth, srcHeight)
+                val surface = Surface(st)
+                masterSurface = surface
+                try {
+                    val fps = ScreenCaptureManager.maxFps.value
+                    AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
+                    surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Error setting initial surface frame rate", e)
+                }
+                AppLog.d(TAG, "master TextureView surface available")
+                onSurfaceReady?.invoke(surface)
+            }
+            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) {}
+            override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                AppLog.d(TAG, "master TextureView surface destroyed")
+                onSurfaceDestroyed?.invoke()
+                masterSurface?.release()
+                masterSurface = null
+                return true
+            }
+            override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
+                val now = System.currentTimeMillis()
+                val fps = ScreenCaptureManager.maxFps.value.coerceIn(10, 60)
+                val interval = 1000L / fps
+                if (now - lastUpdateTime >= interval) {
+                    mcc.updateAccumulator(tv)
+                    lastUpdateTime = now
+                }
+            }
+        }
+
+        scope.launch {
+            ScreenCaptureManager.cutouts.collect { cutouts ->
+                mcc.cutouts = cutouts
+            }
+        }
+
+        scope.launch {
+            ScreenCaptureManager.edgeBlendWidthDp.collect {
+                mcc.invalidate()
+            }
+        }
+
+        scope.launch {
+            ScreenCaptureManager.maxFps.collect { fps ->
+                tv.maxFps = fps
+                masterSurface?.let { surface ->
+                    if (surface.isValid) {
+                        try {
+                            AppLog.i(TAG, "Setting surface frame rate to $fps FPS")
+                            surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Error setting surface frame rate", e)
+                        }
+                    }
+                }
+            }
+        }
+
+        scope.launch {
+            combine(
+                ScreenCaptureManager.scale,
+                ScreenCaptureManager.offsetX,
+                ScreenCaptureManager.offsetY,
+            ) { s, ox, oy -> Triple(s, ox, oy) }
+            .collect { triple ->
+                mcc.viewportScale = triple.first
+                mcc.viewportOffsetX = triple.second
+                mcc.viewportOffsetY = triple.third
+            }
+        }
 
         // BackHandler (used in Compose Dialog) requires
         // LocalOnBackPressedDispatcherOwner. backDispatcher is a class property so that
@@ -408,28 +487,7 @@ class MirrorPresentation(
                                     }
                                 },
                         ) {
-                            // Layer 1: Frozen bitmap — rendered with the same viewport
-                            // transform (graphicsLayer) that was applied to the SurfaceView,
-                            // so it looks identical to what was visible before freeze.
-                            // PixelCopy captures without View transforms, so we re-apply
-                            // scale/offsetX/offsetY here. Collecting via StateFlow also
-                            // makes it reactive during viewport-edit pan/zoom.
-                            val bitmap = frozenBitmap
-                            if (isFrozen && bitmap != null) {
-                                Image(
-                                    bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .graphicsLayer(
-                                            scaleX = scale,
-                                            scaleY = scale,
-                                            translationX = offsetX,
-                                            translationY = offsetY,
-                                        ),
-                                    contentScale = ContentScale.Fit,
-                                )
-                            }
+
 
                             // Layer 2: BackgroundMacroPadOverlay — always rendered when active
                             // so IdlePill remains visible in all modes. Internally hides
@@ -447,24 +505,9 @@ class MirrorPresentation(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        // Reserve the IdlePill swipe edge zone so
-                                        // BackgroundMacroPadOverlay's SwipeGestureProcessor
-                                        // can detect the edge-swipe and call
-                                        // handleEdgeSwipe() → closeActiveModal().
-                                        .padding(
-                                            top = if (overlayAtBottom) 0.dp else MP_EDGE_ZONE,
-                                            bottom = if (overlayAtBottom) MP_EDGE_ZONE else 0.dp,
-                                        )
-                                        .pointerInput(Unit) {
-                                            detectTransformGestures { _, pan, zoom, _ ->
-                                                MirrorViewportController.applyZoomPan(
-                                                    zoom, pan.x, pan.y,
-                                                    ScreenCaptureManager.surfaceWidth.value,
-                                                    ScreenCaptureManager.surfaceHeight.value,
-                                                )
-                                            }
-                                        }
-                                )
+                                ) {
+                                    CutoutLayoutEditor(overlayAtBottom = overlayAtBottom)
+                                }
                             }
 
                             // Layer 4: Fullscreen Mouse Overlay — rendered above background
@@ -505,22 +548,10 @@ class MirrorPresentation(
 
         setContentView(container)
 
-        sv.holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: SurfaceHolder) {
-                onSurfaceReady?.invoke(holder.surface)
-            }
-            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-                // no-op
-            }
-            override fun surfaceDestroyed(holder: SurfaceHolder) {
-                onSurfaceDestroyed?.invoke()
-            }
-        })
-
-        bindStateFlows(sv)
+        bindStateFlows()
     }
 
-    private fun bindStateFlows(sv: SurfaceView) {
+    private fun bindStateFlows() {
         scope.launch {
             combine(
                 AppStateManager.isFullscreenKeyboardActive,
@@ -591,41 +622,24 @@ class MirrorPresentation(
             }
         }
         scope.launch {
-            ScreenCaptureManager.scale.collect { 
-                sv.scaleX = it
-                sv.scaleY = it
-            }
-        }
-        scope.launch {
-            ScreenCaptureManager.offsetX.collect { sv.translationX = it }
-        }
-        scope.launch {
-            ScreenCaptureManager.offsetY.collect { sv.translationY = it }
-        }
-        scope.launch {
             ScreenCaptureManager.isFrozen.collect { frozen ->
-                if (frozen && sv.width > 0 && sv.height > 0) {
+                val tv = masterTextureView
+                if (frozen && tv != null && tv.width > 0 && tv.height > 0) {
                     try {
-                        val bitmap = Bitmap.createBitmap(sv.width, sv.height, Bitmap.Config.ARGB_8888)
-                        PixelCopy.request(
-                            sv,
-                            bitmap,
-                            { result ->
-                                if (result == PixelCopy.SUCCESS) {
-                                    ScreenCaptureManager.setFrozenBitmap(bitmap)
-                                    sv.visibility = View.INVISIBLE
-                                } else {
-                                    AppLog.e(TAG, "PixelCopy failed with result code: $result")
-                                    bitmap.recycle()
-                                }
-                            },
-                            Handler(Looper.getMainLooper())
-                        )
+                        val bitmap = tv.getBitmap()
+                        if (bitmap != null) {
+                            ScreenCaptureManager.setFrozenBitmap(bitmap)
+                            multiCutoutContainer?.isFrozen = true
+                            multiCutoutContainer?.frozenBitmap = bitmap
+                        } else {
+                            AppLog.e(TAG, "masterTextureView.getBitmap() returned null")
+                        }
                     } catch (e: Exception) {
-                        AppLog.e(TAG, "PixelCopy exception", e)
+                        AppLog.e(TAG, "masterTextureView.getBitmap() exception", e)
                     }
                 } else if (!frozen) {
-                    sv.visibility = View.VISIBLE
+                    multiCutoutContainer?.isFrozen = false
+                    multiCutoutContainer?.frozenBitmap = null
                     ScreenCaptureManager.setFrozenBitmap(null)
                 }
             }
@@ -642,6 +656,403 @@ class MirrorPresentation(
         }
     }
 
-    fun getSurface(): Surface? = surfaceView?.holder?.surface
+    fun getSurface(): Surface? = masterSurface
 }
+
+class MultiCutoutContainer(
+    context: Context,
+    private val srcWidth: Int,
+    private val srcHeight: Int
+) : FrameLayout(context) {
+    var cutouts: List<ScreenCutout> = emptyList()
+        set(value) {
+            field = value
+            if (isFrozen || !value.any { it.motionSmoothing }) {
+                releaseAccumulator()
+            }
+            invalidate()
+        }
+    var isFrozen: Boolean = false
+        set(value) {
+            field = value
+            if (value) {
+                releaseAccumulator()
+            }
+            invalidate()
+        }
+    var frozenBitmap: Bitmap? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var viewportScale: Float = 1f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var viewportOffsetX: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var viewportOffsetY: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    private val cutoutPaint = Paint()
+    private val blendPaint = Paint().apply {
+        isAntiAlias = true
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+    }
+    private val circlePath = Path()
+
+    private var scratchBitmap: Bitmap? = null
+
+    private class Accumulator(val strength: Int, width: Int, height: Int) {
+        var accumulated: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        var initialized: Boolean = false
+
+        val blendPaint = Paint().apply {
+            val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
+            alpha = (alphaPercent * 255f).roundToInt()
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
+        }
+
+        fun recycle() {
+            accumulated?.recycle()
+            accumulated = null
+        }
+    }
+
+    private val accumulators = mutableMapOf<Int, Accumulator>()
+
+    init {
+        clipChildren = true
+        setWillNotDraw(false)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        releaseAccumulator()
+    }
+
+    fun releaseAccumulator() {
+        accumulators.values.forEach { it.recycle() }
+        accumulators.clear()
+        scratchBitmap?.recycle()
+        scratchBitmap = null
+    }
+
+    fun updateAccumulator(textureView: TextureView) {
+        val activeStrengths = if (isFrozen) emptySet() else cutouts.filter { it.motionSmoothing }.map { it.motionSmoothingStrength }.toSet()
+        if (activeStrengths.isNotEmpty() && srcWidth > 0 && srcHeight > 0) {
+            // 1. Recycle accumulators for strengths that are no longer active
+            val iterator = accumulators.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (entry.key !in activeStrengths) {
+                    entry.value.recycle()
+                    iterator.remove()
+                }
+            }
+
+            // 2. Ensure accumulators exist and have correct sizes
+            for (strength in activeStrengths) {
+                val existing = accumulators[strength]
+                if (existing != null) {
+                    val acc = existing.accumulated
+                    if (acc == null || acc.width != srcWidth || acc.height != srcHeight) {
+                        existing.recycle()
+                        accumulators[strength] = Accumulator(strength, srcWidth, srcHeight)
+                    }
+                } else {
+                    accumulators[strength] = Accumulator(strength, srcWidth, srcHeight)
+                }
+            }
+
+            // 3. Ensure a valid single scratch bitmap exists
+            val currentScratch = scratchBitmap
+            val scratch = if (currentScratch == null || currentScratch.width != srcWidth || currentScratch.height != srcHeight) {
+                currentScratch?.recycle()
+                Bitmap.createBitmap(srcWidth, srcHeight, Bitmap.Config.ARGB_8888).also { scratchBitmap = it }
+            } else {
+                currentScratch
+            }
+
+            // 4. Capture TextureView frame once
+            try {
+                textureView.getBitmap(scratch)
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Error getting TextureView bitmap for motion smoothing", e)
+                return
+            }
+
+            // 5. Update each active accumulator with the captured frame
+            for (strength in activeStrengths) {
+                val acc = accumulators[strength] ?: continue
+                val accum = acc.accumulated
+                if (accum != null) {
+                    try {
+                        val accumCanvas = Canvas(accum)
+                        if (!acc.initialized) {
+                            accumCanvas.drawBitmap(scratch, 0f, 0f, null)
+                            acc.initialized = true
+                        } else {
+                            accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
+                        }
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
+                    }
+                }
+            }
+            invalidate()
+        } else {
+            releaseAccumulator()
+        }
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        if (childCount > 0) {
+            val child = getChildAt(0)
+            child.layout(0, 0, srcWidth, srcHeight)
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        setMeasuredDimension(
+            resolveSize(suggestedMinimumWidth, widthMeasureSpec),
+            resolveSize(suggestedMinimumHeight, heightMeasureSpec)
+        )
+        if (childCount > 0) {
+            val child = getChildAt(0)
+            child.measure(
+                MeasureSpec.makeMeasureSpec(srcWidth, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(srcHeight, MeasureSpec.EXACTLY)
+            )
+        }
+    }
+
+    override fun dispatchDraw(canvas: Canvas) {
+        val masterView = if (childCount > 0) getChildAt(0) else null
+        if (masterView == null && (!isFrozen || frozenBitmap == null)) return
+
+        val parentW = width.toFloat()
+        val parentH = height.toFloat()
+        if (parentW <= 0f || parentH <= 0f) return
+
+        val drawTime = this.drawingTime
+        val blendWidthDp = ScreenCaptureManager.edgeBlendWidthDp.value
+        val edgeBlending = blendWidthDp > 0f
+        val tolerance = TOUCH_TOLERANCE
+        val blendW = (blendWidthDp * resources.displayMetrics.density).roundToInt().toFloat()
+
+        var masterViewDrawn = false
+
+        for (cutout in cutouts) {
+            val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
+            val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
+            val dx = (cutout.destX * parentW).roundToInt().toFloat()
+            val dy = (cutout.destY * parentH).roundToInt().toFloat()
+            
+            val sw = cutout.srcWidth * srcWidth
+            val sh = cutout.srcHeight * srcHeight
+            val sx = cutout.srcX * srcWidth
+            val sy = cutout.srcY * srcHeight
+
+            if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
+
+            val touchesLeft = edgeBlending && (cutout.destX > tolerance)
+            val touchesRight = edgeBlending && (cutout.destX + cutout.destWidth < 1.0f - tolerance)
+            val touchesTop = edgeBlending && (cutout.destY > tolerance)
+            val touchesBottom = edgeBlending && (cutout.destY + cutout.destHeight < 1.0f - tolerance)
+
+            val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
+            val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
+            val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
+            val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
+            val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
+
+            val saveCount = if (cutout.opacity < 1f || hasTouching) {
+                cutoutPaint.alpha = (cutout.opacity * 255).toInt()
+                if (hasTouching) {
+                    cutoutPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+                } else {
+                    cutoutPaint.xfermode = null
+                }
+                val clipLeft = dx - leftExt
+                val clipTop = dy - topExt
+                val clipRight = dx + dw + rightExt
+                val clipBottom = dy + dh + bottomExt
+                canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
+            } else {
+                canvas.save()
+                canvas.clipRect(dx, dy, dx + dw, dy + dh)
+                0
+            }
+
+            try {
+                canvas.translate(dx, dy)
+                if (cutout.shape == CutoutShape.CIRCLE) {
+                    circlePath.reset()
+                    val r = min(dw, dh) / 2f
+                    circlePath.addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
+                    canvas.clipPath(circlePath)
+                }
+                val innerSaveCount = canvas.save()
+                
+                val isFollowActive = ScreenCaptureManager.isFollowActive.value
+                val isUncropped = cutout.srcWidth >= 0.999f && cutout.srcHeight >= 0.999f
+                if (cutouts.size == 1 && isFollowActive && isUncropped) {
+                    canvas.translate(viewportOffsetX, viewportOffsetY)
+                    canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+
+                    // Fit srcWidth x srcHeight into dw x dh preserving aspect ratio
+                    val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                    val destRatio = dw / dh
+                    
+                    var fitW = dw
+                    var fitH = dh
+                    if (srcRatio > destRatio) {
+                        fitH = dw / srcRatio
+                    } else {
+                        fitW = dh * srcRatio
+                    }
+                    
+                    // Center the fitted rectangle within dw x dh
+                    val fitX = (dw - fitW) / 2f
+                    val fitY = (dh - fitH) / 2f
+                    canvas.translate(fitX, fitY)
+
+                    val scaleX = fitW / srcWidth
+                    val scaleY = fitH / srcHeight
+                    canvas.scale(scaleX, scaleY)
+                } else {
+                    val scaleX = dw / sw
+                    val scaleY = dh / sh
+                    canvas.translate(-sx * scaleX, -sy * scaleY)
+                    canvas.scale(scaleX, scaleY)
+                }
+
+                if (isFrozen && frozenBitmap != null) {
+                    canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
+                } else if (cutout.motionSmoothing && accumulators[cutout.motionSmoothingStrength]?.accumulated != null) {
+                    canvas.drawBitmap(accumulators[cutout.motionSmoothingStrength]!!.accumulated!!, 0f, 0f, null)
+                } else if (masterView != null) {
+                    drawChild(canvas, masterView, drawTime)
+                    masterViewDrawn = true
+                }
+
+                canvas.restoreToCount(innerSaveCount)
+
+                if (cutout.shape == CutoutShape.CIRCLE) {
+                    if (edgeBlending) {
+                        val r = min(dw, dh) / 2f
+                        val stop = maxOf(0f, r - blendW) / r
+                        val colors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
+                        val stops = floatArrayOf(0f, stop, 1f)
+                        val shader = RadialGradient(dw / 2f, dh / 2f, r, colors, stops, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(0f, 0f, dw, dh, blendPaint)
+                        blendPaint.shader = null
+                    }
+                } else if (hasTouching) {
+                    if (touchesLeft) {
+                        val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
+                        val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                    }
+                    if (touchesRight) {
+                        val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
+                        val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                    }
+                    if (touchesTop) {
+                        val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
+                        val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                    }
+                    if (touchesBottom) {
+                        val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
+                        val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
+                        blendPaint.shader = shader
+                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                    }
+                    blendPaint.shader = null
+                }
+            } finally {
+                if (cutout.opacity < 1f || hasTouching) {
+                    canvas.restoreToCount(saveCount)
+                } else {
+                    canvas.restore()
+                }
+            }
+        }
+
+        if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
+            val saveCount = canvas.save()
+            canvas.clipRect(0f, 0f, 0f, 0f)
+            drawChild(canvas, masterView, drawTime)
+            canvas.restoreToCount(saveCount)
+        }
+    }
+}
+
+private class ThrottledTextureView(context: Context) : TextureView(context) {
+    var maxFps: Int = 60
+        set(value) {
+            if (field != value) {
+                field = value
+                if (isScheduled) {
+                    removeCallbacks(invalidateRunnable)
+                    isScheduled = false
+                }
+                invalidate()
+            }
+        }
+    private var lastInvalidateTime: Long = 0L
+    private var isScheduled = false
+    private val invalidateRunnable = Runnable {
+        isScheduled = false
+        invalidate()
+    }
+
+    override fun invalidate() {
+        val now = System.currentTimeMillis()
+        val fps = maxFps.coerceAtLeast(1)
+        val interval = if (fps >= 60) 0L else (1000L / fps)
+        if (interval == 0L || now - lastInvalidateTime >= interval) {
+            if (isScheduled) {
+                removeCallbacks(invalidateRunnable)
+                isScheduled = false
+            }
+            lastInvalidateTime = now
+            super.invalidate()
+        } else {
+            if (!isScheduled) {
+                isScheduled = true
+                val delay = interval - (now - lastInvalidateTime)
+                postDelayed(invalidateRunnable, delay)
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in parent class")
+    override fun invalidate(dirty: android.graphics.Rect?) {
+        invalidate()
+    }
+
+    @Deprecated("Deprecated in parent class")
+    override fun invalidate(l: Int, t: Int, r: Int, b: Int) {
+        invalidate()
+    }
+}
+
+
+
+
 

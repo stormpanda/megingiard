@@ -48,6 +48,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -280,12 +282,37 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 profiles    = profiles,
                 existingLayoutNames = profile.layouts.map { it.name },
                 accentColor = colors.accent,
-                onConfirm   = { name, templateButtons ->
-                    val newLayout = PadLayout(
-                        id      = UUID.randomUUID().toString(),
-                        name    = name.ifBlank { defaultLayoutName },
-                        buttons = templateButtons,
-                    )
+                onConfirm   = { name, templateLayout ->
+                    val newLayout = if (templateLayout != null) {
+                        val copiedButtons = templateLayout.buttons.map { btn ->
+                            btn.copy(id = UUID.randomUUID().toString())
+                        }
+                        val copiedCutouts = templateLayout.mirrorCutouts.map { cutout ->
+                            cutout.copy(id = UUID.randomUUID().toString())
+                        }
+                        templateLayout.copy(
+                            id = UUID.randomUUID().toString(),
+                            name = name.ifBlank { defaultLayoutName },
+                            buttons = copiedButtons,
+                            mirrorCutouts = copiedCutouts
+                        )
+                    } else {
+                        val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
+                        val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
+                        val bottomW = ScreenCaptureManager.surfaceWidth.value
+                        val bottomH = ScreenCaptureManager.surfaceHeight.value
+                        val defaultCutout = if (bottomW > 0f && bottomH > 0f) {
+                            ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
+                        } else {
+                            ScreenCutout.createDefault(sourceW, sourceH)
+                        }
+                        PadLayout(
+                            id      = UUID.randomUUID().toString(),
+                            name    = name.ifBlank { defaultLayoutName },
+                            buttons = emptyList(),
+                            mirrorCutouts = listOf(defaultCutout),
+                        )
+                    }
                     MacroPadState.addLayout(newLayout)
                     showNewLayoutDialog = false
                 },

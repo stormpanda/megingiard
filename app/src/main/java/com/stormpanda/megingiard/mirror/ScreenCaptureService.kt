@@ -15,11 +15,13 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.IBinder
 import android.view.Display
+import android.view.Surface
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CaptureRequestActivity
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
@@ -35,7 +37,8 @@ const val ACTION_STOP = "STOP"
 
 class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
-    private var virtualDisplay: VirtualDisplay? = null
+    private var mirrorVirtualDisplay: VirtualDisplay? = null
+    private var mirrorSurface: Surface? = null
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
     private var directPrivdSession: DirectPrivdMirrorSession? = null
@@ -122,9 +125,10 @@ class ScreenCaptureService : Service() {
                         AppLog.i(TAG, "recording requested → creating RecordingMirrorPresentation")
                         recordingPresentation?.dismiss()
                         
-                        // Release main virtualDisplay to avoid AYN Thor display conflict
-                        virtualDisplay?.release()
-                        virtualDisplay = null
+                        // Release master virtualDisplay to avoid AYN Thor display conflict
+                        mirrorVirtualDisplay?.release()
+                        mirrorVirtualDisplay = null
+                        mirrorSurface = null
                         // Hide the main presentation window
                         mirrorPresentation?.hide()
 
@@ -151,26 +155,12 @@ class ScreenCaptureService : Service() {
                             mirrorPresentation?.show()
                         }
                         val surface = mirrorPresentation?.getSurface()
-                        if (surface != null && surface.isValid && directPrivdSession == null) {
+                        if (surface != null && surface.isValid) {
+                            mirrorSurface = surface
+                        }
+                        if (mirrorSurface != null && directPrivdSession == null) {
                             AppLog.i(TAG, "surface is already valid in privileged mode → manually recreating directPrivdSession")
-                            directPrivdStartGeneration += 1L
-                            val startGeneration = directPrivdStartGeneration
-                            scope.launch {
-                                val directSession = DirectPrivdMirrorSession(capturedSrcWidth, capturedSrcHeight)
-                                directPrivdSession = directSession
-                                val directStarted = directSession.start()
-                                if (startGeneration == directPrivdStartGeneration && directPrivdSession === directSession) {
-                                    if (directStarted && DirectMirrorSurfaceBridge.sendToDirectServer(surface)) {
-                                        AppLog.i(TAG, "manually recreated direct privileged mirror session started")
-                                    } else {
-                                        directSession.release()
-                                        directPrivdSession = null
-                                        launchConsentFallback("direct privileged mirror manual recreate failed")
-                                    }
-                                } else {
-                                    directSession.release()
-                                }
-                            }
+                            updateDirectServerSurfaces()
                         }
                     } else {
                         AppLog.i(TAG, "recording stopped in non-privileged mode → restoring main mirror")
@@ -178,19 +168,20 @@ class ScreenCaptureService : Service() {
                             mirrorPresentation?.show()
                         }
                         val surface = mirrorPresentation?.getSurface()
-                        if (surface != null && surface.isValid && virtualDisplay == null) {
-                            AppLog.i(TAG, "surface is already valid → manually recreating VirtualDisplay")
+                        if (surface != null && surface.isValid && mirrorVirtualDisplay == null) {
                             val dpi = resources.displayMetrics.densityDpi
                             try {
-                                virtualDisplay = mediaProjection?.createVirtualDisplay(
-                                    "ScreenCapture",
+                                val vd = mediaProjection?.createVirtualDisplay(
+                                    "ScreenCapture-Master",
                                     capturedSrcWidth, capturedSrcHeight, dpi,
                                     DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                                     surface, null, null
                                 )
-                                AppLog.i(TAG, "VirtualDisplay recreated manually ${capturedSrcWidth}x${capturedSrcHeight} dpi=$dpi")
+                                mirrorVirtualDisplay = vd
+                                mirrorSurface = surface
+                                AppLog.i(TAG, "VirtualDisplay recreated manually for master ${capturedSrcWidth}x${capturedSrcHeight} dpi=$dpi")
                             } catch (e: Exception) {
-                                AppLog.e(TAG, "Exception recreating VirtualDisplay manually", e)
+                                AppLog.e(TAG, "Exception recreating VirtualDisplay manually for master", e)
                             }
                         }
                     }
@@ -225,6 +216,7 @@ class ScreenCaptureService : Service() {
             }
 
             isPrivilegedMode = false
+            ScreenCaptureManager.setPrivilegedMirror(false)
             val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
@@ -262,38 +254,33 @@ class ScreenCaptureService : Service() {
             val presentation = MirrorPresentation(this, secondaryDisplay, srcWidth, srcHeight)
             mirrorPresentation = presentation
 
-            presentation.onSurfaceDestroyed = {
-                // Detach the surface but keep the VirtualDisplay alive. Releasing here
-                // would remove a virtual display from the system, causing the launcher on
-                // the secondary display to react (detect display change) and push
-                // Megingiard off the secondary screen the next time show() creates a NEW
-                // VirtualDisplay. By keeping it alive with surface=null we avoid any
-                // system display lifecycle event. The VirtualDisplay is properly released
-                // in onDestroy().
-                virtualDisplay?.setSurface(null)
-            }
-
             presentation.onSurfaceReady = { surface ->
+                mirrorSurface = surface
                 val isFrozen = ScreenCaptureManager.isFrozen.value
                 val activeSurface = if (isFrozen) null else surface
-                if (virtualDisplay != null) {
-                    // Reattach surface after a hide/show cycle — VirtualDisplay was kept
-                    // alive with surface=null while the Presentation window was hidden.
-                    virtualDisplay?.setSurface(activeSurface)
-                    AppLog.d(TAG, "VirtualDisplay surface reattached after show()")
+                val existingVd = mirrorVirtualDisplay
+                if (existingVd != null) {
+                    existingVd.setSurface(activeSurface)
+                    AppLog.d(TAG, "VirtualDisplay surface reattached for master after show()")
                 } else {
                     try {
-                        virtualDisplay = mediaProjection?.createVirtualDisplay(
-                            "ScreenCapture",
+                        val vd = mediaProjection?.createVirtualDisplay(
+                            "ScreenCapture-Master",
                             srcWidth, srcHeight, dpi,
                             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                             activeSurface, null, null
                         )
-                        AppLog.i(TAG, "VirtualDisplay created ${srcWidth}x${srcHeight} dpi=$dpi")
+                        mirrorVirtualDisplay = vd
+                        AppLog.i(TAG, "VirtualDisplay created for master ${srcWidth}x${srcHeight} dpi=$dpi")
                     } catch (e: Exception) {
-                        AppLog.e(TAG, "Exception creating VirtualDisplay", e)
+                        AppLog.e(TAG, "Exception creating VirtualDisplay for master", e)
                     }
                 }
+            }
+            presentation.onSurfaceDestroyed = {
+                mirrorSurface = null
+                mirrorVirtualDisplay?.setSurface(null)
+                AppLog.d(TAG, "VirtualDisplay surface detached after surface destroyed (hide())")
             }
 
             // Start viewport persistence coroutines in the service scope so they are
@@ -307,6 +294,22 @@ class ScreenCaptureService : Service() {
             // isCapturing=false && promptInFlight=false could re-trigger the capture prompt.
             scope.launch {
                 MirrorSettings.restoreMirrorSessionState()
+                val layout = MacroPadState.activeLayout.value
+                if (layout != null && layout.mirrorCutouts.isEmpty()) {
+                    val secWindowContext = createWindowContext(secondaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
+                    val secWindowMetrics = secWindowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
+                    val secBounds = secWindowMetrics.bounds
+                    val secWidth = secBounds.width().toFloat()
+                    val secHeight = secBounds.height().toFloat()
+                    val defaultCutout = ScreenCutout.createDefault(
+                        srcPixelWidth = srcWidth.toFloat(),
+                        srcPixelHeight = srcHeight.toFloat(),
+                        bottomPixelWidth = secWidth,
+                        bottomPixelHeight = secHeight
+                    )
+                    AppLog.i(TAG, "onStartCommand: cutout list is empty, creating default cutout size=${secWidth}x${secHeight}")
+                    MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
+                }
                 MirrorViewportController.restoreFromLayout()
                 AppLog.i(TAG, "session state restored → setCapturing(true)")
                 ScreenCaptureManager.setCapturing(true)
@@ -357,6 +360,7 @@ class ScreenCaptureService : Service() {
             return START_NOT_STICKY
         }
         isPrivilegedMode = true
+        ScreenCaptureManager.setPrivilegedMirror(true)
         startForegroundNotificationConnectedDevice()
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -384,49 +388,33 @@ class ScreenCaptureService : Service() {
         mirrorPresentation = presentation
 
         presentation.onSurfaceDestroyed = {
-            directPrivdStartGeneration += 1L
-            directPrivdSession?.stop()
+            mirrorSurface = null
+            updateDirectServerSurfaces()
         }
         presentation.onSurfaceReady = { surface ->
-            // Tear down any existing session and start a fresh one bound to the new surface.
-            directPrivdStartGeneration += 1L
-            val startGeneration = directPrivdStartGeneration
-            directPrivdSession?.release()
-            directPrivdSession = null
-            scope.launch {
-                if (startGeneration != directPrivdStartGeneration) {
-                    AppLog.d(TAG, "stale privileged mirror launch ignored")
-                    return@launch
-                }
-                val directSession = DirectPrivdMirrorSession(
-                    srcWidth,
-                    srcHeight,
-                )
-                directPrivdSession = directSession
-                val directStarted = directSession.start()
-                if (startGeneration != directPrivdStartGeneration || directPrivdSession !== directSession) {
-                    AppLog.d(TAG, "stale privileged mirror start ignored")
-                    directSession.release()
-                    return@launch
-                }
-                if (directStarted && DirectMirrorSurfaceBridge.sendToDirectServer(surface)) {
-                    AppLog.i(TAG, "direct privileged mirror session started")
-                    return@launch
-                }
-                if (startGeneration != directPrivdStartGeneration || directPrivdSession !== directSession) {
-                    AppLog.d(TAG, "stale privileged mirror fallback ignored")
-                    directSession.release()
-                    return@launch
-                }
-                directSession.release()
-                directPrivdSession = null
-                launchConsentFallback("direct privileged mirror unavailable")
-            }
+            mirrorSurface = surface
+            updateDirectServerSurfaces()
         }
 
         MirrorViewportController.startPersistence(scope)
         scope.launch {
             MirrorSettings.restoreMirrorSessionState()
+            val layout = MacroPadState.activeLayout.value
+            if (layout != null && layout.mirrorCutouts.isEmpty()) {
+                val secWindowContext = createWindowContext(secondaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
+                val secWindowMetrics = secWindowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
+                val secBounds = secWindowMetrics.bounds
+                val secWidth = secBounds.width().toFloat()
+                val secHeight = secBounds.height().toFloat()
+                val defaultCutout = ScreenCutout.createDefault(
+                    srcPixelWidth = srcWidth.toFloat(),
+                    srcPixelHeight = srcHeight.toFloat(),
+                    bottomPixelWidth = secWidth,
+                    bottomPixelHeight = secHeight
+                )
+                AppLog.i(TAG, "startPrivdPath: cutout list is empty, creating default cutout size=${secWidth}x${secHeight}")
+                MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
+            }
             MirrorViewportController.restoreFromLayout()
             AppLog.i(TAG, "privd session state restored → setCapturing(true)")
             ScreenCaptureManager.setCapturing(true)
@@ -436,6 +424,48 @@ class ScreenCaptureService : Service() {
             }
         }
         return START_NOT_STICKY
+    }
+
+    private fun updateDirectServerSurfaces() {
+        if (!isPrivilegedMode) return
+        directPrivdStartGeneration += 1L
+        val startGeneration = directPrivdStartGeneration
+        scope.launch {
+            if (startGeneration != directPrivdStartGeneration) return@launch
+            val surface = mirrorSurface
+            if (surface == null || !surface.isValid) {
+                directPrivdSession?.release()
+                directPrivdSession = null
+                return@launch
+            }
+
+            var directSession = directPrivdSession
+            if (directSession == null) {
+                directSession = DirectPrivdMirrorSession(capturedSrcWidth, capturedSrcHeight)
+                directPrivdSession = directSession
+                val directStarted = directSession.start()
+                if (startGeneration != directPrivdStartGeneration || directPrivdSession !== directSession) {
+                    directSession.release()
+                    return@launch
+                }
+                if (!directStarted) {
+                    directSession.release()
+                    directPrivdSession = null
+                    launchConsentFallback("direct privileged mirror unavailable")
+                    return@launch
+                }
+            }
+
+            if (startGeneration == directPrivdStartGeneration) {
+                if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                    AppLog.i(TAG, "direct privileged mirror session updated with master surface")
+                } else {
+                    directSession.release()
+                    directPrivdSession = null
+                    launchConsentFallback("direct privileged mirror send failed")
+                }
+            }
+        }
     }
 
     private fun launchConsentFallback(reason: String) {
@@ -488,9 +518,12 @@ class ScreenCaptureService : Service() {
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure
         // the UI state is cleaned up so the app doesn't get stuck.
+        ScreenCaptureManager.setPrivilegedMirror(false)
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         if (!consentFallbackInFlight) AppStateManager.setPromptInFlight(false)
-        virtualDisplay?.release()
+        mirrorVirtualDisplay?.release()
+        mirrorVirtualDisplay = null
+        mirrorSurface = null
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()

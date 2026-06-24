@@ -27,9 +27,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,12 +59,17 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.settings.ColorWheelPicker
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppTextField
+import androidx.compose.material.icons.rounded.Edit
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
+import androidx.compose.ui.text.style.TextAlign
+import kotlin.math.roundToInt
+
 
 private const val TAG = "BackgroundSettingsOverlay"
 
@@ -80,20 +86,24 @@ private val ASO_SECTION_HEADER_PADDING_H = 16.dp
 private val ASO_SECTION_HEADER_PADDING_V = 10.dp
 private val ASO_ROW_PADDING_H = 16.dp
 private val ASO_ROW_PADDING_V = 12.dp
+private val ASO_EDIT_ICON_SIZE = 28.dp
+private val ASO_EDIT_ICON_INNER_SIZE = 18.dp
+private val ASO_SPACING_8 = 8.dp
+private val ASO_CUTOUT_ROW_V_PADDING = 4.dp
+
+private const val ASO_SMOOTHING_OFF = 0f
+private const val ASO_SMOOTHING_LIGHT = 1f
+private const val ASO_SMOOTHING_MEDIUM = 2f
+private const val ASO_SMOOTHING_STRONG = 3f
+
+private const val ASO_SMOOTHING_VAL_LIGHT = 75
+private const val ASO_SMOOTHING_VAL_MEDIUM = 80
+private const val ASO_SMOOTHING_VAL_STRONG = 85
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
-private fun VignetteShape.labelResId(): Int = when (this) {
-    VignetteShape.RADIAL    -> R.string.settings_macropad_vignette_shape_radial
-    VignetteShape.LETTERBOX -> R.string.settings_macropad_vignette_shape_letterbox
-    VignetteShape.PILLARBOX -> R.string.settings_macropad_vignette_shape_pillarbox
-    VignetteShape.TOP       -> R.string.settings_macropad_vignette_shape_top
-    VignetteShape.BOTTOM    -> R.string.settings_macropad_vignette_shape_bottom
-    VignetteShape.LEFT      -> R.string.settings_macropad_vignette_shape_left
-    VignetteShape.RIGHT     -> R.string.settings_macropad_vignette_shape_right
-}
 
 /**
  * Full-screen overlay for per-layout ambient display settings.
@@ -127,51 +137,39 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
     // Local slider state for smooth dragging — committed on finger up via updateLayout.
     var dimAlpha by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientDim) }
-    var vignetteEnabled by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteEnabled) }
-    var vignetteShape by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteShape) }
-    var vignetteVisibleArea by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteVisibleArea) }
-    var vignetteTransition by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteTransition) }
-    var vignetteOpacity by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientVignetteOpacity) }
-    var vignetteColorInt by remember(currentLayout.id) { mutableStateOf(currentLayout.ambientVignetteColor) }
+    var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }
+    var renamingCutout by remember { mutableStateOf<ScreenCutout?>(null) }
+    var renameText by remember(renamingCutout) { mutableStateOf(renamingCutout?.name ?: "") }
+    val localSmoothingValues = remember(currentLayout.id) { mutableStateMapOf<String, Float>() }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
     val isInPreview = previewConfig != null
-    // Color picker state hoisted to top level so ColorWheelPicker renders as a
-    // full-screen sibling of the main settings Box (not nested inside the scroll column).
-    var showColorPicker by remember { mutableStateOf(false) }
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
         val updated = MacroPadState.activeLayout.value ?: return
         MacroPadState.updateLayout(updated.block())
     }
 
-    val labelSoft = stringResource(R.string.settings_macropad_vignette_transition_soft)
-    val labelHard = stringResource(R.string.settings_macropad_vignette_transition_hard)
     // Pre-captured for use inside onPreviewClick lambdas (non-composable context).
     val labelDim              = stringResource(R.string.settings_macropad_dim)
-    val labelVignetteArea     = stringResource(R.string.settings_macropad_vignette_visible_area)
-    val labelVignetteTransition = stringResource(R.string.settings_macropad_vignette_transition)
-    val labelVignetteOpacity  = stringResource(R.string.settings_macropad_vignette_opacity)
+    val labelEdgeBlending     = stringResource(R.string.mirror_edge_blend_label)
 
-    // Back: exit preview / color picker first; the system Back then closes ambient settings.
-    BackHandler(enabled = isInPreview || showColorPicker) {
-        when {
-            isInPreview -> {
-                val config = previewConfig!!
-                AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
-                commitLayout {
-                    when (config.type) {
-                        AmbientPreviewType.DIM                 -> copy(ambientDim = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_AREA       -> copy(ambientVignetteVisibleArea = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_TRANSITION -> copy(ambientVignetteTransition = config.originalValue)
-                        AmbientPreviewType.VIGNETTE_OPACITY    -> copy(ambientVignetteOpacity = config.originalValue)
-                    }
+    // Back: exit preview first; otherwise close background settings.
+    BackHandler(enabled = true) {
+        if (isInPreview) {
+            val config = previewConfig!!
+            AppLog.d(TAG, "preview ${config.type} cancelled → restoring ${config.originalValue}")
+            commitLayout {
+                when (config.type) {
+                    AmbientPreviewType.DIM -> copy(ambientDim = config.originalValue)
+                    AmbientPreviewType.EDGE_BLENDING -> copy(mirrorEdgeBlendWidth = config.originalValue)
                 }
-                AppStateManager.setAmbientPreviewConfig(null)
             }
-            showColorPicker -> showColorPicker = false
+            AppStateManager.setAmbientPreviewConfig(null)
+        } else {
+            onDone()
         }
     }
 
@@ -181,9 +179,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         if (!isInPreview) {
             val l = MacroPadState.activeLayout.value ?: return@LaunchedEffect
             dimAlpha = l.ambientDim
-            vignetteVisibleArea = l.ambientVignetteVisibleArea
-            vignetteTransition = l.ambientVignetteTransition
-            vignetteOpacity = l.ambientVignetteOpacity
+            edgeBlendWidth = l.mirrorEdgeBlendWidth
         }
     }
 
@@ -193,8 +189,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             .blockPointerEvents(),
     ) {
 
-        // ── Main settings panel — hidden while previewing or picking a color ──
-        if (!isInPreview && !showColorPicker) {
+        // ── Main settings panel — hidden while previewing ──
+        if (!isInPreview) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -236,7 +232,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
                     AsoSectionHeader(text = stringResource(R.string.settings_section_general))
 
-                    // ── Dim slider ────────────────────────────────────────────
                     Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
                         AsoSliderRow(
                             label = labelDim,
@@ -258,13 +253,45 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 ))
                             },
                         )
-                    }
 
-                    AsoSectionHeader(text = stringResource(R.string.settings_section_background_following))
+                        AppDivider()
 
-                    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
+                        AsoSliderRow(
+                            label = labelEdgeBlending,
+                            value = edgeBlendWidth,
+                            valueRange = 0f..100f,
+                            formatLabel = { v ->
+                                when (v.roundToInt()) {
+                                    in 0..12 -> context.getString(R.string.mirror_edge_blend_strength_off)
+                                    in 13..37 -> context.getString(R.string.mirror_edge_blend_strength_light)
+                                    in 38..62 -> context.getString(R.string.mirror_edge_blend_strength_medium)
+                                    in 63..87 -> context.getString(R.string.mirror_edge_blend_strength_strong)
+                                    else -> context.getString(R.string.mirror_edge_blend_strength_max)
+                                }
+                            },
+                            accentColor = colors.accent,
+                            onValueChange = { value ->
+                                val idx = (value / 25f).roundToInt().coerceIn(0, 4)
+                                edgeBlendWidth = idx * 25f
+                            },
+                            onValueChangeFinished = {
+                                AppLog.d(TAG, "edge blend → $edgeBlendWidth")
+                                commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
+                            },
+                            onPreviewClick = {
+                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
+                                    type = AmbientPreviewType.EDGE_BLENDING,
+                                    label = labelEdgeBlending,
+                                    originalValue = edgeBlendWidth,
+                                    valueRange = 0f..100f,
+                                ))
+                            },
+                        )
+
+                        AppDivider()
+
                         AppSettingsRow {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = ASO_SPACING_8)) {
                                 Text(
                                     text = stringResource(R.string.settings_mirror_follow_touch),
                                     color = colors.onSurface,
@@ -276,193 +303,242 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
-                            Switch(
-                                checked = currentLayout.mirrorFollowActive,
-                                onCheckedChange = {
-                                    AppLog.d(TAG, "mirrorFollowActive → $it")
-                                    commitLayout { copy(mirrorFollowActive = it) }
-                                    ScreenCaptureManager.setFollowActive(it, persist = false)
+                            val selectedCutoutId = currentLayout.mirrorCutouts.find { it.followTouch }?.id
+                            val dropdownOptions = remember(currentLayout.mirrorCutouts) {
+                                listOf<String?>(null) + currentLayout.mirrorCutouts.map { it.id }
+                            }
+                            AppDropdown(
+                                selected = selectedCutoutId,
+                                options = dropdownOptions,
+                                optionText = { id ->
+                                    if (id == null) {
+                                        stringResource(R.string.settings_mirror_follow_touch_off)
+                                    } else {
+                                        val defaultName = stringResource(R.string.settings_mirror_cutout_default)
+                                        currentLayout.mirrorCutouts.find { it.id == id }?.name?.ifBlank { defaultName } ?: defaultName
+                                    }
+                                },
+                                onSelected = { id ->
+                                    AppLog.d(TAG, "mirrorFollowCutoutId → $id")
+                                    val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                        c.copy(followTouch = (c.id == id))
+                                    }
+                                    commitLayout {
+                                        copy(
+                                            mirrorCutouts = updatedCutouts,
+                                            mirrorFollowActive = (id != null)
+                                        )
+                                    }
+                                    ScreenCaptureManager.setFollowActive(id != null, persist = false)
                                 }
                             )
-                        }
-                        if (currentLayout.mirrorFollowActive) {
-                            AppDivider()
-                            AppSettingsRow {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_smoothing),
-                                        color = colors.onSurface,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_smoothing_desc),
-                                        color = colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                                Switch(
-                                    checked = currentLayout.mirrorSmoothing,
-                                    onCheckedChange = {
-                                        AppLog.d(TAG, "mirrorSmoothing → $it")
-                                        commitLayout { copy(mirrorSmoothing = it) }
-                                    }
-                                )
-                            }
-                            AppDivider()
-                            AppSettingsRow {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_disable_during_macro),
-                                        color = colors.onSurface,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_mirror_follow_disable_during_macro_desc),
-                                        color = colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                                Switch(
-                                    checked = currentLayout.mirrorFollowDisableDuringMacro,
-                                    onCheckedChange = {
-                                        AppLog.d(TAG, "mirrorFollowDisableDuringMacro → $it")
-                                        commitLayout { copy(mirrorFollowDisableDuringMacro = it) }
-                                    }
-                                )
-                            }
                         }
                     }
 
-                    AsoSectionHeader(text = stringResource(R.string.settings_macropad_vignette))
+                    AsoSectionHeader(text = stringResource(R.string.settings_section_cutouts))
 
-                    // ── Vignette toggle ───────────────────────────────────────
-                    Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
-                        AppSettingsRow {
+                    if (currentLayout.mirrorCutouts.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(colors.surface)
+                                .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = stringResource(R.string.settings_macropad_vignette),
-                                color = colors.onSurface,
+                                text = stringResource(R.string.settings_mirror_no_cutouts),
+                                color = colors.onSurfaceSecondary,
                                 style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Switch(
-                                checked = vignetteEnabled,
-                                onCheckedChange = {
-                                    vignetteEnabled = it
-                                    AppLog.d(TAG, "vignette enabled → $it")
-                                    commitLayout { copy(ambientVignetteEnabled = it) }
-                                },
+                                textAlign = TextAlign.Center
                             )
                         }
+                    } else {
+                        Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) {
+                            currentLayout.mirrorCutouts.forEachIndexed { index, cutout ->
+                                if (index > 0) {
+                                    AppDivider()
+                                }
 
-                        if (vignetteEnabled) {
-                            AppDivider()
-                            // Shape dropdown
-                            AsoShapeRow(
-                                currentShape = vignetteShape,
-                                accentColor = colors.accent,
-                                onShapeSelected = {
-                                    vignetteShape = it
-                                    AppLog.d(TAG, "vignette shape → $it")
-                                    commitLayout { copy(ambientVignetteShape = it) }
-                                },
-                            )
-                            AppDivider()
-                            // Visible Area slider
-                            AsoSliderRow(
-                                label = labelVignetteArea,
-                                value = vignetteVisibleArea,
-                                valueRange = 0f..1f,
-                                formatLabel = { "${(it * ASO_PERCENT_DIVISOR).toInt()}%" },
-                                accentColor = colors.accent,
-                                onValueChange = { vignetteVisibleArea = it },
-                                onValueChangeFinished = {
-                                    AppLog.d(TAG, "vignette visibleArea → $vignetteVisibleArea")
-                                    commitLayout { copy(ambientVignetteVisibleArea = vignetteVisibleArea) }
-                                },
-                                onPreviewClick = {
-                                    AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                        type = AmbientPreviewType.VIGNETTE_AREA,
-                                        label = labelVignetteArea,
-                                        originalValue = vignetteVisibleArea,
-                                        valueRange = 0f..1f,
-                                    ))
-                                },
-                            )
-                            AppDivider()
-                            // Transition slider
-                            AsoSliderRow(
-                                label = labelVignetteTransition,
-                                value = vignetteTransition,
-                                valueRange = 0f..1f,
-                                formatLabel = { v ->
-                                    when {
-                                        v <= 0f -> labelSoft
-                                        v >= 1f -> labelHard
-                                        else    -> "${(v * ASO_PERCENT_DIVISOR).toInt()}%"
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = ASO_SPACING_8)
+                                    ) {
+                                        Text(
+                                            text = cutout.name.ifBlank { stringResource(R.string.settings_mirror_cutout_default_name_fmt, index + 1) },
+                                            color = colors.onSurface,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(
+                                            onClick = { renamingCutout = cutout },
+                                            modifier = Modifier.size(ASO_EDIT_ICON_SIZE)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Edit,
+                                                contentDescription = stringResource(R.string.macropad_editor_rename),
+                                                tint = colors.accent,
+                                                modifier = Modifier.size(ASO_EDIT_ICON_INNER_SIZE)
+                                            )
+                                        }
                                     }
-                                },
-                                accentColor = colors.accent,
-                                onValueChange = { vignetteTransition = it },
-                                onValueChangeFinished = {
-                                    AppLog.d(TAG, "vignette transition → $vignetteTransition")
-                                    commitLayout { copy(ambientVignetteTransition = vignetteTransition) }
-                                },
-                                onPreviewClick = {
-                                    AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                        type = AmbientPreviewType.VIGNETTE_TRANSITION,
-                                        label = labelVignetteTransition,
-                                        originalValue = vignetteTransition,
-                                        valueRange = 0f..1f,
-                                    ))
-                                },
-                            )
-                            AppDivider()
-                            // Opacity slider
-                            AsoSliderRow(
-                                label = labelVignetteOpacity,
-                                value = vignetteOpacity,
-                                valueRange = 0f..1f,
-                                formatLabel = { "${(it * ASO_PERCENT_DIVISOR).toInt()}%" },
-                                accentColor = colors.accent,
-                                onValueChange = { vignetteOpacity = it },
-                                onValueChangeFinished = {
-                                    AppLog.d(TAG, "vignette opacity → $vignetteOpacity")
-                                    commitLayout { copy(ambientVignetteOpacity = vignetteOpacity) }
-                                },
-                                onPreviewClick = {
-                                    AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                        type = AmbientPreviewType.VIGNETTE_OPACITY,
-                                        label = labelVignetteOpacity,
-                                        originalValue = vignetteOpacity,
-                                        valueRange = 0f..1f,
-                                    ))
-                                },
-                            )
-                            AppDivider()
-                            // Color picker row — opens full-screen overlay (see below)
-                            AsoColorRow(
-                                vignetteColorInt = vignetteColorInt,
-                                accentColor = colors.accent,
-                                onShowPicker = { showColorPicker = true },
-                            )
+
+                                    // Motion Smoothing Slider Row
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = ASO_CUTOUT_ROW_V_PADDING),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val cutoutValue = if (cutout.motionSmoothing) {
+                                            when (cutout.motionSmoothingStrength) {
+                                                ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
+                                                ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
+                                                ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
+                                                else -> ASO_SMOOTHING_STRONG
+                                            }
+                                        } else {
+                                            ASO_SMOOTHING_OFF
+                                        }
+                                        val sliderValue = localSmoothingValues[cutout.id] ?: cutoutValue
+                                        Column(modifier = Modifier.weight(1f).padding(end = ASO_SPACING_8)) {
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_follow_smoothing),
+                                                color = colors.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            val strengthText = when (sliderValue.roundToInt()) {
+                                                ASO_SMOOTHING_OFF.toInt() -> stringResource(R.string.mirror_smoothing_strength_off)
+                                                ASO_SMOOTHING_LIGHT.toInt() -> stringResource(R.string.mirror_smoothing_strength_light)
+                                                ASO_SMOOTHING_MEDIUM.toInt() -> stringResource(R.string.mirror_smoothing_strength_medium)
+                                                ASO_SMOOTHING_STRONG.toInt() -> stringResource(R.string.mirror_smoothing_strength_strong)
+                                                else -> stringResource(R.string.mirror_smoothing_strength_off)
+                                            }
+                                            Text(
+                                                text = strengthText,
+                                                color = colors.onSurfaceSecondary,
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                        Slider(
+                                            modifier = Modifier.weight(1.5f),
+                                            value = sliderValue,
+                                            onValueChange = { newValue ->
+                                                val idx = newValue.roundToInt().coerceIn(ASO_SMOOTHING_OFF.toInt(), ASO_SMOOTHING_STRONG.toInt())
+                                                localSmoothingValues[cutout.id] = idx.toFloat()
+                                            },
+                                            onValueChangeFinished = {
+                                                val valFloat = localSmoothingValues[cutout.id] ?: cutoutValue
+                                                val idx = valFloat.roundToInt().coerceIn(ASO_SMOOTHING_OFF.toInt(), ASO_SMOOTHING_STRONG.toInt())
+                                                val isSmooth = idx > 0
+                                                val strength = when (idx) {
+                                                    ASO_SMOOTHING_LIGHT.toInt() -> ASO_SMOOTHING_VAL_LIGHT
+                                                    ASO_SMOOTHING_MEDIUM.toInt() -> ASO_SMOOTHING_VAL_MEDIUM
+                                                    ASO_SMOOTHING_STRONG.toInt() -> ASO_SMOOTHING_VAL_STRONG
+                                                    else -> cutout.motionSmoothingStrength
+                                                }
+                                                AppLog.d(TAG, "cutout '${cutout.name}' smoothing slider finished → $idx (strength: $strength)")
+                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                                    if (c.id == cutout.id) {
+                                                        c.copy(
+                                                            motionSmoothing = isSmooth,
+                                                            motionSmoothingStrength = strength
+                                                        )
+                                                    } else c
+                                                }
+                                                commitLayout {
+                                                    copy(mirrorCutouts = updatedCutouts)
+                                                }
+                                            },
+                                            valueRange = ASO_SMOOTHING_OFF..ASO_SMOOTHING_STRONG,
+                                            steps = 2,
+                                        )
+                                    }
+
+                                    // Touch Projection Switch
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = ASO_CUTOUT_ROW_V_PADDING),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_touch_projection),
+                                                color = colors.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.settings_mirror_touch_projection_desc),
+                                                color = colors.onSurfaceSecondary,
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        }
+                                        Switch(
+                                            checked = cutout.touchProjectionEnabled,
+                                            onCheckedChange = { isChecked ->
+                                                AppLog.d(TAG, "cutout '${cutout.name}' touchProjectionEnabled → $isChecked")
+                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                                                    if (c.id == cutout.id) c.copy(touchProjectionEnabled = isChecked) else c
+                                                }
+                                                commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                                                if (isChecked) {
+                                                    ScreenCaptureManager.setLocked(true)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
 
-        // ── Color picker — full-screen in-tree overlay ────────────────────────
-        // Rendered as a sibling of the main settings Box so it truly fills the screen.
-        if (showColorPicker) {
-            ColorWheelPicker(
-                initialColor = Color(vignetteColorInt),
-                onColorSelected = { color ->
-                    vignetteColorInt = color.toArgb()
-                    AppLog.d(TAG, "vignette color → 0x${Integer.toHexString(vignetteColorInt)}")
-                    commitLayout { copy(ambientVignetteColor = color.toArgb()) }
-                    showColorPicker = false
-                },
-                onDismiss = { showColorPicker = false },
+    if (renamingCutout != null) {
+        val targetCutout = renamingCutout!!
+        InlineDialogOverlay(
+            title = stringResource(R.string.mirror_editor_rename_cutout),
+            onDismiss = { renamingCutout = null },
+            widthFraction = 0.8f,
+            buttonsRow = {
+                TextButton(onClick = { renamingCutout = null }) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_cancel),
+                        color = colors.onSurfaceSecondary
+                    )
+                }
+                val newName = renameText.trim()
+                TextButton(
+                    onClick = {
+                        val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                            if (c.id == targetCutout.id) c.copy(name = newName) else c
+                        }
+                        commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                        renamingCutout = null
+                    },
+                    enabled = true
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_done),
+                        color = colors.accent
+                    )
+                }
+            }
+        ) {
+            AppTextField(
+                value = renameText,
+                onValueChange = { renameText = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.mirror_editor_cutout_name_hint),
+                        color = colors.onSurfaceSecondary
+                    )
+                }
             )
         }
     }
@@ -514,11 +590,6 @@ private fun AsoSliderRow(
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = accentColor,
-                inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
-            ),
         )
         IconButton(
             onClick = onPreviewClick,
@@ -583,11 +654,6 @@ internal fun AsoPreviewBar(
                 value = value,
                 onValueChange = onValueChange,
                 valueRange = valueRange,
-                colors = SliderDefaults.colors(
-                    thumbColor = accentColor,
-                    activeTrackColor = accentColor,
-                    inactiveTrackColor = colors.onSurfaceSecondary.copy(alpha = 0.3f),
-                ),
             )
             IconButton(onClick = onConfirm) {
                 Icon(
@@ -600,60 +666,4 @@ internal fun AsoPreviewBar(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shape dropdown
-// ─────────────────────────────────────────────────────────────────────────────
 
-@Composable
-private fun AsoShapeRow(
-    currentShape: VignetteShape,
-    accentColor: Color,
-    onShapeSelected: (VignetteShape) -> Unit,
-) {
-    val colors = LocalAppColors.current
-
-    AppSettingsRow {
-        Text(
-            text = stringResource(R.string.settings_macropad_vignette_shape),
-            color = colors.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        AppDropdown(
-            selected          = currentShape,
-            options           = VignetteShape.entries,
-            optionText        = { shape -> stringResource(shape.labelResId()) },
-            onSelected        = onShapeSelected,
-            horizontalPadding = ASO_DROPDOWN_H_PADDING,
-            verticalPadding   = ASO_DROPDOWN_V_PADDING,
-        )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Color picker row
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun AsoColorRow(
-    vignetteColorInt: Int,
-    accentColor: Color,
-    onShowPicker: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    AppSettingsRow(onClick = onShowPicker) {
-        Text(
-            text = stringResource(R.string.settings_macropad_vignette_color),
-            color = colors.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        Box(
-            modifier = Modifier
-                .size(ASO_SWATCH_SIZE)
-                .clip(CircleShape)
-                .background(Color(vignetteColorInt))
-                .border(1.dp, colors.accentBorder, CircleShape),
-        )
-    }
-}

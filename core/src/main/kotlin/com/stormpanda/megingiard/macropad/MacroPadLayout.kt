@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -39,11 +40,7 @@ enum class TrackpointSize(val multiplier: Float) {
 enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Vignette shape — used by PadLayout ambient settings
-// ─────────────────────────────────────────────────────────────────────────────
 
-@Serializable
-enum class VignetteShape { RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Trackpoint tracking mode
@@ -304,12 +301,7 @@ data class PadButton(
  * @param enabled                     Whether this layout participates in next/previous navigation.
  * @param buttons                     All buttons placed on this layout.
  * @param ambientDim                  Dim overlay alpha [0.0, 0.9] when screen mirror is active.
- * @param ambientVignetteEnabled      Whether the vignette effect is active.
- * @param ambientVignetteShape        Vignette shape (RADIAL, LETTERBOX, PILLARBOX, TOP, BOTTOM, LEFT, RIGHT).
- * @param ambientVignetteVisibleArea  Vignette inner transparent zone size [0.0, 1.0].
- * @param ambientVignetteTransition   Vignette gradient softness [0.0, 1.0].
- * @param ambientVignetteOpacity      Vignette alpha [0.0, 1.0].
- * @param ambientVignetteColor        Vignette color (ARGB int).
+
  * @param mirrorSavedScale            Persisted mirror zoom level.
  * @param mirrorSavedOffsetX          Persisted mirror pan X offset.
  * @param mirrorSavedOffsetY          Persisted mirror pan Y offset.
@@ -330,19 +322,19 @@ data class PadLayout(
     val enabled: Boolean = true,
     val buttons: List<PadButton> = emptyList(),
     val ambientDim: Float = 0f,
-    val ambientVignetteEnabled: Boolean = false,
-    val ambientVignetteShape: VignetteShape = VignetteShape.RADIAL,
-    val ambientVignetteVisibleArea: Float = 0.7f,
-    val ambientVignetteTransition: Float = 0.5f,
-    val ambientVignetteOpacity: Float = 0.6f,
-    val ambientVignetteColor: Int = 0xFF000000.toInt(),
+
     val mirrorSavedScale: Float = 1f,
     val mirrorSavedOffsetX: Float = 0f,
     val mirrorSavedOffsetY: Float = 0f,
     val mirrorAutoStart: Boolean = false,
     val mirrorFollowActive: Boolean = false,
-    val mirrorFollowDisableDuringMacro: Boolean = false,
     val mirrorSmoothing: Boolean = true,
+    val mirrorCutouts: List<ScreenCutout> = emptyList(),
+    val mirrorConfigured: Boolean = false,
+    val mirrorMultiMode: Boolean = false,
+    val mirrorEdgeBlendWidth: Float = 0f,
+    val mirrorMaxFps: Int = 60,
+    val mirrorSmoothingStrength: Int = 85,
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
 )

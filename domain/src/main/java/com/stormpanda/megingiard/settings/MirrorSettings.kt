@@ -52,6 +52,7 @@ object MirrorSettings {
 
     internal fun loadFrom(prefs: Preferences) {
         _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
+
         _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
         _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false

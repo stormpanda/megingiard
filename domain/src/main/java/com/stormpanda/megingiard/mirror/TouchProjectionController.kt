@@ -30,6 +30,7 @@ class TouchProjectionController(
     private var gestureInEdgeZone = false
     private var gestureStarted = false
     private var activePointerId = -1L
+    private var activeCutoutId: String? = null
     private var lastInjectedNx = 0f
     private var lastInjectedNy = 0f
 
@@ -39,15 +40,6 @@ class TouchProjectionController(
 
     /**
      * Handle a Press event.
-     *
-     * @param pointerId     unique ID of the pointer that just went down
-     * @param x             pointer X in gesture-box pixels
-     * @param y             pointer Y in gesture-box pixels
-     * @param boxW          gesture-box width in pixels
-     * @param boxH          gesture-box height in pixels
-     * @param isConsumed    true if a child (e.g. button) already consumed this pointer
-     * @param pointerCount  total number of pressed pointers in this event
-     * @return true if the event was handled and should be consumed
      */
     fun onPress(
         pointerId: Long,
@@ -65,6 +57,7 @@ class TouchProjectionController(
             TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
             gestureStarted = false
             activePointerId = -1L
+            activeCutoutId = null
             return false
         }
 
@@ -78,34 +71,51 @@ class TouchProjectionController(
         if (nearEdge) return false
         if (isConsumed) return false
 
-        val projected = projectCoordinates(
-            x, y, boxW, boxH,
-            ScreenCaptureManager.surfaceWidth.value,
-            ScreenCaptureManager.surfaceHeight.value,
-            ScreenCaptureManager.scale.value,
-            ScreenCaptureManager.offsetX.value,
-            ScreenCaptureManager.offsetY.value
-        ) ?: return false
+        var matchedProjected: Pair<Float, Float>? = null
+        var matchedCutoutId: String? = null
+
+        val cutouts = ScreenCaptureManager.cutouts.value
+        for (cutout in cutouts) {
+            if (!cutout.touchProjectionEnabled) continue
+            val destLeft = cutout.destX * boxW
+            val destTop = cutout.destY * boxH
+            val destWidth = cutout.destWidth * boxW
+            val destHeight = cutout.destHeight * boxH
+
+            val projected = projectCutoutCoordinates(
+                touchX = x,
+                touchY = y,
+                destLeft = destLeft,
+                destTop = destTop,
+                destWidth = destWidth,
+                destHeight = destHeight,
+                srcX = cutout.srcX,
+                srcY = cutout.srcY,
+                srcWidth = cutout.srcWidth,
+                srcHeight = cutout.srcHeight,
+                clampToEdge = false
+            )
+            if (projected != null) {
+                matchedProjected = projected
+                matchedCutoutId = cutout.id
+                break
+            }
+        }
+
+        if (matchedProjected == null) return false
 
         _indicatorPos.value = Pair(x, y)
-        lastInjectedNx = projected.first
-        lastInjectedNy = projected.second
+        lastInjectedNx = matchedProjected.first
+        lastInjectedNy = matchedProjected.second
         TouchInjector.injectTouch(TouchAction.DOWN, lastInjectedNx, lastInjectedNy)
         activePointerId = pointerId
+        activeCutoutId = matchedCutoutId
         gestureStarted = true
         return true
     }
 
     /**
      * Handle a Move event.
-     *
-     * @param pointerId   ID of the pointer that moved
-     * @param x           pointer X in gesture-box pixels
-     * @param y           pointer Y in gesture-box pixels
-     * @param boxW        gesture-box width in pixels
-     * @param boxH        gesture-box height in pixels
-     * @param isConsumed  true if consumed by multi-finger transform (Block 3)
-     * @return true if the event was handled and should be consumed
      */
     fun onMove(
         pointerId: Long,
@@ -118,30 +128,69 @@ class TouchProjectionController(
         if (gestureInEdgeZone || !gestureStarted) return false
         if (pointerId != activePointerId) return false
 
-        // If consumed by pinch-zoom (Block 3), send UP at last known position
         if (isConsumed) {
             _indicatorPos.value = null
             TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
             gestureStarted = false
             activePointerId = -1L
+            activeCutoutId = null
             return false
         }
 
-        val sw = ScreenCaptureManager.surfaceWidth.value
-        val sh = ScreenCaptureManager.surfaceHeight.value
-        val sc = ScreenCaptureManager.scale.value
-        val ox = ScreenCaptureManager.offsetX.value
-        val oy = ScreenCaptureManager.offsetY.value
+        val cutoutId = activeCutoutId
+        val cutout = if (cutoutId != null) {
+            ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
+        } else null
 
-        val coords = projectCoordinates(x, y, boxW, boxH, sw, sh, sc, ox, oy)
-        if (coords == null) {
-            // Finger moved out of content area — send clamped UP
+        if (cutoutId == null || cutout == null) {
             _indicatorPos.value = null
-            val svX = ((x - boxW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw)
-            val svY = ((y - boxH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh)
-            TouchInjector.injectTouch(TouchAction.UP, svX / sw, svY / sh)
+            TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
             gestureStarted = false
             activePointerId = -1L
+            activeCutoutId = null
+            return false
+        }
+
+        val destLeft = cutout.destX * boxW
+        val destTop = cutout.destY * boxH
+        val destWidth = cutout.destWidth * boxW
+        val destHeight = cutout.destHeight * boxH
+
+        val coords = projectCutoutCoordinates(
+            touchX = x,
+            touchY = y,
+            destLeft = destLeft,
+            destTop = destTop,
+            destWidth = destWidth,
+            destHeight = destHeight,
+            srcX = cutout.srcX,
+            srcY = cutout.srcY,
+            srcWidth = cutout.srcWidth,
+            srcHeight = cutout.srcHeight,
+            clampToEdge = false
+        )
+
+        if (coords == null) {
+            // Finger panned outside destination bounds — send clamped UP
+            _indicatorPos.value = null
+            val clampedCoords = projectCutoutCoordinates(
+                touchX = x,
+                touchY = y,
+                destLeft = destLeft,
+                destTop = destTop,
+                destWidth = destWidth,
+                destHeight = destHeight,
+                srcX = cutout.srcX,
+                srcY = cutout.srcY,
+                srcWidth = cutout.srcWidth,
+                srcHeight = cutout.srcHeight,
+                clampToEdge = true
+            ) ?: Pair(lastInjectedNx, lastInjectedNy)
+
+            TouchInjector.injectTouch(TouchAction.UP, clampedCoords.first, clampedCoords.second)
+            gestureStarted = false
+            activePointerId = -1L
+            activeCutoutId = null
             return true
         }
 
@@ -154,13 +203,6 @@ class TouchProjectionController(
 
     /**
      * Handle a Release event.
-     *
-     * @param pointerId  ID of the pointer that released, or -1 if unknown
-     * @param x          pointer X in gesture-box pixels (may be null if pointer left the list)
-     * @param y          pointer Y in gesture-box pixels
-     * @param boxW       gesture-box width in pixels
-     * @param boxH       gesture-box height in pixels
-     * @return true if the event was handled and should be consumed
      */
     fun onRelease(
         pointerId: Long,
@@ -171,18 +213,32 @@ class TouchProjectionController(
     ): Boolean {
         _indicatorPos.value = null
         if (!gestureInEdgeZone && gestureStarted) {
-            val sw = ScreenCaptureManager.surfaceWidth.value
-            val sh = ScreenCaptureManager.surfaceHeight.value
-            val sc = ScreenCaptureManager.scale.value
-            val ox = ScreenCaptureManager.offsetX.value
-            val oy = ScreenCaptureManager.offsetY.value
+            val cutoutId = activeCutoutId
+            val cutout = if (cutoutId != null) {
+                ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
+            } else null
 
-            if (x != null && y != null) {
-                val coords = projectCoordinates(x, y, boxW, boxH, sw, sh, sc, ox, oy)
-                val nx = coords?.first
-                    ?: ((x - boxW / 2f - ox) / sc + sw / 2f).coerceIn(0f, sw) / sw
-                val ny = coords?.second
-                    ?: ((y - boxH / 2f - oy) / sc + sh / 2f).coerceIn(0f, sh) / sh
+            if (cutout != null && x != null && y != null) {
+                val destLeft = cutout.destX * boxW
+                val destTop = cutout.destY * boxH
+                val destWidth = cutout.destWidth * boxW
+                val destHeight = cutout.destHeight * boxH
+
+                val coords = projectCutoutCoordinates(
+                    touchX = x,
+                    touchY = y,
+                    destLeft = destLeft,
+                    destTop = destTop,
+                    destWidth = destWidth,
+                    destHeight = destHeight,
+                    srcX = cutout.srcX,
+                    srcY = cutout.srcY,
+                    srcWidth = cutout.srcWidth,
+                    srcHeight = cutout.srcHeight,
+                    clampToEdge = true
+                )
+                val nx = coords?.first ?: lastInjectedNx
+                val ny = coords?.second ?: lastInjectedNy
                 TouchInjector.injectTouch(TouchAction.UP, nx, ny)
             } else {
                 TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
@@ -191,6 +247,7 @@ class TouchProjectionController(
         gestureInEdgeZone = false
         gestureStarted = false
         activePointerId = -1L
+        activeCutoutId = null
         return !gestureInEdgeZone
     }
 
@@ -199,6 +256,7 @@ class TouchProjectionController(
         gestureInEdgeZone = false
         gestureStarted = false
         activePointerId = -1L
+        activeCutoutId = null
         _indicatorPos.value = null
     }
 }

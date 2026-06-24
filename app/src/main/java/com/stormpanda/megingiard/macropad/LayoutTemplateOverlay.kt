@@ -39,7 +39,7 @@ private val ED_PADDING = 16.dp
 internal data class TemplateOption(
     val profileName: String,
     val layoutName: String,
-    val buttons: List<PadButton>,
+    val layout: PadLayout,
 )
 
 /**
@@ -51,7 +51,7 @@ internal fun NewLayoutOverlay(
     profiles:    List<PadProfile>,
     existingLayoutNames: List<String>,
     accentColor: Color,
-    onConfirm:   (name: String, templateButtons: List<PadButton>) -> Unit,
+    onConfirm:   (name: String, templateLayout: PadLayout?) -> Unit,
     onDismiss:   () -> Unit,
 ) {
     var text             by remember { mutableStateOf("") }
@@ -68,7 +68,7 @@ internal fun NewLayoutOverlay(
                 TemplateOption(
                     profileName = profile.name,
                     layoutName  = layout.name,
-                    buttons     = layout.buttons,
+                    layout      = layout,
                 )
             }
         }
@@ -146,10 +146,7 @@ internal fun NewLayoutOverlay(
                 }
                 TextButton(
                     onClick = {
-                        val buttons = selectedTemplate?.buttons?.map {
-                            it.copy(id = UUID.randomUUID().toString())
-                        } ?: emptyList()
-                        onConfirm(normalizedName, buttons)
+                        onConfirm(normalizedName, selectedTemplate?.layout)
                     },
                     enabled = !hasError,
                 ) {

@@ -42,6 +42,15 @@
     <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
     <string name="settings_show_mirror_control_labels">Spiegelsteuerungsbeschriftungen anzeigen</string>
     <string name="settings_show_mirror_control_labels_desc">Kurze Beschriftungen unter den Spiegelsteuerungssymbolen anzeigen</string>
+    <string name="mirror_edge_blend_label">Kantenübergänge</string>
+    <string name="mirror_edge_blend_label_value">%1$d</string>
+    <string name="mirror_edge_blend_strength_off">Aus</string>
+    <string name="mirror_edge_blend_strength_light">Leicht</string>
+    <string name="mirror_edge_blend_strength_medium">Mittel</string>
+    <string name="mirror_edge_blend_strength_strong">Stark</string>
+    <string name="mirror_edge_blend_strength_max">Max</string>
+    <string name="mirror_fps_label">FPS-Limit</string>
+    <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
     <string name="settings_mirror_auto_start">Spiegelung automatisch starten</string>
@@ -245,8 +254,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_mirror_follow_touch_desc">Zentriert den gespiegelten Bildausschnitt auf der zuletzt berührten Stelle des Hauptbildschirms.</string>
     <string name="settings_mirror_follow_smoothing">Glättung</string>
     <string name="settings_mirror_follow_smoothing_desc">Sanftes Verschieben des Ausschnitts mit exponentieller Glättung</string>
-    <string name="settings_mirror_follow_disable_during_macro">Während Makroausführung deaktivieren</string>
-    <string name="settings_mirror_follow_disable_during_macro_desc">Pausiert die Hintergrund-Verfolgung vorübergehend, solange ein Makro abgespielt wird, damit Touch-Eingaben im Makro den Ausschnitt nicht beeinflussen</string>
+    <string name="settings_mirror_follow_touch_off">Aus</string>
+    <string name="settings_section_cutouts">Ausschnitte</string>
+    <string name="settings_mirror_no_cutouts">Keine Ausschnitte definiert. Füge Ausschnitte im Viewport-Editor hinzu.</string>
+
 
     <string name="settings_macropad_ambient">Spiegelung im Hintergrund</string>
     <string name="settings_macropad_ambient_hint">Startet Bildschirmspiegelung automatisch (einmalige Berechtigung erforderlich)</string>
@@ -255,21 +266,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_ambient_apply_theme">Theme auch bei Spiegelung im Hintergrund anwenden</string>
     <string name="settings_macropad_ambient_apply_theme_hint">Wenn deaktiviert, erscheinen alle Buttons im neutralen Grau-Stil</string>
     <string name="settings_macropad_dim">Abdunkelung</string>
-    <string name="settings_macropad_vignette">Vignette</string>
-    <string name="settings_macropad_vignette_visible_area">Sichtbarer Bereich</string>
-    <string name="settings_macropad_vignette_transition">Übergang</string>
-    <string name="settings_macropad_vignette_transition_soft">Weich</string>
-    <string name="settings_macropad_vignette_transition_hard">Hart</string>
-    <string name="settings_macropad_vignette_opacity">Stärke</string>
-    <string name="settings_macropad_vignette_color">Farbe</string>
-    <string name="settings_macropad_vignette_shape">Form</string>
-    <string name="settings_macropad_vignette_shape_radial">Radial</string>
-    <string name="settings_macropad_vignette_shape_letterbox">Letterbox</string>
-    <string name="settings_macropad_vignette_shape_pillarbox">Pillarbox</string>
-    <string name="settings_macropad_vignette_shape_top">Von oben</string>
-    <string name="settings_macropad_vignette_shape_bottom">Von unten</string>
-    <string name="settings_macropad_vignette_shape_left">Von links</string>
-    <string name="settings_macropad_vignette_shape_right">Von rechts</string>
+
     <string name="ambient_preview">Vorschau</string>
 
     <!-- MacroPad button action display labels (shown in editor button list) -->
@@ -624,7 +621,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="pill_menu_new_profile">Neues Profil</string>
     <string name="pill_menu_new_layout">Neues Layout</string>
     <string name="pill_menu_edit_layout">Profil/Layout bearbeiten</string>
-    <string name="pill_menu_ambient_settings">Hintergrund-Einstellungen</string>
+    <string name="pill_menu_ambient_settings">Bildschirmspiegelungs-Einstellungen</string>
+    <string name="pill_menu_screen_mirroring">Bildschirmspiegelung</string>
     <string name="pill_menu_global_settings">Globale Einstellungen</string>
     <string name="pill_menu_dismiss_dialog">Dialog schließen</string>
     <string name="pill_menu_profile_name_hint">Profilname</string>
@@ -664,4 +662,54 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_duplicate_layout">Layout duplizieren</string>
     <string name="macropad_copy_no_profiles_available">Keine anderen Profile verfügbar.</string>
     <string name="macropad_copy_no_layouts_available">Keine anderen Layouts verfügbar.</string>
+
+    <!-- Crop editor -->
+    <string name="mirror_crop_editor_title">Ausschnitt festlegen</string>
+    <string name="mirror_crop_editor_subtitle">Ausschnitt: %1$s</string>
+    <string name="mirror_crop_editor_done">Fertig</string>
+    <string name="mirror_crop_editor_cancel">Abbrechen</string>
+    <string name="cd_drag_toolbar">Ziehen, um die Symbolleiste zu verschieben</string>
+
+    <!-- Cutout Layout Editor -->
+    <string name="mirror_editor_add_cutout">Ausschnitt hinzufügen</string>
+    <string name="mirror_editor_delete_cutout">Auswahl löschen</string>
+    <string name="mirror_editor_delete_cutout_label">Ausschnitt löschen</string>
+    <string name="mirror_editor_edit_crop">Ausschnitt wählen</string>
+    <string name="mirror_editor_single_mode">Einzelner Viewport</string>
+    <string name="mirror_editor_multi_mode">Mehrere Ausschnitte</string>
+    <string name="mirror_editor_done">Fertig</string>
+    <string name="mirror_editor_multi_cutout_privileged_only">Mehrere Ausschnitte erfordern den Privilegierten Modus</string>
+    <string name="mirror_editor_aspect_ratio_mode">Seitenverhältnis-Modus</string>
+    <string name="mirror_editor_aspect_ratio_locked">Seitenverhältnis: Gesperrt</string>
+    <string name="mirror_editor_aspect_ratio_free">Frei</string>
+    <string name="mirror_editor_aspect_ratio_top">Oben</string>
+    <string name="mirror_editor_aspect_ratio_bottom">Unten</string>
+    <string name="mirror_editor_motion_smoothing">Glätten</string>
+    <string name="cd_motion_smoothing">Bewegungsglättung für den ausgewählten Ausschnitt umschalten</string>
+    <string name="mirror_smoothing_strength_label">Glättung</string>
+    <string name="mirror_smoothing_strength_value">%1$d%%</string>
+    <string name="mirror_smoothing_strength_light">Leicht</string>
+    <string name="mirror_smoothing_strength_medium">Mittel</string>
+    <string name="mirror_smoothing_strength_strong">Stark</string>
+    <string name="mirror_smoothing_strength_off">Aus</string>
+    <string name="mirror_editor_shape_circle">Form: Kreis</string>
+    <string name="mirror_editor_shape_rectangle">Form: Rechteck</string>
+    <string name="mirror_editor_no_space">Kein Platz für einen weiteren Ausschnitt</string>
+    <string name="mirror_editor_max_cutouts">Maximale Anzahl von 10 Ausschnitten erreicht</string>
+    <string name="mirror_editor_rename_cutout">Ausschnitt umbenennen</string>
+    <string name="mirror_editor_cutout_name_hint">Ausschnitt-Name</string>
+
+    <!-- Cutout Layout Editor Toolbar Short Labels -->
+    <string name="mirror_editor_toolbar_add">Hinzufügen</string>
+    <string name="mirror_editor_toolbar_settings">Optionen</string>
+    <string name="mirror_editor_toolbar_delete">Löschen</string>
+    <string name="mirror_editor_toolbar_crop">Zuschneiden</string>
+    <string name="mirror_editor_toolbar_done">Fertig</string>
+    <string name="mirror_editor_toolbar_cancel">Abbrechen</string>
+    <string name="mirror_editor_toolbar_shape_circle">Kreis</string>
+    <string name="mirror_editor_toolbar_shape_rect">Rechteck</string>
+    <string name="settings_mirror_touch_projection">Touch-Projektion</string>
+    <string name="settings_mirror_touch_projection_desc">Berührungen innerhalb dieses Ausschnitts an den Hauptbildschirm weiterleiten</string>
+    <string name="settings_mirror_cutout_default">Ausschnitt</string>
+    <string name="settings_mirror_cutout_default_name_fmt">Ausschnitt %1$d</string>
 </resources>

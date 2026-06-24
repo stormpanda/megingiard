@@ -13,11 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,14 +43,11 @@ internal fun MirrorControlCard(
     isCapturing: Boolean,
     isFrozen: Boolean,
     isViewportEditActive: Boolean,
-    isTouchProjectionActive: Boolean,
     modifier: Modifier = Modifier,
-    onBackgroundSettings: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
     onToggleViewportEdit: () -> Unit,
-    onToggleTouchProjection: () -> Unit,
     showLabels: Boolean,
 ) {
     Row(
@@ -69,18 +65,37 @@ internal fun MirrorControlCard(
             .padding(horizontal = PM_CONTENT_PADDING, vertical = PM_MIRROR_CARD_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Background Settings button (left)
+        // Screen Mirroring button (left)
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .clickable(onClick = onBackgroundSettings)
+                .background(if (isViewportEditActive) colors.accent.copy(alpha = 0.15f) else Color.Transparent)
+                .border(
+                    width = PM_BORDER_WIDTH,
+                    color = if (isViewportEditActive) {
+                        colors.accent
+                    } else {
+                        if (isCapturing) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f)
+                    },
+                    shape = RoundedCornerShape(PM_ACTION_BUTTON_CORNER)
+                )
+                .clickable(
+                    enabled = isCapturing,
+                    onClick = onToggleViewportEdit
+                )
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(
+                imageVector = Icons.Rounded.Edit,
+                contentDescription = stringResource(R.string.cd_viewport_edit),
+                tint = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
+                modifier = Modifier.size(PM_SCREEN_MIRRORING_ICON_SIZE)
+            )
+            Spacer(Modifier.width(PM_SCREEN_MIRRORING_SPACER_W))
             Text(
-                text  = stringResource(R.string.pill_menu_ambient_settings),
-                color = colors.accent,
+                text  = stringResource(R.string.pill_menu_screen_mirroring),
+                color = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -124,29 +139,6 @@ internal fun MirrorControlCard(
             showLabel = showLabels,
             colors = colors,
             onClick = onToggleFreeze,
-        )
-        MirrorControlIconButton(
-            icon = Icons.Rounded.CropFree,
-            contentDescription = stringResource(R.string.cd_viewport_edit),
-            label = stringResource(R.string.mirror_control_label_viewport),
-            tint = if (isViewportEditActive) colors.accent else colors.onControlOverlay,
-            enabled = isCapturing,
-            showLabel = showLabels,
-            colors = colors,
-            onClick = onToggleViewportEdit,
-        )
-        MirrorControlIconButton(
-            icon = Icons.Rounded.TouchApp,
-            contentDescription = stringResource(
-                if (isTouchProjectionActive) R.string.cd_touch_projection_on
-                else R.string.cd_touch_projection_off,
-            ),
-            label = stringResource(R.string.mirror_control_label_projection),
-            tint = if (isTouchProjectionActive) colors.accent else colors.onControlOverlay,
-            enabled = isCapturing,
-            showLabel = showLabels,
-            colors = colors,
-            onClick = onToggleTouchProjection,
         )
     }
 }

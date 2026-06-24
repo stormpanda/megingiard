@@ -68,6 +68,8 @@ internal val PM_MIRROR_ICON_SIZE = 22.dp
 internal val PM_MIRROR_BUTTON_SIZE = 48.dp
 internal val PM_MIRROR_LABELED_BUTTON_WIDTH = 72.dp
 internal val PM_MIRROR_CARD_V_PADDING = 10.dp
+internal val PM_SCREEN_MIRRORING_ICON_SIZE = 16.dp
+internal val PM_SCREEN_MIRRORING_SPACER_W = 6.dp
 internal const val PM_SCRIM_ALPHA = 0.55f
 internal const val PM_NAME_DIALOG_SCRIM_ALPHA = 0.5f
 internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
@@ -94,7 +96,6 @@ fun PillMenu(
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     var showGlobalSettings by remember { mutableStateOf(false) }
 
@@ -120,20 +121,14 @@ fun PillMenu(
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
                 isViewportEditActive = isViewportEditActive,
-                isTouchProjectionActive = isTouchProjectionActive,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .animateEnterExit(
                         enter = slideInVertically { -it },
                         exit  = slideOutVertically { -it },
                     ),
-                onBackgroundSettings = {
-                    AppStateManager.setBackgroundSettingsActive(true)
-                    onDismiss()
-                },
                 onStart = {
                     AppStateManager.requestMirrorStart()
-                    onDismiss()
                 },
                 onStop = {
                     AppStateManager.requestMirrorStop()
@@ -144,7 +139,6 @@ fun PillMenu(
                     AppStateManager.setViewportEditActive(true)
                     onDismiss()
                 },
-                onToggleTouchProjection = { ScreenCaptureManager.toggleTouchProjection() },
                 showLabels = showMirrorControlLabels,
             )
 

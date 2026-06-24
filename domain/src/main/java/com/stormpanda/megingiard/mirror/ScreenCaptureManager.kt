@@ -38,6 +38,15 @@ object ScreenCaptureManager {
     private val _surfaceHeight = MutableStateFlow(0f)
     val surfaceHeight: StateFlow<Float> = _surfaceHeight.asStateFlow()
 
+    private val _cutouts = MutableStateFlow<List<ScreenCutout>>(emptyList())
+    val cutouts: StateFlow<List<ScreenCutout>> = _cutouts.asStateFlow()
+
+    private val _edgeBlendWidthDp = MutableStateFlow(0f)
+    val edgeBlendWidthDp: StateFlow<Float> = _edgeBlendWidthDp.asStateFlow()
+
+    private val _maxFps = MutableStateFlow(60)
+    val maxFps: StateFlow<Int> = _maxFps.asStateFlow()
+
     private val _isFrozen = MutableStateFlow(false)
     val isFrozen: StateFlow<Boolean> = _isFrozen.asStateFlow()
 
@@ -53,11 +62,58 @@ object ScreenCaptureManager {
     private val _isFollowActive = MutableStateFlow(false)
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
 
+    private val _isPrivilegedMirror = MutableStateFlow(false)
+    val isPrivilegedMirror: StateFlow<Boolean> = _isPrivilegedMirror.asStateFlow()
+
+    private var activeLayoutJob: Job? = null
+    private var activeCutoutsJob: Job? = null
+
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        set(value) {
+            followAnimationJob?.cancel()
+            followAnimationJob = null
+            followAnimationCutoutId = null
+            field = value
+            restartCollectors()
+        }
+
+    init {
+        restartCollectors()
+    }
+
+    private fun restartCollectors() {
+        activeLayoutJob?.cancel()
+        activeCutoutsJob?.cancel()
+
+        activeLayoutJob = scope.launch {
+            MacroPadState.activeLayout.collect { layout ->
+                if (layout != null) {
+                    _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
+                    _maxFps.value = layout.mirrorMaxFps
+                    _cutouts.value = layout.mirrorCutouts
+                } else {
+                    _edgeBlendWidthDp.value = 0f
+                    _maxFps.value = 60
+                    _cutouts.value = emptyList()
+                }
+            }
+        }
+
+        activeCutoutsJob = scope.launch {
+            _cutouts.collect { list ->
+                val touchActive = list.any { it.touchProjectionEnabled }
+                _isTouchProjectionActive.value = touchActive
+                if (touchActive) {
+                    _isLocked.value = true
+                }
+            }
+        }
+    }
 
     private var targetFollowX = 0f
     private var targetFollowY = 0f
     private var followAnimationJob: Job? = null
+    private var followAnimationCutoutId: String? = null
 
     private val _captureSourceWidth = MutableStateFlow(0)
     val captureSourceWidth: StateFlow<Int> = _captureSourceWidth.asStateFlow()
@@ -110,6 +166,11 @@ object ScreenCaptureManager {
      */
     fun setTouchProjectionActive(active: Boolean) {
         AppLog.i(TAG, "setTouchProjectionActive($active)${if (active) " → auto-enabling lock" else ""}")
+        val layout = MacroPadState.activeLayout.value
+        if (layout != null) {
+            val updated = layout.mirrorCutouts.map { it.copy(touchProjectionEnabled = active) }
+            MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
+        }
         _isTouchProjectionActive.value = active
         if (active) _isLocked.value = true
     }
@@ -122,7 +183,9 @@ object ScreenCaptureManager {
         val newLocked = !_isLocked.value
         AppLog.d(TAG, "toggleLocked → $newLocked${if (!newLocked && _isTouchProjectionActive.value) " (deactivating projection)" else ""}")
         _isLocked.value = newLocked
-        if (!newLocked) _isTouchProjectionActive.value = false
+        if (!newLocked) {
+            setTouchProjectionActive(false)
+        }
     }
 
     fun toggleTouchProjection() {
@@ -138,34 +201,21 @@ object ScreenCaptureManager {
                 MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
             }
         }
+        val layout = MacroPadState.activeLayout.value
         if (active) {
-            val layout = MacroPadState.activeLayout.value
-            val s = layout?.mirrorSavedScale ?: 1f
-            val ox = layout?.mirrorSavedOffsetX ?: 0f
-            val oy = layout?.mirrorSavedOffsetY ?: 0f
-            setScale(s)
-            setOffsetX(ox)
-            setOffsetY(oy)
-            MirrorViewportController.setValues(s, ox, oy)
+            followAnimationJob?.cancel()
+            followAnimationJob = null
+            followAnimationCutoutId = null
+            if (layout != null) {
+                _cutouts.value = layout.mirrorCutouts
+            }
             AppStateManager.setViewportEditActive(false)
         } else {
             followAnimationJob?.cancel()
             followAnimationJob = null
-            val layout = MacroPadState.activeLayout.value
+            followAnimationCutoutId = null
             if (layout != null) {
-                setScale(layout.mirrorSavedScale)
-                setOffsetX(layout.mirrorSavedOffsetX)
-                setOffsetY(layout.mirrorSavedOffsetY)
-                MirrorViewportController.setValues(
-                    layout.mirrorSavedScale,
-                    layout.mirrorSavedOffsetX,
-                    layout.mirrorSavedOffsetY
-                )
-            } else {
-                setScale(1f)
-                setOffsetX(0f)
-                setOffsetY(0f)
-                MirrorViewportController.resetViewport()
+                _cutouts.value = layout.mirrorCutouts
             }
         }
     }
@@ -176,63 +226,77 @@ object ScreenCaptureManager {
 
     fun onTouchReceived(nx: Float, ny: Float) {
         if (!_isCapturing.value || !_isFollowActive.value) return
-        val layout = MacroPadState.activeLayout.value
-        if (layout != null && layout.mirrorFollowDisableDuringMacro && MacroExecutor.runningMacroIds.value.isNotEmpty()) {
+        if (MacroExecutor.runningMacroIds.value.isNotEmpty()) {
             return
         }
         updateFollowCenter(nx, ny)
     }
 
     private fun updateFollowCenter(nx: Float, ny: Float) {
-        val sw = _surfaceWidth.value
-        val sh = _surfaceHeight.value
-        if (sw <= 0f || sh <= 0f) return
+        val targetCutout = _cutouts.value.find { it.followTouch } ?: return
+        val targetSrcX = (nx - targetCutout.srcWidth / 2f).coerceIn(0f, 1f - targetCutout.srcWidth)
+        val targetSrcY = (ny - targetCutout.srcHeight / 2f).coerceIn(0f, 1f - targetCutout.srcHeight)
 
-        val currentScale = _scale.value
-        val targetOffsetX = -(nx - 0.5f) * sw * currentScale
-        val targetOffsetY = -(ny - 0.5f) * sh * currentScale
-
-        val layout = MacroPadState.activeLayout.value
-        val smoothing = layout?.mirrorSmoothing ?: true
+        val smoothing = targetCutout.motionSmoothing
         if (!smoothing) {
             followAnimationJob?.cancel()
             followAnimationJob = null
-            _offsetX.value = targetOffsetX
-            _offsetY.value = targetOffsetY
+            followAnimationCutoutId = null
+            val updated = _cutouts.value.map {
+                if (it.id == targetCutout.id) it.copy(srcX = targetSrcX, srcY = targetSrcY) else it
+            }
+            _cutouts.value = updated
         } else {
-            targetFollowX = targetOffsetX
-            targetFollowY = targetOffsetY
-            ensureFollowAnimationRunning()
+            targetFollowX = targetSrcX
+            targetFollowY = targetSrcY
+            ensureFollowAnimationRunning(targetCutout.id)
         }
     }
 
-    private fun ensureFollowAnimationRunning() {
-        if (followAnimationJob?.isActive == true) return
+    private fun ensureFollowAnimationRunning(cutoutId: String) {
+        if (followAnimationJob?.isActive == true && followAnimationCutoutId == cutoutId) return
+        followAnimationJob?.cancel()
+        followAnimationCutoutId = cutoutId
         followAnimationJob = scope.launch {
             val lerpFactor = 0.15f
-            val epsilon = 0.5f // Stop loop when within 0.5 pixels to prevent endless calculations
+            val epsilon = 0.001f
 
             while (isActive) {
                 val currTargetX = targetFollowX
                 val currTargetY = targetFollowY
 
-                val curX = _offsetX.value
-                val curY = _offsetY.value
+                val list = _cutouts.value
+                val curCutout = list.find { it.id == cutoutId }
+                if (curCutout == null) break
+                val curX = curCutout.srcX
+                val curY = curCutout.srcY
 
                 val dx = currTargetX - curX
                 val dy = currTargetY - curY
 
                 if (abs(dx) < epsilon && abs(dy) < epsilon) {
-                    _offsetX.value = currTargetX
-                    _offsetY.value = currTargetY
+                    val updated = _cutouts.value.map {
+                        if (it.id == cutoutId) it.copy(srcX = currTargetX, srcY = currTargetY) else it
+                    }
+                    _cutouts.value = updated
                     break
                 } else {
-                    _offsetX.value = curX + dx * lerpFactor
-                    _offsetY.value = curY + dy * lerpFactor
+                    val nextX = curX + dx * lerpFactor
+                    val nextY = curY + dy * lerpFactor
+                    val updated = _cutouts.value.map {
+                        if (it.id == cutoutId) it.copy(srcX = nextX, srcY = nextY) else it
+                    }
+                    _cutouts.value = updated
                 }
                 delay(10)
             }
         }
+    }
+
+
+    fun setPrivilegedMirror(active: Boolean) {
+        AppLog.d(TAG, "setPrivilegedMirror($active)")
+        _isPrivilegedMirror.value = active
     }
 
     /** Resets all transient mirror session state (lock, projection, freeze, follow). */

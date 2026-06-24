@@ -12,9 +12,10 @@ private const val DIRECT_SURFACE_DESCRIPTOR = "com.stormpanda.megingiard.mirrors
 private const val TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION
 
 internal object DirectMirrorSurfaceBridge {
-    fun sendToDirectServer(surface: Surface): Boolean {
-        if (!surface.isValid) {
-            AppLog.w(TAG, "sendToDirectServer: invalid surface")
+    fun sendToDirectServer(surfaces: List<Triple<Surface, Int, Int>>): Boolean {
+        val validSurfaces = surfaces.filter { it.first.isValid }
+        if (validSurfaces.isEmpty()) {
+            AppLog.w(TAG, "sendToDirectServer: no valid surfaces")
             return false
         }
         val binder = getService(DIRECT_SURFACE_SERVICE_NAME) ?: run {
@@ -25,8 +26,13 @@ internal object DirectMirrorSurfaceBridge {
         val reply = Parcel.obtain()
         return try {
             data.writeInterfaceToken(DIRECT_SURFACE_DESCRIPTOR)
-            data.writeInt(1)
-            surface.writeToParcel(data, 0)
+            data.writeInt(validSurfaces.size)
+            for ((surface, width, height) in validSurfaces) {
+                data.writeInt(width)
+                data.writeInt(height)
+                data.writeInt(1)
+                surface.writeToParcel(data, 0)
+            }
             if (!binder.transact(TRANSACTION_SET_SURFACE, data, reply, 0)) {
                 AppLog.w(TAG, "sendToDirectServer: transact returned false")
                 false
@@ -43,6 +49,10 @@ internal object DirectMirrorSurfaceBridge {
             reply.recycle()
             data.recycle()
         }
+    }
+
+    fun sendToDirectServer(surface: Surface, width: Int, height: Int): Boolean {
+        return sendToDirectServer(listOf(Triple(surface, width, height)))
     }
 
     private fun getService(name: String): IBinder? {
