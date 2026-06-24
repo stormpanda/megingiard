@@ -169,9 +169,6 @@ class MirrorPresentation(
         val targetWidth = targetBounds.width()
         val targetHeight = targetBounds.height()
 
-        val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-        val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()
-
         ScreenCaptureManager.setSurfaceSize(targetWidth.toFloat(), targetHeight.toFloat())
 
         val container = FrameLayout(context).apply {
@@ -713,6 +710,7 @@ class MultiCutoutContainer(
         isAntiAlias = true
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
     }
+    private val circlePath = Path()
 
     private var scratchBitmap: Bitmap? = null
 
@@ -901,11 +899,10 @@ class MultiCutoutContainer(
             try {
                 canvas.translate(dx, dy)
                 if (cutout.shape == CutoutShape.CIRCLE) {
-                    val path = Path().apply {
-                        val r = min(dw, dh) / 2f
-                        addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
-                    }
-                    canvas.clipPath(path)
+                    circlePath.reset()
+                    val r = min(dw, dh) / 2f
+                    circlePath.addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
+                    canvas.clipPath(circlePath)
                 }
                 val innerSaveCount = canvas.save()
                 

@@ -511,22 +511,19 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                     )
                 }
                 val newName = renameText.trim()
-                val isError = newName.isEmpty()
                 TextButton(
                     onClick = {
-                        if (!isError) {
-                            val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                                if (c.id == targetCutout.id) c.copy(name = newName) else c
-                            }
-                            commitLayout { copy(mirrorCutouts = updatedCutouts) }
-                            renamingCutout = null
+                        val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
+                            if (c.id == targetCutout.id) c.copy(name = newName) else c
                         }
+                        commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                        renamingCutout = null
                     },
-                    enabled = !isError
+                    enabled = true
                 ) {
                     Text(
                         text = stringResource(R.string.macropad_editor_done),
-                        color = if (!isError) colors.accent else colors.onSurfaceSecondary
+                        color = colors.accent
                     )
                 }
             }

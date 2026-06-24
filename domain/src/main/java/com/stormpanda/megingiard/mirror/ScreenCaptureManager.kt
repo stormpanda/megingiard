@@ -70,6 +70,9 @@ object ScreenCaptureManager {
 
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         set(value) {
+            followAnimationJob?.cancel()
+            followAnimationJob = null
+            followAnimationCutoutId = null
             field = value
             restartCollectors()
         }

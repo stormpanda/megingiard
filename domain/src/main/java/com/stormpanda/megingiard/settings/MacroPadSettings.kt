@@ -204,8 +204,6 @@ object MacroPadSettings {
         val profiles = MacroPadState.profiles.value
         val activeId = MacroPadState.activeProfileId.value
         val json = macropadJson.encodeToString(profiles)
-        lastLoadedProfilesJson = json
-        lastLoadedActiveProfileId = activeId
         dataStore.edit { prefs ->
             prefs[KEY_MACROPAD_PROFILES] = json
             if (activeId != null) {
@@ -214,5 +212,7 @@ object MacroPadSettings {
                 prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
             }
         }
+        lastLoadedProfilesJson = json
+        lastLoadedActiveProfileId = activeId
     }
 }
