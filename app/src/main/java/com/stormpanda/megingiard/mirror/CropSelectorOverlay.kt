@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -54,6 +55,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "CropSelectorOverlay"
 private const val MIN_CROP_SIZE = 0.05f
+private const val CS_TOUCH_AREA_RATIO = 0.25f
 private val CS_HANDLE_SIZE = 24.dp
 private val CS_BORDER_WIDTH = 1.dp
 private val CS_CARD_SHADOW = 8.dp
@@ -212,6 +214,10 @@ fun CropSelectorOverlay(
         )
 
         val handleSizePx = with(density) { CS_HANDLE_SIZE.toPx() }
+        val touchWPx = kotlin.math.max(handleSizePx, cropW * CS_TOUCH_AREA_RATIO)
+        val touchHPx = kotlin.math.max(handleSizePx, cropH * CS_TOUCH_AREA_RATIO)
+        val touchWidth = with(density) { touchWPx.toDp() }
+        val touchHeight = with(density) { touchHPx.toDp() }
 
         // 2. Crop rectangle border and drag area
         Box(
@@ -262,11 +268,17 @@ fun CropSelectorOverlay(
         var gestureStartDestH by remember(cutoutId) { mutableStateOf(0f) }
 
         // Top-Left handle
+        val topLeftCenterX = cropLeft + handleSizePx / 2f
+        val topLeftCenterY = cropTop + handleSizePx / 2f
+        val topLeftTouchX = topLeftCenterX - touchWPx / 2f
+        val topLeftTouchY = topLeftCenterY - touchHPx / 2f
         ResizeHandleView(
             offset = IntOffset(
-                cropLeft.roundToInt(),
-                cropTop.roundToInt()
+                topLeftTouchX.roundToInt(),
+                topLeftTouchY.roundToInt()
             ),
+            touchWidth = touchWidth,
+            touchHeight = touchHeight,
             color = colors.accent,
             onDragStart = {
                 val curCutout = currentCutoutState.value
@@ -315,11 +327,17 @@ fun CropSelectorOverlay(
         )
 
         // Top-Right handle
+        val topRightCenterX = cropLeft + cropW - handleSizePx / 2f
+        val topRightCenterY = cropTop + handleSizePx / 2f
+        val topRightTouchX = topRightCenterX - touchWPx / 2f
+        val topRightTouchY = topRightCenterY - touchHPx / 2f
         ResizeHandleView(
             offset = IntOffset(
-                (cropLeft + cropW - handleSizePx).roundToInt(),
-                cropTop.roundToInt()
+                topRightTouchX.roundToInt(),
+                topRightTouchY.roundToInt()
             ),
+            touchWidth = touchWidth,
+            touchHeight = touchHeight,
             color = colors.accent,
             onDragStart = {
                 val curCutout = currentCutoutState.value
@@ -366,11 +384,17 @@ fun CropSelectorOverlay(
         )
 
         // Bottom-Left handle
+        val bottomLeftCenterX = cropLeft + handleSizePx / 2f
+        val bottomLeftCenterY = cropTop + cropH - handleSizePx / 2f
+        val bottomLeftTouchX = bottomLeftCenterX - touchWPx / 2f
+        val bottomLeftTouchY = bottomLeftCenterY - touchHPx / 2f
         ResizeHandleView(
             offset = IntOffset(
-                cropLeft.roundToInt(),
-                (cropTop + cropH - handleSizePx).roundToInt()
+                bottomLeftTouchX.roundToInt(),
+                bottomLeftTouchY.roundToInt()
             ),
+            touchWidth = touchWidth,
+            touchHeight = touchHeight,
             color = colors.accent,
             onDragStart = {
                 val curCutout = currentCutoutState.value
@@ -417,11 +441,17 @@ fun CropSelectorOverlay(
         )
 
         // Bottom-Right handle
+        val bottomRightCenterX = cropLeft + cropW - handleSizePx / 2f
+        val bottomRightCenterY = cropTop + cropH - handleSizePx / 2f
+        val bottomRightTouchX = bottomRightCenterX - touchWPx / 2f
+        val bottomRightTouchY = bottomRightCenterY - touchHPx / 2f
         ResizeHandleView(
             offset = IntOffset(
-                (cropLeft + cropW - handleSizePx).roundToInt(),
-                (cropTop + cropH - handleSizePx).roundToInt()
+                bottomRightTouchX.roundToInt(),
+                bottomRightTouchY.roundToInt()
             ),
+            touchWidth = touchWidth,
+            touchHeight = touchHeight,
             color = colors.accent,
             onDragStart = {
                 val curCutout = currentCutoutState.value
@@ -559,6 +589,8 @@ private fun ToolbarIconButton(
 @Composable
 private fun ResizeHandleView(
     offset: IntOffset,
+    touchWidth: Dp,
+    touchHeight: Dp,
     color: Color,
     onDragStart: () -> Unit,
     onDrag: (Float, Float) -> Unit
@@ -568,8 +600,7 @@ private fun ResizeHandleView(
     Box(
         modifier = Modifier
             .offset { offset }
-            .size(CS_HANDLE_SIZE)
-            .background(color.copy(alpha = 0.5f), RoundedCornerShape(CS_INDICATOR_CORNER))
+            .size(width = touchWidth, height = touchHeight)
             .pointerInput(Unit) {
                 var accumulatedX = 0f
                 var accumulatedY = 0f
@@ -586,8 +617,15 @@ private fun ResizeHandleView(
                         currentOnDrag(accumulatedX, accumulatedY)
                     }
                 )
-            }
-    )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(CS_HANDLE_SIZE)
+                .background(color.copy(alpha = 0.5f), RoundedCornerShape(CS_INDICATOR_CORNER))
+        )
+    }
 }
 
 private enum class CropResizeHandle {
