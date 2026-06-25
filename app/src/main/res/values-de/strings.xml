@@ -719,19 +719,19 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_close_cd">Hilfe schließen</string>
 
     <!-- MacroPad Editor help -->
-    <string name="help_editor_title">MacroPad-Editor — Hilfe</string>
-    <string name="help_editor_intro">Im MacroPad-Editor erstellst und organisierst du alle Schaltflächen auf deinem Makro-Pad. Änderungen werden sofort gespeichert — es gibt keinen separaten Speicherschritt.</string>
+    <string name="help_editor_title">Profil/Layout bearbeiten — Hilfe</string>
+    <string name="help_editor_intro">In diesem Bereich erstellst und organisierst du alle Schaltflächen auf deinem Makro-Pad. Änderungen werden sofort gespeichert — es gibt keinen separaten Speicherschritt.</string>
     <string name="help_editor_section_profiles">Profile</string>
     <string name="help_editor_profiles_label">Profil-Chips</string>
     <string name="help_editor_profiles_desc">Tippe auf einen Chip, um das aktive Profil zu wechseln. Das aktive Profil ist hervorgehoben. Jedes Profil enthält eigene Layouts und Makros — ideal für verschiedene Spiele.</string>
-    <string name="help_editor_add_profile_label">Profil hinzufügen (＋)</string>
+    <string name="help_editor_add_profile_label">Profil hinzufügen</string>
     <string name="help_editor_add_profile_desc">Erstellt ein neues leeres Profil. Du wirst sofort nach einem Namen gefragt.</string>
-    <string name="help_editor_edit_profile_label">Profil bearbeiten / umbenennen (✏)</string>
+    <string name="help_editor_edit_profile_label">Profil bearbeiten / umbenennen</string>
     <string name="help_editor_edit_profile_desc">Tippe auf das Stift-Symbol am aktiven Profil-Chip, um es umzubenennen oder Optionen wie Duplizieren und Löschen aufzurufen.</string>
     <string name="help_editor_section_layouts">Layouts</string>
     <string name="help_editor_layouts_label">Layout-Chips</string>
     <string name="help_editor_layouts_desc">Ein Profil kann mehrere Layouts haben — verschiedene Schaltflächen-Anordnungen für dasselbe Spiel. Nur aktivierte Layouts erscheinen im Pill-Menü zum schnellen Wechseln.</string>
-    <string name="help_editor_add_layout_label">Layout hinzufügen (＋)</string>
+    <string name="help_editor_add_layout_label">Layout hinzufügen</string>
     <string name="help_editor_add_layout_desc">Erstellt ein neues leeres Layout im aktuellen Profil. Über das Langdruck-Menü des Layout-Chips kann es in ein anderes Profil kopiert werden.</string>
     <string name="help_editor_section_toolbar">Toolbar</string>
     <string name="help_editor_toolbar_button_label">Schaltfläche</string>
@@ -749,21 +749,21 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_editor_canvas_tap_desc">Öffnet den Schaltflächen-Bearbeitungsdialog zum Umbenennen, Symbol-Auswählen, Makro-Zuweisen und Aussehen-Anpassen.</string>
 
     <!-- Macro List help -->
-    <string name="help_macrolist_title">Makro-Liste — Hilfe</string>
+    <string name="help_macrolist_title">Makros — Hilfe</string>
     <string name="help_macrolist_intro">Die Makro-Liste zeigt alle wiederverwendbaren Makros des aktuellen Profils. Makros sind eigenständige Eingabe-Sequenzen, die einer oder mehreren Pad-Schaltflächen zugewiesen werden können.</string>
     <string name="help_macrolist_section_actions">Aktionen</string>
-    <string name="help_macrolist_add_label">Makro hinzufügen (＋)</string>
+    <string name="help_macrolist_add_label">Makro hinzufügen</string>
     <string name="help_macrolist_add_desc">Erstellt ein neues leeres Makro und öffnet sofort den Timeline-Editor, damit du Schritte hinzufügen kannst. Gib dem Makro oben im Editor einen aussagekräftigen Namen.</string>
     <string name="help_macrolist_section_list">Makro-Einträge</string>
     <string name="help_macrolist_tap_label">Makro-Zeile antippen</string>
     <string name="help_macrolist_tap_desc">Öffnet den Makro-Timeline-Editor für dieses Makro, um Schritte anzuzeigen oder zu bearbeiten.</string>
-    <string name="help_macrolist_menu_label">⋮ Optionsmenü</string>
+    <string name="help_macrolist_menu_label">Optionsmenü</string>
     <string name="help_macrolist_menu_desc">Jede Makro-Zeile hat ein Drei-Punkte-Menü mit Optionen zum Umbenennen, Duplizieren (Kopie mit gleichen Schritten) oder Löschen. Löschen ist dauerhaft.</string>
-    <string name="help_macrolist_drag_label">Zieh-Griff (≡)</string>
+    <string name="help_macrolist_drag_label">Zieh-Griff</string>
     <string name="help_macrolist_drag_desc">Den Zieh-Griff rechts in der Makro-Zeile gedrückt halten und bewegen, um Makros in der Liste neu anzuordnen. Die Reihenfolge ist rein kosmetisch.</string>
 
     <!-- Macro Timeline Editor help -->
-    <string name="help_timeline_title">Makro-Timeline-Editor — Hilfe</string>
+    <string name="help_timeline_title">Makro-Editor — Hilfe</string>
     <string name="help_timeline_intro">Im Timeline-Editor baust du die genaue Abfolge von Eingaben, die ein Makro ausführt. Schritte werden von oben nach unten ausgeführt. Zeiten können aufgezeichnet oder manuell eingegeben werden.</string>
     <string name="help_timeline_section_topbar">Steuerleiste oben</string>
     <string name="help_timeline_name_label">Makro-Namensfeld</string>
@@ -777,12 +777,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_timeline_undo_desc">Macht die letzte Änderung an der Schritt-Liste rückgängig. Bis zu 50 Rückgängig-Schritte werden pro Sitzung gespeichert.</string>
     <string name="help_timeline_redo_label">Wiederholen</string>
     <string name="help_timeline_redo_desc">Stellt eine rückgängig gemachte Änderung wieder her. Der Verlauf wird bei jeder neuen Bearbeitung gelöscht.</string>
-    <string name="help_timeline_view_list_label">Listenansicht</string>
+    <string name="help_timeline_view_list_label">Liste/Bearbeiten</string>
     <string name="help_timeline_view_list_desc">Zeigt alle Schritte als vertikale scrollbare Liste — die übersichtlichste Ansicht zum Prüfen und Bearbeiten einzelner Schritt-Zeiten.</string>
-    <string name="help_timeline_view_timeline_label">Timeline-Ansicht</string>
+    <string name="help_timeline_view_timeline_label">Zeitleiste</string>
     <string name="help_timeline_view_timeline_desc">Stellt Schritte horizontal auf einer Zeitachse dar. Hilfreich, um Lücken, Überlappungen und die Gesamtstruktur des Makro-Timings zu erkennen.</string>
     <string name="help_timeline_section_steps">Schritte hinzufügen</string>
-    <string name="help_timeline_add_step_label">Schritt hinzufügen (＋)</string>
+    <string name="help_timeline_add_step_label">Schritt hinzufügen</string>
     <string name="help_timeline_add_step_desc">Öffnet eine Auswahl mit Eingabe-Typen: Tastendruck, Gamepad-Taste, Mausklick, Scrollen, Verzögerung und mehr. Der Schritt wird nach dem aktuell gewählten eingefügt.</string>
     <string name="help_timeline_record_touch_label">Touch aufzeichnen</string>
     <string name="help_timeline_record_touch_desc">Zeichnet einen echten Tipp-Vorgang oder eine Geste auf dem Primärbildschirm auf und wandelt ihn in Touch-Schritte um. Die Spiegelung wird bei Bedarf automatisch gestartet.</string>
@@ -791,7 +791,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_timeline_section_step_items">Schritt-Einträge</string>
     <string name="help_timeline_step_tap_label">Schritt-Zeile antippen</string>
     <string name="help_timeline_step_tap_desc">Öffnet den Schritt-Editor zum Ändern von Eingabe-Typ, Zeitversatz, Dauer und anderen schritt-spezifischen Parametern.</string>
-    <string name="help_timeline_step_menu_label">⋮ Optionsmenü</string>
+    <string name="help_timeline_step_menu_label">Optionsmenü</string>
     <string name="help_timeline_step_menu_desc">Jede Schritt-Zeile hat ein Drei-Punkte-Menü mit Duplizieren (Kopie direkt danach einfügen) und Löschen.</string>
     <string name="help_timeline_section_loop">Schleife &amp; Timing</string>
     <string name="help_timeline_loop_label">Schleifen-Umschalter</string>
@@ -812,25 +812,25 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_ambient_section_cutouts">Ausschnitte</string>
     <string name="help_ambient_cutouts_label">Ausschnitt-Liste</string>
     <string name="help_ambient_cutouts_desc">Jeder Ausschnitt ist ein transparentes Fenster im Spiegel-Overlay, das einen Live-Bereich des Primärbildschirms zeigt. Tippe auf das Stift-Symbol, um einen Ausschnitt umzubenennen. Verwende den Ausschnitt-Layout-Editor (über das Pill-Menü), um Größe und Position anzupassen.</string>
-    <string name="help_ambient_preview_label">Vorschau-Auge (👁)</string>
+    <string name="help_ambient_preview_label">Vorschau</string>
     <string name="help_ambient_preview_desc">Aktiviert eine Live-Vorschau des Reglerwerts auf dem Sekundärbildschirm. Interagiere dort mit den Steuerelementen, um den Wert zu bestätigen oder abzubrechen.</string>
 
     <!-- Mirror editor (Cutout Layout Editor) help -->
     <string name="help_mirror_editor_title">Spiegel-Editor — Hilfe</string>
     <string name="help_mirror_editor_intro">Der Spiegel-Editor ermöglicht es, die Viewport-Ausschnitte hinzuzufügen, zu verschieben, in der Größe zu ändern und zu konfigurieren, die während der Spiegelung auf dem Sekundärbildschirm erscheinen. Tippe auf einen Ausschnitt, um ihn auszuwählen, und nutze dann die Toolbar-Schaltflächen, um darauf zu reagieren.</string>
     <string name="help_mirror_editor_section_global">Globale Aktionen</string>
-    <string name="help_mirror_editor_add_label">Ausschnitt hinzufügen</string>
+    <string name="help_mirror_editor_add_label">Hinzufügen</string>
     <string name="help_mirror_editor_add_desc">Erstellt einen neuen Viewport-Ausschnitt an einer freien Position auf dem Sekundärbildschirm. Pro Layout sind bis zu 10 Ausschnitte erlaubt. Der neue Ausschnitt wird automatisch ausgewählt.</string>
-    <string name="help_mirror_editor_settings_label">Anzeigeeinstellungen</string>
+    <string name="help_mirror_editor_settings_label">Optionen</string>
     <string name="help_mirror_editor_settings_desc">Öffnet die layoutspezifischen Ambient-Anzeigeeinstellungen (Abdunkelung, Randüberblendung, Weichzeichnung). Änderungen gelten nur für das aktuell aktive Layout.</string>
     <string name="help_mirror_editor_section_selected">Ausgewählter Ausschnitt</string>
     <string name="help_mirror_editor_aspect_label">Seitenverhältnis-Modus</string>
     <string name="help_mirror_editor_aspect_desc">Wechselt zwischen drei Seitenverhältnis-Modi für den ausgewählten Ausschnitt. Frei — keine Einschränkung, unabhängige Größenänderung. An Quelle anpassen — die Viewport-Abmessungen werden auf das Crop-Verhältnis der Quelle fixiert. An Quelle anpassen (Crop verkleinern) — der Quell-Crop wird stattdessen an die Viewport-Abmessungen angepasst.</string>
     <string name="help_mirror_editor_shape_label">Form</string>
     <string name="help_mirror_editor_shape_desc">Wechselt die Form des ausgewählten Ausschnitts zwischen Rechteck und Kreis. Nützlich für Spielminiaturkarten oder runde Anzeigen, die im Kreis besser aussehen.</string>
-    <string name="help_mirror_editor_crop_label">Crop bearbeiten</string>
+    <string name="help_mirror_editor_crop_label">Zuschneiden</string>
     <string name="help_mirror_editor_crop_desc">Öffnet die Crop-Auswahl für den gewählten Ausschnitt und ermöglicht es, einen Rahmen über den oberen Bildschirm zu ziehen, um den gespiegelten Bereich festzulegen.</string>
-    <string name="help_mirror_editor_delete_label">Ausschnitt löschen</string>
+    <string name="help_mirror_editor_delete_label">Löschen</string>
     <string name="help_mirror_editor_delete_desc">Entfernt den ausgewählten Ausschnitt dauerhaft aus dem Layout. Wenn der gelöschte Ausschnitt Touch-Follow aktiv hatte, wird dieser Modus ebenfalls deaktiviert.</string>
     <string name="help_mirror_editor_section_finish">Abschließen</string>
     <string name="help_mirror_editor_done_label">Fertig</string>
@@ -892,16 +892,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_pillmenu_start_desc">Startet oder stoppt die Bildschirmspiegelung. Bei aktiver Spiegelung erweitert sich die obere Karte um weitere Steuerelemente.</string>
     <string name="help_pillmenu_freeze_label">Einfrieren / Auftauen</string>
     <string name="help_pillmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
-    <string name="help_pillmenu_viewport_label">Viewport bearbeiten</string>
+    <string name="help_pillmenu_viewport_label">Viewport</string>
     <string name="help_pillmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
     <string name="help_pillmenu_section_macropad">MacroPad-Steuerung (untere Karte)</string>
     <string name="help_pillmenu_profiles_label">Profil-Chips</string>
-    <string name="help_pillmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Makroprofil zu wechseln. Das aktive Profil ist hervorgehoben. Profile werden im MacroPad-Editor verwaltet.</string>
+    <string name="help_pillmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Makroprofil zu wechseln. Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
     <string name="help_pillmenu_layouts_label">Layout-Chips</string>
     <string name="help_pillmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Schaltflächen-Layout im aktuellen Profil zu wechseln. Nur als aktiviert markierte Layouts erscheinen hier.</string>
-    <string name="help_pillmenu_edit_label">Layout bearbeiten</string>
-    <string name="help_pillmenu_edit_desc">Öffnet den MacroPad-Editor zum Hinzufügen, Verschieben und Konfigurieren von Schaltflächen sowie zum Verwalten von Profilen, Layouts und Makros.</string>
-    <string name="help_pillmenu_settings_label">Einstellungen</string>
+    <string name="help_pillmenu_edit_label">Profil/Layout bearbeiten</string>
+    <string name="help_pillmenu_edit_desc">Öffnet den Bereich „Profil/Layout bearbeiten“, in dem du Schaltflächen hinzufügen, verschieben und konfigurieren sowie Profile, Layouts und Makros verwalten kannst.</string>
+    <string name="help_pillmenu_settings_label">Globale Einstellungen</string>
     <string name="help_pillmenu_settings_desc">Öffnet die globalen Einstellungen für App-weite Konfiguration wie Design, Akzentfarbe, automatischen Spiegelungsstart und Privilegierter-Modus-Einrichtung.</string>
     <string name="help_pillmenu_help_label">Hilfe (diese Ansicht)</string>
     <string name="help_pillmenu_help_desc">Öffnet dieses Hilfe-Blatt mit einer Erklärung aller Steuerelemente im Schnellmenü.</string>

@@ -713,19 +713,19 @@ Open Settings to create a layout.</string>
     <string name="help_close_cd">Close help</string>
 
     <!-- MacroPad Editor help -->
-    <string name="help_editor_title">MacroPad Editor — Help</string>
-    <string name="help_editor_intro">The MacroPad Editor lets you build and organise every button that appears on your macro pad. Changes are saved immediately — there is no separate save step.</string>
+    <string name="help_editor_title">Edit Profile/Layout — Help</string>
+    <string name="help_editor_intro">This screen lets you build and organise every button that appears on your macro pad. Changes are saved immediately — there is no separate save step.</string>
     <string name="help_editor_section_profiles">Profiles</string>
     <string name="help_editor_profiles_label">Profile chips</string>
     <string name="help_editor_profiles_desc">Tap a chip to switch the active profile. The active one is highlighted. Each profile contains its own set of layouts and macros, so you can have separate setups for different games.</string>
-    <string name="help_editor_add_profile_label">Add profile (＋)</string>
+    <string name="help_editor_add_profile_label">Add profile</string>
     <string name="help_editor_add_profile_desc">Creates a brand-new empty profile. You will be prompted for a name immediately.</string>
-    <string name="help_editor_edit_profile_label">Edit / Rename profile (✏)</string>
+    <string name="help_editor_edit_profile_label">Edit / Rename profile</string>
     <string name="help_editor_edit_profile_desc">Tap the pencil icon on the active profile chip to rename it or access profile-level options like duplication and deletion.</string>
     <string name="help_editor_section_layouts">Layouts</string>
     <string name="help_editor_layouts_label">Layout chips</string>
     <string name="help_editor_layouts_desc">A profile can have multiple layouts — think of them as different button arrangements for the same game. Only enabled layouts appear in the Pill Menu for quick switching.</string>
-    <string name="help_editor_add_layout_label">Add layout (＋)</string>
+    <string name="help_editor_add_layout_label">Add layout</string>
     <string name="help_editor_add_layout_desc">Creates a new empty layout inside the current profile. You can copy the layout to another profile using the layout chip\'s long-press menu.</string>
     <string name="help_editor_section_toolbar">Toolbar</string>
     <string name="help_editor_toolbar_button_label">Button</string>
@@ -743,21 +743,21 @@ Open Settings to create a layout.</string>
     <string name="help_editor_canvas_tap_desc">Opens the Button Edit dialog where you can rename the button, pick an icon, choose a macro action, and adjust its visual appearance.</string>
 
     <!-- Macro List help -->
-    <string name="help_macrolist_title">Macro List — Help</string>
+    <string name="help_macrolist_title">Macros — Help</string>
     <string name="help_macrolist_intro">The Macro List shows every reusable macro belonging to the current profile. Macros are independent sequences of input steps that can be assigned to one or more pad buttons.</string>
     <string name="help_macrolist_section_actions">Actions</string>
-    <string name="help_macrolist_add_label">Add macro (＋)</string>
+    <string name="help_macrolist_add_label">Add macro</string>
     <string name="help_macrolist_add_desc">Creates a new empty macro and opens the Timeline Editor immediately so you can start adding steps. Give it a meaningful name at the top of the editor.</string>
     <string name="help_macrolist_section_list">Macro items</string>
     <string name="help_macrolist_tap_label">Tap macro row</string>
     <string name="help_macrolist_tap_desc">Opens the Macro Timeline Editor for that macro so you can view or edit its steps.</string>
-    <string name="help_macrolist_menu_label">⋮ Options menu</string>
+    <string name="help_macrolist_menu_label">Options menu</string>
     <string name="help_macrolist_menu_desc">Each macro row has a three-dot menu with options to Rename, Duplicate (creates a copy with the same steps), or Delete the macro. Deletion is permanent.</string>
-    <string name="help_macrolist_drag_label">Drag handle (≡)</string>
+    <string name="help_macrolist_drag_label">Drag handle</string>
     <string name="help_macrolist_drag_desc">Long-press the drag handle on the right side of a macro row and move it to reorder macros in the list. The order here is cosmetic only and does not affect execution.</string>
 
     <!-- Macro Timeline Editor help -->
-    <string name="help_timeline_title">Macro Timeline Editor — Help</string>
+    <string name="help_timeline_title">Macro Editor — Help</string>
     <string name="help_timeline_intro">The Timeline Editor is where you build the exact sequence of inputs that a macro performs. Steps are executed in order from top to bottom. Timings are recorded precisely or entered manually.</string>
     <string name="help_timeline_section_topbar">Top bar controls</string>
     <string name="help_timeline_name_label">Macro name field</string>
@@ -771,12 +771,12 @@ Open Settings to create a layout.</string>
     <string name="help_timeline_undo_desc">Reverts the last change to the step list. Up to 50 undo steps are kept during the current editing session.</string>
     <string name="help_timeline_redo_label">Redo</string>
     <string name="help_timeline_redo_desc">Re-applies a change that was previously undone. Redo history is cleared whenever you make a new edit.</string>
-    <string name="help_timeline_view_list_label">List view</string>
+    <string name="help_timeline_view_list_label">List/Edit</string>
     <string name="help_timeline_view_list_desc">Shows all steps as a vertical scrollable list — the most readable view for reviewing and editing individual step timings.</string>
-    <string name="help_timeline_view_timeline_label">Timeline view</string>
+    <string name="help_timeline_view_timeline_label">Timeline</string>
     <string name="help_timeline_view_timeline_desc">Shows steps laid out horizontally on a time axis. Useful for spotting gaps, overlaps, and the overall shape of the macro timing.</string>
     <string name="help_timeline_section_steps">Adding steps</string>
-    <string name="help_timeline_add_step_label">Add step (＋)</string>
+    <string name="help_timeline_add_step_label">Add step</string>
     <string name="help_timeline_add_step_desc">Opens a picker where you choose the input type: key press, gamepad button, mouse click, scroll, delay, and more. The step is added after the currently selected one.</string>
     <string name="help_timeline_record_touch_label">Record touch</string>
     <string name="help_timeline_record_touch_desc">Records a real tap or gesture on the primary screen and converts it into one or more Touch steps. The mirroring stream is started automatically if it isn\'t active.</string>
@@ -785,7 +785,7 @@ Open Settings to create a layout.</string>
     <string name="help_timeline_section_step_items">Step items</string>
     <string name="help_timeline_step_tap_label">Tap step row</string>
     <string name="help_timeline_step_tap_desc">Opens the step editor where you can change the input type, timing offset, duration, and other parameters specific to that step type.</string>
-    <string name="help_timeline_step_menu_label">⋮ Options menu</string>
+    <string name="help_timeline_step_menu_label">Options menu</string>
     <string name="help_timeline_step_menu_desc">Each step row has a three-dot menu offering Duplicate (inserts a copy directly after) and Delete.</string>
     <string name="help_timeline_section_loop">Loop &amp; timing</string>
     <string name="help_timeline_loop_label">Loop toggle</string>
@@ -806,25 +806,25 @@ Open Settings to create a layout.</string>
     <string name="help_ambient_section_cutouts">Cutouts</string>
     <string name="help_ambient_cutouts_label">Cutout list</string>
     <string name="help_ambient_cutouts_desc">Each cutout is a transparent window punched through the mirror overlay, showing a live region of the primary screen. Tap the rename icon (✏) to give a cutout a meaningful name, or use the Cutout Layout Editor (opened from the Pill Menu) to resize and reposition them.</string>
-    <string name="help_ambient_preview_label">Preview eye icon (👁)</string>
+    <string name="help_ambient_preview_label">Preview</string>
     <string name="help_ambient_preview_desc">Activates a live preview of that slider value on the secondary screen. Interact with the secondary screen\'s controls to confirm or cancel the value. This lets you see the effect without navigating away.</string>
 
     <!-- Mirror editor (Cutout Layout Editor) help -->
     <string name="help_mirror_editor_title">Mirror Editor — Help</string>
     <string name="help_mirror_editor_intro">The Mirror Editor lets you add, position, resize, and configure the viewport cutouts that appear on the secondary screen during mirroring. Select a cutout by tapping it on screen, then use the toolbar buttons below to act on it.</string>
     <string name="help_mirror_editor_section_global">Global actions</string>
-    <string name="help_mirror_editor_add_label">Add cutout</string>
+    <string name="help_mirror_editor_add_label">Add</string>
     <string name="help_mirror_editor_add_desc">Creates a new viewport cutout at a free position on the secondary screen. Up to 10 cutouts are allowed per layout. The new cutout is automatically selected.</string>
-    <string name="help_mirror_editor_settings_label">Display settings</string>
+    <string name="help_mirror_editor_settings_label">Settings</string>
     <string name="help_mirror_editor_settings_desc">Opens the per-layout ambient display settings (dim level, edge blending, smoothing). Changes apply only to the currently active layout.</string>
     <string name="help_mirror_editor_section_selected">Selected cutout</string>
     <string name="help_mirror_editor_aspect_label">Aspect ratio mode</string>
     <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Lock to source — the viewport dimensions are locked to the source crop ratio. Lock to source (shrink crop) — the source crop is adjusted to fit the viewport dimensions instead.</string>
     <string name="help_mirror_editor_shape_label">Shape</string>
     <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
-    <string name="help_mirror_editor_crop_label">Edit crop</string>
+    <string name="help_mirror_editor_crop_label">Crop</string>
     <string name="help_mirror_editor_crop_desc">Opens the crop selector for the selected cutout, letting you drag a frame over the top screen to choose which region is mirrored into this cutout.</string>
-    <string name="help_mirror_editor_delete_label">Delete cutout</string>
+    <string name="help_mirror_editor_delete_label">Delete</string>
     <string name="help_mirror_editor_delete_desc">Permanently removes the selected cutout from the layout. If the deleted cutout had touch-follow enabled, that mode is also deactivated.</string>
     <string name="help_mirror_editor_section_finish">Finish</string>
     <string name="help_mirror_editor_done_label">Done</string>
@@ -886,16 +886,16 @@ Open Settings to create a layout.</string>
     <string name="help_pillmenu_start_desc">Starts or stops the screen mirroring capture. When mirroring is active the top card expands to show additional controls.</string>
     <string name="help_pillmenu_freeze_label">Freeze / Unfreeze</string>
     <string name="help_pillmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
-    <string name="help_pillmenu_viewport_label">Edit viewport</string>
+    <string name="help_pillmenu_viewport_label">Viewport</string>
     <string name="help_pillmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
     <string name="help_pillmenu_section_macropad">MacroPad controls (bottom card)</string>
     <string name="help_pillmenu_profiles_label">Profile chips</string>
-    <string name="help_pillmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the MacroPad Editor.</string>
+    <string name="help_pillmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
     <string name="help_pillmenu_layouts_label">Layout chips</string>
     <string name="help_pillmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
-    <string name="help_pillmenu_edit_label">Edit layout</string>
-    <string name="help_pillmenu_edit_desc">Opens the MacroPad Editor where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
-    <string name="help_pillmenu_settings_label">Settings</string>
+    <string name="help_pillmenu_edit_label">Edit Profile/Layout</string>
+    <string name="help_pillmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
+    <string name="help_pillmenu_settings_label">Global Settings</string>
     <string name="help_pillmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
     <string name="help_pillmenu_help_label">Help (this screen)</string>
     <string name="help_pillmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
