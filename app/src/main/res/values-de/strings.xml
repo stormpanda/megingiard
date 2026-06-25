@@ -815,6 +815,29 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_ambient_preview_label">Vorschau-Auge (👁)</string>
     <string name="help_ambient_preview_desc">Aktiviert eine Live-Vorschau des Reglerwerts auf dem Sekundärbildschirm. Interagiere dort mit den Steuerelementen, um den Wert zu bestätigen oder abzubrechen.</string>
 
+    <!-- Mirror editor (Cutout Layout Editor) help -->
+    <string name="help_mirror_editor_title">Spiegel-Editor — Hilfe</string>
+    <string name="help_mirror_editor_intro">Der Spiegel-Editor ermöglicht es, die Viewport-Ausschnitte hinzuzufügen, zu verschieben, in der Größe zu ändern und zu konfigurieren, die während der Spiegelung auf dem Sekundärbildschirm erscheinen. Tippe auf einen Ausschnitt, um ihn auszuwählen, und nutze dann die Toolbar-Schaltflächen, um darauf zu reagieren.</string>
+    <string name="help_mirror_editor_section_global">Globale Aktionen</string>
+    <string name="help_mirror_editor_add_label">Ausschnitt hinzufügen</string>
+    <string name="help_mirror_editor_add_desc">Erstellt einen neuen Viewport-Ausschnitt an einer freien Position auf dem Sekundärbildschirm. Pro Layout sind bis zu 10 Ausschnitte erlaubt. Der neue Ausschnitt wird automatisch ausgewählt.</string>
+    <string name="help_mirror_editor_settings_label">Anzeigeeinstellungen</string>
+    <string name="help_mirror_editor_settings_desc">Öffnet die layoutspezifischen Ambient-Anzeigeeinstellungen (Abdunkelung, Randüberblendung, Weichzeichnung). Änderungen gelten nur für das aktuell aktive Layout.</string>
+    <string name="help_mirror_editor_section_selected">Ausgewählter Ausschnitt</string>
+    <string name="help_mirror_editor_aspect_label">Seitenverhältnis-Modus</string>
+    <string name="help_mirror_editor_aspect_desc">Wechselt zwischen drei Seitenverhältnis-Modi für den ausgewählten Ausschnitt. Frei — keine Einschränkung, unabhängige Größenänderung. An Quelle anpassen — die Viewport-Abmessungen werden auf das Crop-Verhältnis der Quelle fixiert. An Quelle anpassen (Crop verkleinern) — der Quell-Crop wird stattdessen an die Viewport-Abmessungen angepasst.</string>
+    <string name="help_mirror_editor_shape_label">Form</string>
+    <string name="help_mirror_editor_shape_desc">Wechselt die Form des ausgewählten Ausschnitts zwischen Rechteck und Kreis. Nützlich für Spielminiaturkarten oder runde Anzeigen, die im Kreis besser aussehen.</string>
+    <string name="help_mirror_editor_crop_label">Crop bearbeiten</string>
+    <string name="help_mirror_editor_crop_desc">Öffnet die Crop-Auswahl für den gewählten Ausschnitt und ermöglicht es, einen Rahmen über den oberen Bildschirm zu ziehen, um den gespiegelten Bereich festzulegen.</string>
+    <string name="help_mirror_editor_delete_label">Ausschnitt löschen</string>
+    <string name="help_mirror_editor_delete_desc">Entfernt den ausgewählten Ausschnitt dauerhaft aus dem Layout. Wenn der gelöschte Ausschnitt Touch-Follow aktiv hatte, wird dieser Modus ebenfalls deaktiviert.</string>
+    <string name="help_mirror_editor_section_finish">Abschließen</string>
+    <string name="help_mirror_editor_done_label">Fertig</string>
+    <string name="help_mirror_editor_done_desc">Speichert alle in dieser Sitzung vorgenommenen Änderungen und schließt den Editor. Das aktualisierte Ausschnitt-Layout wird sofort aktiv.</string>
+    <string name="help_mirror_editor_cancel_label">Abbrechen</string>
+    <string name="help_mirror_editor_cancel_desc">Verwirft alle seit dem Öffnen des Editors vorgenommenen Änderungen und stellt das Layout in den vorherigen Zustand zurück. Es werden keine Änderungen gespeichert.</string>
+
     <!-- Global Settings help -->
     <string name="help_settings_title">Einstellungen — Hilfe</string>
     <string name="help_settings_intro">Die globalen Einstellungen gelten für die gesamte App und bleiben zwischen Sitzungen erhalten. Nutze die Abschnitts-Sprungleiste oben, um schnell zu einer bestimmten Gruppe zu scrollen.</string>

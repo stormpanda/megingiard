@@ -69,6 +69,11 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import kotlin.math.min
@@ -588,6 +593,8 @@ fun CutoutLayoutEditor(
 
         val currentClampedOffset by rememberUpdatedState(clampedOffset)
 
+        var showEditorHelp by remember { mutableStateOf(false) }
+
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -598,37 +605,13 @@ fun CutoutLayoutEditor(
             shape = RoundedCornerShape(TOOLBAR_CORNER),
             border = borderStrokeFor(colors.controlOverlayBorder)
         ) {
-            Box(
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 8.dp)
+            Row(
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 8.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Drag handle centered vertically on the left
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .size(width = 36.dp, height = 32.dp)
-                        .pointerInput(Unit) {
-                            detectDragGestures { change, dragAmount ->
-                                change.consume()
-                                val cur = currentClampedOffset
-                                toolbarOffset = IntOffset(
-                                    x = cur.x + dragAmount.x.roundToInt(),
-                                    y = cur.y + dragAmount.y.roundToInt()
-                                )
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.DragIndicator,
-                        contentDescription = stringResource(R.string.cd_drag_toolbar),
-                        tint = colors.onSurfaceSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
+                // Button grid (left side)
                 Column(
                     modifier = Modifier
-                        .padding(start = 40.dp, top = 4.dp, bottom = 4.dp, end = 4.dp) // clear drag handle (36dp + 4dp space)
                         .width(IntrinsicSize.Max),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.Start
@@ -873,9 +856,109 @@ fun CutoutLayoutEditor(
                             }
                         )
                     }
+                } // end Column (button grid)
+
+                Spacer(Modifier.width(8.dp))
+
+                // Right-side handle column: help icon at top, drag handle at bottom
+                Column(
+                    modifier = Modifier
+                        .size(width = 36.dp, height = 36.dp * 4 + 8.dp * 3) // mirror height of 4 rows + gaps
+                        .padding(top = 4.dp, bottom = 4.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    // Help icon at top
+                    HelpIconButton(onClick = { showEditorHelp = true })
+
+                    // Drag handle at bottom
+                    Box(
+                        modifier = Modifier
+                            .size(width = 36.dp, height = 32.dp)
+                            .pointerInput(Unit) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    val cur = currentClampedOffset
+                                    toolbarOffset = IntOffset(
+                                        x = cur.x + dragAmount.x.roundToInt(),
+                                        y = cur.y + dragAmount.y.roundToInt()
+                                    )
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.DragIndicator,
+                            contentDescription = stringResource(R.string.cd_drag_toolbar),
+                            tint = colors.onSurfaceSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
-            }
-        }
+            } // end Row
+        } // end Surface
+
+        CutoutLayoutEditorHelpModal(
+            visible = showEditorHelp,
+            onDismiss = { showEditorHelp = false },
+        )
+    }
+}
+
+@Composable
+private fun CutoutLayoutEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_mirror_editor_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_mirror_editor_intro))
+
+        HelpSection(stringResource(R.string.help_mirror_editor_section_global))
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.help_mirror_editor_add_label),
+            description = stringResource(R.string.help_mirror_editor_add_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Settings,
+            label = stringResource(R.string.help_mirror_editor_settings_label),
+            description = stringResource(R.string.help_mirror_editor_settings_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_mirror_editor_section_selected))
+        HelpEntry(
+            icon = Icons.Rounded.AspectRatio,
+            label = stringResource(R.string.help_mirror_editor_aspect_label),
+            description = stringResource(R.string.help_mirror_editor_aspect_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CropSquare,
+            label = stringResource(R.string.help_mirror_editor_shape_label),
+            description = stringResource(R.string.help_mirror_editor_shape_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Crop,
+            label = stringResource(R.string.help_mirror_editor_crop_label),
+            description = stringResource(R.string.help_mirror_editor_crop_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Delete,
+            label = stringResource(R.string.help_mirror_editor_delete_label),
+            description = stringResource(R.string.help_mirror_editor_delete_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_mirror_editor_section_finish))
+        HelpEntry(
+            icon = Icons.Rounded.Check,
+            label = stringResource(R.string.help_mirror_editor_done_label),
+            description = stringResource(R.string.help_mirror_editor_done_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Close,
+            label = stringResource(R.string.help_mirror_editor_cancel_label),
+            description = stringResource(R.string.help_mirror_editor_cancel_desc),
+        )
     }
 }
 
