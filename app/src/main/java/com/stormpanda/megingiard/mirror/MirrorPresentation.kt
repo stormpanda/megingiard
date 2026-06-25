@@ -98,7 +98,6 @@ private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
-private const val OFF_SCREEN_OFFSET = -10000f
 
 class MirrorPresentation(
     context: Context, 
@@ -708,6 +707,9 @@ class MultiCutoutContainer(
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
     }
     private val circlePath = Path()
+    private val maskPaint = Paint().apply {
+        color = Color.BLACK
+    }
 
     private var scratchBitmap: Bitmap? = null
 
@@ -996,9 +998,9 @@ class MultiCutoutContainer(
 
         if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
             val saveCount = canvas.save()
-            canvas.translate(OFF_SCREEN_OFFSET, OFF_SCREEN_OFFSET)
             canvas.clipRect(0f, 0f, 1f, 1f)
             drawChild(canvas, masterView, drawTime)
+            canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
             canvas.restoreToCount(saveCount)
         }
     }
