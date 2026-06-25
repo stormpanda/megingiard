@@ -62,6 +62,11 @@ import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppSettingsRow
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
@@ -115,6 +120,7 @@ fun GlobalSettingsScreen(
     var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
     var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
     
+    var showSettingsHelp by rememberSaveable { mutableStateOf(false) }
     var isAccessibilityActive by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -163,6 +169,9 @@ fun GlobalSettingsScreen(
                                 tint = colors.onSurface
                             )
                         }
+                    },
+                    actions = {
+                        HelpIconButton(onClick = { showSettingsHelp = true })
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
                 )
@@ -598,5 +607,107 @@ fun GlobalSettingsScreen(
             }
             null -> {}
         }
+    }
+
+    GlobalSettingsHelpModal(
+        visible = showSettingsHelp,
+        onDismiss = { showSettingsHelp = false },
+    )
+}
+
+@Composable
+private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    val colors = LocalAppColors.current
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_settings_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_settings_intro))
+
+        HelpSection(stringResource(R.string.help_settings_section_general))
+        HelpEntry(
+            label = stringResource(R.string.help_settings_overlay_position_label),
+            description = stringResource(R.string.help_settings_overlay_position_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_mirror_labels_label),
+            description = stringResource(R.string.help_settings_mirror_labels_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_exit_hints_label),
+            description = stringResource(R.string.help_settings_exit_hints_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_mirror_autostart_label),
+            description = stringResource(R.string.help_settings_mirror_autostart_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_auto_profile_label),
+            description = stringResource(R.string.help_settings_auto_profile_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_recents_label),
+            description = stringResource(R.string.help_settings_recents_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_accessibility_label),
+            description = stringResource(R.string.help_settings_accessibility_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_settings_section_appearance))
+        HelpEntry(
+            label = stringResource(R.string.help_settings_accent_label),
+            description = stringResource(R.string.help_settings_accent_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_theme_label),
+            description = stringResource(R.string.help_settings_theme_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_language_label),
+            description = stringResource(R.string.help_settings_language_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_settings_section_data))
+        HelpEntry(
+            label = stringResource(R.string.help_settings_gamepad_swap_label),
+            description = stringResource(R.string.help_settings_gamepad_swap_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_settings_section_config))
+        HelpEntry(
+            label = stringResource(R.string.help_settings_export_label),
+            description = stringResource(R.string.help_settings_export_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_import_label),
+            description = stringResource(R.string.help_settings_import_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Refresh,
+            label = stringResource(R.string.help_settings_restore_label),
+            description = stringResource(R.string.help_settings_restore_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_settings_section_privd))
+        HelpEntry(
+            label = stringResource(R.string.help_settings_privd_label),
+            description = stringResource(R.string.help_settings_privd_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_deadzone_label),
+            description = stringResource(R.string.help_settings_deadzone_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_settings_section_diagnostics))
+        HelpEntry(
+            label = stringResource(R.string.help_settings_log_level_label),
+            description = stringResource(R.string.help_settings_log_level_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_settings_save_log_label),
+            description = stringResource(R.string.help_settings_save_log_desc),
+        )
     }
 }

@@ -706,4 +706,175 @@ Open Settings to create a layout.</string>
     <string name="settings_mirror_touch_projection_desc">Forward touch inputs inside this cutout to the primary screen</string>
     <string name="settings_mirror_cutout_default">Cutout</string>
     <string name="settings_mirror_cutout_default_name_fmt">Cutout %1$d</string>
+
+    <!-- ── Help tutorial system ──────────────────────────────────────────── -->
+    <!-- Shared -->
+    <string name="help_open_cd">Open help</string>
+    <string name="help_close_cd">Close help</string>
+
+    <!-- MacroPad Editor help -->
+    <string name="help_editor_title">MacroPad Editor — Help</string>
+    <string name="help_editor_intro">The MacroPad Editor lets you build and organise every button that appears on your macro pad. Changes are saved immediately — there is no separate save step.</string>
+    <string name="help_editor_section_profiles">Profiles</string>
+    <string name="help_editor_profiles_label">Profile chips</string>
+    <string name="help_editor_profiles_desc">Tap a chip to switch the active profile. The active one is highlighted. Each profile contains its own set of layouts and macros, so you can have separate setups for different games.</string>
+    <string name="help_editor_add_profile_label">Add profile (＋)</string>
+    <string name="help_editor_add_profile_desc">Creates a brand-new empty profile. You will be prompted for a name immediately.</string>
+    <string name="help_editor_edit_profile_label">Edit / Rename profile (✏)</string>
+    <string name="help_editor_edit_profile_desc">Tap the pencil icon on the active profile chip to rename it or access profile-level options like duplication and deletion.</string>
+    <string name="help_editor_section_layouts">Layouts</string>
+    <string name="help_editor_layouts_label">Layout chips</string>
+    <string name="help_editor_layouts_desc">A profile can have multiple layouts — think of them as different button arrangements for the same game. Only enabled layouts appear in the Pill Menu for quick switching.</string>
+    <string name="help_editor_add_layout_label">Add layout (＋)</string>
+    <string name="help_editor_add_layout_desc">Creates a new empty layout inside the current profile. You can copy the layout to another profile using the layout chip\'s long-press menu.</string>
+    <string name="help_editor_section_toolbar">Toolbar</string>
+    <string name="help_editor_toolbar_button_label">Button</string>
+    <string name="help_editor_toolbar_button_desc">Places a new macro button on the canvas. After tapping, you can drag it to any position while the canvas is unlocked, then tap it to configure its action.</string>
+    <string name="help_editor_toolbar_macros_label">Macros</string>
+    <string name="help_editor_toolbar_macros_desc">Opens the Macro List for this profile — a separate screen where you can create, edit, and organise reusable macro sequences that can be assigned to buttons.</string>
+    <string name="help_editor_toolbar_grid_label">Grid toggle</string>
+    <string name="help_editor_toolbar_grid_desc">Cycles through grid modes: Off → Rectangular → Radial. When a grid is active, buttons snap to grid positions as you drag them, making precise layouts much easier.</string>
+    <string name="help_editor_toolbar_lock_label">Lock / Unlock canvas</string>
+    <string name="help_editor_toolbar_lock_desc">Locking prevents accidental button moves. Tap the lock icon to allow repositioning again. Buttons can be tapped to edit them regardless of lock state.</string>
+    <string name="help_editor_section_canvas">Canvas</string>
+    <string name="help_editor_canvas_drag_label">Drag button</string>
+    <string name="help_editor_canvas_drag_desc">While the canvas is unlocked, hold and drag any button to reposition it freely. Release to place it.</string>
+    <string name="help_editor_canvas_tap_label">Tap button</string>
+    <string name="help_editor_canvas_tap_desc">Opens the Button Edit dialog where you can rename the button, pick an icon, choose a macro action, and adjust its visual appearance.</string>
+
+    <!-- Macro List help -->
+    <string name="help_macrolist_title">Macro List — Help</string>
+    <string name="help_macrolist_intro">The Macro List shows every reusable macro belonging to the current profile. Macros are independent sequences of input steps that can be assigned to one or more pad buttons.</string>
+    <string name="help_macrolist_section_actions">Actions</string>
+    <string name="help_macrolist_add_label">Add macro (＋)</string>
+    <string name="help_macrolist_add_desc">Creates a new empty macro and opens the Timeline Editor immediately so you can start adding steps. Give it a meaningful name at the top of the editor.</string>
+    <string name="help_macrolist_section_list">Macro items</string>
+    <string name="help_macrolist_tap_label">Tap macro row</string>
+    <string name="help_macrolist_tap_desc">Opens the Macro Timeline Editor for that macro so you can view or edit its steps.</string>
+    <string name="help_macrolist_menu_label">⋮ Options menu</string>
+    <string name="help_macrolist_menu_desc">Each macro row has a three-dot menu with options to Rename, Duplicate (creates a copy with the same steps), or Delete the macro. Deletion is permanent.</string>
+    <string name="help_macrolist_drag_label">Drag handle (≡)</string>
+    <string name="help_macrolist_drag_desc">Long-press the drag handle on the right side of a macro row and move it to reorder macros in the list. The order here is cosmetic only and does not affect execution.</string>
+
+    <!-- Macro Timeline Editor help -->
+    <string name="help_timeline_title">Macro Timeline Editor — Help</string>
+    <string name="help_timeline_intro">The Timeline Editor is where you build the exact sequence of inputs that a macro performs. Steps are executed in order from top to bottom. Timings are recorded precisely or entered manually.</string>
+    <string name="help_timeline_section_topbar">Top bar controls</string>
+    <string name="help_timeline_name_label">Macro name field</string>
+    <string name="help_timeline_name_desc">Tap the text field to rename the macro. The name is saved when you tap Save.</string>
+    <string name="help_timeline_cancel_label">Cancel</string>
+    <string name="help_timeline_cancel_desc">Discards all unsaved changes to this macro and returns to the Macro List. Steps you added during this session are lost.</string>
+    <string name="help_timeline_save_label">Save</string>
+    <string name="help_timeline_save_desc">Saves the current name and all steps to the profile. The button is greyed out if the name field is empty.</string>
+    <string name="help_timeline_section_secondary">Secondary bar</string>
+    <string name="help_timeline_undo_label">Undo</string>
+    <string name="help_timeline_undo_desc">Reverts the last change to the step list. Up to 50 undo steps are kept during the current editing session.</string>
+    <string name="help_timeline_redo_label">Redo</string>
+    <string name="help_timeline_redo_desc">Re-applies a change that was previously undone. Redo history is cleared whenever you make a new edit.</string>
+    <string name="help_timeline_view_list_label">List view</string>
+    <string name="help_timeline_view_list_desc">Shows all steps as a vertical scrollable list — the most readable view for reviewing and editing individual step timings.</string>
+    <string name="help_timeline_view_timeline_label">Timeline view</string>
+    <string name="help_timeline_view_timeline_desc">Shows steps laid out horizontally on a time axis. Useful for spotting gaps, overlaps, and the overall shape of the macro timing.</string>
+    <string name="help_timeline_section_steps">Adding steps</string>
+    <string name="help_timeline_add_step_label">Add step (＋)</string>
+    <string name="help_timeline_add_step_desc">Opens a picker where you choose the input type: key press, gamepad button, mouse click, scroll, delay, and more. The step is added after the currently selected one.</string>
+    <string name="help_timeline_record_touch_label">Record touch</string>
+    <string name="help_timeline_record_touch_desc">Records a real tap or gesture on the primary screen and converts it into one or more Touch steps. The mirroring stream is started automatically if it isn\'t active.</string>
+    <string name="help_timeline_record_gamepad_label">Record gamepad</string>
+    <string name="help_timeline_record_gamepad_desc">Captures live button presses from the physical controller and converts them into Gamepad steps. If Privileged Mode is active, the physical gamepad recorder is used for higher fidelity.</string>
+    <string name="help_timeline_section_step_items">Step items</string>
+    <string name="help_timeline_step_tap_label">Tap step row</string>
+    <string name="help_timeline_step_tap_desc">Opens the step editor where you can change the input type, timing offset, duration, and other parameters specific to that step type.</string>
+    <string name="help_timeline_step_menu_label">⋮ Options menu</string>
+    <string name="help_timeline_step_menu_desc">Each step row has a three-dot menu offering Duplicate (inserts a copy directly after) and Delete.</string>
+    <string name="help_timeline_section_loop">Loop &amp; timing</string>
+    <string name="help_timeline_loop_label">Loop toggle</string>
+    <string name="help_timeline_loop_desc">When enabled, the macro repeats continuously until stopped. You can set a pause between repetitions using the slider that appears below the toggle.</string>
+    <string name="help_timeline_randomise_label">Randomise timing</string>
+    <string name="help_timeline_randomise_desc">Adds a small random offset (±range) to each step\'s timing on every execution. This makes the macro feel less mechanical and can help avoid bot-detection patterns in some apps.</string>
+
+    <!-- Ambient / Background Settings help -->
+    <string name="help_ambient_title">Screen Mirroring Settings — Help</string>
+    <string name="help_ambient_intro">These settings control how the mirrored top-screen image looks in ambient mode — when Megingiard runs in the background behind your buttons. All changes apply to the currently active layout only.</string>
+    <string name="help_ambient_section_display">Display</string>
+    <string name="help_ambient_dim_label">Dim</string>
+    <string name="help_ambient_dim_desc" formatted="false">Reduces the brightness of the mirrored image by overlaying a black veil. 0% means no dimming; 90% is nearly black. Use the eye icon to preview the effect live on the secondary screen without saving.</string>
+    <string name="help_ambient_blend_label">Edge blending</string>
+    <string name="help_ambient_blend_desc">Fades the edges of the mirror image inward so the mirrored content transitions smoothly into the background rather than cutting off sharply. Higher values produce a stronger vignette effect.</string>
+    <string name="help_ambient_smoothing_label">Smoothing</string>
+    <string name="help_ambient_smoothing_desc">Applies a blur to the mirrored image, reducing visual noise and making text or fine details less distracting while the MacroPad is in use.</string>
+    <string name="help_ambient_section_cutouts">Cutouts</string>
+    <string name="help_ambient_cutouts_label">Cutout list</string>
+    <string name="help_ambient_cutouts_desc">Each cutout is a transparent window punched through the mirror overlay, showing a live region of the primary screen. Tap the rename icon (✏) to give a cutout a meaningful name, or use the Cutout Layout Editor (opened from the Pill Menu) to resize and reposition them.</string>
+    <string name="help_ambient_preview_label">Preview eye icon (👁)</string>
+    <string name="help_ambient_preview_desc">Activates a live preview of that slider value on the secondary screen. Interact with the secondary screen\'s controls to confirm or cancel the value. This lets you see the effect without navigating away.</string>
+
+    <!-- Global Settings help -->
+    <string name="help_settings_title">Settings — Help</string>
+    <string name="help_settings_intro">Global Settings apply to the whole app and persist across sessions. Use the section jump row at the top to scroll quickly to a specific group.</string>
+    <string name="help_settings_section_general">General</string>
+    <string name="help_settings_overlay_position_label">Controls at bottom</string>
+    <string name="help_settings_overlay_position_desc">When enabled, the idle pill and pill menu slide in from the bottom edge instead of the top. Choose whichever position your grip makes easier to reach.</string>
+    <string name="help_settings_mirror_labels_label">Show mirror control labels</string>
+    <string name="help_settings_mirror_labels_desc">Adds short text labels below the mirror control icons inside the Pill Menu\'s top card, making it easier to identify each button at a glance.</string>
+    <string name="help_settings_exit_hints_label">Show fullscreen exit hints</string>
+    <string name="help_settings_exit_hints_desc">Shows a brief auto-fading banner when you enter the virtual keyboard or touchpad mode, reminding you how to exit the fullscreen overlay.</string>
+    <string name="help_settings_mirror_autostart_label">Auto-start mirroring</string>
+    <string name="help_settings_mirror_autostart_desc">Automatically begins screen mirroring whenever Megingiard comes to the foreground, so you never have to manually tap Start Mirroring.</string>
+    <string name="help_settings_auto_profile_label">Auto-switch profiles</string>
+    <string name="help_settings_auto_profile_desc">Requires the Megingiard Accessibility Service. Automatically activates the profile linked to the foreground app on the primary screen, so your macro buttons always match the current game.</string>
+    <string name="help_settings_recents_label">Exclude from Recents</string>
+    <string name="help_settings_recents_desc">Hides Megingiard from the Android task switcher. Useful if you want a cleaner Recents view while gaming.</string>
+    <string name="help_settings_accessibility_label">Accessibility Service</string>
+    <string name="help_settings_accessibility_desc">The Megingiard Accessibility Service enables automatic profile switching. Tap this row to open Android\'s Accessibility settings and enable it there. The status dot turns green when active.</string>
+    <string name="help_settings_section_appearance">Appearance</string>
+    <string name="help_settings_accent_label">Accent color</string>
+    <string name="help_settings_accent_desc">Sets the highlight color used for buttons, active chips, section headers, and other interactive elements throughout the app. Has no effect on Cyberpunk theme.</string>
+    <string name="help_settings_theme_label">Theme</string>
+    <string name="help_settings_theme_desc">Choose between Dark, Light, or the fixed Cyberpunk palette. Dark and Light themes respect the accent color setting; Cyberpunk uses its own built-in palette.</string>
+    <string name="help_settings_language_label">Language</string>
+    <string name="help_settings_language_desc">Overrides the system language for Megingiard\'s UI. Currently English and German are supported.</string>
+    <string name="help_settings_section_data">Data</string>
+    <string name="help_settings_gamepad_swap_label">Swap face buttons</string>
+    <string name="help_settings_gamepad_swap_desc">Swaps the A/B and X/Y face button assignments for gamepad macros, matching the Nintendo button layout if you prefer that convention.</string>
+    <string name="help_settings_section_config">Configuration</string>
+    <string name="help_settings_export_label">Export backup (.mgrd)</string>
+    <string name="help_settings_export_desc">Exports all profiles, layouts, macros, and app settings into a single portable .mgrd file. Share it with others or keep it as a backup. You can choose what to include in the export dialog.</string>
+    <string name="help_settings_import_label">Import backup</string>
+    <string name="help_settings_import_desc">Loads a .mgrd backup file from your device. You can choose to import from a file or from an internal backup. Existing data will be replaced by the imported content, so review carefully before confirming.</string>
+    <string name="help_settings_restore_label">Restore defaults</string>
+    <string name="help_settings_restore_desc">Resets all settings to their factory values. A 5-second countdown gives you time to cancel. This does not delete profiles or macros.</string>
+    <string name="help_settings_section_privd">Privileged Mode</string>
+    <string name="help_settings_privd_label">Privileged Mode card</string>
+    <string name="help_settings_privd_desc">Privileged Mode connects to a small helper daemon running under the Android shell user. This unlocks features that require direct kernel device access, such as higher-accuracy touch injection and physical gamepad recording. Follow the Setup Wizard to enable it — you will need ADB Wireless enabled on the device.</string>
+    <string name="help_settings_deadzone_label">Input deadzone</string>
+    <string name="help_settings_deadzone_desc">Adjustable deadzone for the privileged touch injector. A larger deadzone ignores small unintentional movements; a smaller value makes the injector more responsive. Only available when Privileged Mode is running.</string>
+    <string name="help_settings_section_diagnostics">Diagnostics</string>
+    <string name="help_settings_log_level_label">Log level</string>
+    <string name="help_settings_log_level_desc">Controls the verbosity of Megingiard\'s internal log. Debug and Verbose produce much more output — useful when diagnosing a bug but should be left at Warn or Info during normal use.</string>
+    <string name="help_settings_save_log_label">Save log report</string>
+    <string name="help_settings_save_log_desc">Captures the current logcat output filtered to Megingiard and saves it to a file, ready to attach to a bug report.</string>
+
+    <!-- Pill Menu help -->
+    <string name="help_pillmenu_title">Quick Menu — Help</string>
+    <string name="help_pillmenu_intro">The Quick Menu (Pill Menu) gives you fast access to profiles, layouts, and the most common actions — all without leaving your current game. Tap the pill on the screen edge to open it; tap the scrim to close.</string>
+    <string name="help_pillmenu_section_mirror">Mirror controls (top card)</string>
+    <string name="help_pillmenu_start_label">Start / Stop mirroring</string>
+    <string name="help_pillmenu_start_desc">Starts or stops the screen mirroring capture. When mirroring is active the top card expands to show additional controls.</string>
+    <string name="help_pillmenu_freeze_label">Freeze / Unfreeze</string>
+    <string name="help_pillmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
+    <string name="help_pillmenu_viewport_label">Edit viewport</string>
+    <string name="help_pillmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
+    <string name="help_pillmenu_section_macropad">MacroPad controls (bottom card)</string>
+    <string name="help_pillmenu_profiles_label">Profile chips</string>
+    <string name="help_pillmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the MacroPad Editor.</string>
+    <string name="help_pillmenu_layouts_label">Layout chips</string>
+    <string name="help_pillmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
+    <string name="help_pillmenu_edit_label">Edit layout</string>
+    <string name="help_pillmenu_edit_desc">Opens the MacroPad Editor where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
+    <string name="help_pillmenu_settings_label">Settings</string>
+    <string name="help_pillmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
+    <string name="help_pillmenu_help_label">Help (this screen)</string>
+    <string name="help_pillmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
+
 </resources>

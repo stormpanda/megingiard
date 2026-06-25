@@ -712,4 +712,175 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_mirror_touch_projection_desc">Berührungen innerhalb dieses Ausschnitts an den Hauptbildschirm weiterleiten</string>
     <string name="settings_mirror_cutout_default">Ausschnitt</string>
     <string name="settings_mirror_cutout_default_name_fmt">Ausschnitt %1$d</string>
+
+    <!-- ── Help tutorial system ──────────────────────────────────────────── -->
+    <!-- Shared -->
+    <string name="help_open_cd">Hilfe öffnen</string>
+    <string name="help_close_cd">Hilfe schließen</string>
+
+    <!-- MacroPad Editor help -->
+    <string name="help_editor_title">MacroPad-Editor — Hilfe</string>
+    <string name="help_editor_intro">Im MacroPad-Editor erstellst und organisierst du alle Schaltflächen auf deinem Makro-Pad. Änderungen werden sofort gespeichert — es gibt keinen separaten Speicherschritt.</string>
+    <string name="help_editor_section_profiles">Profile</string>
+    <string name="help_editor_profiles_label">Profil-Chips</string>
+    <string name="help_editor_profiles_desc">Tippe auf einen Chip, um das aktive Profil zu wechseln. Das aktive Profil ist hervorgehoben. Jedes Profil enthält eigene Layouts und Makros — ideal für verschiedene Spiele.</string>
+    <string name="help_editor_add_profile_label">Profil hinzufügen (＋)</string>
+    <string name="help_editor_add_profile_desc">Erstellt ein neues leeres Profil. Du wirst sofort nach einem Namen gefragt.</string>
+    <string name="help_editor_edit_profile_label">Profil bearbeiten / umbenennen (✏)</string>
+    <string name="help_editor_edit_profile_desc">Tippe auf das Stift-Symbol am aktiven Profil-Chip, um es umzubenennen oder Optionen wie Duplizieren und Löschen aufzurufen.</string>
+    <string name="help_editor_section_layouts">Layouts</string>
+    <string name="help_editor_layouts_label">Layout-Chips</string>
+    <string name="help_editor_layouts_desc">Ein Profil kann mehrere Layouts haben — verschiedene Schaltflächen-Anordnungen für dasselbe Spiel. Nur aktivierte Layouts erscheinen im Pill-Menü zum schnellen Wechseln.</string>
+    <string name="help_editor_add_layout_label">Layout hinzufügen (＋)</string>
+    <string name="help_editor_add_layout_desc">Erstellt ein neues leeres Layout im aktuellen Profil. Über das Langdruck-Menü des Layout-Chips kann es in ein anderes Profil kopiert werden.</string>
+    <string name="help_editor_section_toolbar">Toolbar</string>
+    <string name="help_editor_toolbar_button_label">Schaltfläche</string>
+    <string name="help_editor_toolbar_button_desc">Platziert eine neue Makro-Schaltfläche auf der Arbeitsfläche. Danach kannst du sie bei entsperrter Fläche beliebig verschieben und durch Antippen konfigurieren.</string>
+    <string name="help_editor_toolbar_macros_label">Makros</string>
+    <string name="help_editor_toolbar_macros_desc">Öffnet die Makro-Liste für dieses Profil — ein separater Bereich, in dem du Makro-Sequenzen erstellen, bearbeiten und verwalten kannst.</string>
+    <string name="help_editor_toolbar_grid_label">Raster-Umschalter</string>
+    <string name="help_editor_toolbar_grid_desc">Wechselt zwischen Raster-Modi: Aus → Rechteckig → Radial. Bei aktivem Raster rasten Schaltflächen beim Verschieben an Rasterpositionen ein.</string>
+    <string name="help_editor_toolbar_lock_label">Arbeitsfläche sperren / entsperren</string>
+    <string name="help_editor_toolbar_lock_desc">Das Sperren verhindert versehentliches Verschieben. Tippe erneut auf das Schloss-Symbol, um das Verschieben wieder zu erlauben.</string>
+    <string name="help_editor_section_canvas">Arbeitsfläche</string>
+    <string name="help_editor_canvas_drag_label">Schaltfläche ziehen</string>
+    <string name="help_editor_canvas_drag_desc">Bei entsperrter Fläche: halten und ziehen, um eine Schaltfläche neu zu positionieren. Loslassen zum Ablegen.</string>
+    <string name="help_editor_canvas_tap_label">Schaltfläche antippen</string>
+    <string name="help_editor_canvas_tap_desc">Öffnet den Schaltflächen-Bearbeitungsdialog zum Umbenennen, Symbol-Auswählen, Makro-Zuweisen und Aussehen-Anpassen.</string>
+
+    <!-- Macro List help -->
+    <string name="help_macrolist_title">Makro-Liste — Hilfe</string>
+    <string name="help_macrolist_intro">Die Makro-Liste zeigt alle wiederverwendbaren Makros des aktuellen Profils. Makros sind eigenständige Eingabe-Sequenzen, die einer oder mehreren Pad-Schaltflächen zugewiesen werden können.</string>
+    <string name="help_macrolist_section_actions">Aktionen</string>
+    <string name="help_macrolist_add_label">Makro hinzufügen (＋)</string>
+    <string name="help_macrolist_add_desc">Erstellt ein neues leeres Makro und öffnet sofort den Timeline-Editor, damit du Schritte hinzufügen kannst. Gib dem Makro oben im Editor einen aussagekräftigen Namen.</string>
+    <string name="help_macrolist_section_list">Makro-Einträge</string>
+    <string name="help_macrolist_tap_label">Makro-Zeile antippen</string>
+    <string name="help_macrolist_tap_desc">Öffnet den Makro-Timeline-Editor für dieses Makro, um Schritte anzuzeigen oder zu bearbeiten.</string>
+    <string name="help_macrolist_menu_label">⋮ Optionsmenü</string>
+    <string name="help_macrolist_menu_desc">Jede Makro-Zeile hat ein Drei-Punkte-Menü mit Optionen zum Umbenennen, Duplizieren (Kopie mit gleichen Schritten) oder Löschen. Löschen ist dauerhaft.</string>
+    <string name="help_macrolist_drag_label">Zieh-Griff (≡)</string>
+    <string name="help_macrolist_drag_desc">Den Zieh-Griff rechts in der Makro-Zeile gedrückt halten und bewegen, um Makros in der Liste neu anzuordnen. Die Reihenfolge ist rein kosmetisch.</string>
+
+    <!-- Macro Timeline Editor help -->
+    <string name="help_timeline_title">Makro-Timeline-Editor — Hilfe</string>
+    <string name="help_timeline_intro">Im Timeline-Editor baust du die genaue Abfolge von Eingaben, die ein Makro ausführt. Schritte werden von oben nach unten ausgeführt. Zeiten können aufgezeichnet oder manuell eingegeben werden.</string>
+    <string name="help_timeline_section_topbar">Steuerleiste oben</string>
+    <string name="help_timeline_name_label">Makro-Namensfeld</string>
+    <string name="help_timeline_name_desc">Tippe in das Textfeld, um das Makro umzubenennen. Der Name wird beim Antippen von „Speichern" gespeichert.</string>
+    <string name="help_timeline_cancel_label">Abbrechen</string>
+    <string name="help_timeline_cancel_desc">Verwirft alle nicht gespeicherten Änderungen und kehrt zur Makro-Liste zurück. In dieser Sitzung hinzugefügte Schritte gehen verloren.</string>
+    <string name="help_timeline_save_label">Speichern</string>
+    <string name="help_timeline_save_desc">Speichert den aktuellen Namen und alle Schritte im Profil. Die Schaltfläche ist ausgegraut, wenn das Namensfeld leer ist.</string>
+    <string name="help_timeline_section_secondary">Sekundäre Leiste</string>
+    <string name="help_timeline_undo_label">Rückgängig</string>
+    <string name="help_timeline_undo_desc">Macht die letzte Änderung an der Schritt-Liste rückgängig. Bis zu 50 Rückgängig-Schritte werden pro Sitzung gespeichert.</string>
+    <string name="help_timeline_redo_label">Wiederholen</string>
+    <string name="help_timeline_redo_desc">Stellt eine rückgängig gemachte Änderung wieder her. Der Verlauf wird bei jeder neuen Bearbeitung gelöscht.</string>
+    <string name="help_timeline_view_list_label">Listenansicht</string>
+    <string name="help_timeline_view_list_desc">Zeigt alle Schritte als vertikale scrollbare Liste — die übersichtlichste Ansicht zum Prüfen und Bearbeiten einzelner Schritt-Zeiten.</string>
+    <string name="help_timeline_view_timeline_label">Timeline-Ansicht</string>
+    <string name="help_timeline_view_timeline_desc">Stellt Schritte horizontal auf einer Zeitachse dar. Hilfreich, um Lücken, Überlappungen und die Gesamtstruktur des Makro-Timings zu erkennen.</string>
+    <string name="help_timeline_section_steps">Schritte hinzufügen</string>
+    <string name="help_timeline_add_step_label">Schritt hinzufügen (＋)</string>
+    <string name="help_timeline_add_step_desc">Öffnet eine Auswahl mit Eingabe-Typen: Tastendruck, Gamepad-Taste, Mausklick, Scrollen, Verzögerung und mehr. Der Schritt wird nach dem aktuell gewählten eingefügt.</string>
+    <string name="help_timeline_record_touch_label">Touch aufzeichnen</string>
+    <string name="help_timeline_record_touch_desc">Zeichnet einen echten Tipp-Vorgang oder eine Geste auf dem Primärbildschirm auf und wandelt ihn in Touch-Schritte um. Die Spiegelung wird bei Bedarf automatisch gestartet.</string>
+    <string name="help_timeline_record_gamepad_label">Gamepad aufzeichnen</string>
+    <string name="help_timeline_record_gamepad_desc">Erfasst live Tastendruck des physischen Controllers und wandelt sie in Gamepad-Schritte um. Im Privileged Mode wird der physische Gamepad-Rekorder für höhere Genauigkeit verwendet.</string>
+    <string name="help_timeline_section_step_items">Schritt-Einträge</string>
+    <string name="help_timeline_step_tap_label">Schritt-Zeile antippen</string>
+    <string name="help_timeline_step_tap_desc">Öffnet den Schritt-Editor zum Ändern von Eingabe-Typ, Zeitversatz, Dauer und anderen schritt-spezifischen Parametern.</string>
+    <string name="help_timeline_step_menu_label">⋮ Optionsmenü</string>
+    <string name="help_timeline_step_menu_desc">Jede Schritt-Zeile hat ein Drei-Punkte-Menü mit Duplizieren (Kopie direkt danach einfügen) und Löschen.</string>
+    <string name="help_timeline_section_loop">Schleife &amp; Timing</string>
+    <string name="help_timeline_loop_label">Schleifen-Umschalter</string>
+    <string name="help_timeline_loop_desc">Wenn aktiviert, wird das Makro dauerhaft wiederholt bis es gestoppt wird. Eine Pause zwischen Wiederholungen kann mit dem dann erscheinenden Regler eingestellt werden.</string>
+    <string name="help_timeline_randomise_label">Timing randomisieren</string>
+    <string name="help_timeline_randomise_desc">Fügt bei jeder Ausführung einen kleinen zufälligen Versatz (±Bereich) zu den Schritt-Zeiten hinzu. Das macht das Makro weniger mechanisch und kann Bot-Erkennung in manchen Apps erschweren.</string>
+
+    <!-- Ambient / Background Settings help -->
+    <string name="help_ambient_title">Bildschirmspiegelungs-Einstellungen — Hilfe</string>
+    <string name="help_ambient_intro">Diese Einstellungen steuern, wie das gespiegelte Bild im Ambient-Modus aussieht — wenn Megingiard im Hintergrund hinter deinen Schaltflächen läuft. Alle Änderungen gelten nur für das aktuell aktive Layout.</string>
+    <string name="help_ambient_section_display">Anzeige</string>
+    <string name="help_ambient_dim_label">Abdunkeln</string>
+    <string name="help_ambient_dim_desc" formatted="false">Reduziert die Helligkeit des gespiegelten Bildes durch einen schwarzen Schleier. 0 % bedeutet kein Abdunkeln; 90 % ist nahezu schwarz. Das Auge-Symbol ermöglicht eine Live-Vorschau auf dem Sekundärbildschirm.</string>
+    <string name="help_ambient_blend_label">Randüberblendung</string>
+    <string name="help_ambient_blend_desc">Blendet die Ränder des Spiegelbildes nach innen aus, sodass der Inhalt fließend in den Hintergrund übergeht statt abrupt abzubrechen. Höhere Werte erzeugen einen stärkeren Vignetten-Effekt.</string>
+    <string name="help_ambient_smoothing_label">Weichzeichnung</string>
+    <string name="help_ambient_smoothing_desc">Wendet einen Weichzeichner auf das gespiegelte Bild an, um visuelle Unruhe zu reduzieren und feine Details weniger ablenkend zu machen.</string>
+    <string name="help_ambient_section_cutouts">Ausschnitte</string>
+    <string name="help_ambient_cutouts_label">Ausschnitt-Liste</string>
+    <string name="help_ambient_cutouts_desc">Jeder Ausschnitt ist ein transparentes Fenster im Spiegel-Overlay, das einen Live-Bereich des Primärbildschirms zeigt. Tippe auf das Stift-Symbol, um einen Ausschnitt umzubenennen. Verwende den Ausschnitt-Layout-Editor (über das Pill-Menü), um Größe und Position anzupassen.</string>
+    <string name="help_ambient_preview_label">Vorschau-Auge (👁)</string>
+    <string name="help_ambient_preview_desc">Aktiviert eine Live-Vorschau des Reglerwerts auf dem Sekundärbildschirm. Interagiere dort mit den Steuerelementen, um den Wert zu bestätigen oder abzubrechen.</string>
+
+    <!-- Global Settings help -->
+    <string name="help_settings_title">Einstellungen — Hilfe</string>
+    <string name="help_settings_intro">Die globalen Einstellungen gelten für die gesamte App und bleiben zwischen Sitzungen erhalten. Nutze die Abschnitts-Sprungleiste oben, um schnell zu einer bestimmten Gruppe zu scrollen.</string>
+    <string name="help_settings_section_general">Allgemein</string>
+    <string name="help_settings_overlay_position_label">Steuerelemente unten</string>
+    <string name="help_settings_overlay_position_desc">Wenn aktiviert, erscheinen Idle-Pill und Pill-Menü am unteren Bildschirmrand statt oben. Wähle die Position, die für deinen Griff bequemer ist.</string>
+    <string name="help_settings_mirror_labels_label">Spiegel-Steuerbezeichnungen anzeigen</string>
+    <string name="help_settings_mirror_labels_desc">Zeigt kurze Textbezeichnungen unter den Spiegel-Steuersymbolen in der oberen Karte des Pill-Menüs, um die Symbole leichter erkennbar zu machen.</string>
+    <string name="help_settings_exit_hints_label">Vollbild-Beenden-Hinweise anzeigen</string>
+    <string name="help_settings_exit_hints_desc">Zeigt beim Öffnen der virtuellen Tastatur oder des Touchpads kurz einen Hinweis an, wie das Vollbild-Overlay verlassen werden kann.</string>
+    <string name="help_settings_mirror_autostart_label">Spiegelung automatisch starten</string>
+    <string name="help_settings_mirror_autostart_desc">Startet die Bildschirmspiegelung automatisch, sobald Megingiard in den Vordergrund kommt, ohne dass „Spiegelung starten" manuell getippt werden muss.</string>
+    <string name="help_settings_auto_profile_label">Profile automatisch wechseln</string>
+    <string name="help_settings_auto_profile_desc">Erfordert den Megingiard-Bedienungshilfen-Dienst. Aktiviert automatisch das Profil, das der aktuell im Vordergrund befindlichen App zugeordnet ist.</string>
+    <string name="help_settings_recents_label">Aus Zuletzt geöffnet ausblenden</string>
+    <string name="help_settings_recents_desc">Blendet Megingiard aus dem Android-Task-Wechsler aus. Praktisch für eine übersichtlichere Aufgaben-Ansicht beim Spielen.</string>
+    <string name="help_settings_accessibility_label">Bedienungshilfen-Dienst</string>
+    <string name="help_settings_accessibility_desc">Der Megingiard-Bedienungshilfen-Dienst ermöglicht automatische Profilwechsel. Tippe auf diese Zeile, um die Android-Bedienungshilfen-Einstellungen zu öffnen und ihn dort zu aktivieren. Der Statuspunkt wird grün, wenn er aktiv ist.</string>
+    <string name="help_settings_section_appearance">Erscheinungsbild</string>
+    <string name="help_settings_accent_label">Akzentfarbe</string>
+    <string name="help_settings_accent_desc">Legt die Hervorhebungsfarbe für Schaltflächen, aktive Chips, Abschnitts-Überschriften und andere interaktive Elemente fest. Hat keinen Einfluss auf das Cyberpunk-Design.</string>
+    <string name="help_settings_theme_label">Design</string>
+    <string name="help_settings_theme_desc">Wähle zwischen Dunkel, Hell oder dem festen Cyberpunk-Farbschema. Dunkel und Hell berücksichtigen die Akzentfarbe; Cyberpunk verwendet eine eigene Palette.</string>
+    <string name="help_settings_language_label">Sprache</string>
+    <string name="help_settings_language_desc">Überschreibt die Systemsprache für Megingiards Benutzeroberfläche. Derzeit werden Englisch und Deutsch unterstützt.</string>
+    <string name="help_settings_section_data">Daten</string>
+    <string name="help_settings_gamepad_swap_label">Gesichtstasten tauschen</string>
+    <string name="help_settings_gamepad_swap_desc">Tauscht die A/B- und X/Y-Gesichtstastenbelegungen für Gamepad-Makros aus — passend zum Nintendo-Button-Layout.</string>
+    <string name="help_settings_section_config">Konfiguration</string>
+    <string name="help_settings_export_label">Backup exportieren (.mgrd)</string>
+    <string name="help_settings_export_desc">Exportiert alle Profile, Layouts, Makros und App-Einstellungen in eine portable .mgrd-Datei. Teile sie mit anderen oder bewahre sie als Backup auf. Im Export-Dialog kannst du auswählen, was enthalten sein soll.</string>
+    <string name="help_settings_import_label">Backup importieren</string>
+    <string name="help_settings_import_desc">Lädt eine .mgrd-Backup-Datei vom Gerät. Bestehende Daten werden durch den Import ersetzt — überprüfe den Inhalt sorgfältig, bevor du bestätigst.</string>
+    <string name="help_settings_restore_label">Standardwerte wiederherstellen</string>
+    <string name="help_settings_restore_desc">Setzt alle Einstellungen auf Werkseinstellungen zurück. Ein 5-Sekunden-Countdown gibt Zeit zum Abbrechen. Profile und Makros werden nicht gelöscht.</string>
+    <string name="help_settings_section_privd">Privilegierter Modus</string>
+    <string name="help_settings_privd_label">Privilegierter-Modus-Karte</string>
+    <string name="help_settings_privd_desc">Der privilegierte Modus verbindet sich mit einem kleinen Hilfsprozess unter dem Android-Shell-Benutzer. Er schaltet Funktionen frei, die direkten Kernel-Gerätezugriff erfordern, wie genauere Touch-Injektion und physische Gamepad-Aufzeichnung. Folge dem Einrichtungsassistenten — ADB Wireless muss auf dem Gerät aktiviert sein.</string>
+    <string name="help_settings_deadzone_label">Eingabe-Totzone</string>
+    <string name="help_settings_deadzone_desc">Einstellbare Totzone für den privilegierten Touch-Injektor. Eine größere Totzone ignoriert kleine unbeabsichtigte Bewegungen; ein kleinerer Wert macht den Injektor reaktionsschneller. Nur verfügbar wenn der privilegierte Modus aktiv ist.</string>
+    <string name="help_settings_section_diagnostics">Diagnose</string>
+    <string name="help_settings_log_level_label">Log-Level</string>
+    <string name="help_settings_log_level_desc">Steuert die Ausführlichkeit von Megingiards internem Log. Debug und Verbose erzeugen deutlich mehr Ausgaben — nützlich bei der Fehlersuche, sollten aber im Normalbetrieb auf Warn oder Info belassen werden.</string>
+    <string name="help_settings_save_log_label">Log-Bericht speichern</string>
+    <string name="help_settings_save_log_desc">Erfasst die aktuelle Logcat-Ausgabe gefiltert auf Megingiard und speichert sie in einer Datei, bereit zum Anhängen an einen Fehlerbericht.</string>
+
+    <!-- Pill Menu help -->
+    <string name="help_pillmenu_title">Schnellmenü — Hilfe</string>
+    <string name="help_pillmenu_intro">Das Schnellmenü (Pill-Menü) bietet schnellen Zugriff auf Profile, Layouts und die häufigsten Aktionen — ohne das aktuelle Spiel zu verlassen. Tippe auf die Pill am Bildschirmrand, um es zu öffnen; auf den Scrim, um es zu schließen.</string>
+    <string name="help_pillmenu_section_mirror">Spiegel-Steuerung (obere Karte)</string>
+    <string name="help_pillmenu_start_label">Spiegelung starten / stoppen</string>
+    <string name="help_pillmenu_start_desc">Startet oder stoppt die Bildschirmspiegelung. Bei aktiver Spiegelung erweitert sich die obere Karte um weitere Steuerelemente.</string>
+    <string name="help_pillmenu_freeze_label">Einfrieren / Auftauen</string>
+    <string name="help_pillmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
+    <string name="help_pillmenu_viewport_label">Viewport bearbeiten</string>
+    <string name="help_pillmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
+    <string name="help_pillmenu_section_macropad">MacroPad-Steuerung (untere Karte)</string>
+    <string name="help_pillmenu_profiles_label">Profil-Chips</string>
+    <string name="help_pillmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Makroprofil zu wechseln. Das aktive Profil ist hervorgehoben. Profile werden im MacroPad-Editor verwaltet.</string>
+    <string name="help_pillmenu_layouts_label">Layout-Chips</string>
+    <string name="help_pillmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Schaltflächen-Layout im aktuellen Profil zu wechseln. Nur als aktiviert markierte Layouts erscheinen hier.</string>
+    <string name="help_pillmenu_edit_label">Layout bearbeiten</string>
+    <string name="help_pillmenu_edit_desc">Öffnet den MacroPad-Editor zum Hinzufügen, Verschieben und Konfigurieren von Schaltflächen sowie zum Verwalten von Profilen, Layouts und Makros.</string>
+    <string name="help_pillmenu_settings_label">Einstellungen</string>
+    <string name="help_pillmenu_settings_desc">Öffnet die globalen Einstellungen für App-weite Konfiguration wie Design, Akzentfarbe, automatischen Spiegelungsstart und Privilegierter-Modus-Einrichtung.</string>
+    <string name="help_pillmenu_help_label">Hilfe (diese Ansicht)</string>
+    <string name="help_pillmenu_help_desc">Öffnet dieses Hilfe-Blatt mit einer Erklärung aller Steuerelemente im Schnellmenü.</string>
+
 </resources>
