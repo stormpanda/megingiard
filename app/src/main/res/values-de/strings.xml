@@ -763,7 +763,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_macrolist_tap_label">Makro-Zeile antippen</string>
     <string name="help_macrolist_tap_desc">Öffnet den Makro-Timeline-Editor für dieses Makro, um Schritte anzuzeigen oder zu bearbeiten.</string>
     <string name="help_macrolist_menu_label">Optionsmenü</string>
-    <string name="help_macrolist_menu_desc">Jede Makro-Zeile hat ein Drei-Punkte-Menü mit Optionen zum Umbenennen, Duplizieren (Kopie mit gleichen Schritten) oder Löschen. Löschen ist dauerhaft.</string>
+    <string name="help_macrolist_menu_desc">Jede Makro-Zeile hat ein Optionen-Menü (drei Punkte) zum Umbenennen, Duplizieren, In Profil kopieren oder Löschen des Makros. Das Löschen ist dauerhaft.</string>
     <string name="help_macrolist_drag_label">Zieh-Griff</string>
     <string name="help_macrolist_drag_desc">Den Zieh-Griff rechts in der Makro-Zeile gedrückt halten und bewegen, um Makros in der Liste neu anzuordnen. Die Reihenfolge ist rein kosmetisch.</string>
 

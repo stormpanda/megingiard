@@ -757,7 +757,7 @@ Open Settings to create a layout.</string>
     <string name="help_macrolist_tap_label">Tap macro row</string>
     <string name="help_macrolist_tap_desc">Opens the Macro Timeline Editor for that macro so you can view or edit its steps.</string>
     <string name="help_macrolist_menu_label">Options menu</string>
-    <string name="help_macrolist_menu_desc">Each macro row has a three-dot menu with options to Rename, Duplicate (creates a copy with the same steps), or Delete the macro. Deletion is permanent.</string>
+    <string name="help_macrolist_menu_desc">Each macro row has an options menu (three dots) to Rename, Duplicate, Copy to profile, or Delete the macro. Deletion is permanent.</string>
     <string name="help_macrolist_drag_label">Drag handle</string>
     <string name="help_macrolist_drag_desc">Long-press the drag handle on the right side of a macro row and move it to reorder macros in the list. The order here is cosmetic only and does not affect execution.</string>
 
