@@ -822,23 +822,16 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_title">Mirror Editor — Help</string>
     <string name="help_mirror_editor_intro">The Mirror Editor lets you add, position, resize, and configure the viewport cutouts that appear on the secondary screen during mirroring. Select a cutout by tapping it on screen, then use the toolbar buttons below to act on it.</string>
     <string name="help_mirror_editor_section_global">Global actions</string>
-    <string name="help_mirror_editor_add_label">Add</string>
     <string name="help_mirror_editor_add_desc">Creates a new viewport cutout at a free position on the secondary screen. Up to 10 cutouts are allowed per layout. The new cutout is automatically selected.</string>
-    <string name="help_mirror_editor_settings_label">Settings</string>
     <string name="help_mirror_editor_settings_desc">Opens the per-layout ambient display settings (dim level, edge blending, smoothing). Changes apply only to the currently active layout.</string>
     <string name="help_mirror_editor_section_selected">Selected cutout</string>
-    <string name="help_mirror_editor_aspect_label">Aspect ratio mode</string>
     <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Lock to source — the viewport dimensions are locked to the source crop ratio. Lock to source (shrink crop) — the source crop is adjusted to fit the viewport dimensions instead.</string>
     <string name="help_mirror_editor_shape_label">Shape</string>
     <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
-    <string name="help_mirror_editor_crop_label">Crop</string>
     <string name="help_mirror_editor_crop_desc">Opens the crop selector for the selected cutout, letting you drag a frame over the top screen to choose which region is mirrored into this cutout.</string>
-    <string name="help_mirror_editor_delete_label">Delete</string>
     <string name="help_mirror_editor_delete_desc">Permanently removes the selected cutout from the layout. If the deleted cutout had touch-follow enabled, that mode is also deactivated.</string>
     <string name="help_mirror_editor_section_finish">Finish</string>
-    <string name="help_mirror_editor_done_label">Done</string>
     <string name="help_mirror_editor_done_desc">Saves all changes made in this session and closes the editor. The updated cutout layout becomes immediately active.</string>
-    <string name="help_mirror_editor_cancel_label">Cancel</string>
     <string name="help_mirror_editor_cancel_desc">Discards all changes made since the editor was opened and reverts the layout to its previous state. No modifications are saved.</string>
 
     <!-- Global Settings help -->

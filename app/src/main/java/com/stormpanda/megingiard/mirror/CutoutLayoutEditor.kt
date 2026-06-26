@@ -917,19 +917,19 @@ private fun CutoutLayoutEditorHelpModal(visible: Boolean, onDismiss: () -> Unit)
         HelpSection(stringResource(R.string.help_mirror_editor_section_global))
         HelpEntry(
             icon = Icons.Rounded.Add,
-            label = stringResource(R.string.help_mirror_editor_add_label),
+            label = stringResource(R.string.mirror_editor_toolbar_add),
             description = stringResource(R.string.help_mirror_editor_add_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Settings,
-            label = stringResource(R.string.help_mirror_editor_settings_label),
+            label = stringResource(R.string.mirror_editor_toolbar_settings),
             description = stringResource(R.string.help_mirror_editor_settings_desc),
         )
 
         HelpSection(stringResource(R.string.help_mirror_editor_section_selected))
         HelpEntry(
             icon = Icons.Rounded.AspectRatio,
-            label = stringResource(R.string.help_mirror_editor_aspect_label),
+            label = stringResource(R.string.mirror_editor_aspect_ratio_mode),
             description = stringResource(R.string.help_mirror_editor_aspect_desc),
         )
         HelpEntry(
@@ -939,24 +939,24 @@ private fun CutoutLayoutEditorHelpModal(visible: Boolean, onDismiss: () -> Unit)
         )
         HelpEntry(
             icon = Icons.Rounded.Crop,
-            label = stringResource(R.string.help_mirror_editor_crop_label),
+            label = stringResource(R.string.mirror_editor_toolbar_crop),
             description = stringResource(R.string.help_mirror_editor_crop_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Delete,
-            label = stringResource(R.string.help_mirror_editor_delete_label),
+            label = stringResource(R.string.mirror_editor_toolbar_delete),
             description = stringResource(R.string.help_mirror_editor_delete_desc),
         )
 
         HelpSection(stringResource(R.string.help_mirror_editor_section_finish))
         HelpEntry(
             icon = Icons.Rounded.Check,
-            label = stringResource(R.string.help_mirror_editor_done_label),
+            label = stringResource(R.string.mirror_editor_toolbar_done),
             description = stringResource(R.string.help_mirror_editor_done_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Close,
-            label = stringResource(R.string.help_mirror_editor_cancel_label),
+            label = stringResource(R.string.mirror_editor_toolbar_cancel),
             description = stringResource(R.string.help_mirror_editor_cancel_desc),
         )
     }
