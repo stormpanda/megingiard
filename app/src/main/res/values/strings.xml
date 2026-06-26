@@ -873,16 +873,11 @@ Open Settings to create a layout.</string>
     <string name="help_pillmenu_start_desc">Starts or stops the screen mirroring capture. When mirroring is active the top card expands to show additional controls.</string>
     <string name="help_pillmenu_freeze_label">Freeze / Unfreeze</string>
     <string name="help_pillmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
-    <string name="help_pillmenu_viewport_label">Viewport</string>
     <string name="help_pillmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
     <string name="help_pillmenu_section_macropad">MacroPad controls (bottom card)</string>
-    <string name="help_pillmenu_profiles_label">Profile chips</string>
     <string name="help_pillmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
-    <string name="help_pillmenu_layouts_label">Layout chips</string>
     <string name="help_pillmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
-    <string name="help_pillmenu_edit_label">Edit Profile/Layout</string>
     <string name="help_pillmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
-    <string name="help_pillmenu_settings_label">Global Settings</string>
     <string name="help_pillmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
     <string name="help_pillmenu_help_label">Help (this screen)</string>
     <string name="help_pillmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>

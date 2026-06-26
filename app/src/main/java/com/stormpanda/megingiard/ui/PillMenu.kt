@@ -24,7 +24,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -263,31 +263,32 @@ private fun PillMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             description = stringResource(R.string.help_pillmenu_freeze_desc),
         )
         HelpEntry(
-            icon = Icons.AutoMirrored.Rounded.ViewQuilt,
-            label = stringResource(R.string.help_pillmenu_viewport_label),
+            icon = Icons.Rounded.Edit,
+            label = stringResource(R.string.pill_menu_screen_mirroring),
             description = stringResource(R.string.help_pillmenu_viewport_desc),
         )
 
         HelpSection(stringResource(R.string.help_pillmenu_section_macropad))
         HelpEntry(
-            label = stringResource(R.string.help_pillmenu_profiles_label),
+            label = stringResource(R.string.pill_menu_profile_label),
             description = stringResource(R.string.help_pillmenu_profiles_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_pillmenu_layouts_label),
+            label = stringResource(R.string.pill_menu_layout_label),
             description = stringResource(R.string.help_pillmenu_layouts_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.help_pillmenu_edit_label),
+            label = stringResource(R.string.pill_menu_edit_layout),
             description = stringResource(R.string.help_pillmenu_edit_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Settings,
-            label = stringResource(R.string.help_pillmenu_settings_label),
+            label = stringResource(R.string.pill_menu_global_settings),
             description = stringResource(R.string.help_pillmenu_settings_desc),
         )
         HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.HelpOutline,
             label = stringResource(R.string.help_pillmenu_help_label),
             description = stringResource(R.string.help_pillmenu_help_desc),
         )

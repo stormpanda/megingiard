@@ -879,16 +879,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_pillmenu_start_desc">Startet oder stoppt die Bildschirmspiegelung. Bei aktiver Spiegelung erweitert sich die obere Karte um weitere Steuerelemente.</string>
     <string name="help_pillmenu_freeze_label">Einfrieren / Auftauen</string>
     <string name="help_pillmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
-    <string name="help_pillmenu_viewport_label">Viewport</string>
     <string name="help_pillmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
     <string name="help_pillmenu_section_macropad">MacroPad-Steuerung (untere Karte)</string>
-    <string name="help_pillmenu_profiles_label">Profil-Chips</string>
     <string name="help_pillmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Makroprofil zu wechseln. Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
-    <string name="help_pillmenu_layouts_label">Layout-Chips</string>
     <string name="help_pillmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Schaltflächen-Layout im aktuellen Profil zu wechseln. Nur als aktiviert markierte Layouts erscheinen hier.</string>
-    <string name="help_pillmenu_edit_label">Profil/Layout bearbeiten</string>
     <string name="help_pillmenu_edit_desc">Öffnet den Bereich „Profil/Layout bearbeiten“, in dem du Schaltflächen hinzufügen, verschieben und konfigurieren sowie Profile, Layouts und Makros verwalten kannst.</string>
-    <string name="help_pillmenu_settings_label">Globale Einstellungen</string>
     <string name="help_pillmenu_settings_desc">Öffnet die globalen Einstellungen für App-weite Konfiguration wie Design, Akzentfarbe, automatischen Spiegelungsstart und Privilegierter-Modus-Einrichtung.</string>
     <string name="help_pillmenu_help_label">Hilfe (diese Ansicht)</string>
     <string name="help_pillmenu_help_desc">Öffnet dieses Hilfe-Blatt mit einer Erklärung aller Steuerelemente im Schnellmenü.</string>
