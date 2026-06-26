@@ -689,25 +689,38 @@ private fun BackgroundSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit)
     ) {
         HelpIntro(stringResource(R.string.help_ambient_intro))
 
-        HelpSection(stringResource(R.string.help_ambient_section_display))
+        HelpSection(stringResource(R.string.settings_section_general))
         HelpEntry(
             icon = Icons.Rounded.Visibility,
-            label = stringResource(R.string.help_ambient_dim_label),
+            label = stringResource(R.string.settings_macropad_dim),
             description = stringResource(R.string.help_ambient_dim_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_ambient_blend_label),
+            icon = Icons.Rounded.Visibility,
+            label = stringResource(R.string.mirror_edge_blend_label),
             description = stringResource(R.string.help_ambient_blend_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_ambient_smoothing_label),
-            description = stringResource(R.string.help_ambient_smoothing_desc),
+            icon = null,
+            label = stringResource(R.string.settings_mirror_follow_touch),
+            description = stringResource(R.string.help_ambient_follow_touch_desc),
         )
 
-        HelpSection(stringResource(R.string.help_ambient_section_cutouts))
+        HelpSection(stringResource(R.string.settings_section_cutouts))
         HelpEntry(
+            icon = null,
             label = stringResource(R.string.help_ambient_cutouts_label),
             description = stringResource(R.string.help_ambient_cutouts_desc),
+        )
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.settings_mirror_follow_smoothing),
+            description = stringResource(R.string.help_ambient_smoothing_desc),
+        )
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.settings_mirror_touch_projection),
+            description = stringResource(R.string.help_ambient_touch_projection_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Visibility,

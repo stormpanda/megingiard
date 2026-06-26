@@ -805,16 +805,16 @@ Open Settings to create a layout.</string>
     <!-- Ambient / Background Settings help -->
     <string name="help_ambient_title">Screen Mirroring Settings — Help</string>
     <string name="help_ambient_intro">These settings control how the mirrored top-screen image looks in ambient mode — when Megingiard runs in the background behind your buttons. All changes apply to the currently active layout only.</string>
-    <string name="help_ambient_section_display">Display</string>
     <string name="help_ambient_dim_label">Dim</string>
     <string name="help_ambient_dim_desc" formatted="false">Reduces the brightness of the mirrored image by overlaying a black veil. 0% means no dimming; 90% is nearly black. Use the eye icon to preview the effect live on the secondary screen without saving.</string>
     <string name="help_ambient_blend_label">Edge blending</string>
     <string name="help_ambient_blend_desc">Fades the edges of the mirror image inward so the mirrored content transitions smoothly into the background rather than cutting off sharply. Higher values produce a stronger vignette effect.</string>
+    <string name="help_ambient_follow_touch_desc">Centers the mirrored viewport on the spot you last touched on the primary screen. Select a cutout from the dropdown to enable it, or choose Off to disable.</string>
+    <string name="help_ambient_cutouts_label">Cutouts list</string>
+    <string name="help_ambient_cutouts_desc">Lists all mirroring cutouts defined for this layout. You can rename each cutout using its edit (pencil) icon, or adjust its motion smoothing and touch projection settings.</string>
     <string name="help_ambient_smoothing_label">Smoothing</string>
-    <string name="help_ambient_smoothing_desc">Applies a blur to the mirrored image, reducing visual noise and making text or fine details less distracting while the MacroPad is in use.</string>
-    <string name="help_ambient_section_cutouts">Cutouts</string>
-    <string name="help_ambient_cutouts_label">Cutout list</string>
-    <string name="help_ambient_cutouts_desc">Each cutout is a transparent window punched through the mirror overlay, showing a live region of the primary screen. Tap the rename icon (✏) to give a cutout a meaningful name, or use the Cutout Layout Editor (opened from the Pill Menu) to resize and reposition them.</string>
+    <string name="help_ambient_smoothing_desc">Applies motion smoothing to the cutout panning (Off, Light, Medium, or Strong). Higher values make the viewport movement smoother during panning but can add a tiny amount of latency.</string>
+    <string name="help_ambient_touch_projection_desc">Translates touch inputs on the mirrored cutout area back to the primary display. When active, touches inside the cutout trigger corresponding actions on the main screen.</string>
     <string name="help_ambient_preview_label">Preview</string>
     <string name="help_ambient_preview_desc">Activates a live preview of that slider value on the secondary screen. Interact with the secondary screen\'s controls to confirm or cancel the value. This lets you see the effect without navigating away.</string>
 
