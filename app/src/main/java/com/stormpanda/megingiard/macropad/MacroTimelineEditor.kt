@@ -19,7 +19,10 @@ import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -758,6 +761,11 @@ private fun MacroTimelineHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             label = stringResource(R.string.help_timeline_view_timeline_label),
             description = stringResource(R.string.help_timeline_view_timeline_desc),
         )
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.help_timeline_shift_label),
+            description = stringResource(R.string.help_timeline_shift_desc),
+        )
 
         HelpSection(stringResource(R.string.help_timeline_section_steps))
         HelpEntry(
@@ -775,16 +783,22 @@ private fun MacroTimelineHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             label = stringResource(R.string.help_timeline_record_gamepad_label),
             description = stringResource(R.string.help_timeline_record_gamepad_desc),
         )
+        HelpEntry(
+            icon = Icons.Rounded.PlayArrow,
+            label = stringResource(R.string.help_timeline_test_run_label),
+            description = stringResource(R.string.help_timeline_test_run_desc),
+        )
 
         HelpSection(stringResource(R.string.help_timeline_section_step_items))
         HelpEntry(
-            label = stringResource(R.string.help_timeline_step_tap_label),
-            description = stringResource(R.string.help_timeline_step_tap_desc),
+            icon = Icons.Rounded.Edit,
+            label = stringResource(R.string.help_timeline_step_edit_label),
+            description = stringResource(R.string.help_timeline_step_edit_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.MoreVert,
-            label = stringResource(R.string.help_timeline_step_menu_label),
-            description = stringResource(R.string.help_timeline_step_menu_desc),
+            icon = Icons.Rounded.Delete,
+            label = stringResource(R.string.help_timeline_step_delete_label),
+            description = stringResource(R.string.help_timeline_step_delete_desc),
         )
 
         HelpSection(stringResource(R.string.help_timeline_section_loop))
