@@ -625,88 +625,95 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
     ) {
         HelpIntro(stringResource(R.string.help_settings_intro))
 
-        HelpSection(stringResource(R.string.help_settings_section_general))
+        HelpSection(stringResource(R.string.settings_section_general))
         HelpEntry(
-            label = stringResource(R.string.help_settings_overlay_position_label),
+            label = stringResource(R.string.settings_overlay_position),
             description = stringResource(R.string.help_settings_overlay_position_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_mirror_labels_label),
+            label = stringResource(R.string.settings_show_mirror_control_labels),
             description = stringResource(R.string.help_settings_mirror_labels_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_exit_hints_label),
+            label = stringResource(R.string.settings_show_fullscreen_exit_hints),
             description = stringResource(R.string.help_settings_exit_hints_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_mirror_autostart_label),
+            label = stringResource(R.string.settings_mirror_auto_start),
             description = stringResource(R.string.help_settings_mirror_autostart_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_auto_profile_label),
+            label = stringResource(R.string.settings_auto_switch_profiles),
             description = stringResource(R.string.help_settings_auto_profile_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_recents_label),
+            label = stringResource(R.string.settings_exclude_from_recents),
             description = stringResource(R.string.help_settings_recents_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_accessibility_label),
+            label = stringResource(R.string.settings_accessibility_status),
             description = stringResource(R.string.help_settings_accessibility_desc),
         )
-
-        HelpSection(stringResource(R.string.help_settings_section_appearance))
         HelpEntry(
-            label = stringResource(R.string.help_settings_accent_label),
-            description = stringResource(R.string.help_settings_accent_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.help_settings_theme_label),
-            description = stringResource(R.string.help_settings_theme_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.help_settings_language_label),
+            label = stringResource(R.string.settings_language),
             description = stringResource(R.string.help_settings_language_desc),
         )
-
-        HelpSection(stringResource(R.string.help_settings_section_data))
         HelpEntry(
-            label = stringResource(R.string.help_settings_gamepad_swap_label),
+            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
             description = stringResource(R.string.help_settings_gamepad_swap_desc),
         )
 
-        HelpSection(stringResource(R.string.help_settings_section_config))
+        HelpSection(stringResource(R.string.settings_section_appearance))
         HelpEntry(
-            label = stringResource(R.string.help_settings_export_label),
-            description = stringResource(R.string.help_settings_export_desc),
+            label = stringResource(R.string.settings_theme),
+            description = stringResource(R.string.help_settings_theme_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_import_label),
-            description = stringResource(R.string.help_settings_import_desc),
+            label = stringResource(R.string.settings_accent_color),
+            description = stringResource(R.string.help_settings_accent_desc),
         )
+
+        HelpSection(stringResource(R.string.settings_section_data))
         HelpEntry(
-            icon = Icons.Rounded.Refresh,
-            label = stringResource(R.string.help_settings_restore_label),
+            label = stringResource(R.string.settings_restore_defaults),
             description = stringResource(R.string.help_settings_restore_desc),
         )
 
-        HelpSection(stringResource(R.string.help_settings_section_privd))
+        HelpSection(stringResource(R.string.settings_section_config))
         HelpEntry(
-            label = stringResource(R.string.help_settings_privd_label),
+            label = stringResource(R.string.settings_config_export),
+            description = stringResource(R.string.help_settings_export_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_config_import),
+            description = stringResource(R.string.help_settings_import_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_config_export_profile),
+            description = stringResource(R.string.help_settings_export_profile_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_config_import_profile),
+            description = stringResource(R.string.help_settings_import_profile_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_section_privileged_mode))
+        HelpEntry(
+            label = stringResource(R.string.privd_title),
             description = stringResource(R.string.help_settings_privd_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_deadzone_label),
+            label = stringResource(R.string.privd_deadzone_title),
             description = stringResource(R.string.help_settings_deadzone_desc),
         )
 
-        HelpSection(stringResource(R.string.help_settings_section_diagnostics))
+        HelpSection(stringResource(R.string.settings_section_diagnostics))
         HelpEntry(
-            label = stringResource(R.string.help_settings_log_level_label),
+            label = stringResource(R.string.settings_log_level),
             description = stringResource(R.string.help_settings_log_level_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.help_settings_save_log_label),
+            label = stringResource(R.string.settings_save_log_report),
             description = stringResource(R.string.help_settings_save_log_desc),
         )
     }
