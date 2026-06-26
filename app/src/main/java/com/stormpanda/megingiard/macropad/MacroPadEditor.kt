@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Lock
@@ -563,7 +564,7 @@ private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
 
         HelpSection(stringResource(R.string.help_editor_section_profiles))
         HelpEntry(
-            icon = Icons.Rounded.MoreVert,
+            icon = null,
             label = stringResource(R.string.help_editor_profiles_label),
             description = stringResource(R.string.help_editor_profiles_desc),
         )
@@ -573,14 +574,14 @@ private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             description = stringResource(R.string.help_editor_add_profile_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.help_editor_edit_profile_label),
-            description = stringResource(R.string.help_editor_edit_profile_desc),
+            icon = Icons.Rounded.MoreVert,
+            label = stringResource(R.string.help_editor_profile_options_label),
+            description = stringResource(R.string.help_editor_profile_options_desc),
         )
 
         HelpSection(stringResource(R.string.help_editor_section_layouts))
         HelpEntry(
-            icon = Icons.Rounded.MoreVert,
+            icon = null,
             label = stringResource(R.string.help_editor_layouts_label),
             description = stringResource(R.string.help_editor_layouts_desc),
         )
@@ -588,6 +589,11 @@ private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             icon = Icons.Rounded.Add,
             label = stringResource(R.string.help_editor_add_layout_label),
             description = stringResource(R.string.help_editor_add_layout_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.MoreVert,
+            label = stringResource(R.string.help_editor_layout_options_label),
+            description = stringResource(R.string.help_editor_layout_options_desc),
         )
 
         HelpSection(stringResource(R.string.help_editor_section_toolbar))
@@ -617,9 +623,16 @@ private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             label = stringResource(R.string.help_editor_canvas_drag_label),
             description = stringResource(R.string.help_editor_canvas_drag_desc),
         )
+
+        HelpSection(stringResource(R.string.help_editor_section_buttons))
         HelpEntry(
-            label = stringResource(R.string.help_editor_canvas_tap_label),
-            description = stringResource(R.string.help_editor_canvas_tap_desc),
+            label = stringResource(R.string.help_editor_button_edit_label),
+            description = stringResource(R.string.help_editor_button_edit_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.DragHandle,
+            label = stringResource(R.string.help_editor_button_reorder_label),
+            description = stringResource(R.string.help_editor_button_reorder_desc),
         )
     }
 }

@@ -90,6 +90,7 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 | `BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` |
 | `GlobalSettingsScreen.kt` | `GlobalSettingsHelpModal` |
 | `PillMenu.kt` | `PillMenuHelpModal` |
+| `CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` |
 
 ### State management
 
@@ -125,5 +126,6 @@ help_close_cd  — content description for the Close button
 | `macropad/BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` content + icon wiring |
 | `settings/GlobalSettingsScreen.kt` | `GlobalSettingsHelpModal` content + icon wiring |
 | `ui/PillMenu.kt` | `PillMenuHelpModal` content + icon wiring |
+| `mirror/CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` content + icon wiring |
 | `res/values/strings.xml` | English help strings (prefix `help_`) |
 | `res/values-de/strings.xml` | German help strings (prefix `help_`) |
