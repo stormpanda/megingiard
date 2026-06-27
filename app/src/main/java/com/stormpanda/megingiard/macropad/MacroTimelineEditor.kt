@@ -86,6 +86,7 @@ private const val MTE_TIMING_MAX_MS = 10_000L
 private const val MTE_GAMEPAD_INJECTOR_INIT_MS = 200L
 
 private const val MTE_VIEW_CHIP_SPACING = 6
+private const val MTE_NAME_FIELD_WEIGHT = 0.55f
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -293,7 +294,7 @@ internal fun MacroTimelineEditor(
                         cursorColor = accentColor,
                     ),
                     modifier = Modifier
-                        .weight(0.55f)
+                        .weight(MTE_NAME_FIELD_WEIGHT)
                         .padding(vertical = 6.dp),
                 )
                 Spacer(Modifier.width(8.dp))
