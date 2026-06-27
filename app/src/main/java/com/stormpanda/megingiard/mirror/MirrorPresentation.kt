@@ -78,7 +78,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.ui.draw.shadow
@@ -552,11 +557,19 @@ class MirrorPresentation(
                             // Layer 7: Screenshot Preview Overlay
                             val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsState()
                             var isPreviewVisible by remember { mutableStateOf(false) }
+                            val sweepOffset = remember { Animatable(-0.5f) }
 
                             LaunchedEffect(previewBitmap) {
                                 val bitmap = previewBitmap
                                 if (bitmap != null) {
                                     isPreviewVisible = true
+                                    sweepOffset.snapTo(-0.5f)
+                                    launch {
+                                        sweepOffset.animateTo(
+                                            targetValue = 1.5f,
+                                            animationSpec = tween(durationMillis = 1000, easing = LinearEasing)
+                                        )
+                                    }
                                     delay(1800) // stay for 1.8 seconds
                                     isPreviewVisible = false
                                     delay(400) // wait for slide/fade out animation to finish
@@ -587,6 +600,30 @@ class MirrorPresentation(
                                             .background(ComposeColor(0xFFFCFBF9)) // clean off-white photograph frame
                                             .border(width = 1.dp, color = ComposeColor(0xFFE5E4E0), shape = RoundedCornerShape(4.dp))
                                             .padding(12.dp) // photograph frame margins
+                                            .drawWithContent {
+                                                drawContent()
+                                                val progress = sweepOffset.value
+                                                if (progress in -0.5f..1.5f) {
+                                                    val width = size.width
+                                                    val height = size.height
+                                                    val startX = width * progress
+                                                    val startY = 0f
+                                                    val endX = startX + width * 0.4f
+                                                    val endY = height
+                                                    val glossBrush = Brush.linearGradient(
+                                                        colors = listOf(
+                                                            ComposeColor.Transparent,
+                                                            ComposeColor.White.copy(alpha = 0.02f),
+                                                            ComposeColor.White.copy(alpha = 0.45f),
+                                                            ComposeColor.White.copy(alpha = 0.02f),
+                                                            ComposeColor.Transparent
+                                                        ),
+                                                        start = Offset(startX, startY),
+                                                        end = Offset(endX, endY)
+                                                    )
+                                                    drawRect(brush = glossBrush)
+                                                }
+                                            }
                                     ) {
                                         Image(
                                             bitmap = currentBitmap.asImageBitmap(),
