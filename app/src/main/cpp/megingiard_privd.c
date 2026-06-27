@@ -891,16 +891,36 @@ static int serve_client(int client_fd) {
 
         if (strncmp(line, "SCREENSHOT ", 11) == 0) {
             char path[384];
-            char cmd[512];
             char resp[128];
             int rl;
-            if (sscanf(line, "SCREENSHOT %383s", path) == 1) {
-                snprintf(cmd, sizeof(cmd), "/system/bin/screencap -p %s", path);
-                int rc = system(cmd);
-                if (rc == 0) {
-                    rl = snprintf(resp, sizeof(resp), "SCREENSHOT_OK\n");
+            char *p = line + 11;
+            size_t len = strlen(p);
+            while (len > 0 && (p[len - 1] == '\n' || p[len - 1] == '\r')) {
+                p[len - 1] = '\0';
+                len--;
+            }
+            if (len > 0 && len < sizeof(path)) {
+                strncpy(path, p, sizeof(path));
+                path[sizeof(path) - 1] = '\0';
+                pid_t pid = fork();
+                if (pid == 0) {
+                    char *args[] = {"/system/bin/screencap", "-p", path, NULL};
+                    execv(args[0], args);
+                    _exit(127);
+                } else if (pid > 0) {
+                    int status;
+                    if (waitpid(pid, &status, 0) == pid) {
+                        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                            rl = snprintf(resp, sizeof(resp), "SCREENSHOT_OK\n");
+                        } else {
+                            int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+                            rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR %d\n", exit_code);
+                        }
+                    } else {
+                        rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR WAIT_FAILED\n");
+                    }
                 } else {
-                    rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR %d\n", rc);
+                    rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR FORK_FAILED\n");
                 }
             } else {
                 rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR INVALID_PATH\n");

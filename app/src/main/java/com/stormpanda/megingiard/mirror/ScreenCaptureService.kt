@@ -204,22 +204,36 @@ class ScreenCaptureService : Service() {
                             try {
                                 val previewBitmap = Bitmap.createBitmap(bitmap)
                                 ScreenCaptureManager.showScreenshotPreview(previewBitmap)
-                            } catch (e: Exception) {
-                                AppLog.e(TAG, "Failed to create preview bitmap", e)
+                            } catch (t: Throwable) {
+                                AppLog.e(TAG, "Failed to create preview bitmap", t)
                             }
 
                             scope.launch(Dispatchers.IO) {
                                 try {
-                                    saveScreenshotToGallery(this@ScreenCaptureService, bitmap)
-                                } catch (e: Exception) {
-                                    AppLog.e(TAG, "Failed to save screenshot", e)
-                                }
-                                launch(Dispatchers.Main) {
-                                    bitmap.recycle()
+                                    val savedUri = saveScreenshotToGallery(this@ScreenCaptureService, bitmap)
+                                    if (savedUri != null) {
+                                        launch(Dispatchers.Main) {
+                                            Toast.makeText(this@ScreenCaptureService, R.string.screenshot_saved, Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        launch(Dispatchers.Main) {
+                                            Toast.makeText(this@ScreenCaptureService, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } catch (t: Throwable) {
+                                    AppLog.e(TAG, "Failed to save screenshot", t)
+                                    launch(Dispatchers.Main) {
+                                        Toast.makeText(this@ScreenCaptureService, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                    }
+                                } finally {
+                                    launch(Dispatchers.Main) {
+                                        bitmap.recycle()
+                                    }
                                 }
                             }
                         } else {
                             AppLog.e(TAG, "Screenshot capture returned null bitmap")
+                            Toast.makeText(this@ScreenCaptureService, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
                         }
                     }
                     ScreenCaptureManager.consumeScreenshotRequest()
@@ -233,7 +247,7 @@ class ScreenCaptureService : Service() {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/Megingiard")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, ScreenCaptureManager.SCREENSHOT_SUBDIR)
         }
 
         val resolver = context.contentResolver
@@ -247,8 +261,8 @@ class ScreenCaptureService : Service() {
             }
             AppLog.i(TAG, "Screenshot saved to $uri")
             uri
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to write screenshot to MediaStore", e)
+        } catch (t: Throwable) {
+            AppLog.e(TAG, "Failed to write screenshot to MediaStore", t)
             resolver.delete(uri, null, null)
             null
         }

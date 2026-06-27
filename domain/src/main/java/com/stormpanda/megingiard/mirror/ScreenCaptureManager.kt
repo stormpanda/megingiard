@@ -20,6 +20,8 @@ import kotlin.math.abs
 private const val TAG = "ScreenCaptureManager"
 
 object ScreenCaptureManager {
+    const val SCREENSHOT_SUBDIR = "Pictures/Megingiard"
+
     private val _isCapturing = MutableStateFlow(false)
     val isCapturing: StateFlow<Boolean> = _isCapturing.asStateFlow()
 

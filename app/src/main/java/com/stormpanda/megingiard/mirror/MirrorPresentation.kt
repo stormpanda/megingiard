@@ -53,6 +53,7 @@ import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
+import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import android.graphics.LinearGradient
@@ -554,88 +555,7 @@ class MirrorPresentation(
                                 IdlePill()
                             }
 
-                            // Layer 7: Screenshot Preview Overlay
-                            val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsState()
-                            var isPreviewVisible by remember { mutableStateOf(false) }
-                            val sweepOffset = remember { Animatable(-0.5f) }
-
-                            LaunchedEffect(previewBitmap) {
-                                val bitmap = previewBitmap
-                                if (bitmap != null) {
-                                    isPreviewVisible = true
-                                    sweepOffset.snapTo(-0.5f)
-                                    launch {
-                                        sweepOffset.animateTo(
-                                            targetValue = 1.5f,
-                                            animationSpec = tween(durationMillis = 1000, easing = LinearEasing)
-                                        )
-                                    }
-                                    delay(1800) // stay for 1.8 seconds
-                                    isPreviewVisible = false
-                                    delay(400) // wait for slide/fade out animation to finish
-                                    ScreenCaptureManager.clearScreenshotPreview()
-                                } else {
-                                    isPreviewVisible = false
-                                }
-                            }
-
-                            val currentBitmap = previewBitmap
-                            if (currentBitmap != null) {
-                                AnimatedVisibility(
-                                    visible = isPreviewVisible,
-                                    enter = fadeIn(animationSpec = tween(durationMillis = 400)),
-                                    exit = fadeOut(animationSpec = tween(durationMillis = 400)) + slideOutHorizontally(
-                                        targetOffsetX = { fullWidth -> fullWidth },
-                                        animationSpec = tween(durationMillis = 400)
-                                    ),
-                                    modifier = Modifier.align(Alignment.Center)
-                                ) {
-                                    val aspectRatio = remember(currentBitmap) {
-                                        currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth(0.85f)
-                                            .shadow(elevation = 12.dp, shape = RoundedCornerShape(4.dp))
-                                            .background(ComposeColor(0xFFFCFBF9)) // clean off-white photograph frame
-                                            .border(width = 1.dp, color = ComposeColor(0xFFE5E4E0), shape = RoundedCornerShape(4.dp))
-                                            .padding(12.dp) // photograph frame margins
-                                            .drawWithContent {
-                                                drawContent()
-                                                val progress = sweepOffset.value
-                                                if (progress in -0.5f..1.5f) {
-                                                    val width = size.width
-                                                    val height = size.height
-                                                    val startX = width * progress
-                                                    val startY = 0f
-                                                    val endX = startX + width * 0.4f
-                                                    val endY = height
-                                                    val glossBrush = Brush.linearGradient(
-                                                        colors = listOf(
-                                                            ComposeColor.Transparent,
-                                                            ComposeColor.White.copy(alpha = 0.02f),
-                                                            ComposeColor.White.copy(alpha = 0.45f),
-                                                            ComposeColor.White.copy(alpha = 0.02f),
-                                                            ComposeColor.Transparent
-                                                        ),
-                                                        start = Offset(startX, startY),
-                                                        end = Offset(endX, endY)
-                                                    )
-                                                    drawRect(brush = glossBrush)
-                                                }
-                                            }
-                                    ) {
-                                        Image(
-                                            bitmap = currentBitmap.asImageBitmap(),
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .aspectRatio(aspectRatio)
-                                                .border(width = 1.dp, color = ComposeColor(0x22000000)) // slight dark edge on the image itself
-                                        )
-                                    }
-                                }
-                            }
+                            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
                         }
                     }
                 }
