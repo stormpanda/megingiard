@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
@@ -91,7 +93,7 @@ private val SLIDER_VALUE_WIDTH = 80.dp
 private val TOOLBAR_EXPANDED_WIDTH = 360.dp
 private const val SLIDER_VALUE_MIN = 0f
 private const val SLIDER_VALUE_MAX = 100f
-private val TOOLBAR_SAFE_MARGIN = 16.dp
+private val TOOLBAR_SAFE_MARGIN = 0.dp
 private const val TOUCH_AREA_RATIO = 0.25f
 
 @Composable
@@ -691,7 +693,20 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        HelpIconButton(onClick = { showEditorHelp = true })
+                        Box(
+                            modifier = Modifier
+                                .size(width = 48.dp, height = 32.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable { showEditorHelp = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
+                                contentDescription = stringResource(R.string.help_open_cd),
+                                tint = colors.onSurfaceSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     // Row 2: Aspect Ratio | Shape Toggle | Spacer
