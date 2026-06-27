@@ -161,9 +161,9 @@ Implement according to plan. Follow `AGENTS.md` strictly:
 
 ---
 
-### 6. ✅ Update documentation (mandatory)
+### 6. ✅ Update documentation & help tutorials (mandatory)
 
-After implementation, always synchronize documentation:
+After implementation, always synchronize documentation and in-app help:
 
 **Extending an existing feature:**
 
@@ -171,12 +171,14 @@ After implementation, always synchronize documentation:
 2. Check whether Functional Requirements or Technical Implementation sections are now outdated
 3. Add new requirements and a technical description for the new behavior
 4. If the architecture is affected: review `docs/ARCHITECTURE.md`
+5. **Update in-app help/tutorials**: if the change modifies user interaction (buttons, view modes, settings, gestures), update the corresponding `HelpModal` files, onboarding/welcome popups, and localized strings (`strings.xml`, `values-de/strings.xml`).
 
 **Brand-new feature:**
 
 1. Create `docs/features/<feature>/FEATURE.md` based on `docs/features/FEATURE_TEMPLATE.md`
 2. Add a row to the Documentation Map table in `AGENTS.md §2`
 3. Check `docs/ARCHITECTURE.md` for impact
+4. **Create in-app help/tutorials**: build the help modal and onboarding dialog for the new feature, registering their strings in the localized resources.
 
 ---
 
@@ -200,6 +202,7 @@ Perform a static review — no build command:
 - [ ] `Presentation` mode switches use `hide()`/`show()`, not `dismiss()`
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY` (for new Services)
 - [ ] `FEATURE.md` updated / created
+- [ ] In-app help, tutorials, and localized strings updated / created
 - [ ] No suspected compile errors
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
