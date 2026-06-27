@@ -1,6 +1,6 @@
 # Megingiard for **AYN Thor**
 
-Welcome to **Megingiard**, a bespoke companion application specifically designed for the **AYN Thor** dual-screen Android handheld. Megingiard combines deep Android hardware video stream manipulation with modern Jetpack Compose interfaces to turn your secondary display into a fully interactive tool belt: a latency-free mirror of your primary screen, a virtual keyboard, a virtual touchpad, a configurable MacroPad, and a virtual gamepad — all driven by native input injection for sub-millisecond response.
+Welcome to **Megingiard**, a bespoke companion application specifically designed for the **AYN Thor** dual-screen Android handheld. Megingiard combines deep Android hardware video stream manipulation with modern Jetpack Compose interfaces to turn your secondary display into a fully interactive tool belt: a latency-free, multi-cutout mirror of your primary screen, a virtual keyboard, a virtual touchpad, a configurable MacroPad, and a virtual gamepad — all driven by native input injection for sub-millisecond response.
 
 ---
 
@@ -34,11 +34,13 @@ Given its hardware-specific approach and advanced features, this project is exte
 
 ## Core Features
 
-### 1. Latency-Free Screen Mirroring
+### 1. Latency-Free Multi-Cutout Screen Mirroring
 
 - **Direct Hardware Pipe:** Utilizes Android's `MediaProjection` coupled with native `VirtualDisplay` directly into a `SurfaceView` to bypass all software composition and copy steps.
-- **Gallery-Style Pan & Zoom (1× – 10×):** Smart and natural multi-touch gestures with physical boundaries (_Hard Edges_ to prevent vanishing windows) and automatic snap-back when zooming out.
-- **Resource-Efficient Freeze Frame:** Physically decouples the video producer from the renderer to freeze the current frame in the hardware buffer. Zoom and pan the frozen reference frame with zero extra CPU or memory overhead.
+- **Multi-Cutout Layout Editor:** Define up to 10 cropped regions ("cutouts") of the primary screen and arrange them freely on the secondary screen using a single-surface duplication architecture that prevents token conflicts and display freezes.
+- **Aspect Ratio Lock Modes:** Configure aspect ratio locking per cutout: _Free_ for independent sizing, _Top_ (source-locked) to scale destination bounds uniformly, and _Bottom_ (destination-locked) to auto-adjust source crops.
+- **Edge Blending & Circular Shapes:** Apply additive edge gradients (up to 100 dp) to create seamless transitions without dark seams between adjacent cutouts, or toggle cutouts to render as perfect circles.
+- **Temporal Motion Smoothing:** Select between Off, Light, Medium, or Strong temporal filtering (exponential moving average) to stabilize UI elements in individual cutouts.
 - **Follow Touch Mode:** Real-time touch tracking on the primary screen. The mirror viewport automatically centers on the spot last touched on the primary screen at your current zoom level, with optional movement smoothing. Can be configured to temporarily disable during macro execution to prevent movement conflicts.
 - **Customizable Controls:** Fully integrate mirror controls (Start / Stop / Freeze / Viewport reset) directly as buttons onto your custom MacroPad layouts, or use the always-present controls in the Pill Menu overlay.
 
