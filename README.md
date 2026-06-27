@@ -319,8 +319,7 @@ Megingiard is completely free to use for personal, non-commercial use. If you en
 
 ## Links
 
+- Megingiard is featured in [GAFT (Games & Apps for AYN Thor)](https://andreyvelsk.github.io/GAFT/) - A community-curated directory of dual-screen games, companion app pairings, and Android ports for the AYN Thor, created and maintained by Andrey Velsk (@andreyvelsk).
 - Are you creating videos, guides, or posts featuring Megingiard? Reach out, and I will gladly feature your content right here!
 
 ---
-
-_Developed on the edge of the Android Graphics Architecture._
