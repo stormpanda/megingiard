@@ -59,7 +59,9 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -120,6 +122,8 @@ internal fun MacroTimelineEditor(
     var usingPhysicalRecorder by remember { mutableStateOf(false) }
     var showPhysicalRecordingSheet by remember { mutableStateOf(false) }
     var showTimelineHelp by remember { mutableStateOf(false) }
+    val showMacroEditorTutorial by SettingsManager.showMacroEditorTutorial.collectAsState()
+    var showMacroEditorTutorialLocal by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -712,6 +716,16 @@ internal fun MacroTimelineEditor(
         visible = showTimelineHelp,
         onDismiss = { showTimelineHelp = false },
     )
+
+    if (showMacroEditorTutorial && showMacroEditorTutorialLocal) {
+        MacroEditorTutorialDialog(
+            onDismiss = { showMacroEditorTutorialLocal = false },
+            onDismissForever = {
+                showMacroEditorTutorialLocal = false
+                SettingsManager.setShowMacroEditorTutorial(false)
+            }
+        )
+    }
 }
 
 @Composable

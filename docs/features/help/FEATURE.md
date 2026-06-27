@@ -128,6 +128,7 @@ help_close_cd  — content description for the Close button
 |---|---|
 | `ui/HelpModal.kt` | Shared `HelpModal`, `HelpIconButton`, `HelpEntry`, `HelpSection`, `HelpIntro` composables |
 | `ui/WelcomeTutorialDialog.kt` | First-boot welcome onboarding dialog |
+| `ui/MacroEditorTutorialDialog.kt` | Macro editor onboarding tutorial dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
 | `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |
 | `macropad/MacroTimelineEditor.kt` | `MacroTimelineHelpModal` content + icon wiring |

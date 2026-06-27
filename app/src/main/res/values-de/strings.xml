@@ -892,4 +892,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_reset_tutorials_toast">Tutorials werden nun wieder angezeigt</string>
     <string name="help_settings_reset_tutorials_desc">Erzwingt, dass alle Tutorial-Bildschirme und Willkommens-Popups beim nächsten Zugriff wieder angezeigt werden, selbst wenn sie zuvor ausgeblendet wurden.</string>
 
+    <!-- Macro Editor Tutorial -->
+    <string name="macro_tutorial_title">Makros erstellen</string>
+    <string name="macro_tutorial_intro">Makros ermöglichen es dir, Sequenzen von Controller-Tasten oder Bildschirmberührungen zu automatisieren.</string>
+    <string name="macro_tutorial_privileged">Aufnahme mit physischen Tasten:\nFür das beste Spielerlebnis aktiviere den Privilegierten Modus in den globalen Einstellungen. Dadurch kannst du Makros direkt durch Drücken der physischen Tasten deines Thor-Geräts aufzeichnen.</string>
+    <string name="macro_tutorial_virtual">Virtuelles Gamepad:\nIst der Privilegierte Modus nicht aktiv, wird stattdessen ein virtuelles Touch-Gamepad auf dem Bildschirm angezeigt, mit dem du Controller-Eingaben aufzeichnen kannst.</string>
+    <string name="macro_tutorial_manual">Manuelle Bearbeitung und Timings:\nDu kannst Schritte auch manuell über die Leiste unten hinzufügen. Obwohl Standard-Verzögerungen automatisch hinzugefügt werden, um eine logische Abfolge zu erstellen, musst du diese Werte fast immer an die spezifischen Zeitfenster deines Spiels anpassen.</string>
+    <string name="macro_tutorial_btn_got_it">Verstanden</string>
+    <string name="macro_tutorial_btn_dont_show">Nicht mehr anzeigen</string>
+
 </resources>

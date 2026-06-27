@@ -29,15 +29,19 @@ class SettingsManagerTest {
 
     @Test
     fun testWelcomeTutorialDefaultsAndUpdates() {
-        // 1. Verify default value is true
+        // 1. Verify default values are true
         assertTrue(SettingsManager.showWelcomeTutorial.value)
+        assertTrue(SettingsManager.showMacroEditorTutorial.value)
 
-        // 2. Set to false and verify update
+        // 2. Set to false and verify updates
         SettingsManager.setShowWelcomeTutorial(false)
+        SettingsManager.setShowMacroEditorTutorial(false)
         assertFalse(SettingsManager.showWelcomeTutorial.value)
+        assertFalse(SettingsManager.showMacroEditorTutorial.value)
 
         // 3. Reset all tutorials and verify reset to true
         SettingsManager.resetAllTutorials()
         assertTrue(SettingsManager.showWelcomeTutorial.value)
+        assertTrue(SettingsManager.showMacroEditorTutorial.value)
     }
 }
