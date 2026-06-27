@@ -18,7 +18,35 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import android.graphics.BitmapFactory
+import android.media.MediaScannerConnection
+import java.io.File
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -70,6 +98,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -529,6 +558,41 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            LaunchedEffect(Unit) {
+                ScreenCaptureManager.screenshotRequested.collect { requested ->
+                    if (!requested) return@collect
+                    if (!ScreenCaptureManager.isCapturing.value && PrivdClient.isConnected) {
+                        AppLog.i(TAG, "screenshotRequested → handling via privileged mode (mirroring not running)")
+                        launch(Dispatchers.IO) {
+                            try {
+                                val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
+                                val picturesDir = File("/storage/emulated/0/Pictures/Megingiard")
+                                if (!picturesDir.exists()) {
+                                    picturesDir.mkdirs()
+                                }
+                                val filepath = File(picturesDir, filename).absolutePath
+                                val ok = PrivdClient.takeScreenshot(filepath)
+                                if (ok) {
+                                    MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
+                                    val bitmap = BitmapFactory.decodeFile(filepath)
+                                    if (bitmap != null) {
+                                        ScreenCaptureManager.showScreenshotPreview(bitmap)
+                                    } else {
+                                        AppLog.e(TAG, "Failed to decode screenshot file $filepath")
+                                    }
+                                } else {
+                                    AppLog.e(TAG, "Privileged screenshot failed via privd client")
+                                }
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Exception during privileged screenshot", e)
+                            } finally {
+                                ScreenCaptureManager.consumeScreenshotRequest()
+                            }
+                        }
+                    }
+                }
+            }
+
             val themeMode by SettingsManager.themeMode.collectAsState()
             val userAccentArgb by SettingsManager.accentColor.collectAsState()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
@@ -545,7 +609,92 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = appColors.appBackground
                     ) {
-                        MainAppScreen()
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            MainAppScreen()
+
+                            // Layer: Screenshot Preview Overlay (when mirroring not running)
+                            val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsState()
+                            var isPreviewVisible by remember { mutableStateOf(false) }
+                            val sweepOffset = remember { Animatable(-0.5f) }
+
+                            LaunchedEffect(previewBitmap) {
+                                val bitmap = previewBitmap
+                                if (bitmap != null) {
+                                    isPreviewVisible = true
+                                    sweepOffset.snapTo(-0.5f)
+                                    launch {
+                                        sweepOffset.animateTo(
+                                            targetValue = 1.5f,
+                                            animationSpec = tween(durationMillis = 1000, easing = LinearEasing)
+                                        )
+                                    }
+                                    delay(1800) // stay for 1.8 seconds
+                                    isPreviewVisible = false
+                                    delay(400) // wait for slide/fade out animation to finish
+                                    ScreenCaptureManager.clearScreenshotPreview()
+                                } else {
+                                    isPreviewVisible = false
+                                }
+                            }
+
+                            val currentBitmap = previewBitmap
+                            if (currentBitmap != null) {
+                                AnimatedVisibility(
+                                    visible = isPreviewVisible,
+                                    enter = fadeIn(animationSpec = tween(durationMillis = 400)),
+                                    exit = fadeOut(animationSpec = tween(durationMillis = 400)) + slideOutHorizontally(
+                                        targetOffsetX = { fullWidth -> fullWidth },
+                                        animationSpec = tween(durationMillis = 400)
+                                    ),
+                                    modifier = Modifier.align(Alignment.Center)
+                                ) {
+                                    val aspectRatio = remember(currentBitmap) {
+                                        currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.85f)
+                                            .shadow(elevation = 12.dp, shape = RoundedCornerShape(4.dp))
+                                            .background(Color(0xFFFCFBF9)) // clean off-white photograph frame
+                                            .border(width = 1.dp, color = Color(0xFFE5E4E0), shape = RoundedCornerShape(4.dp))
+                                            .padding(12.dp) // photograph frame margins
+                                            .drawWithContent {
+                                                drawContent()
+                                                val progress = sweepOffset.value
+                                                if (progress in -0.5f..1.5f) {
+                                                    val width = size.width
+                                                    val height = size.height
+                                                    val startX = width * progress
+                                                    val startY = 0f
+                                                    val endX = startX + width * 0.4f
+                                                    val endY = height
+                                                    val glossBrush = Brush.linearGradient(
+                                                        colors = listOf(
+                                                            Color.Transparent,
+                                                            Color.White.copy(alpha = 0.02f),
+                                                            Color.White.copy(alpha = 0.45f),
+                                                            Color.White.copy(alpha = 0.02f),
+                                                            Color.Transparent
+                                                        ),
+                                                        start = Offset(startX, startY),
+                                                        end = Offset(endX, endY)
+                                                    )
+                                                    drawRect(brush = glossBrush)
+                                                }
+                                            }
+                                    ) {
+                                        Image(
+                                            bitmap = currentBitmap.asImageBitmap(),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .aspectRatio(aspectRatio)
+                                                .border(width = 1.dp, color = Color(0x22000000)) // slight dark edge on the image itself
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

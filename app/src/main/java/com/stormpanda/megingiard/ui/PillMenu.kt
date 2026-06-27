@@ -48,6 +48,8 @@ import com.stormpanda.megingiard.macropad.NewLayoutOverlay
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.UUID
@@ -100,6 +102,8 @@ fun PillMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
+    val privdState by PrivdClient.state.collectAsState()
+    val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     var showGlobalSettings by remember { mutableStateOf(false) }
     var showPillHelp by remember { mutableStateOf(false) }
 
@@ -125,6 +129,7 @@ fun PillMenu(
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
                 isViewportEditActive = isViewportEditActive,
+                isScreenshotEnabled = isCapturing || isPrivdConnected,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .animateEnterExit(

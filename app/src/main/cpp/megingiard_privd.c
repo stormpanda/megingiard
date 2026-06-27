@@ -889,6 +889,28 @@ static int serve_client(int client_fd) {
             continue;
         }
 
+        if (strncmp(line, "SCREENSHOT ", 11) == 0) {
+            char path[256];
+            char cmd[384];
+            char resp[128];
+            int rl;
+            if (sscanf(line, "SCREENSHOT %255s", path) == 1) {
+                snprintf(cmd, sizeof(cmd), "/system/bin/screencap -d 0 -p %s", path);
+                int rc = system(cmd);
+                if (rc == 0) {
+                    rl = snprintf(resp, sizeof(resp), "SCREENSHOT_OK\n");
+                } else {
+                    rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR %d\n", rc);
+                }
+            } else {
+                rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR INVALID_PATH\n");
+            }
+            pthread_mutex_lock(&g_send_mutex);
+            (void)write(client_fd, resp, rl);
+            pthread_mutex_unlock(&g_send_mutex);
+            continue;
+        }
+
         if (line[0] == 'G') {
             /* GD/GU <btn> */
             if (sscanf(line, "%4s %d", action, &a) != 2) continue;

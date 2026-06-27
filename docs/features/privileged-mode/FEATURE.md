@@ -279,6 +279,9 @@ the existing protocol.
 | D → App   | `MIRROR_DIRECT_ERR <reason>\n` | Direct mirror child failed to start                      |
 | App → D   | `MIRROR STOP\n`                | Terminate the running mirror child (idempotent)          |
 | D → App   | `MIRROR_STOPPED\n`             | Mirror child has been reaped                             |
+| App → D   | `SCREENSHOT <path>\n`          | Take primary display screenshot, output to path          |
+| D → App   | `SCREENSHOT_OK\n`               | Screenshot completed successfully                        |
+| D → App   | `SCREENSHOT_ERR <reason>\n`     | Screenshot failed (e.g. invalid path / execution error)  |
 
 For the privileged mirror (`MIRROR START_DIRECT`), the `app_process` child registers the Binder service `megingiard.direct.surface` to receive multiple target `Surface` instances and their physical dimensions. This allows the direct mirror server to set up and capture multiple concurrent virtual displays mapping to different cutout regions without process restarts.
 
