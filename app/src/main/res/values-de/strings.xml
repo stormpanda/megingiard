@@ -772,7 +772,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_timeline_intro">Im Timeline-Editor baust du die genaue Abfolge von Eingaben, die ein Makro ausführt. Schritte werden von oben nach unten ausgeführt. Zeiten können aufgezeichnet oder manuell eingegeben werden.</string>
     <string name="help_timeline_section_topbar">Steuerleiste oben</string>
     <string name="help_timeline_name_label">Makro-Namensfeld</string>
-    <string name="help_timeline_name_desc">Tippe in das Textfeld, um das Makro umzubenennen. Der Name wird beim Antippen von „Speichern" gespeichert.</string>
+    <string name="help_timeline_name_desc">Tippe in das Textfeld, um das Makro umzubenennen. Der Name wird beim Antippen von „Speichern“ gespeichert.</string>
     <string name="help_timeline_cancel_label">Abbrechen</string>
     <string name="help_timeline_cancel_desc">Verwirft alle nicht gespeicherten Änderungen und kehrt zur Makro-Liste zurück. In dieser Sitzung hinzugefügte Schritte gehen verloren.</string>
     <string name="help_timeline_save_label">Speichern</string>

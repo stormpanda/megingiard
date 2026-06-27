@@ -16,6 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 
+private const val TAG = "MacroEditorTutorialDialog"
+private val MET_SECTION_SPACING = 16.dp
+private val MET_HEADER_SPACING = 6.dp
+
 @Composable
 fun MacroEditorTutorialDialog(
     onDismiss: () -> Unit,
@@ -42,7 +46,7 @@ fun MacroEditorTutorialDialog(
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(MET_SECTION_SPACING))
 
                 Text(
                     text = stringResource(R.string.macro_tutorial_privileged_title),
@@ -50,13 +54,13 @@ fun MacroEditorTutorialDialog(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(MET_HEADER_SPACING))
                 Text(
                     text = stringResource(R.string.macro_tutorial_privileged_body),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(MET_SECTION_SPACING))
 
                 Text(
                     text = stringResource(R.string.macro_tutorial_virtual_title),
@@ -64,13 +68,13 @@ fun MacroEditorTutorialDialog(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(MET_HEADER_SPACING))
                 Text(
                     text = stringResource(R.string.macro_tutorial_virtual_body),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(MET_SECTION_SPACING))
 
                 Text(
                     text = stringResource(R.string.macro_tutorial_manual_title),
@@ -78,13 +82,13 @@ fun MacroEditorTutorialDialog(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(MET_HEADER_SPACING))
                 Text(
                     text = stringResource(R.string.macro_tutorial_manual_body),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(MET_SECTION_SPACING))
 
                 Text(
                     text = stringResource(R.string.macro_tutorial_randomize_title),
@@ -92,7 +96,7 @@ fun MacroEditorTutorialDialog(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(MET_HEADER_SPACING))
                 Text(
                     text = stringResource(R.string.macro_tutorial_randomize_body),
                     color = colors.onSurfaceSecondary,

@@ -44,6 +44,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 
+private const val TAG = "PillTutorialDialog"
+
+// ── Animation ────────────────────────────────────────────────────────────────
+private const val PT_BOUNCE_MIN_PX = -12f
+private const val PT_BOUNCE_MAX_PX = 12f
+private const val PT_BOUNCE_DURATION_MS = 1000
+
+// ── Appearance ───────────────────────────────────────────────────────────────
+private const val PT_SCRIM_ALPHA = 0.6f
+private val PT_DIALOG_MAX_WIDTH = 320.dp
+private val PT_DIALOG_PADDING = 24.dp
+private val PT_DIALOG_SHADOW_ELEVATION = 8.dp
+private val PT_DIALOG_CORNER_RADIUS = 28.dp
+private val PT_DIALOG_BORDER_WIDTH = 1.dp
+private val PT_TITLE_BODY_SPACING = 16.dp
+private val PT_BODY_BUTTON_SPACING = 24.dp
+private val PT_ARROW_EDGE_PADDING = 24.dp
+private val PT_ARROW_SIZE = 48.dp
+
 @Composable
 fun PillTutorialDialog(
     overlayAtBottom: Boolean,
@@ -53,10 +72,10 @@ fun PillTutorialDialog(
 
     val bounceTransition = rememberInfiniteTransition(label = "pill-arrow-bounce")
     val bounceOffset by bounceTransition.animateFloat(
-        initialValue = -12f,
-        targetValue = 12f,
+        initialValue = PT_BOUNCE_MIN_PX,
+        targetValue = PT_BOUNCE_MAX_PX,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = PT_BOUNCE_DURATION_MS, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "pill-arrow-y"
@@ -65,7 +84,7 @@ fun PillTutorialDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(Color.Black.copy(alpha = PT_SCRIM_ALPHA))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -76,20 +95,20 @@ fun PillTutorialDialog(
         // Centered dialog card
         Column(
             modifier = Modifier
-                .widthIn(max = 320.dp)
-                .padding(24.dp)
-                .shadow(8.dp, RoundedCornerShape(28.dp))
-                .clip(RoundedCornerShape(28.dp))
+                .widthIn(max = PT_DIALOG_MAX_WIDTH)
+                .padding(PT_DIALOG_PADDING)
+                .shadow(PT_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(PT_DIALOG_CORNER_RADIUS))
+                .clip(RoundedCornerShape(PT_DIALOG_CORNER_RADIUS))
                 .background(colors.surface)
-                .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(28.dp))
-                .padding(24.dp)
+                .border(PT_DIALOG_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PT_DIALOG_CORNER_RADIUS))
+                .padding(PT_DIALOG_PADDING)
         ) {
             Text(
                 text = stringResource(R.string.pill_tutorial_title),
                 color = colors.onSurface,
                 style = MaterialTheme.typography.titleLarge,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(PT_TITLE_BODY_SPACING))
             Column(
                 modifier = Modifier
                     .weight(weight = 1f, fill = false)
@@ -101,7 +120,7 @@ fun PillTutorialDialog(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(PT_BODY_BUTTON_SPACING))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -124,8 +143,8 @@ fun PillTutorialDialog(
             modifier = Modifier
                 .align(arrowAlign)
                 .padding(
-                    top = if (overlayAtBottom) 0.dp else 24.dp,
-                    bottom = if (overlayAtBottom) 24.dp else 0.dp
+                    top = if (overlayAtBottom) 0.dp else PT_ARROW_EDGE_PADDING,
+                    bottom = if (overlayAtBottom) PT_ARROW_EDGE_PADDING else 0.dp
                 )
                 .offset(y = bounceOffset.dp),
             contentAlignment = Alignment.Center
@@ -134,7 +153,7 @@ fun PillTutorialDialog(
                 imageVector = arrowIcon,
                 contentDescription = null,
                 tint = colors.accent,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(PT_ARROW_SIZE)
             )
         }
     }

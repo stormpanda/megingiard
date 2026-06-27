@@ -746,12 +746,10 @@ private fun MacroTimelineHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpEntry(
             label = stringResource(R.string.help_timeline_cancel_label),
             description = stringResource(R.string.help_timeline_cancel_desc),
-            iconTint = colors.onSurfaceSecondary,
         )
         HelpEntry(
             label = stringResource(R.string.help_timeline_save_label),
             description = stringResource(R.string.help_timeline_save_desc),
-            iconTint = colors.accent,
         )
 
         HelpSection(stringResource(R.string.help_timeline_section_secondary))

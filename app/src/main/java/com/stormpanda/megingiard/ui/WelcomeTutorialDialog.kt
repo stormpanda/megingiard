@@ -16,6 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 
+private const val TAG = "WelcomeTutorialDialog"
+private val WT_CONTENT_SPACING = 16.dp
+private val WT_INTRO_SPACING = 6.dp
+
 @Composable
 fun WelcomeTutorialDialog(
     onDismiss: () -> Unit,
@@ -41,14 +45,14 @@ fun WelcomeTutorialDialog(
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(WT_CONTENT_SPACING))
                 Text(
                     text = stringResource(R.string.welcome_help_title),
                     color = colors.accent,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(WT_INTRO_SPACING))
                 Text(
                     text = stringResource(R.string.welcome_help_intro),
                     color = colors.onSurfaceSecondary,
