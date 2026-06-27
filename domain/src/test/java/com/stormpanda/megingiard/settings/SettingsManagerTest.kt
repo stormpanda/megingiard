@@ -19,6 +19,7 @@ class SettingsManagerTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        SettingsManager.resetAllTutorials()
     }
 
     @After

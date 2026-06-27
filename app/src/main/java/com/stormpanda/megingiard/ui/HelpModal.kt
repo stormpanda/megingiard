@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -71,7 +72,6 @@ private val HM_CONTENT_TOP_PADDING = 8.dp
 private val HM_CONTENT_BOTTOM_PADDING = 32.dp
 private val HM_ENTRY_ICON_SIZE = 20.dp
 private val HM_ENTRY_ICON_SPACER = 12.dp
-private val HM_ENTRY_SPACING = 16.dp
 private val HM_ENTRY_V_PADDING = 12.dp
 private const val HM_SCRIM_ALPHA = 0.55f
 private const val HM_SHEET_HEIGHT_FRACTION = 0.93f
@@ -79,7 +79,7 @@ private const val HM_SHEET_HEIGHT_FRACTION = 0.93f
 /**
  * Icon button used in every screen top bar to open its help modal.
  *
- * Renders [Icons.Rounded.HelpOutline] with the standard [LocalAppColors] secondary tint.
+ * Renders [Icons.AutoMirrored.Rounded.HelpOutline] with the standard [LocalAppColors] secondary tint.
  */
 @Composable
 internal fun HelpIconButton(onClick: () -> Unit) {
@@ -276,7 +276,7 @@ internal fun HelpSection(title: String) {
     val colors = LocalAppColors.current
     Spacer(Modifier.height(20.dp))
     Text(
-        text = title.uppercase(),
+        text = title.uppercase(Locale.ROOT),
         color = colors.sectionHeaderColor,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Bold,
