@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
+import kotlin.random.Random
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -229,16 +230,47 @@ data class Macro(
  * Returns a copy of this macro where every step has been randomized by timing and duration
  * using [random], if timing randomization is enabled.
  */
-fun Macro.randomized(random: kotlin.random.Random = kotlin.random.Random): Macro {
+fun Macro.randomized(random: Random = Random): Macro {
     if (!randomizeTimingEnabled) return this
     val maxOffset = randomizeTimingRangeMs.toLong()
-    val randomizedSteps = steps.map { step ->
-        val offsetStart = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
-        val offsetDuration = if (maxOffset > 0) random.nextLong(0, maxOffset + 1) else 0L
-        step.withTiming(
-            newStartTimeMs = step.startTimeMs + offsetStart,
+
+    // Sort steps by original startTimeMs to compute chronological delay propagation.
+    val sortedWithIndex = steps.mapIndexed { index, step -> Triple(index, step.startTimeMs, step) }
+        .sortedBy { it.second }
+
+    // Map of original index to the new randomized step
+    val randomizedMap = mutableMapOf<Int, MacroStep>()
+
+    // Track the (originalStartTime, offsetDuration) of processed steps to compute cumulative delays.
+    val processedDelays = mutableListOf<Pair<Long, Long>>()
+
+    for ((index, originalStart, step) in sortedWithIndex) {
+        val cumulativeDelay = processedDelays
+            .filter { it.first < originalStart }
+            .sumOf { it.second }
+
+        val isExcluded = when (step) {
+            is MacroStep.JoystickMove,
+            is MacroStep.JoystickPath,
+            is MacroStep.TouchPath -> true
+            else -> false
+        }
+
+        val offsetDuration = if (!isExcluded && maxOffset > 0) {
+            random.nextLong(0, maxOffset + 1)
+        } else {
+            0L
+        }
+
+        val newStep = step.withTiming(
+            newStartTimeMs = originalStart + cumulativeDelay,
             newDurationMs = step.durationMs + offsetDuration
         )
+
+        randomizedMap[index] = newStep
+        processedDelays.add(Pair(originalStart, offsetDuration))
     }
+
+    val randomizedSteps = List(steps.size) { index -> randomizedMap[index]!! }
     return copy(steps = randomizedSteps)
 }

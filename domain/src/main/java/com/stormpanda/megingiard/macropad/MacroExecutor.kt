@@ -111,16 +111,8 @@ object MacroExecutor {
         var liveTouchPos: Pair<Float, Float>? = null
 
         _runningMacroIds.update { it + macro.id }
-        val randomizedMacro = macro.randomized()
-        if (macro.randomizeTimingEnabled) {
-            AppLog.d(TAG, "executeSuspend: applied timing and duration randomization to ${macro.steps.size} steps with max offset ${macro.randomizeTimingRangeMs}ms")
-        }
-        val events = buildMacroEventList(randomizedMacro)
-        val hasTouchEvents = events.any { it.type == MacroEventType.TOUCH_DOWN || it.type == MacroEventType.TOUCH_UP }
-        val hasGamepadEvents = events.any {
-            it.type == MacroEventType.BUTTON_DOWN || it.type == MacroEventType.BUTTON_UP ||
-            it.type == MacroEventType.JOYSTICK_SET || it.type == MacroEventType.HAT
-        }
+        val hasTouchEvents = macro.steps.any { it is MacroStep.TouchTap || it is MacroStep.TouchPath }
+        val hasGamepadEvents = macro.steps.any { it !is MacroStep.TouchTap && it !is MacroStep.TouchPath }
         var startedGamepad = false
         try {
             // Start injectors that aren't already running.
@@ -146,6 +138,11 @@ object MacroExecutor {
             }
             // Execute once, or loop indefinitely if loopEnabled (cancelled by stop()).
             do {
+                val randomizedMacro = macro.randomized()
+                if (macro.randomizeTimingEnabled) {
+                    AppLog.d(TAG, "executeSuspend: applied timing and duration randomization to ${macro.steps.size} steps with max offset ${macro.randomizeTimingRangeMs}ms")
+                }
+                val events = buildMacroEventList(randomizedMacro)
                 var currentTimeMs = 0L
                 for (event in events) {
                     val waitMs = event.timeMs - currentTimeMs
