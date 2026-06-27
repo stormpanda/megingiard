@@ -695,7 +695,7 @@ fun CutoutLayoutEditor(
 
                         Box(
                             modifier = Modifier
-                                .size(width = 48.dp, height = 32.dp)
+                                .size(32.dp)
                                 .clip(RoundedCornerShape(4.dp))
                                 .clickable { showEditorHelp = true },
                             contentAlignment = Alignment.Center
@@ -798,7 +798,7 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        Spacer(Modifier.width(48.dp))
+                        Spacer(Modifier.width(32.dp))
                     }
 
                     // Row 3: Edit Crop | Delete Selected | Spacer
@@ -842,7 +842,7 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        Spacer(Modifier.width(48.dp))
+                        Spacer(Modifier.width(32.dp))
                     }
 
                     // Row 4: Done / Save | Cancel / Revert | Drag Handle
@@ -879,7 +879,7 @@ fun CutoutLayoutEditor(
 
                         Box(
                             modifier = Modifier
-                                .size(width = 48.dp, height = 32.dp)
+                                .size(32.dp)
                                 .pointerInput(Unit) {
                                     detectDragGestures { change, dragAmount ->
                                         change.consume()
