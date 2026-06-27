@@ -881,4 +881,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_pillmenu_help_label">Hilfe (diese Ansicht)</string>
     <string name="help_pillmenu_help_desc">Öffnet dieses Hilfe-Blatt mit einer Erklärung aller Steuerelemente im Schnellmenü.</string>
 
+    <!-- Welcome Tutorial & Reset -->
+    <string name="welcome_title">Willkommen bei Megingiard!</string>
+    <string name="welcome_desc">Megingiard ist eine Begleit-App für das AYN Thor Dual-Screen-Handheld. Sie ermöglicht die Konfiguration physischer Steuerelemente, virtueller Tastaturbelegung, Touchpads und der Bildschirmspiegelung zwischen beiden Displays.</string>
+    <string name="welcome_help_intro">Achte auf das Hilfe-Symbol (?) in der oberen rechten Ecke jedes Bildschirms, um detaillierte Anleitungen und Best Practices für diese Funktion anzuzeigen.</string>
+    <string name="welcome_btn_got_it">Verstanden</string>
+    <string name="welcome_btn_dont_show">Nicht mehr anzeigen</string>
+    <string name="settings_reset_tutorials">Tutorials zurücksetzen</string>
+    <string name="settings_reset_tutorials_desc">Setzt alle Tutorial-Popups zurück, um sie beim nächsten Zugriff erneut anzuzeigen</string>
+    <string name="settings_reset_tutorials_toast">Tutorials werden nun wieder angezeigt</string>
+    <string name="help_settings_reset_tutorials_desc">Erzwingt, dass alle Tutorial-Bildschirme und Willkommens-Popups beim nächsten Zugriff wieder angezeigt werden, selbst wenn sie zuvor ausgeblendet wurden.</string>
+
 </resources>

@@ -48,6 +48,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
     val showMirrorControlLabels: StateFlow<Boolean> = SettingsManager.showMirrorControlLabels
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
+    val showWelcomeTutorial: StateFlow<Boolean> = SettingsManager.showWelcomeTutorial
     val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
@@ -72,6 +73,8 @@ class GlobalSettingsViewModel : ViewModel() {
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
     fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
+    fun setShowWelcomeTutorial(value: Boolean) = SettingsManager.setShowWelcomeTutorial(value)
+    fun resetAllTutorials() = SettingsManager.resetAllTutorials()
     fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)
     fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)

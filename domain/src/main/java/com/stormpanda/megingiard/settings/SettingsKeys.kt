@@ -88,6 +88,9 @@ internal val KEY_MACROPAD_AMBIENT_APPLY_THEME = booleanPreferencesKey("macropad_
 internal val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
 internal val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
 
+// Tutorials persistence
+internal val KEY_SHOW_WELCOME_TUTORIAL = booleanPreferencesKey("show_welcome_tutorial")
+
 // Internal backups storage key — isolated from SECTION_MAP export/import
 internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 

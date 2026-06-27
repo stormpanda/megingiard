@@ -68,6 +68,7 @@ import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -92,6 +93,8 @@ fun MainAppScreen() {
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+    val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
+    var showWelcomeLocal by remember { mutableStateOf(true) }
 
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
@@ -239,6 +242,16 @@ fun MainAppScreen() {
                     }
                 },
                 onDismiss = { ConfigManager.clearPendingImport() },
+            )
+        }
+
+        if (showWelcomeTutorial && showWelcomeLocal) {
+            WelcomeTutorialDialog(
+                onDismiss = { showWelcomeLocal = false },
+                onDismissForever = {
+                    showWelcomeLocal = false
+                    SettingsManager.setShowWelcomeTutorial(false)
+                }
             )
         }
 

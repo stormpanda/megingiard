@@ -875,4 +875,15 @@ Open Settings to create a layout.</string>
     <string name="help_pillmenu_help_label">Help (this screen)</string>
     <string name="help_pillmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
 
+    <!-- Welcome Tutorial & Reset -->
+    <string name="welcome_title">Welcome to Megingiard!</string>
+    <string name="welcome_desc">Megingiard is a companion app for the AYN Thor dual-screen handheld. It allows you to configure custom MacroPad profiles, virtual keyboard maps, virtual touchpads, and screen mirroring between displays.</string>
+    <string name="welcome_help_intro">Look for the help icon (?) in the top-right corner of each screen to view detailed guides and best practices for that feature.</string>
+    <string name="welcome_btn_got_it">Got it</string>
+    <string name="welcome_btn_dont_show">Don\'t show again</string>
+    <string name="settings_reset_tutorials">Reset tutorials</string>
+    <string name="settings_reset_tutorials_desc">Reset all tutorial popups to show them again on next access</string>
+    <string name="settings_reset_tutorials_toast">Tutorials will now be shown again</string>
+    <string name="help_settings_reset_tutorials_desc">Forces all tutorial screens and welcome popups to be shown again upon access, even if you previously dismissed them.</string>
+
 </resources>

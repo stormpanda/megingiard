@@ -96,6 +96,13 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 
 Modal visibility is controlled by a local `Boolean` state variable (`showXxxHelp`) declared with `remember { mutableStateOf(false) }` (or `rememberSaveable` for screens using `Scaffold`). No global state is used; visibility is entirely local to each screen's composable.
 
+### Welcome Onboarding Dialog
+
+On first boot of the application, a `WelcomeTutorialDialog` is shown to introduce Megingiard\'s features and highlight the in-app help (?) buttons.
+- Triggered by `SettingsManager.showWelcomeTutorial`, which defaults to `true`.
+- The user can temporarily dismiss it with "Got it", or dismiss it permanently with "Don't show again" (persists to DataStore).
+- The state can be reset app-wide under **Global Settings** -> **Data** -> **Reset tutorials** to show all onboarding and automated tutorials again next time they are accessed.
+
 ### String resource conventions
 
 All help strings use the prefix `help_` followed by a short feature abbreviation and a descriptor:
@@ -120,6 +127,7 @@ help_close_cd  — content description for the Close button
 | File | Responsibility |
 |---|---|
 | `ui/HelpModal.kt` | Shared `HelpModal`, `HelpIconButton`, `HelpEntry`, `HelpSection`, `HelpIntro` composables |
+| `ui/WelcomeTutorialDialog.kt` | First-boot welcome onboarding dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
 | `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |
 | `macropad/MacroTimelineEditor.kt` | `MacroTimelineHelpModal` content + icon wiring |
@@ -127,5 +135,5 @@ help_close_cd  — content description for the Close button
 | `settings/GlobalSettingsScreen.kt` | `GlobalSettingsHelpModal` content + icon wiring |
 | `ui/PillMenu.kt` | `PillMenuHelpModal` content + icon wiring |
 | `mirror/CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` content + icon wiring |
-| `res/values/strings.xml` | English help strings (prefix `help_`) |
-| `res/values-de/strings.xml` | German help strings (prefix `help_`) |
+| `res/values/strings.xml` | English help and onboarding strings (prefix `help_` / `welcome_`) |
+| `res/values-de/strings.xml` | German help and onboarding strings (prefix `help_` / `welcome_`) |
