@@ -825,7 +825,7 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_add_desc">Creates a new viewport cutout at a free position on the secondary screen. Up to 10 cutouts are allowed per layout. The new cutout is automatically selected.</string>
     <string name="help_mirror_editor_settings_desc">Opens the per-layout ambient display settings (dim level, edge blending, smoothing). Changes apply only to the currently active layout.</string>
     <string name="help_mirror_editor_section_selected">Selected cutout</string>
-    <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Lock to source — the viewport dimensions are locked to the source crop ratio. Lock to source (shrink crop) — the source crop is adjusted to fit the viewport dimensions instead.</string>
+    <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Top — lock aspect ratio to match the crop on the Top screen. Bottom — lock aspect ratio to match the cutout on the Bottom screen.</string>
     <string name="help_mirror_editor_shape_label">Shape</string>
     <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
     <string name="help_mirror_editor_crop_desc">Opens the crop selector for the selected cutout, letting you drag a frame over the top screen to choose which region is mirrored into this cutout.</string>
