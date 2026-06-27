@@ -843,26 +843,26 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Global Settings help -->
     <string name="help_settings_title">Einstellungen — Hilfe</string>
     <string name="help_settings_intro">Die globalen Einstellungen gelten für die gesamte App und bleiben zwischen Sitzungen erhalten. Nutze die Abschnitts-Sprungleiste oben, um schnell zu einer bestimmten Gruppe zu scrollen.</string>
-    <string name="help_settings_overlay_position_desc">Wenn aktiviert, erscheinen Idle-Pill und Pill-Menü am unteren Bildschirmrand statt oben. Wähle die Position, die für deinen Griff bequemer ist.</string>
-    <string name="help_settings_mirror_labels_desc">Zeigt kurze Textbezeichnungen unter den Spiegel-Steuersymbolen in der oberen Karte des Pill-Menüs, um die Symbole leichter erkennbar zu machen.</string>
-    <string name="help_settings_exit_hints_desc">Zeigt beim Öffnen der virtuellen Tastatur oder des Touchpads kurz einen Hinweis an, wie das Vollbild-Overlay verlassen werden kann.</string>
-    <string name="help_settings_mirror_autostart_desc">Startet die Bildschirmspiegelung automatisch, sobald Megingiard in den Vordergrund kommt, ohne dass „Spiegelung starten\" manuell getippt werden muss.</string>
-    <string name="help_settings_auto_profile_desc">Erfordert den Megingiard-Bedienungshilfen-Dienst. Aktiviert automatisch das Profil, das der aktuell im Vordergrund befindlichen App zugeordnet ist.</string>
-    <string name="help_settings_recents_desc">Blendet Megingiard aus dem Android-Task-Wechsler aus. Praktisch für eine übersichtlichere Aufgaben-Ansicht beim Spielen.</string>
-    <string name="help_settings_accessibility_desc">Der Megingiard-Bedienungshilfen-Dienst ermöglicht automatische Profilwechsel. Tippe auf diese Zeile, um die Android-Bedienungshilfen-Einstellungen zu öffnen und ihn dort zu aktivieren. Der Statuspunkt wird grün, wenn er aktiv ist.</string>
-    <string name="help_settings_language_desc">Überschreibt die Systemsprache für Megingiards Benutzeroberfläche. Derzeit werden Englisch und Deutsch unterstützt.</string>
-    <string name="help_settings_gamepad_swap_desc">Tauscht die A/B- und X/Y-Gesichtstastenbelegungen für Gamepad-Makros aus — passend zum Nintendo-Button-Layout.</string>
-    <string name="help_settings_accent_desc">Legt die Hervorhebungsfarbe für Schaltflächen, aktive Chips, Abschnitts-Überschriften und andere interaktive Elemente fest. Hat keinen Einfluss auf das Cyberpunk-Design.</string>
-    <string name="help_settings_theme_desc">Wähle zwischen Dunkel, Hell oder dem festen Cyberpunk-Farbschema. Dunkel und Hell berücksichtigen die Akzentfarbe; Cyberpunk verwendet eine eigene Palette.</string>
-    <string name="help_settings_restore_desc">Setzt alle Einstellungen auf Werkseinstellungen zurück. Ein 5-Sekunden-Countdown gibt Zeit zum Abbrechen. Profile und Makros werden nicht gelöscht.</string>
-    <string name="help_settings_export_desc">Exportiert alle Profile, Layouts, Makros und App-Einstellungen in eine portable .mgrd-Datei. Teile sie mit anderen oder bewahre sie als Backup auf. Im Export-Dialog kannst du auswählen, was enthalten sein soll.</string>
-    <string name="help_settings_import_desc">Lädt eine .mgrd-Backup-Datei vom Gerät. Bestehende Daten werden durch den Import ersetzt — überprüfe den Inhalt sorgfältig, bevor du bestätigst.</string>
-    <string name="help_settings_export_profile_desc">Exportiert ein einzelnes MacroPad-Profil (einschließlich Tasten-Layout und Makros) in eine .mgrd-Datei, um es mit anderen Benutzern zu teilen.</string>
-    <string name="help_settings_import_profile_desc">Importiert ein geteiltes MacroPad-Profil aus einer .mgrd-Datei und fügt es deiner Profilliste hinzu, ohne deine vorhandenen Profile zu überschreiben.</string>
-    <string name="help_settings_privd_desc">Der privilegierte Modus verbindet sich mit einem kleinen Hilfsprozess unter dem Android-Shell-Benutzer. Er schaltet Funktionen frei, die direkten Kernel-Gerätezugriff erfordern, wie genauere Touch-Injektion und physische Gamepad-Aufzeichnung. Folge dem Einrichtungsassistenten — ADB Wireless muss auf dem Gerät aktiviert sein.</string>
-    <string name="help_settings_deadzone_desc">Einstellbare Deadzones für die Analogsticks bei der Aufnahme von physischen Gamepad-Makros. Eine größere Deadzone ignoriert minimales Stick-Driften oder Rauschen; ein kleinerer Wert macht die Aufnahme empfindlicher. Sollte mit den Werten in den Thor-Einstellungen des Systems übereinstimmen.</string>
-    <string name="help_settings_log_level_desc">Steuert die Ausführlichkeit von Megingiards internem Log. Debug und Verbose erzeugen deutlich mehr Ausgaben — nützlich bei der Fehlersuche, sollten aber im Normalbetrieb auf Warn oder Info belassen werden.</string>
-    <string name="help_settings_save_log_desc">Erfasst die aktuelle Logcat-Ausgabe gefiltert auf Megingiard und speichert sie in einer Datei, bereit zum Anhängen an einen Fehlerbericht.</string>
+    <string name="help_settings_overlay_position_desc">Empfohlen, wenn deine Hände das Gerät so halten, dass deine Daumen natürlich in der Nähe der Unterkante ruhen. Das Pill-Menü lässt sich so leichter wischen.</string>
+    <string name="help_settings_mirror_labels_desc">Nützlich, wenn du neu in Megingiard bist und die Steuerungssymbole erst kennenlernst. Deaktiviere sie später, um Platz auf dem Bildschirm zu sparen.</string>
+    <string name="help_settings_exit_hints_desc">Empfohlen für neue Benutzer. Da virtuelle Tastatur und Touchpad im Vollbildmodus laufen, erinnert dich dieser Hinweis stets an die Beendengesten.</string>
+    <string name="help_settings_mirror_autostart_desc">Aktiviere dies, wenn du die Bildschirmspiegelung bei jeder Sitzung verwendest, um den Start-Button nicht jedes Mal manuell antippen zu müssen.</string>
+    <string name="help_settings_auto_profile_desc">Sorgt für nahtloses Gaming. Verknüpft Makroprofile mit Apps, sodass deine Tasten beim Starten eines Spiels automatisch wechseln.</string>
+    <string name="help_settings_recents_desc">Hält deine Übersicht der zuletzt geöffneten Apps aufgeräumt. Empfohlen, wenn du Megingiard komplett über die Pill-Menü-Steuerung steuerst.</string>
+    <string name="help_settings_accessibility_desc">Erforderlich für automatische Profilwechsel, damit Megingiard das aktive Spiel im Vordergrund erkennen darf. Tippe zum Konfigurieren.</string>
+    <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch und Deutsch zur Auswahl.</string>
+    <string name="help_settings_gamepad_swap_desc">Aktiviere dies, wenn du das Nintendo-Layout (A rechts, B unten) dem standardmäßigen Xbox-Layout für Gamepad-Makros vorziehst.</string>
+    <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten nicht für das Cyberpunk-Design, das ein festes Neon-Farbschema nutzt.</string>
+    <string name="help_settings_theme_desc">Wähle das dunkle oder helle Design, um die App mit deiner gewählten Akzentfarbe zu nutzen, oder wähle Cyberpunk für ein festes Neon-Design.</string>
+    <string name="help_settings_restore_desc">Setzt Design, Sprache und Overlays auf Werkseinstellungen zurück, falls etwas falsch konfiguriert ist. Deine Profile und Makros bleiben erhalten.</string>
+    <string name="help_settings_export_desc">Erstellt ein vollständiges Backup deiner Profile und Einstellungen. Empfohlen vor App-Updates oder dem Zurücksetzen von Einstellungen.</string>
+    <string name="help_settings_import_desc">Stellt Profile und Einstellungen aus einer .mgrd-Datei oder einem automatischen täglichen Backup wieder her. Überschreibt aktuelle Profile.</string>
+    <string name="help_settings_export_profile_desc">Speichert ein einzelnes Profil in eine Datei, um Tasten-Layout und Makros mit anderen Spielern zu teilen, ohne deine gesamte Konfiguration freizugeben.</string>
+    <string name="help_settings_import_profile_desc">Fügt ein geteiltes Profil eines anderen Spielers deiner Sammlung hinzu. Vorhandene eigene Profile werden dabei nicht verändert oder überschrieben.</string>
+    <string name="help_settings_privd_desc">Empfohlen für fortgeschrittenes Gaming. Ermöglicht physische Gamepad-Makroaufzeichnung und präzisere Touch-Injektion per ADB-Verbindung im Hintergrund.</string>
+    <string name="help_settings_deadzone_desc">Verhindert, dass Rauschen oder Drift der Analogsticks aufgenommen werden. Gleiche diese Werte für beste Genauigkeit mit den Totzonen-Einstellungen deines Thor ab.</string>
+    <string name="help_settings_log_level_desc">Im Normalbetrieb auf Warn oder Info belassen. Nur bei der Fehlersuche auf Debug oder Verbose stellen, um detaillierte Logs aufzuzeichnen.</string>
+    <string name="help_settings_save_log_desc">Exportiert das aktuelle System-Log. Generiere dieses direkt nach einem Fehler oder Absturz, um es an einen Entwicklerbericht anzuhängen.</string>
 
     <!-- Pill Menu help -->
     <string name="help_pillmenu_title">Schnellmenü — Hilfe</string>
