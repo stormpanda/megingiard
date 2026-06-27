@@ -120,6 +120,7 @@ object PrivdClient {
     @Volatile private var pingDeferred: CompletableDeferred<Boolean>? = null
     @Volatile private var mirrorDirectStartDeferred: CompletableDeferred<Boolean>? = null
     @Volatile private var mirrorStopDeferred: CompletableDeferred<Boolean>? = null
+    @Volatile private var screenshotDeferred: CompletableDeferred<Boolean>? = null
 
     val isConnected: Boolean
         get() = running && (socket?.isConnected == true)
@@ -258,6 +259,17 @@ object PrivdClient {
         return ok
     }
 
+    suspend fun takeScreenshot(path: String): Boolean {
+        if (!isConnected) return false
+        val deferred = CompletableDeferred<Boolean>()
+        screenshotDeferred = deferred
+        send("SCREENSHOT $path\n")
+        val ok = withTimeoutOrNull(4000) { deferred.await() } ?: false
+        screenshotDeferred = null
+        AppLog.i(TAG, "takeScreenshot($path) -> $ok")
+        return ok
+    }
+
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
@@ -304,6 +316,14 @@ object PrivdClient {
                 mirrorStopDeferred?.complete(true)
                 continue
             }
+            if (line == "SCREENSHOT_OK") {
+                screenshotDeferred?.complete(true)
+                continue
+            }
+            if (line.startsWith("SCREENSHOT_ERR")) {
+                screenshotDeferred?.complete(false)
+                continue
+            }
             if (line.startsWith("EVT ")) {
                 val parts = line.split(' ')
                 if (parts.size == 4) {
@@ -341,6 +361,8 @@ object PrivdClient {
         mirrorDirectStartDeferred = null
         mirrorStopDeferred?.complete(false)
         mirrorStopDeferred = null
+        screenshotDeferred?.complete(false)
+        screenshotDeferred = null
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null

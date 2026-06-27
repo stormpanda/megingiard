@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material3.HorizontalDivider
@@ -48,6 +49,8 @@ import com.stormpanda.megingiard.macropad.NewLayoutOverlay
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.UUID
@@ -100,6 +103,8 @@ fun PillMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
+    val privdState by PrivdClient.state.collectAsState()
+    val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     var showGlobalSettings by remember { mutableStateOf(false) }
     var showPillHelp by remember { mutableStateOf(false) }
 
@@ -125,6 +130,7 @@ fun PillMenu(
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
                 isViewportEditActive = isViewportEditActive,
+                isScreenshotEnabled = isCapturing || isPrivdConnected,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .animateEnterExit(
@@ -143,6 +149,7 @@ fun PillMenu(
                     AppStateManager.setViewportEditActive(true)
                     onDismiss()
                 },
+                onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
                 showLabels = showMirrorControlLabels,
             )
 
@@ -266,6 +273,11 @@ private fun PillMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             icon = Icons.Rounded.Edit,
             label = stringResource(R.string.pill_menu_screen_mirroring),
             description = stringResource(R.string.help_pillmenu_viewport_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CameraAlt,
+            label = stringResource(R.string.help_pillmenu_screenshot_label),
+            description = stringResource(R.string.help_pillmenu_screenshot_desc),
         )
 
         HelpSection(stringResource(R.string.help_pillmenu_section_macropad))

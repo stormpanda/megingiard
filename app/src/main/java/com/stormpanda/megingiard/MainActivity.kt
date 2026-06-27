@@ -18,7 +18,38 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import android.graphics.BitmapFactory
+import android.media.MediaScannerConnection
+import android.os.Environment
+import android.widget.Toast
+import java.io.File
+import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -70,6 +101,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -529,6 +561,58 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            LaunchedEffect(Unit) {
+                ScreenCaptureManager.screenshotRequested.collect { requested ->
+                    if (!requested) return@collect
+                    if (!ScreenCaptureManager.isCapturing.value) {
+                        if (PrivdClient.isConnected) {
+                            AppLog.i(TAG, "screenshotRequested → handling via privileged mode (mirroring not running)")
+                            launch(Dispatchers.IO) {
+                                try {
+                                    val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
+                                    val picturesDir = File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
+                                    if (!picturesDir.exists()) {
+                                        picturesDir.mkdirs()
+                                    }
+                                    val filepath = File(picturesDir, filename).absolutePath
+                                    val ok = PrivdClient.takeScreenshot(filepath)
+                                    if (ok) {
+                                        MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
+                                        val bitmap = BitmapFactory.decodeFile(filepath)
+                                        if (bitmap != null) {
+                                            ScreenCaptureManager.showScreenshotPreview(bitmap)
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(this@MainActivity, R.string.screenshot_saved, Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            AppLog.e(TAG, "Failed to decode screenshot file $filepath")
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    } else {
+                                        AppLog.e(TAG, "Privileged screenshot failed via privd client")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                } catch (t: Throwable) {
+                                    AppLog.e(TAG, "Exception during privileged screenshot", t)
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(this@MainActivity, R.string.screenshot_failed, Toast.LENGTH_SHORT).show()
+                                    }
+                                } finally {
+                                    ScreenCaptureManager.consumeScreenshotRequest()
+                                }
+                            }
+                        } else {
+                            AppLog.w(TAG, "Screenshot requested but mirroring is not active and privd is not connected. Consuming request.")
+                            ScreenCaptureManager.consumeScreenshotRequest()
+                        }
+                    }
+                }
+            }
+
             val themeMode by SettingsManager.themeMode.collectAsState()
             val userAccentArgb by SettingsManager.accentColor.collectAsState()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
@@ -545,7 +629,11 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = appColors.appBackground
                     ) {
-                        MainAppScreen()
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            MainAppScreen()
+
+                            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
+                        }
                     }
                 }
             }

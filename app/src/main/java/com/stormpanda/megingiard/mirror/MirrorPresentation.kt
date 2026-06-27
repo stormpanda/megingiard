@@ -28,7 +28,11 @@ import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +53,7 @@ import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.IdlePill
+import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import android.graphics.LinearGradient
@@ -69,12 +74,26 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.ui.draw.shadow
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -535,6 +554,8 @@ class MirrorPresentation(
                             if (capturing) {
                                 IdlePill()
                             }
+
+                            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
                         }
                     }
                 }
@@ -656,6 +677,29 @@ class MirrorPresentation(
     }
 
     fun getSurface(): Surface? = masterSurface
+
+    fun captureScreenshot(): Bitmap? {
+        val frozen = ScreenCaptureManager.isFrozen.value
+        if (frozen) {
+            val bitmap = ScreenCaptureManager.frozenBitmap.value
+            if (bitmap != null) {
+                return try {
+                    Bitmap.createBitmap(bitmap)
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to copy frozen bitmap for screenshot", e)
+                    null
+                }
+            }
+        }
+        val tv = masterTextureView ?: return null
+        if (tv.width <= 0 || tv.height <= 0) return null
+        return try {
+            tv.getBitmap()
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to capture TextureView bitmap for screenshot", e)
+            null
+        }
+    }
 }
 
 class MultiCutoutContainer(

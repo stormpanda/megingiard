@@ -20,6 +20,8 @@ import kotlin.math.abs
 private const val TAG = "ScreenCaptureManager"
 
 object ScreenCaptureManager {
+    const val SCREENSHOT_SUBDIR = "Pictures/Megingiard"
+
     private val _isCapturing = MutableStateFlow(false)
     val isCapturing: StateFlow<Boolean> = _isCapturing.asStateFlow()
 
@@ -52,6 +54,12 @@ object ScreenCaptureManager {
 
     private val _frozenBitmap = MutableStateFlow<Bitmap?>(null)
     val frozenBitmap: StateFlow<Bitmap?> = _frozenBitmap.asStateFlow()
+
+    private val _screenshotRequested = MutableStateFlow(false)
+    val screenshotRequested: StateFlow<Boolean> = _screenshotRequested.asStateFlow()
+
+    private val _screenshotPreview = MutableStateFlow<Bitmap?>(null)
+    val screenshotPreview: StateFlow<Bitmap?> = _screenshotPreview.asStateFlow()
 
     private val _isLocked = MutableStateFlow(false)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
@@ -151,6 +159,28 @@ object ScreenCaptureManager {
         val next = !_isFrozen.value
         AppLog.d(TAG, "toggleFrozen → $next")
         _isFrozen.value = next
+    }
+
+    fun requestScreenshot() {
+        AppLog.d(TAG, "requestScreenshot")
+        _screenshotRequested.value = true
+    }
+
+    fun consumeScreenshotRequest() {
+        AppLog.d(TAG, "consumeScreenshotRequest")
+        _screenshotRequested.value = false
+    }
+
+    fun showScreenshotPreview(bitmap: Bitmap) {
+        AppLog.d(TAG, "showScreenshotPreview")
+        _screenshotPreview.value?.recycle()
+        _screenshotPreview.value = bitmap
+    }
+
+    fun clearScreenshotPreview() {
+        AppLog.d(TAG, "clearScreenshotPreview")
+        _screenshotPreview.value?.recycle()
+        _screenshotPreview.value = null
     }
 
     fun setLocked(locked: Boolean) {
@@ -306,6 +336,7 @@ object ScreenCaptureManager {
         _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)
+        clearScreenshotPreview()
         if (_isFollowActive.value) setFollowActive(false)
     }
 }

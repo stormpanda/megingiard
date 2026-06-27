@@ -63,7 +63,7 @@
 #define ABSTRACT_SOCKET_NAME "megingiard.privd"
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
-#define MAX_LINE 64
+#define MAX_LINE 512
 
 /* test_bit for evdev capability bitmaps */
 #define BITS_PER_LONG    (sizeof(long) * 8)
@@ -885,6 +885,48 @@ static int serve_client(int client_fd) {
             const char *resp = "MIRROR_STOPPED\n";
             pthread_mutex_lock(&g_send_mutex);
             (void)write(client_fd, resp, strlen(resp));
+            pthread_mutex_unlock(&g_send_mutex);
+            continue;
+        }
+
+        if (strncmp(line, "SCREENSHOT ", 11) == 0) {
+            char path[384];
+            char resp[128];
+            int rl;
+            char *p = line + 11;
+            size_t len = strlen(p);
+            while (len > 0 && (p[len - 1] == '\n' || p[len - 1] == '\r')) {
+                p[len - 1] = '\0';
+                len--;
+            }
+            if (len > 0 && len < sizeof(path)) {
+                strncpy(path, p, sizeof(path));
+                path[sizeof(path) - 1] = '\0';
+                pid_t pid = fork();
+                if (pid == 0) {
+                    char *args[] = {"/system/bin/screencap", "-p", path, NULL};
+                    execv(args[0], args);
+                    _exit(127);
+                } else if (pid > 0) {
+                    int status;
+                    if (waitpid(pid, &status, 0) == pid) {
+                        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                            rl = snprintf(resp, sizeof(resp), "SCREENSHOT_OK\n");
+                        } else {
+                            int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+                            rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR %d\n", exit_code);
+                        }
+                    } else {
+                        rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR WAIT_FAILED\n");
+                    }
+                } else {
+                    rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR FORK_FAILED\n");
+                }
+            } else {
+                rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR INVALID_PATH\n");
+            }
+            pthread_mutex_lock(&g_send_mutex);
+            (void)write(client_fd, resp, rl);
             pthread_mutex_unlock(&g_send_mutex);
             continue;
         }

@@ -11,6 +11,7 @@
     <string name="cd_start_mirroring">Spiegelung starten</string>
     <string name="cd_freeze">Einfrieren</string>
     <string name="cd_unfreeze">Einfrieren aufheben</string>
+    <string name="cd_screenshot">Screenshot</string>
     <string name="cd_lock_view">Ansicht sperren</string>
     <string name="cd_unlock_view">Ansicht entsperren</string>
     <string name="cd_touch_projection_on">Touch-Projektion aktiv</string>
@@ -524,6 +525,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="mirror_control_label_unfreeze">Auftauen</string>
     <string name="mirror_control_label_viewport">Viewport</string>
     <string name="mirror_control_label_projection">Projektion</string>
+    <string name="mirror_control_label_screenshot">Screenshot</string>
+    <string name="screenshot_saved">Screenshot unter Pictures/Megingiard gespeichert</string>
+    <string name="screenshot_failed">Screenshot konnte nicht gespeichert werden</string>
     <string name="settings_restore_defaults">Standardprofile wiederherstellen</string>
     <string name="settings_restore_defaults_desc">Löscht alle Profile und erstellt ein leeres Standardprofil</string>
     <string name="settings_restore_defaults_confirm">Alle vorhandenen Profile und Makros werden gelöscht und ein einzelnes leeres Profil erstellt. Diese Aktion kann nicht rückgängig gemacht werden.</string>
@@ -873,6 +877,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_pillmenu_freeze_label">Einfrieren / Auftauen</string>
     <string name="help_pillmenu_freeze_desc">Friert das gespiegelte Bild ein, sodass ein Standbild statt des Live-Feeds angezeigt wird. Nützlich, um eine Spielszene zum genauen Lesen anzuhalten.</string>
     <string name="help_pillmenu_viewport_desc">Öffnet den Ausschnitt-Layout-Editor auf dem Sekundärbildschirm, um transparente Ausschnittfenster im Spiegel-Overlay zu verschieben, zu skalieren oder hinzuzufügen.</string>
+    <string name="help_pillmenu_screenshot_label">Screenshot aufnehmen</string>
+    <string name="help_pillmenu_screenshot_desc">Nimmt einen Screenshot des Hauptbildschirms auf. Wenn die Spiegelung nicht aktiv ist, erfordert dies eine Verbindung zum Privilegierten Modus.</string>
     <string name="help_pillmenu_section_macropad">MacroPad-Steuerung (untere Karte)</string>
     <string name="help_pillmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Makroprofil zu wechseln. Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
     <string name="help_pillmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Schaltflächen-Layout im aktuellen Profil zu wechseln. Nur als aktiviert markierte Layouts erscheinen hier.</string>
