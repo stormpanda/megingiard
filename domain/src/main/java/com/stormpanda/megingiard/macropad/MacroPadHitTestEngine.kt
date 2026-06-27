@@ -155,6 +155,48 @@ class MacroPadHitTestEngine(
     }
 
     /**
+     * Check whether a coordinate falls inside any active button bounds.
+     */
+    fun hitTest(
+        px: Float,
+        py: Float,
+        canvasW: Float,
+        canvasH: Float,
+        buttons: List<PadButton>,
+        isPeekActive: Boolean,
+    ): Boolean {
+        val hitList = if (isPeekActive) {
+            buttons.filter { it.action is PadAction.BackgroundPeek }
+        } else {
+            buttons
+        }
+        return hitList.any { btn ->
+            val isTrackpoint = btn.action is PadAction.TrackpointMove
+            val chipWidthPx = if (isTrackpoint) {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+            } else {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.cols)
+            }
+            val chipHeightPx = if (isTrackpoint) {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+            } else {
+                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.rows)
+            }
+            val bx = btn.posX * canvasW
+            val by = btn.posY * canvasH
+            px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
+            py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
+        }
+    }
+
+    /**
+     * Check whether a pointer is currently tracked (i.e. currently pressing a button).
+     */
+    fun isPointerTracked(pointerId: Long): Boolean {
+        return pointerMap.containsKey(pointerId)
+    }
+
+    /**
      * Handle a Move event.
      *
      * @param pointerId  the pointer that moved

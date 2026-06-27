@@ -239,8 +239,10 @@ internal fun PadSurface(
                                     // Always release pointers when fingers are lifted or touch is cancelled,
                                     // even if another component has consumed the event.
                                     if (!change.pressed && change.previousPressed) {
-                                        engine.onRelease(id, layout.buttons, profile)
-                                        change.consume()
+                                        if (engine.isPointerTracked(id)) {
+                                            engine.onRelease(id, layout.buttons, profile)
+                                            change.consume()
+                                        }
                                         return@forEach
                                     }
 
@@ -249,26 +251,34 @@ internal fun PadSurface(
                                     when (event.type) {
                                         PointerEventType.Press -> {
                                             if (!change.previousPressed) {
-                                                val disabledBtn = engine.onPress(
-                                                    id, change.position.x, change.position.y,
-                                                    w, h, layout.buttons, profile, isPeekActive
+                                                val isHit = engine.hitTest(
+                                                    change.position.x, change.position.y,
+                                                    w, h, layout.buttons, isPeekActive
                                                 )
-                                                if (disabledBtn != null) {
-                                                    val reason = MacroPadHitTestEngine.deviceDisabledReason(
-                                                        disabledBtn.action, profile
+                                                if (isHit) {
+                                                    val disabledBtn = engine.onPress(
+                                                        id, change.position.x, change.position.y,
+                                                        w, h, layout.buttons, profile, isPeekActive
                                                     )
-                                                    if (reason != null) {
-                                                        onDisabledActionFeedback(reason)
+                                                    if (disabledBtn != null) {
+                                                        val reason = MacroPadHitTestEngine.deviceDisabledReason(
+                                                            disabledBtn.action, profile
+                                                        )
+                                                        if (reason != null) {
+                                                            onDisabledActionFeedback(reason)
+                                                        }
                                                     }
+                                                    change.consume()
                                                 }
                                             }
-                                            change.consume()
                                         }
 
                                         PointerEventType.Move -> {
-                                            val delta = change.positionChange()
-                                            engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, layout.buttons, profile)
-                                            change.consume()
+                                            if (engine.isPointerTracked(id)) {
+                                                val delta = change.positionChange()
+                                                engine.onMove(id, change.position.x, change.position.y, delta.x, delta.y, layout.buttons, profile)
+                                                change.consume()
+                                            }
                                         }
 
                                         else -> Unit

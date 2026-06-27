@@ -490,9 +490,8 @@ class MirrorPresentation(
 
 
                             // Layer 2: BackgroundMacroPadOverlay — always rendered when active
-                            // so IdlePill remains visible in all modes. Internally hides
-                            // buttons/dim/vignette during touch projection, freeze, and
-                            // viewport edit.
+                            // so IdlePill remains visible in all modes. Internally dims
+                            // buttons during viewport edit.
                             if (capturing) {
                                 BackgroundMacroPadOverlay(showIdlePill = false)
                             }

@@ -247,4 +247,36 @@ class MacroPadHitTestEngineTest {
         assertEquals(600, cmd.x)
         assertEquals(1110, cmd.y)
     }
+
+    @Test
+    fun `hitTest returns correct value when coordinates fall inside and outside button bounds`() {
+        val engine = MacroPadHitTestEngine(dummyDpToPx)
+        // centered button uses size (cols=1, rows=1) which resolves to size 60px x 60px because of dummyDpToPx returning value directly.
+        // posX = 0.5f -> 500px, posY = 0.5f -> 500px.
+        // Bounds should be [470, 530] for both X and Y.
+        val button = centeredButton(PadAction.KeyboardKey(keycode = 1, label = "Test"))
+
+        // Inside
+        org.junit.Assert.assertTrue(engine.hitTest(500f, 500f, canvasW, canvasH, listOf(button), false))
+        org.junit.Assert.assertTrue(engine.hitTest(480f, 520f, canvasW, canvasH, listOf(button), false))
+
+        // Outside
+        org.junit.Assert.assertFalse(engine.hitTest(400f, 500f, canvasW, canvasH, listOf(button), false))
+        org.junit.Assert.assertFalse(engine.hitTest(500f, 540f, canvasW, canvasH, listOf(button), false))
+    }
+
+    @Test
+    fun `isPointerTracked returns true when pointer is tracked and false otherwise`() {
+        val engine = MacroPadHitTestEngine(dummyDpToPx)
+        val button = centeredButton(PadAction.KeyboardKey(keycode = 1, label = "Test"))
+        val pointerId = 42L
+
+        org.junit.Assert.assertFalse(engine.isPointerTracked(pointerId))
+
+        engine.onPress(pointerId, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
+        org.junit.Assert.assertTrue(engine.isPointerTracked(pointerId))
+
+        engine.onRelease(pointerId, listOf(button), enabledProfile)
+        org.junit.Assert.assertFalse(engine.isPointerTracked(pointerId))
+    }
 }

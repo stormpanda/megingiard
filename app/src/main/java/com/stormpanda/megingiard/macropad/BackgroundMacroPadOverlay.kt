@@ -32,7 +32,6 @@ import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
@@ -86,13 +85,8 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
 
     val dimAlpha = layout?.ambientDim ?: 0f
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
-    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
-    val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
-    // When touch projection or freeze is active, hide pad content entirely.
-    // Viewport edit is handled separately: buttons go semi-transparent.
-    val hideContent = isTouchProjectionActive || isFrozen
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
@@ -213,7 +207,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
             }
     ) {
         // Layer 1: Dim overlay
-        if (!hideContent && effectiveDim > 0f) {
+        if (effectiveDim > 0f) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -224,12 +218,10 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
 
 
         // Layer 4: MacroPad buttons
-        // During touch projection / freeze: fully hidden.
         // During viewport edit: rendered at 50% alpha so the user can see button
         //   positions while adjusting the mirror crop.
         // Normal: fully opaque (or peek-adjusted via isPeekActive).
         val buttonAlpha = when {
-            hideContent                                   -> 0f
             isViewportEditActive || previewConfig != null -> 0.5f
             else                                          -> 1f
         }
