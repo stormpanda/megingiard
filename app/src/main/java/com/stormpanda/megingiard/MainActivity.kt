@@ -439,17 +439,16 @@ class MainActivity : ComponentActivity() {
             // gate when not already running), false means this layout should not mirror.
             LaunchedEffect(isOnValidScreen) {
                 var lastPolicyLayoutId: String? = null
-                // True while privd mirror is enabled and the daemon is still connecting
+                // True while privd mirror daemon is still connecting
                 // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
                 // auto-start so the strategy decision waits for the daemon to settle.
                 val privdMirrorConnectingFlow = combine(
-                    MacroPadSettings.privdMirrorEnabled,
                     MacroPadSettings.privdAutoConnect,
                     PrivdManager.state,
-                ) { enabled, autoConnect, privdState ->
-                    enabled && (privdState == PrivdState.CONNECTING ||
+                ) { autoConnect, privdState ->
+                    privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
-                        (privdState == PrivdState.OFF && autoConnect))
+                        (privdState == PrivdState.OFF && autoConnect)
                 }
                 combine(
                     AppStateManager.promptInFlight,
@@ -654,9 +653,8 @@ class MainActivity : ComponentActivity() {
         * privd connection.
      */
     private fun startMirrorByPolicy() {
-        val privdEnabled = MacroPadSettings.privdMirrorEnabled.value
         val privdRunning = PrivdManager.state.value == PrivdState.RUNNING
-        val strategy = selectMirrorStrategy(privdEnabled, privdRunning)
+        val strategy = selectMirrorStrategy(privdRunning)
         when (strategy) {
             MirrorStrategy.PRIVILEGED -> {
                 AppLog.i(TAG, "startMirrorByPolicy: privd path")

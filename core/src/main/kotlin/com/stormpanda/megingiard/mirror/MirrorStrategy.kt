@@ -23,12 +23,10 @@ enum class MirrorStrategy {
  * Otherwise returns [MirrorStrategy.MEDIA_PROJECTION] — including any
  * transient state (`OFF`, `BOOTSTRAPPING`, `CONNECTING`, `FAILED`).
  *
- * @param privdMirrorEnabled value of `MacroPadSettings.privdMirrorEnabled`.
  * @param privdRunning `true` iff `PrivdManager.state == PrivdState.RUNNING`.
  */
 fun selectMirrorStrategy(
-    privdMirrorEnabled: Boolean,
     privdRunning: Boolean,
 ): MirrorStrategy =
-    if (privdMirrorEnabled && privdRunning) MirrorStrategy.PRIVILEGED
+    if (privdRunning) MirrorStrategy.PRIVILEGED
     else MirrorStrategy.MEDIA_PROJECTION

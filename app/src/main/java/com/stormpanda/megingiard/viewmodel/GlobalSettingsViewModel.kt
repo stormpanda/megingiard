@@ -55,9 +55,6 @@ class GlobalSettingsViewModel : ViewModel() {
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
     val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
-    val privdGamepadMergeEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadMergeEnabled
-    val privdGamepadRecordingEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadRecordingEnabled
-    val privdMirrorEnabled: StateFlow<Boolean> = MacroPadSettings.privdMirrorEnabled
     val privdAutoConnect: StateFlow<Boolean> = MacroPadSettings.privdAutoConnect
     val privdDeadzoneLeft: StateFlow<Float>  = MacroPadSettings.deadzoneLeft
     val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
@@ -93,9 +90,6 @@ class GlobalSettingsViewModel : ViewModel() {
      */
     fun privdDisconnect() = PrivdManager.disconnect()
 
-    fun setPrivdGamepadMergeEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadMergeEnabled(value)
-    fun setPrivdGamepadRecordingEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadRecordingEnabled(value)
-    fun setPrivdMirrorEnabled(value: Boolean) = MacroPadSettings.setPrivdMirrorEnabled(value)
     fun setPrivdAutoConnect(value: Boolean) = MacroPadSettings.setPrivdAutoConnect(value)
     fun setPrivdDeadzoneLeft(value: Float)  = MacroPadSettings.setDeadzoneLeft(value)
     fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)

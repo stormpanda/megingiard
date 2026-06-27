@@ -298,14 +298,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_auto_connect">Beim App-Start automatisch verbinden</string>
     <string name="privd_auto_connect_desc">Wenn aktiviert, öffnet Megingiard den Daemon-Socket beim Start lautlos erneut. Wird nach erfolgreicher Erst-Einrichtung automatisch gesetzt.</string>
 
-    <string name="privd_feature_gamepad_merge">Gamepad-Merge</string>
-    <string name="privd_feature_gamepad_merge_desc">Sendet MacroPad-Gamepad-Aktionen direkt an den verbundenen physischen Controller, sodass Spiele nur ein Gerät sehen. Deaktivieren, um das virtuelle Standard-Gamepad zu verwenden.</string>
 
-    <string name="privd_feature_gamepad_recording">Physisches Gamepad aufzeichnen</string>
-    <string name="privd_feature_gamepad_recording_desc">Nimmt Makro-Schritte direkt vom physischen Gamepad auf (Analogsticks, Tasten). Wenn aktiviert, nutzt die Aufnahme-Schaltfläche im Timeline-Editor den physischen Controller statt des virtuellen On-Screen-Gamepads.</string>
-
-    <string name="privd_feature_mirror">Privilegierter Bildschirm-Spiegel</string>
-    <string name="privd_feature_mirror_desc">Spiegelt den Primärbildschirm über den geräteinternen privilegierten Daemon (kein MediaProjection-Dialog, geringere CPU-Last).</string>
 
     <!-- Dead-zone-Einstellungen Zeile + Dialog -->
     <string name="privd_deadzone_title">Deadzones einstellen</string>

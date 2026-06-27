@@ -368,7 +368,7 @@ but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
 `GamepadInjector` is a strategy router. At `start()` time it decides:
 
 ```
-if (PrivdClient.isConnected && MacroPadSettings.privdGamepadMergeEnabled) {
+if (PrivdClient.isConnected) {
     backend = PrivdGamepadInjector  // physical-pad merge
 } else {
     backend = ShellGamepadInjector  // standard virtual uinput
@@ -391,10 +391,10 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 | `domain/.../privd/PrivdManager.kt`                       | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum                                 |
 | `domain/.../privd/PrivdAdbConnectionManager.kt`          | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                                        |
 | `domain/.../privd/PrivdBootstrapper.kt`                  | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration                     |
-| `app/.../privd/PrivdSettingsCard.kt`                     | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch, feature toggles                                     |
+| `app/.../privd/PrivdSettingsCard.kt`                     | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch                                                     |
 | `app/.../privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; state hoisted to `GlobalSettingsScreen` |
 | `app/.../MainActivity.kt`                                | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                                            |
 | `domain/.../macropad/GamepadInjector.kt`                 | Strategy router between virtual uinput and Privd merge backends                                                                            |
 | `domain/.../macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`)                            |
-| `domain/.../settings/MacroPadSettings.kt`                | `privdGamepadMergeEnabled`, `privdGamepadRecordingEnabled`, and `privdAutoConnect` per-feature flags                                       |
-| `domain/.../settings/SettingsKeys.kt`                    | `KEY_PRIVD_GAMEPAD_MERGE_ENABLED`, `KEY_PRIVD_GAMEPAD_RECORDING_ENABLED`, `KEY_PRIVD_AUTO_CONNECT` DataStore keys                          |
+| `domain/.../settings/MacroPadSettings.kt`                | `privdAutoConnect` flag                                                                                                                   |
+| `domain/.../settings/SettingsKeys.kt`                    | `KEY_PRIVD_AUTO_CONNECT` DataStore key                                                                                                     |

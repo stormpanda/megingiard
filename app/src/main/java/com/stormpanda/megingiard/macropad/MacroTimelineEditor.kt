@@ -133,9 +133,8 @@ internal fun MacroTimelineEditor(
     val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
-    val privdGamepadRecordingEnabled by MacroPadSettings.privdGamepadRecordingEnabled.collectAsState()
     val privdState by PrivdManager.state.collectAsState()
-    val physicalRecordingAvailable = privdGamepadRecordingEnabled && privdState == PrivdState.RUNNING
+    val physicalRecordingAvailable = privdState == PrivdState.RUNNING
 
     fun pushUndo(previous: List<MacroStep>) {
         val bounded = (undoStack + listOf(previous)).takeLast(MTE_UNDO_STACK_MAX)

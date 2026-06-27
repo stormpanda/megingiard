@@ -4,7 +4,6 @@ import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdGamepadInjector
-import com.stormpanda.megingiard.settings.MacroPadSettings
 
 private const val TAG = "GamepadInjector"
 
@@ -18,8 +17,7 @@ private const val TAG = "GamepadInjector"
  *  - **Privileged merge** ([PrivdGamepadInjector] via [PrivdClient]):
  *    forwards events to the privileged daemon, which writes them directly
  *    into the **physical** gamepad's evdev node. Requires Privileged Mode
- *    to be RUNNING and the per-feature flag
- *    [MacroPadSettings.privdGamepadMergeEnabled] to be true.
+ *    to be RUNNING.
  *
  * The active backend is selected at [start] time based on settings + Privd
  * connection state. Once chosen, all dispatch calls go to that backend for
@@ -84,5 +82,5 @@ object GamepadInjector {
     }
 
     private fun shouldUseMerge(): Boolean =
-        MacroPadSettings.privdGamepadMergeEnabled.value && PrivdClient.isConnected
+        PrivdClient.isConnected
 }
