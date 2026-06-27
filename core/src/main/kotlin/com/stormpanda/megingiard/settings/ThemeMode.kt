@@ -4,4 +4,5 @@ enum class ThemeMode(val supportsCustomAccent: Boolean) {
     DARK(supportsCustomAccent = true),
     LIGHT(supportsCustomAccent = true),
     CYBERPUNK(supportsCustomAccent = false),
+    STEAM_OS(supportsCustomAccent = false),
 }

@@ -9,7 +9,7 @@
 
 ### Overview
 
-Megingiard supports user-selectable colour themes. The app currently provides three themes: **Dark** (default), **Light**, and **Cyberpunk**. The architecture is token-based so new themes can be added without per-screen rewrites, and each theme can decide whether its accent colour is user-configurable or fixed.
+Megingiard supports user-selectable colour themes. The app currently provides four themes: **Dark** (default), **Light**, **Cyberpunk**, and **SteamOS**. The architecture is token-based so new themes can be added without per-screen rewrites, and each theme can decide whether its accent colour is user-configurable or fixed.
 
 ### FR-TH1: Manual Theme Selection
 
@@ -87,11 +87,12 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 
 ### Palettes
 
-Three palettes are defined:
+Four palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `lightPalette` — white/light-grey surfaces with near-black text.
 - `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules. The pull-tab pill uses `CP_PILL_IDLE` (`Color.White.copy(alpha = 0.4f)`), consistent with the per-palette `DARK_PILL_IDLE` and `LIGHT_PILL_IDLE` constants in the other themes.
+- `steamOsPalette` — deep dark slate-navy background (`#171A21`), dark slate surfaces (`#212429`), electric blue accent (`#1A9FFF`), with subtle dark blue-grey borders and a lighter cerulean header tint (`#66C0F4`) inspired by SteamOS 3.x / Steam Deck Big Picture UI conventions.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -102,6 +103,7 @@ A new theme requires only a new `AppColors` instance and a corresponding `ThemeM
 - `DARK` → `true`
 - `LIGHT` → `true`
 - `CYBERPUNK` → `false`
+- `STEAM_OS` → `false`
 
 The Global Settings screen uses this metadata to decide whether to render the accent colour picker.
 
@@ -312,15 +314,15 @@ Modifier.padding(dimens.paddingLarge)
 
 ## Additional AppColors Tokens (added in design-system refactor)
 
-| Token                  | Dark          | Light         | Cyberpunk           | Usage                                   |
-| ---------------------- | ------------- | ------------- | ------------------- | --------------------------------------- |
-| `error`                | `0xFFCF6679`  | `0xFFB00020`  | `CP_ACCENT`         | Destructive action text, error states   |
-| `onError`              | `Color.White` | `Color.White` | `CP_DARK_RED`       | Text on error-colored surfaces          |
-| `actionColorGamepad`   | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`        | Gamepad button step indicators          |
-| `actionColorSystem`    | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`         | System/mirror action indicators         |
-| `macroPadSurface`      | `0xFF1C1C1E`  | `0xFF1C1C1E`  | `CP_SURFACE`        | MacroPad placement canvas surface       |
-| `macroPadOnSurface`    | `Color.White` | `Color.White` | `CP_TEXT`           | MacroPad placement labels/icons         |
-| `macroPadAccentBorder` | `White@30%`   | `White@30%`   | `CP_ACCENT@35%`     | MacroPad placement border tint          |
-| `sectionHeaderColor`   | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
+| Token                  | Dark          | Light         | Cyberpunk           | SteamOS             | Usage                                   |
+| ---------------------- | ------------- | ------------- | ------------------- | ------------------- | --------------------------------------- |
+| `error`                | `0xFFCF6679`  | `0xFFB00020`  | `CP_ACCENT`         | `0xFFFF5555`        | Destructive action text, error states   |
+| `onError`              | `Color.White` | `Color.White` | `CP_DARK_RED`       | `Color.White`       | Text on error-colored surfaces          |
+| `actionColorGamepad`   | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`        | `0xFFFF9800`        | Gamepad button step indicators          |
+| `actionColorSystem`    | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`         | `STEAM_ACCENT`      | System/mirror action indicators         |
+| `macroPadSurface`      | `0xFF1C1C1E`  | `0xFF1C1C1E`  | `CP_SURFACE`        | `STEAM_SURFACE`     | MacroPad placement canvas surface       |
+| `macroPadOnSurface`    | `Color.White` | `Color.White` | `CP_TEXT`           | `STEAM_TEXT`        | MacroPad placement labels/icons         |
+| `macroPadAccentBorder` | `White@30%`   | `White@30%`   | `CP_ACCENT@35%`     | `STEAM_ACCENT@35%`  | MacroPad placement border tint          |
+| `sectionHeaderColor`   | `accent`      | `accent`      | `CP_SECTION_HEADER` | `STEAM_HDR_ACCENT`  | Section-header labels and pull-tab tint |
 
 Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` in screen code.

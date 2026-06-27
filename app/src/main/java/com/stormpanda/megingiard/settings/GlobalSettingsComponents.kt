@@ -105,6 +105,7 @@ internal fun ThemeMode.displayNameResId(): Int = when (this) {
     ThemeMode.DARK -> R.string.theme_dark
     ThemeMode.LIGHT -> R.string.theme_light
     ThemeMode.CYBERPUNK -> R.string.theme_cyberpunk
+    ThemeMode.STEAM_OS -> R.string.theme_steamos
 }
 
 @Composable

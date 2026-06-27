@@ -240,6 +240,57 @@ private val cyberpunkPalette = AppColors(
     settingsSeparator      = CP_SECTION_HEADER.copy(alpha = 0.12f),
 )
 
+// ─── SteamOS palette ──────────────────────────────────────────────────────────
+// Colours matching SteamOS 3.x / Steam Deck interface:
+//   Background → deep dark slate-navy ~0xFF171A21
+//   Surface    → dark slate-grey      ~0xFF212429
+//   Accent     → Steam electric blue  ~0xFF1A9FFF
+private val STEAM_ACCENT         = Color(0xFF1A9FFF)   // Steam electric blue
+private val STEAM_HEADER_ACCENT  = Color(0xFF66C0F4)   // Steam light blue highlight
+private val STEAM_BG             = Color(0xFF171A21)   // deep dark slate-navy
+private val STEAM_SURFACE        = Color(0xFF212429)   // dark slate-grey
+private val STEAM_SURFACE_ELEV   = Color(0xFF2D3138)   // elevated / dragged surface
+private val STEAM_TEXT           = Color(0xFFE1E3E6)   // light grey-blue primary text
+private val STEAM_PILL_IDLE      = Color.White.copy(alpha = 0.4f)
+
+private val steamOsPalette = AppColors(
+    appBackground          = STEAM_BG,
+    surface                = STEAM_SURFACE,
+    surfaceVariant         = STEAM_SURFACE_ELEV,
+    onSurface              = STEAM_TEXT,
+    onSurfaceSecondary     = Color(0xFF8F98A0),
+    divider                = Color(0xFF2A313D),
+    controlOverlay         = STEAM_BG.copy(alpha = 0.85f),
+    onControlOverlay       = STEAM_TEXT,
+    fingerCircle           = Color.White.copy(alpha = 0.45f),
+    keyBackground          = STEAM_SURFACE_ELEV,
+    keyPressed             = Color(0xFF3D4554),
+    keyModifierActive      = Color(0xFF2C3545),
+    touchpadBackground     = STEAM_BG,
+    touchpadIndicator      = STEAM_ACCENT,
+    pickerBackground       = STEAM_SURFACE,
+    accentBorder           = STEAM_ACCENT.copy(alpha = 0.35f),
+    accent                 = STEAM_ACCENT,
+    onAccent               = Color.White,
+    pillIdleColor          = STEAM_PILL_IDLE,
+    controlIndicatorActive = STEAM_ACCENT,
+    navPillBody            = STEAM_SURFACE,
+    buttonBody             = Color(0xFF2C3545),
+    controlOverlayBorder   = STEAM_ACCENT,
+    navPillBorder          = STEAM_ACCENT,
+    mirrorPillBorder       = Color.Transparent,
+    buttonIconTint         = STEAM_ACCENT,
+    error                  = Color(0xFFFF5555),
+    onError                = Color.White,
+    actionColorGamepad     = Color(0xFFFF9800),
+    actionColorSystem      = STEAM_ACCENT,
+    macroPadSurface        = STEAM_SURFACE,
+    macroPadOnSurface      = STEAM_TEXT,
+    macroPadAccentBorder   = STEAM_ACCENT.copy(alpha = 0.35f),
+    sectionHeaderColor     = STEAM_HEADER_ACCENT,
+    settingsSeparator      = Color(0xFF2A313D).copy(alpha = 0.5f),
+)
+
 // ─── Palette selector ─────────────────────────────────────────────────────────
 
 /**
@@ -252,6 +303,7 @@ fun paletteFor(mode: ThemeMode, userAccent: Color? = null): AppColors {
         ThemeMode.DARK      -> darkPalette
         ThemeMode.LIGHT     -> lightPalette
         ThemeMode.CYBERPUNK -> cyberpunkPalette
+        ThemeMode.STEAM_OS  -> steamOsPalette
     }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent
