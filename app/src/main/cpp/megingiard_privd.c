@@ -895,7 +895,7 @@ static int serve_client(int client_fd) {
             char resp[128];
             int rl;
             if (sscanf(line, "SCREENSHOT %383s", path) == 1) {
-                snprintf(cmd, sizeof(cmd), "/system/bin/screencap -d 0 -p %s", path);
+                snprintf(cmd, sizeof(cmd), "/system/bin/screencap -p %s", path);
                 int rc = system(cmd);
                 if (rc == 0) {
                     rl = snprintf(resp, sizeof(resp), "SCREENSHOT_OK\n");
