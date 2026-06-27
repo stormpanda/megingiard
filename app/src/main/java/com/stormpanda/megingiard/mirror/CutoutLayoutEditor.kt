@@ -622,7 +622,7 @@ fun CutoutLayoutEditor(
                     val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
                     val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
 
-                    // Row 1: Add Cutout | Settings
+                    // Row 1: Add Cutout | Settings | Help
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -690,9 +690,11 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setBackgroundSettingsActive(true)
                             }
                         )
+
+                        HelpIconButton(onClick = { showEditorHelp = true })
                     }
 
-                    // Row 2: Aspect Ratio | Shape Toggle
+                    // Row 2: Aspect Ratio | Shape Toggle | Spacer
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -780,9 +782,11 @@ fun CutoutLayoutEditor(
                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
                             }
                         )
+
+                        Spacer(Modifier.width(48.dp))
                     }
 
-                    // Row 3: Edit Crop | Delete Selected
+                    // Row 3: Edit Crop | Delete Selected | Spacer
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -822,9 +826,11 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
                             }
                         )
+
+                        Spacer(Modifier.width(48.dp))
                     }
 
-                    // Row 4: Done / Save | Cancel / Revert
+                    // Row 4: Done / Save | Cancel / Revert | Drag Handle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -855,44 +861,29 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setViewportEditActive(false)
                             }
                         )
-                    }
-                } // end Column (button grid)
 
-                Spacer(Modifier.width(8.dp))
-
-                // Right-side handle column: help icon at top, drag handle at bottom
-                Column(
-                    modifier = Modifier
-                        .size(width = 36.dp, height = 36.dp * 4 + 8.dp * 3) // mirror height of 4 rows + gaps
-                        .padding(top = 4.dp, bottom = 4.dp),
-                    verticalArrangement = Arrangement.SpaceBetween,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    // Help icon at top
-                    HelpIconButton(onClick = { showEditorHelp = true })
-
-                    // Drag handle at bottom
-                    Box(
-                        modifier = Modifier
-                            .size(width = 36.dp, height = 32.dp)
-                            .pointerInput(Unit) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    val cur = currentClampedOffset
-                                    toolbarOffset = IntOffset(
-                                        x = cur.x + dragAmount.x.roundToInt(),
-                                        y = cur.y + dragAmount.y.roundToInt()
-                                    )
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.DragIndicator,
-                            contentDescription = stringResource(R.string.cd_drag_toolbar),
-                            tint = colors.onSurfaceSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(width = 48.dp, height = 32.dp)
+                                .pointerInput(Unit) {
+                                    detectDragGestures { change, dragAmount ->
+                                        change.consume()
+                                        val cur = currentClampedOffset
+                                        toolbarOffset = IntOffset(
+                                            x = cur.x + dragAmount.x.roundToInt(),
+                                            y = cur.y + dragAmount.y.roundToInt()
+                                        )
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DragIndicator,
+                                contentDescription = stringResource(R.string.cd_drag_toolbar),
+                                tint = colors.onSurfaceSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             } // end Row

@@ -204,6 +204,7 @@ fun PillMenu(
                 Row(
                     modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
                 ) {
                     PillActionChip(
                         label    = stringResource(R.string.pill_menu_edit_layout),
