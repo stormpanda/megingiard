@@ -901,4 +901,8 @@ Open Settings to create a layout.</string>
     <string name="macro_tutorial_btn_got_it">Got it</string>
     <string name="macro_tutorial_btn_dont_show">Don\'t show again</string>
 
+    <!-- Pill Tutorial -->
+    <string name="pill_tutorial_title">Opening the Menu</string>
+    <string name="pill_tutorial_body">Swipe the pill indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.</string>
+
 </resources>

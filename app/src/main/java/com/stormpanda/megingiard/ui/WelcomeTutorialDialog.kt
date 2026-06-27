@@ -19,7 +19,6 @@ import com.stormpanda.megingiard.R
 @Composable
 fun WelcomeTutorialDialog(
     onDismiss: () -> Unit,
-    onDismissForever: () -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -62,15 +61,6 @@ fun WelcomeTutorialDialog(
                 Text(
                     text = stringResource(R.string.welcome_btn_got_it),
                     color = colors.accent,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissForever) {
-                Text(
-                    text = stringResource(R.string.welcome_btn_dont_show),
-                    color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

@@ -96,12 +96,21 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 
 Modal visibility is controlled by a local `Boolean` state variable (`showXxxHelp`) declared with `remember { mutableStateOf(false) }` (or `rememberSaveable` for screens using `Scaffold`). No global state is used; visibility is entirely local to each screen's composable.
 
-### Welcome Onboarding Dialog
+### Onboarding & Welcome Dialogs
 
-On first boot of the application, a `WelcomeTutorialDialog` is shown to introduce Megingiard\'s features and highlight the in-app help (?) buttons.
-- Triggered by `SettingsManager.showWelcomeTutorial`, which defaults to `true`.
-- The user can temporarily dismiss it with "Got it", or dismiss it permanently with "Don't show again" (persists to DataStore).
-- The state can be reset app-wide under **Global Settings** -> **Data** -> **Reset tutorials** to show all onboarding and automated tutorials again next time they are accessed.
+To onboard new users, the app chains two introductory popups upon the first launch:
+
+1. **Welcome Onboarding Dialog:**
+   - A `WelcomeTutorialDialog` is shown on first launch to introduce Megingiard\'s features and highlight the in-app help (?) buttons.
+   - It only contains a single "Got it" button, which dismisses the modal and flags it as completed (writing `showWelcomeTutorial = false` to Settings) so that it is never shown again.
+   
+2. **Pill Swipe Onboarding Dialog:**
+   - Appears immediately after the welcome modal is closed for the first time.
+   - Explains how to swipe the edge-anchored pill indicator to open the Quick Menu (Pill Menu).
+   - Renders a styled modal containing a "Got it" button that marks the tutorial as completed.
+   - Displays an animated bouncing arrow pointing directly at the pill's edge location (aligned top or bottom center depending on the user's overlay placement setting).
+
+Both tutorial flags can be reset simultaneously under **Global Settings** -> **Data** -> **Reset tutorials** to show these onboarding experiences again.
 
 ### String resource conventions
 
@@ -128,6 +137,7 @@ help_close_cd  — content description for the Close button
 |---|---|
 | `ui/HelpModal.kt` | Shared `HelpModal`, `HelpIconButton`, `HelpEntry`, `HelpSection`, `HelpIntro` composables |
 | `ui/WelcomeTutorialDialog.kt` | First-boot welcome onboarding dialog |
+| `ui/PillTutorialDialog.kt` | Swipe menu affordance onboarding dialog |
 | `ui/MacroEditorTutorialDialog.kt` | Macro editor onboarding tutorial dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
 | `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |

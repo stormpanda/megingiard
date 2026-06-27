@@ -91,6 +91,7 @@ internal val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projecti
 // Tutorials persistence
 internal val KEY_SHOW_WELCOME_TUTORIAL = booleanPreferencesKey("show_welcome_tutorial")
 internal val KEY_SHOW_MACRO_EDITOR_TUTORIAL = booleanPreferencesKey("show_macro_editor_tutorial")
+internal val KEY_SHOW_PILL_TUTORIAL = booleanPreferencesKey("show_pill_tutorial")
 
 // Internal backups storage key — isolated from SECTION_MAP export/import
 internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")

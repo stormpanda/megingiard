@@ -103,6 +103,9 @@ object SettingsManager {
     private val _showMacroEditorTutorial = MutableStateFlow(true)
     val showMacroEditorTutorial: StateFlow<Boolean> = _showMacroEditorTutorial.asStateFlow()
 
+    private val _showPillTutorial = MutableStateFlow(true)
+    val showPillTutorial: StateFlow<Boolean> = _showPillTutorial.asStateFlow()
+
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
     // Touchpad settings live in [TouchpadSettings].
@@ -172,6 +175,7 @@ object SettingsManager {
                     _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
                     _showWelcomeTutorial.value = prefs[KEY_SHOW_WELCOME_TUTORIAL] ?: true
                     _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
+                    _showPillTutorial.value = prefs[KEY_SHOW_PILL_TUTORIAL] ?: true
                     MirrorSettings.loadFrom(prefs)
                     KeyboardSettings.loadFrom(prefs)
                     TouchpadSettings.loadFrom(prefs)
@@ -238,15 +242,29 @@ object SettingsManager {
         }
     }
 
+    fun setShowPillTutorial(value: Boolean) {
+        AppLog.d(TAG, "setShowPillTutorial($value)")
+        _showPillTutorial.value = value
+        scope.launch {
+            if (::dataStore.isInitialized) {
+                dataStore.edit { prefs ->
+                    prefs[KEY_SHOW_PILL_TUTORIAL] = value
+                }
+            }
+        }
+    }
+
     fun resetAllTutorials() {
         AppLog.d(TAG, "resetAllTutorials()")
         _showWelcomeTutorial.value = true
         _showMacroEditorTutorial.value = true
+        _showPillTutorial.value = true
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
                     prefs[KEY_SHOW_WELCOME_TUTORIAL] = true
                     prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
+                    prefs[KEY_SHOW_PILL_TUTORIAL] = true
                 }
             }
         }

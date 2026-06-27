@@ -69,6 +69,7 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.IdlePill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
+import com.stormpanda.megingiard.ui.PillTutorialDialog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -95,6 +96,20 @@ fun MainAppScreen() {
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
+
+    val showPillTutorial by SettingsManager.showPillTutorial.collectAsState()
+    var showPillLocal by remember { mutableStateOf(true) }
+
+    LaunchedEffect(showWelcomeTutorial) {
+        if (showWelcomeTutorial) {
+            showWelcomeLocal = true
+        }
+    }
+    LaunchedEffect(showPillTutorial) {
+        if (showPillTutorial) {
+            showPillLocal = true
+        }
+    }
 
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
@@ -247,10 +262,17 @@ fun MainAppScreen() {
 
         if (showWelcomeTutorial && showWelcomeLocal) {
             WelcomeTutorialDialog(
-                onDismiss = { showWelcomeLocal = false },
-                onDismissForever = {
+                onDismiss = {
                     showWelcomeLocal = false
                     SettingsManager.setShowWelcomeTutorial(false)
+                }
+            )
+        } else if (showPillTutorial && showPillLocal) {
+            PillTutorialDialog(
+                overlayAtBottom = overlayAtBottom,
+                onDismiss = {
+                    showPillLocal = false
+                    SettingsManager.setShowPillTutorial(false)
                 }
             )
         }

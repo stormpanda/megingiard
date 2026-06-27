@@ -31,16 +31,20 @@ class SettingsManagerTest {
         // 1. Verify default values are true
         assertTrue(SettingsManager.showWelcomeTutorial.value)
         assertTrue(SettingsManager.showMacroEditorTutorial.value)
+        assertTrue(SettingsManager.showPillTutorial.value)
 
         // 2. Set to false and verify updates
         SettingsManager.setShowWelcomeTutorial(false)
         SettingsManager.setShowMacroEditorTutorial(false)
+        SettingsManager.setShowPillTutorial(false)
         assertFalse(SettingsManager.showWelcomeTutorial.value)
         assertFalse(SettingsManager.showMacroEditorTutorial.value)
+        assertFalse(SettingsManager.showPillTutorial.value)
 
         // 3. Reset all tutorials and verify reset to true
         SettingsManager.resetAllTutorials()
         assertTrue(SettingsManager.showWelcomeTutorial.value)
         assertTrue(SettingsManager.showMacroEditorTutorial.value)
+        assertTrue(SettingsManager.showPillTutorial.value)
     }
 }

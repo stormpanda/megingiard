@@ -907,4 +907,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macro_tutorial_btn_got_it">Verstanden</string>
     <string name="macro_tutorial_btn_dont_show">Nicht mehr anzeigen</string>
 
+    <!-- Pill Tutorial -->
+    <string name="pill_tutorial_title">Menü öffnen</string>
+    <string name="pill_tutorial_body">Streiche über die Pille am Bildschirmrand, um das Schnellmenü zu öffnen. Du kannst damit Profile, Layouts und Einstellungen schnell wechseln.</string>
+
 </resources>
