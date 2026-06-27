@@ -856,7 +856,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_privd_desc">Recommended for advanced gaming. Connects to a background helper via ADB to enable physical gamepad macro recording and high-speed kernel-level touch injection.</string>
     <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>
-    <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a github issue or developer report.</string>
+    <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a GitHub issue or developer report.</string>
 
     <!-- Pill Menu help -->
     <string name="help_pillmenu_title">Quick Menu — Help</string>

@@ -244,7 +244,6 @@ fun PillMenu(
 
 @Composable
 private fun PillMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
-    val colors = LocalAppColors.current
     HelpModal(
         visible = visible,
         title = stringResource(R.string.help_pillmenu_title),

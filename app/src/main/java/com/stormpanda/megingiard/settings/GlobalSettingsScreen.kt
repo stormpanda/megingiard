@@ -628,7 +628,6 @@ fun GlobalSettingsScreen(
 
 @Composable
 private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
-    val colors = LocalAppColors.current
     HelpModal(
         visible = visible,
         title = stringResource(R.string.help_settings_title),

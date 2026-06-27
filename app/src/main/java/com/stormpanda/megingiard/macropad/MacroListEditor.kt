@@ -201,7 +201,6 @@ private fun MacroListView(
     onDone:           () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val accentColor = colors.accent
 
     val profiles by MacroPadState.profiles.collectAsState()
     val activeProfile by MacroPadState.activeProfile.collectAsState()

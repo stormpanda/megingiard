@@ -28,7 +28,7 @@ Every menu in Megingiard displays a help icon (?) to the right of its headline. 
 
 ### FR-H3: Help Content Structure
 
-- Each modal MUST begin with an `HelpIntro` paragraph describing the screen's overall purpose.
+- Each modal MUST begin with a `HelpIntro` paragraph describing the screen's overall purpose.
 - Related controls MUST be grouped under `HelpSection` headers.
 - Each control MUST be documented with a `HelpEntry` row containing the control's icon (if applicable), a short label, and a 1-3 sentence description.
 - Descriptions MUST be informative and specific, not generic filler text.

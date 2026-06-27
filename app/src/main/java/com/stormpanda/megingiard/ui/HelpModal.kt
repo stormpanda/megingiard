@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -162,7 +161,7 @@ internal fun HelpModal(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = HM_SCRIM_ALPHA))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = HM_SCRIM_ALPHA))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
