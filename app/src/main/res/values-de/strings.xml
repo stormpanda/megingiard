@@ -31,8 +31,6 @@
     <string name="settings_section_tools">Werkzeuge</string>
     <string name="settings_section_general">Allgemein</string>
     <string name="settings_section_appearance">Erscheinungsbild</string>
-    <string name="settings_auto_start_capture">Spiegelung automatisch starten</string>
-    <string name="settings_auto_start_capture_desc">Beim App-Start automatisch die Bildschirmaufnahme anfragen</string>
     <string name="settings_global_title">Einstellungen</string>
     <string name="settings_back">Zurück</string>
     <string name="settings_accent_color">Akzentfarbe</string>
@@ -52,8 +50,6 @@
     <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
-    <string name="settings_mirror_auto_start">Spiegelung automatisch starten</string>
-    <string name="settings_mirror_auto_start_desc">Wenn aktiviert, wird die Spiegelung beim App-Start und beim Layout-Wechsel automatisch fortgesetzt für Layouts, in denen sie zuletzt aktiv war</string>
     <string name="settings_auto_switch_profiles">Profile autom. wechseln</string>
     <string name="settings_auto_switch_profiles_desc">Automatisches Wechseln des MacroPad-Profils, wenn eine verknüpfte App auf dem Hauptbildschirm gestartet wird</string>
     <string name="settings_exclude_from_recents">Aus \"Letzte Apps\" ausschließen</string>
@@ -847,7 +843,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_intro">Die globalen Einstellungen gelten für die gesamte App und bleiben zwischen Sitzungen erhalten. Nutze die Abschnitts-Sprungleiste oben, um schnell zu einer bestimmten Gruppe zu scrollen.</string>
     <string name="help_settings_overlay_position_desc">Empfohlen, wenn deine Hände das Gerät so halten, dass deine Daumen natürlich in der Nähe der Unterkante ruhen. Das Pill-Menü lässt sich so leichter wischen.</string>
     <string name="help_settings_exit_hints_desc">Empfohlen für neue Benutzer. Da virtuelle Tastatur und Touchpad im Vollbildmodus laufen, erinnert dich dieser Hinweis stets an die Beendengesten.</string>
-    <string name="help_settings_mirror_autostart_desc">Aktiviere dies, wenn du die Bildschirmspiegelung bei jeder Sitzung verwendest, um den Start-Button nicht jedes Mal manuell antippen zu müssen.</string>
     <string name="help_settings_auto_profile_desc">Sorgt für nahtloses Gaming. Verknüpft Makroprofile mit Apps, sodass deine Tasten beim Starten eines Spiels automatisch wechseln.</string>
     <string name="help_settings_recents_desc">Hält deine Übersicht der zuletzt geöffneten Apps aufgeräumt. Empfohlen, wenn du Megingiard komplett über die Pill-Menü-Steuerung steuerst.</string>
     <string name="help_settings_accessibility_desc">Erforderlich für automatische Profilwechsel, damit Megingiard das aktive Spiel im Vordergrund erkennen darf. Tippe zum Konfigurieren.</string>

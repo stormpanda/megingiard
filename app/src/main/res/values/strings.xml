@@ -26,8 +26,6 @@
     <string name="settings_section_tools">Tools</string>
     <string name="settings_section_general">General</string>
     <string name="settings_section_appearance">Appearance</string>
-    <string name="settings_auto_start_capture">Auto-start mirroring</string>
-    <string name="settings_auto_start_capture_desc">Automatically request screen capture permission when the app opens</string>
     <string name="settings_global_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_accent_color">Accent color</string>
@@ -47,8 +45,6 @@
     <string name="mirror_fps_value">%1$d FPS</string>
     <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
     <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
-    <string name="settings_mirror_auto_start">Auto-start mirroring</string>
-    <string name="settings_mirror_auto_start_desc">When enabled, mirroring resumes on app launch and on layout switch for layouts that were last running with mirror on</string>
     <string name="settings_auto_switch_profiles">Auto-switch profiles</string>
     <string name="settings_auto_switch_profiles_desc">Automatically switch the MacroPad profile when a mapped app is launched on the primary screen</string>
     <string name="settings_exclude_from_recents">Exclude from Recents</string>
@@ -841,7 +837,6 @@ Open Settings to create a layout.</string>
     <string name="help_settings_intro">Global Settings apply to the whole app and persist across sessions. Use the section jump row at the top to scroll quickly to a specific group.</string>
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Pill Menu easier to swipe open without shifting your thumbs.</string>
     <string name="help_settings_exit_hints_desc">Recommended for new users. The virtual keyboard and touchpad run in immersive fullscreen mode; this hint ensures you always remember the exit gestures/buttons.</string>
-    <string name="help_settings_mirror_autostart_desc">Turn this on if you use screen mirroring during every gaming session to skip tapping the Start button each time you open the app.</string>
     <string name="help_settings_auto_profile_desc">Essential for seamless gaming. Links macro profiles to specific apps so your custom buttons switch instantly when launching a game, without manual menu navigation.</string>
     <string name="help_settings_recents_desc">Keeps your Android Recents menu clean. Recommended if you launch Megingiard once and control it entirely via the edge Pill overlay while gaming.</string>
     <string name="help_settings_accessibility_desc">Required for automatic profile switching. Android permissions require this service to detect which game is active on the primary screen. Tap this row to configure.</string>

@@ -91,7 +91,6 @@ fun GlobalSettingsScreen(
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
-    val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
@@ -209,13 +208,6 @@ fun GlobalSettingsScreen(
                             description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
                             checked = showFullscreenExitHints,
                             onCheckedChange = { viewModel.setShowFullscreenExitHints(it) },
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_mirror_auto_start),
-                            description = stringResource(R.string.settings_mirror_auto_start_desc),
-                            checked = mirrorAutoStart,
-                            onCheckedChange = { viewModel.setMirrorAutoStart(it) },
                         )
                         AppDivider()
                         RememberSettingRow(
@@ -635,10 +627,6 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpEntry(
             label = stringResource(R.string.settings_show_fullscreen_exit_hints),
             description = stringResource(R.string.help_settings_exit_hints_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_mirror_auto_start),
-            description = stringResource(R.string.help_settings_mirror_autostart_desc),
         )
         HelpEntry(
             label = stringResource(R.string.settings_auto_switch_profiles),

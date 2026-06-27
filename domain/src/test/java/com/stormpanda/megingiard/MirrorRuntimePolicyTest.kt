@@ -18,7 +18,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = false,
@@ -35,7 +34,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = true,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
                 autoStartSuppressed = false,
@@ -52,7 +50,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = true,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = false,
@@ -69,26 +66,8 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = false,
-                autoStartSuppressed = false,
-            )
-        )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
-    }
-
-    @Test
-    fun `does not start when global auto-start is disabled`() {
-        val decision = decideMirrorRuntimeAction(
-            MirrorRuntimePolicyState(
-                promptInFlight = false,
-                isOnValidScreen = true,
-                isCapturing = false,
-                globalAutoStart = false,
-                layoutId = LAYOUT_A,
-                layoutWantsMirror = true,
                 autoStartSuppressed = false,
             )
         )
@@ -103,7 +82,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = true,
                 isOnValidScreen = true,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = false,
@@ -120,7 +98,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = false,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = false,
@@ -137,7 +114,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = true,
-                globalAutoStart = true,
                 layoutId = null,
                 layoutWantsMirror = false,
                 autoStartSuppressed = false,
@@ -154,7 +130,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = true,
@@ -171,7 +146,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = false,
@@ -189,7 +163,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = false,
@@ -207,7 +180,6 @@ class MirrorRuntimePolicyTest {
                 promptInFlight = false,
                 isOnValidScreen = true,
                 isCapturing = false,
-                globalAutoStart = true,
                 layoutId = LAYOUT_A,
                 layoutWantsMirror = true,
                 autoStartSuppressed = false,

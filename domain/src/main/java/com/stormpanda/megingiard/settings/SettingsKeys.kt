@@ -18,7 +18,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  * widens access within `:domain`.
  */
 
-internal val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
 internal val KEY_AUTO_SWITCH_PROFILES = booleanPreferencesKey("auto_switch_profiles")
 internal val KEY_EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_recents")
 internal val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
@@ -105,7 +104,7 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_AUTO_SWITCH_PROFILES, KEY_EXCLUDE_FROM_RECENTS,
 )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,
+    KEY_PINCH_WHILE_PROJECTING,
     KEY_REMEMBER_VIEWPORT, KEY_REMEMBER_LOCK, KEY_REMEMBER_PROJECTION,
 )
 private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> = setOf(

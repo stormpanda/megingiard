@@ -404,7 +404,7 @@ class MainActivity : ComponentActivity() {
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
-                            AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value} autoStart=${SettingsManager.autoStartCapture.value}")
+                            AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value}")
                             AppStateManager.setActivityResumed(true)
                             // Clear the user-leaving flag: the user has returned to the app.
                             AppStateManager.setUserLeaving(false)
@@ -455,7 +455,6 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.promptInFlight,
                     AppStateManager.mirrorAutoStartSuppressedLayoutId,
                     ScreenCaptureManager.isCapturing,
-                    SettingsManager.autoStartCapture,
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     SettingsManager.showWelcomeTutorial,
@@ -464,17 +463,15 @@ class MainActivity : ComponentActivity() {
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
                     val capturing = values[2] as Boolean
-                    val globalAutoStart = values[3] as Boolean
-                    val currentLayout = values[4] as? PadLayout
-                    val onValidScreen = values[5] as Boolean
-                    val showWelcome = values[6] as Boolean
-                    val showPill = values[7] as Boolean
+                    val currentLayout = values[3] as? PadLayout
+                    val onValidScreen = values[4] as Boolean
+                    val showWelcome = values[5] as Boolean
+                    val showPill = values[6] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
                         isOnValidScreen = onValidScreen,
                         isCapturing = capturing,
-                        globalAutoStart = globalAutoStart,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,

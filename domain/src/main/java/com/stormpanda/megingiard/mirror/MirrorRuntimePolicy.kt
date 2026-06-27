@@ -5,7 +5,6 @@ data class MirrorRuntimePolicyState(
     val promptInFlight: Boolean,
     val isOnValidScreen: Boolean,
     val isCapturing: Boolean,
-    val globalAutoStart: Boolean,
     val layoutId: String?,
     val layoutWantsMirror: Boolean,
     val autoStartSuppressed: Boolean,
@@ -42,7 +41,6 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
         state.isCapturing && !state.layoutWantsMirror -> MirrorRuntimeAction.STOP
 
         state.layoutWantsMirror &&
-            state.globalAutoStart &&
             !state.autoStartSuppressed &&
             !state.isCapturing &&
             !state.promptInFlight &&

@@ -38,7 +38,7 @@ When `MainActivity` detects that it is running on the **primary display** (`disp
 - Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
 - Consumes all pointer events, preventing interaction with any underlying controls.
 
-Display detection is performed synchronously in `MainActivity`'s Compose tree via `LocalContext.current.display?.displayId` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (`autoStartCapture` on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
+Display detection is performed synchronously in `MainActivity`'s Compose tree via `LocalContext.current.display?.displayId` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (auto-start on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
 
 ---
 

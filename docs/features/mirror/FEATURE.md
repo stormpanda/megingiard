@@ -68,16 +68,16 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
 - Touch Projection settings are stored persistently in the layout config but their runtime session state remains active until explicitly turned off in settings or the mirror session is stopped.
 
-### FR-M8: Auto-start Gating (Global + Per-Layout Memory)
+### FR-M8: Auto-start Gating (Per-Layout Memory)
 
-- A global "Auto-start mirroring" setting (in Global Settings → General) MUST control whether mirroring resumes automatically on app launch and on layout switch.
+- Auto-start mirroring is always enabled globally. Mirroring resumes automatically on app launch and on layout switch according to the active layout's remembered state.
 - Each MacroPad layout MUST remember its last mirror state independently:
   - `PadLayout.mirrorAutoStart = true` is recorded when the user explicitly starts mirroring for that layout.
   - `PadLayout.mirrorAutoStart = false` is recorded when the user explicitly stops mirroring for that layout or cancels the MediaProjection consent prompt.
-- The capture-prompt MUST auto-launch only when **both** the global setting is enabled **and** the active layout's remembered state is `true`.
-- Switching to a layout whose remembered state is `false` while currently capturing MUST stop the runtime mirror session without changing any layout's persisted remembered state.
-- Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt when the global auto-start setting is enabled.
-- The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the global setting or the layout's remembered state.
+- The capture-prompt MUST auto-launch when the active layout's remembered state is `true`.
+- Explicitly switching to a layout whose remembered state is `false` while currently capturing MUST stop the runtime mirror session without changing any layout's persisted remembered state.
+- Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt.
+- The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the layout's remembered state.
 
 ### FR-M9: Privileged Mirror (No-Consent Path)
 
@@ -420,11 +420,10 @@ Users can opt in to persisting specific mirror session states across restarts vi
 
 ### Auto-start Gating
 
-The auto-start logic in `MainActivity` derives an "effective auto-start" signal by combining two inputs:
+The auto-start logic in `MainActivity` derives an "effective auto-start" signal based on the active layout's remembered state:
 
 | Input                                | Source                                                                                                                                 |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Global "Auto-start mirroring" toggle | `SettingsManager.autoStartCapture` (`StateFlow<Boolean>`) — DataStore key `auto_start_capture`.                                        |
 | Active layout's remembered state     | `MacroPadState.activeLayout.mirrorAutoStart` (`Boolean`) — persisted inside the MacroPad profile JSON via `PadLayout.mirrorAutoStart`. |
 
 **Recording the layout state.** `PadLayout.mirrorAutoStart` is the single source of truth for whether each layout last wanted mirroring on or off. It is persisted in the MacroPad profile JSON:
@@ -435,19 +434,18 @@ The auto-start logic in `MainActivity` derives an "effective auto-start" signal 
 
 `ScreenCaptureService` does not write `mirrorAutoStart`; start and teardown only manage runtime capture resources. The persisted layout state is changed only by the user's start/stop/consent decisions.
 
-**Runtime reconciliation.** `MainActivity` combines the prompt, capture, global auto-start, active-layout, and privd-connection `StateFlow`s into a `MirrorRuntimePolicyState`. The active layout's `mirrorAutoStart` flag is evaluated directly on every emission: if it is `false` while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If it is `true` while no session is running, global auto-start decides whether `MainActivity` starts the mirror flow.
+**Runtime reconciliation.** `MainActivity` combines the prompt, capture, active-layout, and privd-connection `StateFlow`s into a `MirrorRuntimePolicyState`. The active layout's `mirrorAutoStart` flag is evaluated directly on every emission: if it is `false` while a session is running, `MainActivity` stops only the runtime service and does not mutate any layout's remembered state. If it is `true` while no session is running, `MainActivity` starts the mirror flow.
 
 ```
 isOnValidScreen && !promptInFlight && !isCapturing &&
-  globalMirrorAutoStart && activeLayout.mirrorAutoStart &&
-  !privdMirrorConnecting
+  activeLayout.mirrorAutoStart && !privdMirrorConnecting
 ```
 
 `privdMirrorConnecting` is `true` while privd mirror is enabled and the daemon is in a transient state (`CONNECTING`, `BOOTSTRAPPING`, or `OFF` with auto-connect pending). This prevents the policy from selecting the `MEDIA_PROJECTION` consent path on fresh app launch before the privd auto-connect coroutine has had a chance to establish the connection. Once the daemon settles (`RUNNING` → privd path; `FAILED`/`OFF` → consent fallback), the combine re-emits and the policy re-evaluates with the correct strategy.
 
-When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror strategy and either starts the privileged service (`ACTION_START_PRIVD`) or opens `CaptureRequestActivity` on the primary display. The flow re-evaluates on every layout switch, so switching to a layout whose remembered state is `true` (with global auto-start on and no active session) starts mirroring.
+When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror strategy and either starts the privileged service (`ACTION_START_PRIVD`) or opens `CaptureRequestActivity` on the primary display. The flow re-evaluates on every layout switch, so switching to a layout whose remembered state is `true` (with no active session) starts mirroring.
 
-**Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the global setting is off.
+**Manual start bypass.** The `mirrorStartRequested` LaunchedEffect (fired by the MacroPad MirrorPlayStop button) directly calls `launchCaptureRequest()` independent of the auto-start gate, so the user can always start mirroring even when the layout's remembered state is off.
 
 ### Multi-Cutout Edge Blending
 

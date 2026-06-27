@@ -48,7 +48,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
     val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val showWelcomeTutorial: StateFlow<Boolean> = SettingsManager.showWelcomeTutorial
-    val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
@@ -73,7 +72,6 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
     fun setShowWelcomeTutorial(value: Boolean) = SettingsManager.setShowWelcomeTutorial(value)
     fun resetAllTutorials() = SettingsManager.resetAllTutorials()
-    fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)
     fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)

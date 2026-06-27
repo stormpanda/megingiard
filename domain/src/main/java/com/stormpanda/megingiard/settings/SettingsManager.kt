@@ -73,8 +73,6 @@ object SettingsManager {
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
 
 
-    private val _autoStartCapture = MutableStateFlow(false)
-    val autoStartCapture: StateFlow<Boolean> = _autoStartCapture.asStateFlow()
 
     private val _autoSwitchProfiles = MutableStateFlow(true)
     val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
@@ -162,7 +160,6 @@ object SettingsManager {
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
 
-                    _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
                     _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
                     _excludeFromRecents.value = prefs[KEY_EXCLUDE_FROM_RECENTS] ?: false
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
@@ -204,15 +201,6 @@ object SettingsManager {
         }
     }
 
-    fun setAutoStartCapture(value: Boolean) {
-        AppLog.d(TAG, "setAutoStartCapture($value)")
-        _autoStartCapture.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_AUTO_START_CAPTURE] = value
-            }
-        }
-    }
 
     fun setShowWelcomeTutorial(value: Boolean) {
         AppLog.d(TAG, "setShowWelcomeTutorial($value)")
