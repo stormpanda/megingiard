@@ -56,6 +56,9 @@ object ScreenCaptureManager {
     private val _screenshotRequested = MutableStateFlow(false)
     val screenshotRequested: StateFlow<Boolean> = _screenshotRequested.asStateFlow()
 
+    private val _screenshotPreview = MutableStateFlow<Bitmap?>(null)
+    val screenshotPreview: StateFlow<Bitmap?> = _screenshotPreview.asStateFlow()
+
     private val _isLocked = MutableStateFlow(false)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
@@ -164,6 +167,18 @@ object ScreenCaptureManager {
     fun consumeScreenshotRequest() {
         AppLog.d(TAG, "consumeScreenshotRequest")
         _screenshotRequested.value = false
+    }
+
+    fun showScreenshotPreview(bitmap: Bitmap) {
+        AppLog.d(TAG, "showScreenshotPreview")
+        _screenshotPreview.value?.recycle()
+        _screenshotPreview.value = bitmap
+    }
+
+    fun clearScreenshotPreview() {
+        AppLog.d(TAG, "clearScreenshotPreview")
+        _screenshotPreview.value?.recycle()
+        _screenshotPreview.value = null
     }
 
     fun setLocked(locked: Boolean) {
@@ -319,6 +334,7 @@ object ScreenCaptureManager {
         _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)
+        clearScreenshotPreview()
         if (_isFollowActive.value) setFollowActive(false)
     }
 }

@@ -28,7 +28,11 @@ import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -69,12 +73,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.ui.draw.shadow
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -534,6 +547,57 @@ class MirrorPresentation(
                             // only one IdlePill instance exists at a time.
                             if (capturing) {
                                 IdlePill()
+                            }
+
+                            // Layer 7: Screenshot Preview Overlay
+                            val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsState()
+                            var isPreviewVisible by remember { mutableStateOf(false) }
+
+                            LaunchedEffect(previewBitmap) {
+                                val bitmap = previewBitmap
+                                if (bitmap != null) {
+                                    isPreviewVisible = true
+                                    delay(1800) // stay for 1.8 seconds
+                                    isPreviewVisible = false
+                                    delay(400) // wait for slide/fade out animation to finish
+                                    ScreenCaptureManager.clearScreenshotPreview()
+                                } else {
+                                    isPreviewVisible = false
+                                }
+                            }
+
+                            val currentBitmap = previewBitmap
+                            if (currentBitmap != null) {
+                                AnimatedVisibility(
+                                    visible = isPreviewVisible,
+                                    enter = fadeIn(animationSpec = tween(durationMillis = 400)),
+                                    exit = fadeOut(animationSpec = tween(durationMillis = 400)) + slideOutHorizontally(
+                                        targetOffsetX = { fullWidth -> fullWidth },
+                                        animationSpec = tween(durationMillis = 400)
+                                    ),
+                                    modifier = Modifier.align(Alignment.Center)
+                                ) {
+                                    val aspectRatio = remember(currentBitmap) {
+                                        currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.85f)
+                                            .shadow(elevation = 12.dp, shape = RoundedCornerShape(4.dp))
+                                            .background(ComposeColor(0xFFFCFBF9)) // clean off-white photograph frame
+                                            .border(width = 1.dp, color = ComposeColor(0xFFE5E4E0), shape = RoundedCornerShape(4.dp))
+                                            .padding(12.dp) // photograph frame margins
+                                    ) {
+                                        Image(
+                                            bitmap = currentBitmap.asImageBitmap(),
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .aspectRatio(aspectRatio)
+                                                .border(width = 1.dp, color = ComposeColor(0x22000000)) // slight dark edge on the image itself
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
