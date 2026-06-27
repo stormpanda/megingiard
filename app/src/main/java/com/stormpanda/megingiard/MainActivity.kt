@@ -561,33 +561,38 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 ScreenCaptureManager.screenshotRequested.collect { requested ->
                     if (!requested) return@collect
-                    if (!ScreenCaptureManager.isCapturing.value && PrivdClient.isConnected) {
-                        AppLog.i(TAG, "screenshotRequested → handling via privileged mode (mirroring not running)")
-                        launch(Dispatchers.IO) {
-                            try {
-                                val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
-                                val picturesDir = File("/storage/emulated/0/Pictures/Megingiard")
-                                if (!picturesDir.exists()) {
-                                    picturesDir.mkdirs()
-                                }
-                                val filepath = File(picturesDir, filename).absolutePath
-                                val ok = PrivdClient.takeScreenshot(filepath)
-                                if (ok) {
-                                    MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
-                                    val bitmap = BitmapFactory.decodeFile(filepath)
-                                    if (bitmap != null) {
-                                        ScreenCaptureManager.showScreenshotPreview(bitmap)
-                                    } else {
-                                        AppLog.e(TAG, "Failed to decode screenshot file $filepath")
+                    if (!ScreenCaptureManager.isCapturing.value) {
+                        if (PrivdClient.isConnected) {
+                            AppLog.i(TAG, "screenshotRequested → handling via privileged mode (mirroring not running)")
+                            launch(Dispatchers.IO) {
+                                try {
+                                    val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
+                                    val picturesDir = File("/storage/emulated/0/Pictures/Megingiard")
+                                    if (!picturesDir.exists()) {
+                                        picturesDir.mkdirs()
                                     }
-                                } else {
-                                    AppLog.e(TAG, "Privileged screenshot failed via privd client")
+                                    val filepath = File(picturesDir, filename).absolutePath
+                                    val ok = PrivdClient.takeScreenshot(filepath)
+                                    if (ok) {
+                                        MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
+                                        val bitmap = BitmapFactory.decodeFile(filepath)
+                                        if (bitmap != null) {
+                                            ScreenCaptureManager.showScreenshotPreview(bitmap)
+                                        } else {
+                                            AppLog.e(TAG, "Failed to decode screenshot file $filepath")
+                                        }
+                                    } else {
+                                        AppLog.e(TAG, "Privileged screenshot failed via privd client")
+                                    }
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Exception during privileged screenshot", e)
+                                } finally {
+                                    ScreenCaptureManager.consumeScreenshotRequest()
                                 }
-                            } catch (e: Exception) {
-                                AppLog.e(TAG, "Exception during privileged screenshot", e)
-                            } finally {
-                                ScreenCaptureManager.consumeScreenshotRequest()
                             }
+                        } else {
+                            AppLog.w(TAG, "Screenshot requested but mirroring is not active and privd is not connected. Consuming request.")
+                            ScreenCaptureManager.consumeScreenshotRequest()
                         }
                     }
                 }

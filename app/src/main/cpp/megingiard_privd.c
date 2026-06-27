@@ -63,7 +63,7 @@
 #define ABSTRACT_SOCKET_NAME "megingiard.privd"
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
-#define MAX_LINE 64
+#define MAX_LINE 512
 
 /* test_bit for evdev capability bitmaps */
 #define BITS_PER_LONG    (sizeof(long) * 8)
@@ -890,11 +890,11 @@ static int serve_client(int client_fd) {
         }
 
         if (strncmp(line, "SCREENSHOT ", 11) == 0) {
-            char path[256];
-            char cmd[384];
+            char path[384];
+            char cmd[512];
             char resp[128];
             int rl;
-            if (sscanf(line, "SCREENSHOT %255s", path) == 1) {
+            if (sscanf(line, "SCREENSHOT %383s", path) == 1) {
                 snprintf(cmd, sizeof(cmd), "/system/bin/screencap -d 0 -p %s", path);
                 int rc = system(cmd);
                 if (rc == 0) {
