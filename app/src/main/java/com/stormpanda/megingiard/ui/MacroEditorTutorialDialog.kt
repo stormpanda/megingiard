@@ -55,6 +55,12 @@ fun MacroEditorTutorialDialog(
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.macro_tutorial_randomize),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         },
         confirmButton = {
