@@ -90,7 +90,6 @@ fun GlobalSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
-    val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
     val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
@@ -203,13 +202,6 @@ fun GlobalSettingsScreen(
                         OverlayPositionRow(
                             overlayAtBottom = overlayAtBottom,
                             onChanged = { viewModel.setOverlayAtBottom(it) }
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_show_mirror_control_labels),
-                            description = stringResource(R.string.settings_show_mirror_control_labels_desc),
-                            checked = showMirrorControlLabels,
-                            onCheckedChange = { viewModel.setShowMirrorControlLabels(it) },
                         )
                         AppDivider()
                         RememberSettingRow(
@@ -639,10 +631,6 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpEntry(
             label = stringResource(R.string.settings_overlay_position),
             description = stringResource(R.string.help_settings_overlay_position_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_show_mirror_control_labels),
-            description = stringResource(R.string.help_settings_mirror_labels_desc),
         )
         HelpEntry(
             label = stringResource(R.string.settings_show_fullscreen_exit_hints),

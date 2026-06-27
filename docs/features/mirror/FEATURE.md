@@ -43,7 +43,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Clicking the **Screen Mirroring** button enters the Screen Mirroring edit mode (cutout layout editor). The layout editor toolbar contains a settings cogwheel button to open the background settings overlay (`BackgroundSettingsOverlay`).
 - There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Pill Menu overlay until it is manually dismissed by tapping the scrim or close elements.
 - Mirror control icon buttons in the Pill Menu MUST use ergonomic touch targets (minimum 48 dp).
-- Mirror control labels MAY be shown below icon buttons via a global setting to improve discoverability.
+- Mirror control labels MUST be shown below icon buttons to improve discoverability.
 
 ### FR-M5: Stop Mirroring
 

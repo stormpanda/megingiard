@@ -36,8 +36,6 @@
     <string name="theme_light">Light</string>
     <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Place controls at bottom</string>
-    <string name="settings_show_mirror_control_labels">Show mirror control labels</string>
-    <string name="settings_show_mirror_control_labels_desc">Display short labels below mirror control icons</string>
     <string name="mirror_edge_blend_label">Edge blending</string>
     <string name="mirror_edge_blend_label_value">%1$d</string>
     <string name="mirror_edge_blend_strength_off">Off</string>
@@ -842,7 +840,6 @@ Open Settings to create a layout.</string>
     <string name="help_settings_title">Settings — Help</string>
     <string name="help_settings_intro">Global Settings apply to the whole app and persist across sessions. Use the section jump row at the top to scroll quickly to a specific group.</string>
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Pill Menu easier to swipe open without shifting your thumbs.</string>
-    <string name="help_settings_mirror_labels_desc">Useful if you are new to Megingiard and still learning the screen mirroring control icons. Disable once you are familiar with the icon layout to save screen space.</string>
     <string name="help_settings_exit_hints_desc">Recommended for new users. The virtual keyboard and touchpad run in immersive fullscreen mode; this hint ensures you always remember the exit gestures/buttons.</string>
     <string name="help_settings_mirror_autostart_desc">Turn this on if you use screen mirroring during every gaming session to skip tapping the Start button each time you open the app.</string>
     <string name="help_settings_auto_profile_desc">Essential for seamless gaming. Links macro profiles to specific apps so your custom buttons switch instantly when launching a game, without manual menu navigation.</string>

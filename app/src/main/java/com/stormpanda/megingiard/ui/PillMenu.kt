@@ -102,7 +102,6 @@ fun PillMenu(
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     var showGlobalSettings by remember { mutableStateOf(false) }
@@ -150,7 +149,6 @@ fun PillMenu(
                     onDismiss()
                 },
                 onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
-                showLabels = showMirrorControlLabels,
             )
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────

@@ -80,8 +80,7 @@ Pill the universal "go back" mechanism throughout the app.
     with `colors.accent` when frozen. Disabled when not capturing.
   - **Screenshot** icon button (rightmost): requests a screenshot via `ScreenCaptureManager.requestScreenshot()`. Renders with a CameraAlt icon. Disabled when not capturing.
 - All icon buttons in this card MUST have a minimum touch target of **48 dp**.
-- When `SettingsManager.showMirrorControlLabels` is enabled, a short text label is rendered below
-  each icon button.
+- A short text label is rendered below each icon button to improve discoverability.
 
 ### FR-PM6: Injector Suspension While Open
 
