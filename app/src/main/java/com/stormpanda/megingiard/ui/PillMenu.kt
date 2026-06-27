@@ -143,6 +143,7 @@ fun PillMenu(
                     AppStateManager.setViewportEditActive(true)
                     onDismiss()
                 },
+                onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
                 showLabels = showMirrorControlLabels,
             )
 

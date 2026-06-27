@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -48,6 +49,7 @@ internal fun MirrorControlCard(
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
     onToggleViewportEdit: () -> Unit,
+    onTakeScreenshot: () -> Unit,
     showLabels: Boolean,
 ) {
     Row(
@@ -139,6 +141,16 @@ internal fun MirrorControlCard(
             showLabel = showLabels,
             colors = colors,
             onClick = onToggleFreeze,
+        )
+        MirrorControlIconButton(
+            icon = Icons.Rounded.CameraAlt,
+            contentDescription = stringResource(R.string.cd_screenshot),
+            label = stringResource(R.string.mirror_control_label_screenshot),
+            tint = colors.onControlOverlay,
+            enabled = isCapturing,
+            showLabel = showLabels,
+            colors = colors,
+            onClick = onTakeScreenshot,
         )
     }
 }

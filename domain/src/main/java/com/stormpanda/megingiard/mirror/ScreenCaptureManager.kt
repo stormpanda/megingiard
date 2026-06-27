@@ -53,6 +53,9 @@ object ScreenCaptureManager {
     private val _frozenBitmap = MutableStateFlow<Bitmap?>(null)
     val frozenBitmap: StateFlow<Bitmap?> = _frozenBitmap.asStateFlow()
 
+    private val _screenshotRequested = MutableStateFlow(false)
+    val screenshotRequested: StateFlow<Boolean> = _screenshotRequested.asStateFlow()
+
     private val _isLocked = MutableStateFlow(false)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
@@ -151,6 +154,16 @@ object ScreenCaptureManager {
         val next = !_isFrozen.value
         AppLog.d(TAG, "toggleFrozen → $next")
         _isFrozen.value = next
+    }
+
+    fun requestScreenshot() {
+        AppLog.d(TAG, "requestScreenshot")
+        _screenshotRequested.value = true
+    }
+
+    fun consumeScreenshotRequest() {
+        AppLog.d(TAG, "consumeScreenshotRequest")
+        _screenshotRequested.value = false
     }
 
     fun setLocked(locked: Boolean) {

@@ -656,6 +656,29 @@ class MirrorPresentation(
     }
 
     fun getSurface(): Surface? = masterSurface
+
+    fun captureScreenshot(): Bitmap? {
+        val frozen = ScreenCaptureManager.isFrozen.value
+        if (frozen) {
+            val bitmap = ScreenCaptureManager.frozenBitmap.value
+            if (bitmap != null) {
+                return try {
+                    Bitmap.createBitmap(bitmap)
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to copy frozen bitmap for screenshot", e)
+                    null
+                }
+            }
+        }
+        val tv = masterTextureView ?: return null
+        if (tv.width <= 0 || tv.height <= 0) return null
+        return try {
+            tv.getBitmap()
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to capture TextureView bitmap for screenshot", e)
+            null
+        }
+    }
 }
 
 class MultiCutoutContainer(

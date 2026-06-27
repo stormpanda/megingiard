@@ -6,17 +6,22 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.net.Uri
 import android.os.IBinder
+import android.provider.MediaStore
 import android.view.Display
 import android.view.Surface
 import android.view.WindowManager
+import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CaptureRequestActivity
@@ -187,6 +192,71 @@ class ScreenCaptureService : Service() {
                     }
                 }
             }
+        }
+
+        scope.launch {
+            ScreenCaptureManager.screenshotRequested.collect { requested ->
+                if (requested) {
+                    val presentation = mirrorPresentation
+                    if (presentation != null) {
+                        val bitmap = presentation.captureScreenshot()
+                        if (bitmap != null) {
+                            scope.launch(Dispatchers.IO) {
+                                val savedUri = saveScreenshotToGallery(this@ScreenCaptureService, bitmap)
+                                launch(Dispatchers.Main) {
+                                    if (savedUri != null) {
+                                        Toast.makeText(
+                                            this@ScreenCaptureService,
+                                            getString(R.string.screenshot_saved),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            this@ScreenCaptureService,
+                                            getString(R.string.screenshot_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                    bitmap.recycle()
+                                }
+                            }
+                        } else {
+                            Toast.makeText(
+                                this@ScreenCaptureService,
+                                getString(R.string.screenshot_failed),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                    ScreenCaptureManager.consumeScreenshotRequest()
+                }
+            }
+        }
+    }
+
+    private fun saveScreenshotToGallery(context: Context, bitmap: Bitmap): Uri? {
+        val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/Megingiard")
+        }
+
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues) ?: return null
+
+        return try {
+            resolver.openOutputStream(uri)?.use { stream ->
+                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
+                    throw Exception("Failed to compress bitmap")
+                }
+            }
+            AppLog.i(TAG, "Screenshot saved to $uri")
+            uri
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to write screenshot to MediaStore", e)
+            resolver.delete(uri, null, null)
+            null
         }
     }
 

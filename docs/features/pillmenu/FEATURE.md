@@ -78,6 +78,7 @@ Pill the universal "go back" mechanism throughout the app.
   - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
     icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
     with `colors.accent` when frozen. Disabled when not capturing.
+  - **Screenshot** icon button (rightmost): requests a screenshot via `ScreenCaptureManager.requestScreenshot()`. Renders with a CameraAlt icon. Disabled when not capturing.
 - All icon buttons in this card MUST have a minimum touch target of **48 dp**.
 - When `SettingsManager.showMirrorControlLabels` is enabled, a short text label is rendered below
   each icon button.
@@ -106,11 +107,10 @@ MainAppScreen (or BackgroundMacroPadOverlay)
         └── PillMenu         — full-screen overlay when isPillMenuOpen == true
               ├── Scrim (Color.Black @ 55% alpha)
               ├── MirrorControlCard (standalone Composable, slides in from top)
-              │     ├── "Background Settings" Bordered Row Button
-              │     ├── Start/Stop IconButton
-              │     ├── Freeze/Unfreeze IconButton
-              │     ├── Viewport Edit IconButton
-              │     └── Touch Projection IconButton
+               │     ├── "Screen Mirroring" Bordered Row Button (Viewport Edit)
+               │     ├── Start/Stop IconButton
+               │     ├── Freeze/Unfreeze IconButton
+               │     └── Screenshot IconButton
               └── Bottom Column card (inline Column, slides in from bottom)
                     ├── Profile chips row
                     ├── Layout chips row
@@ -160,6 +160,7 @@ which routes to open, close, or modal-dismiss as appropriate.
 | `AppStateManager.isViewportEditActive`         | `AppStateManager`      | "Screen Mirroring" action button in Pill Menu    |
 | `ScreenCaptureManager.isFrozen`                | `ScreenCaptureManager` | "Freeze/Unfreeze" button        |
 | `ScreenCaptureManager.isTouchProjectionActive` | `ScreenCaptureManager` | Cutout layout settings          |
+| `ScreenCaptureManager.screenshotRequested`     | `ScreenCaptureManager` | "Screenshot" button             |
 | `MacroPadState.activeProfile`                  | `MacroPadState`        | Profile chip tap / new profile  |
 | `MacroPadState.activeLayout`                   | `MacroPadState`        | Layout chip tap / new layout    |
 
