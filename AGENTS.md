@@ -86,6 +86,8 @@
 
 > **Compilation policy:** The agent is encouraged to run `./gradlew compileDebugKotlin` or `./gradlew :app:assembleDebug` to verify compile safety before presenting changes to the human operator.
 
+> **Deployment policy:** The agent is STRICTLY PROHIBITED from running any deployment commands (such as `./gradlew installDebug`) or executing ADB commands to deploy the APK or delete/clear app data without the human operator's explicit permission.
+
 > **Native binary rebuild policy:** Whenever a native C source file is modified, the
 > agent **must** immediately run the corresponding build script to rebuild the bundled
 > binary. The scripts are at the workspace root:
