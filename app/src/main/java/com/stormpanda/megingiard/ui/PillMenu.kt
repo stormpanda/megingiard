@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material3.HorizontalDivider
@@ -272,6 +273,11 @@ private fun PillMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             icon = Icons.Rounded.Edit,
             label = stringResource(R.string.pill_menu_screen_mirroring),
             description = stringResource(R.string.help_pillmenu_viewport_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CameraAlt,
+            label = stringResource(R.string.help_pillmenu_screenshot_label),
+            description = stringResource(R.string.help_pillmenu_screenshot_desc),
         )
 
         HelpSection(stringResource(R.string.help_pillmenu_section_macropad))

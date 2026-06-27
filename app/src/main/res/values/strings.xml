@@ -871,6 +871,8 @@ Open Settings to create a layout.</string>
     <string name="help_pillmenu_freeze_label">Freeze / Unfreeze</string>
     <string name="help_pillmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
     <string name="help_pillmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
+    <string name="help_pillmenu_screenshot_label">Take Screenshot</string>
+    <string name="help_pillmenu_screenshot_desc">Takes a screenshot of the main screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
     <string name="help_pillmenu_section_macropad">MacroPad controls (bottom card)</string>
     <string name="help_pillmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
     <string name="help_pillmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
