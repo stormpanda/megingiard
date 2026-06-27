@@ -845,7 +845,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_gamepad_swap_desc">Aktiviere dies, wenn du das Nintendo-Layout (A rechts, B unten) dem standardmäßigen Xbox-Layout für Gamepad-Makros vorziehst.</string>
     <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten nicht für das Cyberpunk-Design, das ein festes Neon-Farbschema nutzt.</string>
     <string name="help_settings_theme_desc">Wähle das dunkle oder helle Design, um die App mit deiner gewählten Akzentfarbe zu nutzen, oder wähle Cyberpunk für ein festes Neon-Design.</string>
-    <string name="help_settings_restore_desc">Setzt Design, Sprache und Overlays auf Werkseinstellungen zurück, falls etwas falsch konfiguriert ist. Deine Profile und Makros bleiben erhalten.</string>
+    <string name="help_settings_restore_desc">Setzt alle Einstellungen auf Werkseinstellungen zurück, falls etwas falsch konfiguriert ist. Dies löscht alle deine benutzerdefinierten Profile, Layouts und Makros.</string>
     <string name="help_settings_export_desc">Erstellt ein vollständiges Backup deiner Profile und Einstellungen. Empfohlen vor App-Updates oder dem Zurücksetzen von Einstellungen.</string>
     <string name="help_settings_import_desc">Stellt Profile und Einstellungen aus einer .mgrd-Datei oder einem automatischen täglichen Backup wieder her. Überschreibt aktuelle Profile.</string>
     <string name="help_settings_export_profile_desc">Speichert ein einzelnes Profil in eine Datei, um Tasten-Layout und Makros mit anderen Spielern zu teilen, ohne deine gesamte Konfiguration freizugeben.</string>
