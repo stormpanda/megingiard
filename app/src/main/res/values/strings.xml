@@ -25,6 +25,7 @@
     <string name="cd_drag_reorder">Drag to reorder</string>
     <string name="settings_section_tools">Tools</string>
     <string name="settings_section_general">General</string>
+    <string name="settings_section_automation">Profiles &amp; Automation</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_global_title">Settings</string>
     <string name="settings_back">Back</string>
@@ -414,6 +415,7 @@ Open Settings to create a layout.</string>
     <string name="settings_jump_all">All</string>
     <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">General</string>
+    <string name="settings_jump_automation">Automation</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Configuration</string>
