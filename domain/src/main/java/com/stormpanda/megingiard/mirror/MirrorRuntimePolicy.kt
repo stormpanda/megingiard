@@ -16,6 +16,8 @@ data class MirrorRuntimePolicyState(
      * strategy (privd vs. MediaProjection consent) can be selected.
      */
     val privdMirrorConnecting: Boolean = false,
+    /** True if welcome onboarding or pill swipe tutorial is actively shown. */
+    val tutorialsActive: Boolean = false,
 )
 
 enum class MirrorRuntimeAction {
@@ -44,7 +46,8 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
             !state.autoStartSuppressed &&
             !state.isCapturing &&
             !state.promptInFlight &&
-            !state.privdMirrorConnecting -> MirrorRuntimeAction.START
+            !state.privdMirrorConnecting &&
+            !state.tutorialsActive -> MirrorRuntimeAction.START
         else -> MirrorRuntimeAction.NONE
     }
 }

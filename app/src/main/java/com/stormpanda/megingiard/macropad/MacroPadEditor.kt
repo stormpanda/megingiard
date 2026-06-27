@@ -20,7 +20,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Redo
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Grid4x4
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +59,11 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
@@ -124,6 +136,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var isCanvasLocked            by remember { mutableStateOf(true) }
     var showCopyLayoutProfileDialog by remember { mutableStateOf(false) }
     var showCopyButtonLayoutDialog by remember { mutableStateOf(false) }
+    var showEditorHelp by remember { mutableStateOf(false) }
 
     // Intercept system Back when an overlay is visible, so Back closes the overlay
     // instead of dismissing the whole editor dialog.
@@ -158,6 +171,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             topBar = {
                 EditorTopBar(
                     onDone = onDone,
+                    onHelpClick = { showEditorHelp = true },
                 )
             }
         ) { innerPadding ->
@@ -205,6 +219,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
             }
         }
 
+        MacroPadEditorHelpModal(
+            visible = showEditorHelp,
+            onDismiss = { showEditorHelp = false },
+        )
 
         // Add button overlay
         AnimatedVisibility(
@@ -506,9 +524,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditorTopBar(
-    onDone:                   () -> Unit,
+    onDone: () -> Unit,
+    onHelpClick: () -> Unit,
 ) {
-    val colors        = LocalAppColors.current
+    val colors = LocalAppColors.current
 
     TopAppBar(
         title = {
@@ -527,8 +546,95 @@ private fun EditorTopBar(
                 )
             }
         },
+        actions = {
+            HelpIconButton(onClick = onHelpClick)
+        },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
     )
+}
+
+@Composable
+private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_editor_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_editor_intro))
+
+        HelpSection(stringResource(R.string.help_editor_section_profiles))
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.help_editor_profiles_label),
+            description = stringResource(R.string.help_editor_profiles_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.help_editor_add_profile_label),
+            description = stringResource(R.string.help_editor_add_profile_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.MoreVert,
+            label = stringResource(R.string.help_editor_profile_options_label),
+            description = stringResource(R.string.help_editor_profile_options_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_editor_section_layouts))
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.help_editor_layouts_label),
+            description = stringResource(R.string.help_editor_layouts_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.help_editor_add_layout_label),
+            description = stringResource(R.string.help_editor_add_layout_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.MoreVert,
+            label = stringResource(R.string.help_editor_layout_options_label),
+            description = stringResource(R.string.help_editor_layout_options_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_editor_section_toolbar))
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.help_editor_toolbar_button_label),
+            description = stringResource(R.string.help_editor_toolbar_button_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Edit,
+            label = stringResource(R.string.help_editor_toolbar_macros_label),
+            description = stringResource(R.string.help_editor_toolbar_macros_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Grid4x4,
+            label = stringResource(R.string.help_editor_toolbar_grid_label),
+            description = stringResource(R.string.help_editor_toolbar_grid_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Lock,
+            label = stringResource(R.string.help_editor_toolbar_lock_label),
+            description = stringResource(R.string.help_editor_toolbar_lock_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_editor_section_canvas))
+        HelpEntry(
+            label = stringResource(R.string.help_editor_canvas_drag_label),
+            description = stringResource(R.string.help_editor_canvas_drag_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_editor_section_buttons))
+        HelpEntry(
+            label = stringResource(R.string.help_editor_button_edit_label),
+            description = stringResource(R.string.help_editor_button_edit_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.DragHandle,
+            label = stringResource(R.string.help_editor_button_reorder_label),
+            description = stringResource(R.string.help_editor_button_reorder_desc),
+        )
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

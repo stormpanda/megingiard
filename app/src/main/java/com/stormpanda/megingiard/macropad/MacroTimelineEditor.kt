@@ -18,7 +18,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Timeline
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,8 +59,15 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.delay
@@ -70,6 +86,7 @@ private const val MTE_TIMING_MAX_MS = 10_000L
 private const val MTE_GAMEPAD_INJECTOR_INIT_MS = 200L
 
 private const val MTE_VIEW_CHIP_SPACING = 6
+private const val MTE_NAME_FIELD_WEIGHT = 0.55f
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
@@ -105,6 +122,9 @@ internal fun MacroTimelineEditor(
     // True when the physical recorder path was taken for the current session.
     var usingPhysicalRecorder by remember { mutableStateOf(false) }
     var showPhysicalRecordingSheet by remember { mutableStateOf(false) }
+    var showTimelineHelp by remember { mutableStateOf(false) }
+    val showMacroEditorTutorial by SettingsManager.showMacroEditorTutorial.collectAsState()
+    var showMacroEditorTutorialLocal by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -274,7 +294,7 @@ internal fun MacroTimelineEditor(
                         cursorColor = accentColor,
                     ),
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(MTE_NAME_FIELD_WEIGHT)
                         .padding(vertical = 6.dp),
                 )
                 Spacer(Modifier.width(8.dp))
@@ -302,6 +322,7 @@ internal fun MacroTimelineEditor(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
+                HelpIconButton(onClick = { showTimelineHelp = true })
             }
 
             AppDivider()
@@ -689,6 +710,120 @@ internal fun MacroTimelineEditor(
                     )
                 }
             },
+        )
+    }
+
+    MacroTimelineHelpModal(
+        visible = showTimelineHelp,
+        onDismiss = { showTimelineHelp = false },
+    )
+
+    if (showMacroEditorTutorial && showMacroEditorTutorialLocal) {
+        MacroEditorTutorialDialog(
+            onDismiss = { showMacroEditorTutorialLocal = false },
+            onDismissForever = {
+                showMacroEditorTutorialLocal = false
+                SettingsManager.setShowMacroEditorTutorial(false)
+            }
+        )
+    }
+}
+
+@Composable
+private fun MacroTimelineHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    val colors = LocalAppColors.current
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_timeline_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_timeline_intro))
+
+        HelpSection(stringResource(R.string.help_timeline_section_topbar))
+        HelpEntry(
+            label = stringResource(R.string.help_timeline_name_label),
+            description = stringResource(R.string.help_timeline_name_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_timeline_cancel_label),
+            description = stringResource(R.string.help_timeline_cancel_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_timeline_save_label),
+            description = stringResource(R.string.help_timeline_save_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_timeline_section_secondary))
+        HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.Undo,
+            label = stringResource(R.string.help_timeline_undo_label),
+            description = stringResource(R.string.help_timeline_undo_desc),
+        )
+        HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.Redo,
+            label = stringResource(R.string.help_timeline_redo_label),
+            description = stringResource(R.string.help_timeline_redo_desc),
+        )
+        HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.FormatListBulleted,
+            label = stringResource(R.string.help_timeline_view_list_label),
+            description = stringResource(R.string.help_timeline_view_list_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Timeline,
+            label = stringResource(R.string.help_timeline_view_timeline_label),
+            description = stringResource(R.string.help_timeline_view_timeline_desc),
+        )
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.help_timeline_shift_label),
+            description = stringResource(R.string.help_timeline_shift_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_timeline_section_steps))
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.help_timeline_add_step_label),
+            description = stringResource(R.string.help_timeline_add_step_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.TouchApp,
+            label = stringResource(R.string.help_timeline_record_touch_label),
+            description = stringResource(R.string.help_timeline_record_touch_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.SportsEsports,
+            label = stringResource(R.string.help_timeline_record_gamepad_label),
+            description = stringResource(R.string.help_timeline_record_gamepad_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.PlayArrow,
+            label = stringResource(R.string.help_timeline_test_run_label),
+            description = stringResource(R.string.help_timeline_test_run_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_timeline_section_step_items))
+        HelpEntry(
+            icon = Icons.Rounded.Edit,
+            label = stringResource(R.string.help_timeline_step_edit_label),
+            description = stringResource(R.string.help_timeline_step_edit_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Delete,
+            label = stringResource(R.string.help_timeline_step_delete_label),
+            description = stringResource(R.string.help_timeline_step_delete_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_timeline_section_loop))
+        HelpEntry(
+            icon = Icons.Rounded.Repeat,
+            label = stringResource(R.string.help_timeline_loop_label),
+            description = stringResource(R.string.help_timeline_loop_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Shuffle,
+            label = stringResource(R.string.help_timeline_randomise_label),
+            description = stringResource(R.string.help_timeline_randomise_desc),
         )
     }
 }

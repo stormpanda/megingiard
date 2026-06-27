@@ -426,6 +426,8 @@ class MainActivity : ComponentActivity() {
                     SettingsManager.autoStartCapture,
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
+                    SettingsManager.showWelcomeTutorial,
+                    SettingsManager.showPillTutorial,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
@@ -433,6 +435,8 @@ class MainActivity : ComponentActivity() {
                     val globalAutoStart = values[3] as Boolean
                     val currentLayout = values[4] as? PadLayout
                     val onValidScreen = values[5] as Boolean
+                    val showWelcome = values[6] as Boolean
+                    val showPill = values[7] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -442,6 +446,7 @@ class MainActivity : ComponentActivity() {
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
+                        tutorialsActive = showWelcome || showPill,
                     )
                 }
                     .combine(privdMirrorConnectingFlow) { policy, connecting ->

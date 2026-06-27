@@ -65,6 +65,11 @@ import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppTextField
 import androidx.compose.material.icons.rounded.Edit
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 import androidx.compose.ui.text.style.TextAlign
@@ -183,6 +188,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         }
     }
 
+    var showAmbientHelp by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -228,6 +235,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                             style    = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.weight(1f),
                         )
+                        HelpIconButton(onClick = { showAmbientHelp = true })
                     }
 
                     AsoSectionHeader(text = stringResource(R.string.settings_section_general))
@@ -542,7 +550,13 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
             )
         }
     }
+
+    BackgroundSettingsHelpModal(
+        visible = showAmbientHelp,
+        onDismiss = { showAmbientHelp = false },
+    )
 }
+
 
 /**
  * Section header used in ambient settings to match the shared settings visual language.
@@ -666,4 +680,52 @@ internal fun AsoPreviewBar(
     }
 }
 
+@Composable
+private fun BackgroundSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_ambient_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_ambient_intro))
 
+        HelpSection(stringResource(R.string.settings_section_general))
+        HelpEntry(
+            icon = Icons.Rounded.Visibility,
+            label = stringResource(R.string.settings_macropad_dim),
+            description = stringResource(R.string.help_ambient_dim_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Visibility,
+            label = stringResource(R.string.mirror_edge_blend_label),
+            description = stringResource(R.string.help_ambient_blend_desc),
+        )
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.settings_mirror_follow_touch),
+            description = stringResource(R.string.help_ambient_follow_touch_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_section_cutouts))
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.help_ambient_cutouts_label),
+            description = stringResource(R.string.help_ambient_cutouts_desc),
+        )
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.settings_mirror_follow_smoothing),
+            description = stringResource(R.string.help_ambient_smoothing_desc),
+        )
+        HelpEntry(
+            icon = null,
+            label = stringResource(R.string.settings_mirror_touch_projection),
+            description = stringResource(R.string.help_ambient_touch_projection_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Visibility,
+            label = stringResource(R.string.help_ambient_preview_label),
+            description = stringResource(R.string.help_ambient_preview_desc),
+        )
+    }
+}

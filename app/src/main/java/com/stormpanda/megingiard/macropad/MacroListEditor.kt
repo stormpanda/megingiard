@@ -52,6 +52,11 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import java.util.Locale
@@ -200,6 +205,7 @@ private fun MacroListView(
     val profiles by MacroPadState.profiles.collectAsState()
     val activeProfile by MacroPadState.activeProfile.collectAsState()
     var copyingMacro by remember { mutableStateOf<Macro?>(null) }
+    var showHelp by remember { mutableStateOf(false) }
 
     var deletingMacroId by remember { mutableStateOf<String?>(null) }
 
@@ -260,9 +266,15 @@ private fun MacroListView(
                     tint = accentColor,
                 )
             }
+            HelpIconButton(onClick = { showHelp = true })
         }
 
         AppDivider()
+
+        MacroListHelpModal(
+            visible = showHelp,
+            onDismiss = { showHelp = false },
+        )
 
         // ── Flat macro list ──────────────────────────────────────────────────
         LazyColumn(
@@ -461,5 +473,39 @@ private fun NewMacroChip(accentColor: Color, onClick: () -> Unit) {
             Spacer(Modifier.width(6.dp))
             Text(stringResource(R.string.macropad_macro_list_new), color = accentColor, style = MaterialTheme.typography.labelMedium)
         }
+    }
+}
+
+@Composable
+private fun MacroListHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_macrolist_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_macrolist_intro))
+
+        HelpSection(stringResource(R.string.help_macrolist_section_actions))
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.help_macrolist_add_label),
+            description = stringResource(R.string.help_macrolist_add_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_macrolist_section_list))
+        HelpEntry(
+            label = stringResource(R.string.help_macrolist_tap_label),
+            description = stringResource(R.string.help_macrolist_tap_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.MoreVert,
+            label = stringResource(R.string.help_macrolist_menu_label),
+            description = stringResource(R.string.help_macrolist_menu_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.DragHandle,
+            label = stringResource(R.string.help_macrolist_drag_label),
+            description = stringResource(R.string.help_macrolist_drag_desc),
+        )
     }
 }

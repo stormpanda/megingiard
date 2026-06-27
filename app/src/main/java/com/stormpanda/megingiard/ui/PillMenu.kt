@@ -21,7 +21,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -98,6 +101,7 @@ fun PillMenu(
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     var showGlobalSettings by remember { mutableStateOf(false) }
+    var showPillHelp by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
@@ -200,6 +204,7 @@ fun PillMenu(
                 Row(
                     modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
                 ) {
                     PillActionChip(
                         label    = stringResource(R.string.pill_menu_edit_layout),
@@ -215,6 +220,7 @@ fun PillMenu(
                         onClick  = { showGlobalSettings = true },
                         modifier = Modifier.weight(1f),
                     )
+                    HelpIconButton(onClick = { showPillHelp = true })
                 }
             }
         }
@@ -230,5 +236,61 @@ fun PillMenu(
         GlobalSettingsScreen(onBack = { showGlobalSettings = false })
     }
 
+    PillMenuHelpModal(
+        visible = showPillHelp,
+        onDismiss = { showPillHelp = false },
+    )
+}
 
+@Composable
+private fun PillMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_pillmenu_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_pillmenu_intro))
+
+        HelpSection(stringResource(R.string.help_pillmenu_section_mirror))
+        HelpEntry(
+            icon = Icons.Rounded.PlayArrow,
+            label = stringResource(R.string.help_pillmenu_start_label),
+            description = stringResource(R.string.help_pillmenu_start_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Pause,
+            label = stringResource(R.string.help_pillmenu_freeze_label),
+            description = stringResource(R.string.help_pillmenu_freeze_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Edit,
+            label = stringResource(R.string.pill_menu_screen_mirroring),
+            description = stringResource(R.string.help_pillmenu_viewport_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_pillmenu_section_macropad))
+        HelpEntry(
+            label = stringResource(R.string.pill_menu_profile_label),
+            description = stringResource(R.string.help_pillmenu_profiles_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.pill_menu_layout_label),
+            description = stringResource(R.string.help_pillmenu_layouts_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Edit,
+            label = stringResource(R.string.pill_menu_edit_layout),
+            description = stringResource(R.string.help_pillmenu_edit_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Settings,
+            label = stringResource(R.string.pill_menu_global_settings),
+            description = stringResource(R.string.help_pillmenu_settings_desc),
+        )
+        HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.HelpOutline,
+            label = stringResource(R.string.help_pillmenu_help_label),
+            description = stringResource(R.string.help_pillmenu_help_desc),
+        )
+    }
 }

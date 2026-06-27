@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
@@ -69,6 +71,10 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import kotlin.math.min
@@ -86,8 +92,12 @@ private val SLIDER_VALUE_WIDTH = 80.dp
 private val TOOLBAR_EXPANDED_WIDTH = 360.dp
 private const val SLIDER_VALUE_MIN = 0f
 private const val SLIDER_VALUE_MAX = 100f
-private val TOOLBAR_SAFE_MARGIN = 16.dp
+private val TOOLBAR_SAFE_MARGIN = 0.dp
 private const val TOUCH_AREA_RATIO = 0.25f
+private val CLE_HELP_BTN_SIZE = 32.dp
+private val CLE_HELP_ICON_SIZE = 20.dp
+private val CLE_HELP_BTN_CORNER = 4.dp
+private val CLE_SPACER_WIDTH = 32.dp
 
 @Composable
 fun CutoutLayoutEditor(
@@ -588,6 +598,8 @@ fun CutoutLayoutEditor(
 
         val currentClampedOffset by rememberUpdatedState(clampedOffset)
 
+        var showEditorHelp by remember { mutableStateOf(false) }
+
         Surface(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -598,37 +610,13 @@ fun CutoutLayoutEditor(
             shape = RoundedCornerShape(TOOLBAR_CORNER),
             border = borderStrokeFor(colors.controlOverlayBorder)
         ) {
-            Box(
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 4.dp, end = 8.dp)
+            Row(
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 8.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Drag handle centered vertically on the left
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .size(width = 36.dp, height = 32.dp)
-                        .pointerInput(Unit) {
-                            detectDragGestures { change, dragAmount ->
-                                change.consume()
-                                val cur = currentClampedOffset
-                                toolbarOffset = IntOffset(
-                                    x = cur.x + dragAmount.x.roundToInt(),
-                                    y = cur.y + dragAmount.y.roundToInt()
-                                )
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.DragIndicator,
-                        contentDescription = stringResource(R.string.cd_drag_toolbar),
-                        tint = colors.onSurfaceSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
+                // Button grid (left side)
                 Column(
                     modifier = Modifier
-                        .padding(start = 40.dp, top = 4.dp, bottom = 4.dp, end = 4.dp) // clear drag handle (36dp + 4dp space)
                         .width(IntrinsicSize.Max),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.Start
@@ -639,7 +627,7 @@ fun CutoutLayoutEditor(
                     val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
                     val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
 
-                    // Row 1: Add Cutout | Settings
+                    // Row 1: Add Cutout | Settings | Help
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -707,9 +695,24 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setBackgroundSettingsActive(true)
                             }
                         )
+
+                        Box(
+                            modifier = Modifier
+                                .size(CLE_HELP_BTN_SIZE)
+                                .clip(RoundedCornerShape(CLE_HELP_BTN_CORNER))
+                                .clickable { showEditorHelp = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
+                                contentDescription = stringResource(R.string.help_open_cd),
+                                tint = colors.onSurfaceSecondary,
+                                modifier = Modifier.size(CLE_HELP_ICON_SIZE)
+                            )
+                        }
                     }
 
-                    // Row 2: Aspect Ratio | Shape Toggle
+                    // Row 2: Aspect Ratio | Shape Toggle | Spacer
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -797,9 +800,11 @@ fun CutoutLayoutEditor(
                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
                             }
                         )
+
+                        Spacer(Modifier.width(CLE_SPACER_WIDTH))
                     }
 
-                    // Row 3: Edit Crop | Delete Selected
+                    // Row 3: Edit Crop | Delete Selected | Spacer
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -839,9 +844,11 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
                             }
                         )
+
+                        Spacer(Modifier.width(CLE_SPACER_WIDTH))
                     }
 
-                    // Row 4: Done / Save | Cancel / Revert
+                    // Row 4: Done / Save | Cancel / Revert | Drag Handle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -872,10 +879,95 @@ fun CutoutLayoutEditor(
                                 AppStateManager.setViewportEditActive(false)
                             }
                         )
+
+                        Box(
+                            modifier = Modifier
+                                .size(CLE_HELP_BTN_SIZE)
+                                .pointerInput(Unit) {
+                                    detectDragGestures { change, dragAmount ->
+                                        change.consume()
+                                        val cur = currentClampedOffset
+                                        toolbarOffset = IntOffset(
+                                            x = cur.x + dragAmount.x.roundToInt(),
+                                            y = cur.y + dragAmount.y.roundToInt()
+                                        )
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DragIndicator,
+                                contentDescription = stringResource(R.string.cd_drag_toolbar),
+                                tint = colors.onSurfaceSecondary,
+                                modifier = Modifier.size(CLE_HELP_ICON_SIZE)
+                            )
+                        }
                     }
                 }
-            }
-        }
+            } // end Row
+        } // end Surface
+
+        CutoutLayoutEditorHelpModal(
+            visible = showEditorHelp,
+            onDismiss = { showEditorHelp = false },
+        )
+    }
+}
+
+@Composable
+private fun CutoutLayoutEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_mirror_editor_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_mirror_editor_intro))
+
+        HelpSection(stringResource(R.string.help_mirror_editor_section_global))
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.mirror_editor_toolbar_add),
+            description = stringResource(R.string.help_mirror_editor_add_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Settings,
+            label = stringResource(R.string.mirror_editor_toolbar_settings),
+            description = stringResource(R.string.help_mirror_editor_settings_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_mirror_editor_section_selected))
+        HelpEntry(
+            icon = Icons.Rounded.AspectRatio,
+            label = stringResource(R.string.mirror_editor_aspect_ratio_mode),
+            description = stringResource(R.string.help_mirror_editor_aspect_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.CropSquare,
+            label = stringResource(R.string.help_mirror_editor_shape_label),
+            description = stringResource(R.string.help_mirror_editor_shape_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Crop,
+            label = stringResource(R.string.mirror_editor_toolbar_crop),
+            description = stringResource(R.string.help_mirror_editor_crop_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Delete,
+            label = stringResource(R.string.mirror_editor_toolbar_delete),
+            description = stringResource(R.string.help_mirror_editor_delete_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_mirror_editor_section_finish))
+        HelpEntry(
+            icon = Icons.Rounded.Check,
+            label = stringResource(R.string.mirror_editor_toolbar_done),
+            description = stringResource(R.string.help_mirror_editor_done_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Close,
+            label = stringResource(R.string.mirror_editor_toolbar_cancel),
+            description = stringResource(R.string.help_mirror_editor_cancel_desc),
+        )
     }
 }
 

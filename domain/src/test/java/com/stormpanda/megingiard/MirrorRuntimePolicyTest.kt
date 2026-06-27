@@ -199,4 +199,22 @@ class MirrorRuntimePolicyTest {
 
         assertEquals(MirrorRuntimeAction.START, decision)
     }
+
+    @Test
+    fun `does not start when onboarding tutorials are active`() {
+        val decision = decideMirrorRuntimeAction(
+            MirrorRuntimePolicyState(
+                promptInFlight = false,
+                isOnValidScreen = true,
+                isCapturing = false,
+                globalAutoStart = true,
+                layoutId = LAYOUT_A,
+                layoutWantsMirror = true,
+                autoStartSuppressed = false,
+                tutorialsActive = true,
+            )
+        )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
 }
