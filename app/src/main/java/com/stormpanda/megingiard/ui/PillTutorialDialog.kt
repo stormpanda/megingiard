@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +43,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 
 private const val TAG = "PillTutorialDialog"
@@ -70,6 +72,10 @@ fun PillTutorialDialog(
 ) {
     val colors = LocalAppColors.current
 
+    LaunchedEffect(Unit) {
+        AppLog.d(TAG, "Pill tutorial dialog shown")
+    }
+
     val bounceTransition = rememberInfiniteTransition(label = "pill-arrow-bounce")
     val bounceOffset by bounceTransition.animateFloat(
         initialValue = PT_BOUNCE_MIN_PX,
@@ -88,7 +94,10 @@ fun PillTutorialDialog(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = {} // absorb clicks so background is modal
+                onClick = {
+                    AppLog.d(TAG, "Pill tutorial dialog dismissed via background click")
+                    onDismiss()
+                }
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -102,6 +111,11 @@ fun PillTutorialDialog(
                 .background(colors.surface)
                 .border(PT_DIALOG_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PT_DIALOG_CORNER_RADIUS))
                 .padding(PT_DIALOG_PADDING)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {} // absorb clicks so dialog itself doesn't dismiss
+                )
         ) {
             Text(
                 text = stringResource(R.string.pill_tutorial_title),
@@ -125,7 +139,12 @@ fun PillTutorialDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = onDismiss) {
+                TextButton(
+                    onClick = {
+                        AppLog.d(TAG, "Pill tutorial dialog confirmed")
+                        onDismiss()
+                    }
+                ) {
                     Text(
                         text = stringResource(R.string.welcome_btn_got_it),
                         color = colors.accent,

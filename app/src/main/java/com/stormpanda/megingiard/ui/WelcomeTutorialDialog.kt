@@ -10,10 +10,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 
 private const val TAG = "WelcomeTutorialDialog"
@@ -26,9 +28,16 @@ fun WelcomeTutorialDialog(
 ) {
     val colors = LocalAppColors.current
 
+    LaunchedEffect(Unit) {
+        AppLog.d(TAG, "Welcome tutorial dialog shown")
+    }
+
     AlertDialog(
         containerColor = colors.surface,
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            AppLog.d(TAG, "Welcome tutorial dialog dismissed via request")
+            onDismiss()
+        },
         title = {
             Text(
                 text = stringResource(R.string.welcome_title),
@@ -61,7 +70,12 @@ fun WelcomeTutorialDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = {
+                    AppLog.d(TAG, "Welcome tutorial dialog confirmed")
+                    onDismiss()
+                }
+            ) {
                 Text(
                     text = stringResource(R.string.welcome_btn_got_it),
                     color = colors.accent,

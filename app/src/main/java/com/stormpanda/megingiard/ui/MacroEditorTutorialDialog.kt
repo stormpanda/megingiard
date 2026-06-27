@@ -10,10 +10,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 
 private const val TAG = "MacroEditorTutorialDialog"
@@ -27,9 +29,16 @@ fun MacroEditorTutorialDialog(
 ) {
     val colors = LocalAppColors.current
 
+    LaunchedEffect(Unit) {
+        AppLog.d(TAG, "Macro editor tutorial dialog shown")
+    }
+
     AlertDialog(
         containerColor = colors.surface,
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            AppLog.d(TAG, "Macro editor tutorial dialog dismissed via request")
+            onDismiss()
+        },
         title = {
             Text(
                 text = stringResource(R.string.macro_tutorial_title),
@@ -105,7 +114,12 @@ fun MacroEditorTutorialDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = {
+                    AppLog.d(TAG, "Macro editor tutorial dialog confirmed")
+                    onDismiss()
+                }
+            ) {
                 Text(
                     text = stringResource(R.string.macro_tutorial_btn_got_it),
                     color = colors.accent,
@@ -114,7 +128,12 @@ fun MacroEditorTutorialDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissForever) {
+            TextButton(
+                onClick = {
+                    AppLog.d(TAG, "Macro editor tutorial dialog dismissed forever")
+                    onDismissForever()
+                }
+            ) {
                 Text(
                     text = stringResource(R.string.macro_tutorial_btn_dont_show),
                     color = colors.onSurfaceSecondary,

@@ -75,6 +75,15 @@ private val HM_ENTRY_ICON_SPACER = 12.dp
 private val HM_ENTRY_V_PADDING = 12.dp
 private const val HM_SCRIM_ALPHA = 0.55f
 private const val HM_SHEET_HEIGHT_FRACTION = 0.93f
+private val HM_TITLE_ICON_START_PADDING = 12.dp
+private val HM_TITLE_ICON_SIZE = 22.dp
+private val HM_TITLE_ICON_TEXT_SPACER = 10.dp
+private val HM_SECTION_TOP_SPACER = 20.dp
+private val HM_SECTION_BOTTOM_SPACER = 8.dp
+private val HM_SECTION_DIVIDER_SPACER = 4.dp
+private val HM_ENTRY_ICON_TOP_PADDING = 2.dp
+private val HM_ENTRY_TEXT_SPACER = 2.dp
+private val HM_INTRO_TOP_SPACER = 12.dp
 
 /**
  * Icon button used in every screen top bar to open its help modal.
@@ -223,10 +232,10 @@ internal fun HelpModal(
                             contentDescription = null,
                             tint = colors.accent,
                             modifier = Modifier
-                                .padding(start = 12.dp)
-                                .size(22.dp),
+                                .padding(start = HM_TITLE_ICON_START_PADDING)
+                                .size(HM_TITLE_ICON_SIZE),
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(HM_TITLE_ICON_TEXT_SPACER))
                         Text(
                             text = title,
                             color = colors.onSurface,
@@ -274,7 +283,7 @@ internal fun HelpModal(
 @Composable
 internal fun HelpSection(title: String) {
     val colors = LocalAppColors.current
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(HM_SECTION_TOP_SPACER))
     Text(
         text = title.uppercase(Locale.ROOT),
         color = colors.sectionHeaderColor,
@@ -282,9 +291,9 @@ internal fun HelpSection(title: String) {
         fontWeight = FontWeight.Bold,
         letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(HM_SECTION_BOTTOM_SPACER))
     HorizontalDivider(color = colors.divider)
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(HM_SECTION_DIVIDER_SPACER))
 }
 
 /**
@@ -318,7 +327,7 @@ internal fun HelpEntry(
                 tint = tint,
                 modifier = Modifier
                     .size(HM_ENTRY_ICON_SIZE)
-                    .padding(top = 2.dp),
+                    .padding(top = HM_ENTRY_ICON_TOP_PADDING),
             )
             Spacer(Modifier.width(HM_ENTRY_ICON_SPACER))
         } else {
@@ -331,7 +340,7 @@ internal fun HelpEntry(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(HM_ENTRY_TEXT_SPACER))
             Text(
                 text = description,
                 color = colors.onSurfaceSecondary,
@@ -353,7 +362,7 @@ internal fun HelpEntry(
 @Composable
 internal fun HelpIntro(text: String) {
     val colors = LocalAppColors.current
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(HM_INTRO_TOP_SPACER))
     Text(
         text = text,
         color = colors.onSurfaceSecondary,

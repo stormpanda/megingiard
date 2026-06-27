@@ -94,6 +94,10 @@ private const val SLIDER_VALUE_MIN = 0f
 private const val SLIDER_VALUE_MAX = 100f
 private val TOOLBAR_SAFE_MARGIN = 0.dp
 private const val TOUCH_AREA_RATIO = 0.25f
+private val CLE_HELP_BTN_SIZE = 32.dp
+private val CLE_HELP_ICON_SIZE = 20.dp
+private val CLE_HELP_BTN_CORNER = 4.dp
+private val CLE_SPACER_WIDTH = 32.dp
 
 @Composable
 fun CutoutLayoutEditor(
@@ -694,8 +698,8 @@ fun CutoutLayoutEditor(
 
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .size(CLE_HELP_BTN_SIZE)
+                                .clip(RoundedCornerShape(CLE_HELP_BTN_CORNER))
                                 .clickable { showEditorHelp = true },
                             contentAlignment = Alignment.Center
                         ) {
@@ -703,7 +707,7 @@ fun CutoutLayoutEditor(
                                 imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
                                 contentDescription = stringResource(R.string.help_open_cd),
                                 tint = colors.onSurfaceSecondary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(CLE_HELP_ICON_SIZE)
                             )
                         }
                     }
@@ -797,7 +801,7 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        Spacer(Modifier.width(32.dp))
+                        Spacer(Modifier.width(CLE_SPACER_WIDTH))
                     }
 
                     // Row 3: Edit Crop | Delete Selected | Spacer
@@ -841,7 +845,7 @@ fun CutoutLayoutEditor(
                             }
                         )
 
-                        Spacer(Modifier.width(32.dp))
+                        Spacer(Modifier.width(CLE_SPACER_WIDTH))
                     }
 
                     // Row 4: Done / Save | Cancel / Revert | Drag Handle
@@ -878,7 +882,7 @@ fun CutoutLayoutEditor(
 
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(CLE_HELP_BTN_SIZE)
                                 .pointerInput(Unit) {
                                     detectDragGestures { change, dragAmount ->
                                         change.consume()
@@ -895,7 +899,7 @@ fun CutoutLayoutEditor(
                                 imageVector = Icons.Rounded.DragIndicator,
                                 contentDescription = stringResource(R.string.cd_drag_toolbar),
                                 tint = colors.onSurfaceSecondary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(CLE_HELP_ICON_SIZE)
                             )
                         }
                     }
