@@ -37,16 +37,10 @@ every device since Android 11 (API 30).
 - A `Test connection` button MUST round-trip a `PING` to the daemon and
   display the result, so the user can verify the link is alive.
 
-### FR-PV3: Per-Feature Opt-In
+### FR-PV3: Automatic Feature Promotion
 
-- Each consumer feature (currently Gamepad merge and physical Gamepad recording) MUST have its own
-  toggle inside the Privileged Mode card.
-- The toggle MUST be interactable in **all** `PrivdState` values (not only
-  RUNNING). The flag is persisted independently of the connection state;
-  actual privileged behaviour is only activated when the daemon is RUNNING.
-- Toggling a feature OFF MUST keep that feature working in its non-privileged
-  fallback path. Toggling ON MUST take effect on the next session-start of
-  that feature (no live mid-session swap is required).
+- All consumer features supporting Privileged Mode (Gamepad merge, physical Gamepad recording, privileged mirroring, and screenshots) MUST be automatically activated when the daemon is in the `RUNNING` state.
+- When the daemon is not running (e.g., in `OFF`, `FAILED`, or disconnected states), the app MUST transparently fallback to non-privileged equivalent paths (such as virtual gamepad uinput and standard MediaProjection) without requiring manual configuration.
 
 ### FR-PV4: Setup Discoverability
 

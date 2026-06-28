@@ -239,7 +239,7 @@ object AppStateManager {
 
     /**
      * True whenever any fullscreen modal overlay is showing.
-     * Drives "× close" label on [QuickMenuBar][com.stormpanda.megingiard.ui.QuickMenuBar].
+     * Used by [handleEdgeSwipe] to determine if an edge swipe should close the active modal.
      */
     val isAnyModalActive: StateFlow<Boolean> = combine(
         _isFullscreenKeyboardActive,

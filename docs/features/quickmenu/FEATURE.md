@@ -30,10 +30,6 @@ the universal "go back" mechanism throughout the app.
   content edge-to-edge SHOULD inset by this amount to avoid overlap.
 - The bar tab is **purely visual** — it does not capture touch events. The edge-swipe gesture is
   detected by `SwipeGestureProcessor` in the host screen's `pointerInput` modifier.
-- When any modal is active (`AppStateManager.isAnyModalActive == true`), a **"× close" label**
-  appears on the interior side of the bar (above the bar for bottom-edge placement, below for
-  top-edge, toward the center interior of the screen), indicating that a swipe will close the
-  active modal rather than open the Quick Menu.
 
 ### FR-PM2: Edge-Swipe Gesture Routing
 
@@ -102,7 +98,6 @@ the universal "go back" mechanism throughout the app.
 MainAppScreen (or BackgroundMacroPadOverlay)
   └── QuickMenuBar
         ├── QuickMenuBarTab  — slim bar affordance at screen edge
-        ├── "× close" label  — visible when isAnyModalActive == true
         └── QuickMenu        — full-screen overlay when isQuickMenuOpen == true
               ├── Scrim (Color.Black @ 55% alpha)
               ├── MirrorControlCard (standalone Composable, slides in from top)
@@ -166,14 +161,14 @@ which routes to open, close, or modal-dismiss as appropriate.
 `isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of the
 interactive overlays (`isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,
 `isBackgroundSettingsActive`, or `MacroPadState.isPeekActive`) are active. `isEditorActive` is
-intentionally excluded since the Quick Menu Bar is hidden entirely while the editor is open. The Quick Menu Bar
-reads `isAnyModalActive` to decide whether to show the "× close" label.
+intentionally excluded since the Quick Menu Bar is hidden entirely while the editor is open. The edge-swipe
+handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu.
 
 ### Source Files
 
 | File | Responsibility |
 | --- | --- |
-| [QuickMenuBar.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt) | Always-visible quick menu bar tab + "× close" label; `QUICK_MENU_BAR_INSET` constant for screen edge inset |
+| [QuickMenuBar.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt) | Always-visible quick menu bar tab; `QUICK_MENU_BAR_INSET` constant for screen edge inset |
 | [QuickMenu.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenu.kt) | Full-screen Quick Menu overlay: state coordinator and overlays orchestrator |
 | [QuickMenuComponents.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
 | [QuickMenuDialogs.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | InTreeNameInputDialog dialog helper for new profile/layout creation |
