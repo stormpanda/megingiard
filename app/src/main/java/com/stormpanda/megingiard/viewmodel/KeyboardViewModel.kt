@@ -34,18 +34,17 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     val kbFullscreen: StateFlow<Boolean> = KeyboardSettings.kbFullscreen
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = KeyboardSettings.kbMouseBtnPos
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
-    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
+    val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
 
     val controller = KeyRepeatController(viewModelScope)
 
-    fun closePillMenu() = AppStateManager.closePillMenu()
+    fun closeQuickMenu() = AppStateManager.closeQuickMenu()
 
     fun startInjectors(context: Context) {
         viewModelScope.launch {
             KeyboardState.reset()
-            AppStateManager.isPillMenuOpen.first { !it }
-            AppLog.i(TAG, "pill menu closed, starting KeyInjector + MouseInjector")
+            AppStateManager.isQuickMenuOpen.first { !it }
+            AppLog.i(TAG, "quick menu closed, starting KeyInjector + MouseInjector")
             withContext(Dispatchers.IO) {
                 KeyInjector.start(context)
                 MouseInjector.start(context)

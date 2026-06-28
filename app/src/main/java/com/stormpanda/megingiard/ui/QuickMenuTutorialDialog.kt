@@ -46,56 +46,56 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 
-private const val TAG = "PillTutorialDialog"
+private const val TAG = "QuickMenuTutorialDialog"
 
 // ── Animation ────────────────────────────────────────────────────────────────
-private const val PT_BOUNCE_MIN_PX = -12f
-private const val PT_BOUNCE_MAX_PX = 12f
-private const val PT_BOUNCE_DURATION_MS = 1000
+private const val QM_BOUNCE_MIN_PX = -12f
+private const val QM_BOUNCE_MAX_PX = 12f
+private const val QM_BOUNCE_DURATION_MS = 1000
 
 // ── Appearance ───────────────────────────────────────────────────────────────
-private const val PT_SCRIM_ALPHA = 0.6f
-private val PT_DIALOG_MAX_WIDTH = 320.dp
-private val PT_DIALOG_PADDING = 24.dp
-private val PT_DIALOG_SHADOW_ELEVATION = 8.dp
-private val PT_DIALOG_CORNER_RADIUS = 28.dp
-private val PT_DIALOG_BORDER_WIDTH = 1.dp
-private val PT_TITLE_BODY_SPACING = 16.dp
-private val PT_BODY_BUTTON_SPACING = 24.dp
-private val PT_ARROW_EDGE_PADDING = 24.dp
-private val PT_ARROW_SIZE = 48.dp
+private const val QM_SCRIM_ALPHA = 0.6f
+private val QM_DIALOG_MAX_WIDTH = 320.dp
+private val QM_DIALOG_PADDING = 24.dp
+private val QM_DIALOG_SHADOW_ELEVATION = 8.dp
+private val QM_DIALOG_CORNER_RADIUS = 28.dp
+private val QM_DIALOG_BORDER_WIDTH = 1.dp
+private val QM_TITLE_BODY_SPACING = 16.dp
+private val QM_BODY_BUTTON_SPACING = 24.dp
+private val QM_ARROW_EDGE_PADDING = 24.dp
+private val QM_ARROW_SIZE = 48.dp
 
 @Composable
-fun PillTutorialDialog(
+fun QuickMenuTutorialDialog(
     overlayAtBottom: Boolean,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
 
     LaunchedEffect(Unit) {
-        AppLog.d(TAG, "Pill tutorial dialog shown")
+        AppLog.d(TAG, "Quick Menu tutorial dialog shown")
     }
 
-    val bounceTransition = rememberInfiniteTransition(label = "pill-arrow-bounce")
+    val bounceTransition = rememberInfiniteTransition(label = "quick-menu-arrow-bounce")
     val bounceOffset by bounceTransition.animateFloat(
-        initialValue = PT_BOUNCE_MIN_PX,
-        targetValue = PT_BOUNCE_MAX_PX,
+        initialValue = QM_BOUNCE_MIN_PX,
+        targetValue = QM_BOUNCE_MAX_PX,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = PT_BOUNCE_DURATION_MS, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = QM_BOUNCE_DURATION_MS, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pill-arrow-y"
+        label = "quick-menu-arrow-y"
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = PT_SCRIM_ALPHA))
+            .background(Color.Black.copy(alpha = QM_SCRIM_ALPHA))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = {
-                    AppLog.d(TAG, "Pill tutorial dialog dismissed via background click")
+                    AppLog.d(TAG, "Quick Menu tutorial dialog dismissed via background click")
                     onDismiss()
                 }
             ),
@@ -104,13 +104,13 @@ fun PillTutorialDialog(
         // Centered dialog card
         Column(
             modifier = Modifier
-                .widthIn(max = PT_DIALOG_MAX_WIDTH)
-                .padding(PT_DIALOG_PADDING)
-                .shadow(PT_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(PT_DIALOG_CORNER_RADIUS))
-                .clip(RoundedCornerShape(PT_DIALOG_CORNER_RADIUS))
+                .widthIn(max = QM_DIALOG_MAX_WIDTH)
+                .padding(QM_DIALOG_PADDING)
+                .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
                 .background(colors.surface)
-                .border(PT_DIALOG_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PT_DIALOG_CORNER_RADIUS))
-                .padding(PT_DIALOG_PADDING)
+                .border(QM_DIALOG_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                .padding(QM_DIALOG_PADDING)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -118,30 +118,30 @@ fun PillTutorialDialog(
                 )
         ) {
             Text(
-                text = stringResource(R.string.pill_tutorial_title),
+                text = stringResource(R.string.quick_menu_tutorial_title),
                 color = colors.onSurface,
                 style = MaterialTheme.typography.titleLarge,
             )
-            Spacer(modifier = Modifier.height(PT_TITLE_BODY_SPACING))
+            Spacer(modifier = Modifier.height(QM_TITLE_BODY_SPACING))
             Column(
                 modifier = Modifier
                     .weight(weight = 1f, fill = false)
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = stringResource(R.string.pill_tutorial_body),
+                    text = stringResource(R.string.quick_menu_tutorial_body),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            Spacer(modifier = Modifier.height(PT_BODY_BUTTON_SPACING))
+            Spacer(modifier = Modifier.height(QM_BODY_BUTTON_SPACING))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(
                     onClick = {
-                        AppLog.d(TAG, "Pill tutorial dialog confirmed")
+                        AppLog.d(TAG, "Quick Menu tutorial dialog confirmed")
                         onDismiss()
                     }
                 ) {
@@ -154,7 +154,7 @@ fun PillTutorialDialog(
             }
         }
 
-        // Animated arrow pointing at the edge-pill
+        // Animated arrow pointing at the edge quick menu bar
         val arrowAlign = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter
         val arrowIcon = if (overlayAtBottom) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward
 
@@ -162,8 +162,8 @@ fun PillTutorialDialog(
             modifier = Modifier
                 .align(arrowAlign)
                 .padding(
-                    top = if (overlayAtBottom) 0.dp else PT_ARROW_EDGE_PADDING,
-                    bottom = if (overlayAtBottom) PT_ARROW_EDGE_PADDING else 0.dp
+                    top = if (overlayAtBottom) 0.dp else QM_ARROW_EDGE_PADDING,
+                    bottom = if (overlayAtBottom) QM_ARROW_EDGE_PADDING else 0.dp
                 )
                 .offset(y = bounceOffset.dp),
             contentAlignment = Alignment.Center
@@ -172,7 +172,7 @@ fun PillTutorialDialog(
                 imageVector = arrowIcon,
                 contentDescription = null,
                 tint = colors.accent,
-                modifier = Modifier.size(PT_ARROW_SIZE)
+                modifier = Modifier.size(QM_ARROW_SIZE)
             )
         }
     }

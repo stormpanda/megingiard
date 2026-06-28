@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 
-private const val TAG = "PillMirrorCard"
+private const val TAG = "QuickMenuMirrorCard"
 
 @Composable
 internal fun MirrorControlCard(
@@ -51,7 +51,6 @@ internal fun MirrorControlCard(
     onToggleFreeze: () -> Unit,
     onToggleViewportEdit: () -> Unit,
     onTakeScreenshot: () -> Unit,
-    showLabels: Boolean,
 ) {
     Row(
         modifier = modifier
@@ -97,7 +96,7 @@ internal fun MirrorControlCard(
             )
             Spacer(Modifier.width(PM_SCREEN_MIRRORING_SPACER_W))
             Text(
-                text  = stringResource(R.string.pill_menu_screen_mirroring),
+                text  = stringResource(R.string.quick_menu_screen_mirroring),
                 color = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -113,7 +112,6 @@ internal fun MirrorControlCard(
                 label = stringResource(R.string.mirror_control_label_stop),
                 tint = colors.onControlOverlay,
                 enabled = true,
-                showLabel = showLabels,
                 colors = colors,
                 onClick = onStop,
             )
@@ -124,7 +122,6 @@ internal fun MirrorControlCard(
                 label = stringResource(R.string.mirror_control_label_start),
                 tint = colors.onControlOverlay,
                 enabled = true,
-                showLabel = showLabels,
                 colors = colors,
                 onClick = onStart,
             )
@@ -139,7 +136,6 @@ internal fun MirrorControlCard(
             ),
             tint = if (isFrozen) colors.accent else colors.onControlOverlay,
             enabled = isCapturing,
-            showLabel = showLabels,
             colors = colors,
             onClick = onToggleFreeze,
         )
@@ -149,7 +145,6 @@ internal fun MirrorControlCard(
             label = stringResource(R.string.mirror_control_label_screenshot),
             tint = colors.onControlOverlay,
             enabled = isScreenshotEnabled,
-            showLabel = showLabels,
             colors = colors,
             onClick = onTakeScreenshot,
         )
@@ -163,13 +158,12 @@ private fun MirrorControlIconButton(
     label: String,
     tint: Color,
     enabled: Boolean,
-    showLabel: Boolean,
     colors: AppColors,
     onClick: () -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(if (showLabel) PM_MIRROR_LABELED_BUTTON_WIDTH else PM_MIRROR_BUTTON_SIZE),
+        modifier = Modifier.width(PM_MIRROR_LABELED_BUTTON_WIDTH),
     ) {
         IconButton(
             onClick = onClick,
@@ -183,16 +177,14 @@ private fun MirrorControlIconButton(
                 modifier = Modifier.size(PM_MIRROR_ICON_SIZE),
             )
         }
-        if (showLabel) {
-            Text(
-                text = label,
-                color = if (enabled) colors.onControlOverlay else colors.onControlOverlay.copy(alpha = 0.4f),
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        Text(
+            text = label,
+            color = if (enabled) colors.onControlOverlay else colors.onControlOverlay.copy(alpha = 0.4f),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

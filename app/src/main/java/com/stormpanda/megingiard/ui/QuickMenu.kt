@@ -55,7 +55,7 @@ import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import java.util.UUID
 
-private const val TAG = "PillMenu"
+private const val TAG = "QuickMenu"
 
 // ── Dimensions ──────────────────────────────────────────────────────────────
 internal val PM_PANEL_H_PADDING = 8.dp
@@ -81,7 +81,7 @@ internal const val PM_NAME_DIALOG_SCRIM_ALPHA = 0.5f
 internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
 
 /**
- * Pill Menu overlay — appears when [AppStateManager.isPillMenuOpen] transitions to true.
+ * Quick Menu overlay — appears when [AppStateManager.isQuickMenuOpen] transitions to true.
  *
  * Two-card layout:
  * - **Bottom card** (always visible): Profile / Layout selectors + action buttons.
@@ -90,7 +90,7 @@ internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
  * Tapping the scrim calls [onDismiss].
  */
 @Composable
-fun PillMenu(
+fun QuickMenu(
     visible: Boolean,
     onDismiss: () -> Unit,
 ) {
@@ -102,11 +102,10 @@ fun PillMenu(
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val showMirrorControlLabels by SettingsManager.showMirrorControlLabels.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     var showGlobalSettings by remember { mutableStateOf(false) }
-    var showPillHelp by remember { mutableStateOf(false) }
+    var showQuickMenuHelp by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
@@ -150,7 +149,6 @@ fun PillMenu(
                     onDismiss()
                 },
                 onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
-                showLabels = showMirrorControlLabels,
             )
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
@@ -174,7 +172,7 @@ fun PillMenu(
                     .padding(PM_CONTENT_PADDING),
             ) {
                 // ── Profile section ────────────────────────────────────────
-                SectionLabel(text = stringResource(R.string.pill_menu_profile_label), colors = colors)
+                SectionLabel(text = stringResource(R.string.quick_menu_profile_label), colors = colors)
                 Spacer(Modifier.height(6.dp))
                 ProfileRow(
                     profiles = profiles,
@@ -190,7 +188,7 @@ fun PillMenu(
                 Spacer(Modifier.height(PM_SECTION_SPACING))
 
                 // ── Layout section ─────────────────────────────────────────
-                SectionLabel(text = stringResource(R.string.pill_menu_layout_label), colors = colors)
+                SectionLabel(text = stringResource(R.string.quick_menu_layout_label), colors = colors)
                 Spacer(Modifier.height(6.dp))
                 LayoutRow(
                     activeProfile = activeProfile,
@@ -213,21 +211,21 @@ fun PillMenu(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment     = Alignment.CenterVertically,
                 ) {
-                    PillActionChip(
-                        label    = stringResource(R.string.pill_menu_edit_layout),
+                    QuickMenuActionChip(
+                        label    = stringResource(R.string.quick_menu_edit_layout),
                         icon     = Icons.Rounded.Edit,
                         colors   = colors,
                         onClick  = { AppStateManager.setEditorActive(true); onDismiss() },
                         modifier = Modifier.weight(1f),
                     )
-                    PillActionChip(
-                        label    = stringResource(R.string.pill_menu_global_settings),
+                    QuickMenuActionChip(
+                        label    = stringResource(R.string.quick_menu_global_settings),
                         icon     = Icons.Rounded.Settings,
                         colors   = colors,
                         onClick  = { showGlobalSettings = true },
                         modifier = Modifier.weight(1f),
                     )
-                    HelpIconButton(onClick = { showPillHelp = true })
+                    HelpIconButton(onClick = { showQuickMenuHelp = true })
                 }
             }
         }
@@ -243,66 +241,66 @@ fun PillMenu(
         GlobalSettingsScreen(onBack = { showGlobalSettings = false })
     }
 
-    PillMenuHelpModal(
-        visible = showPillHelp,
-        onDismiss = { showPillHelp = false },
+    QuickMenuHelpModal(
+        visible = showQuickMenuHelp,
+        onDismiss = { showQuickMenuHelp = false },
     )
 }
 
 @Composable
-private fun PillMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun QuickMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
     HelpModal(
         visible = visible,
-        title = stringResource(R.string.help_pillmenu_title),
+        title = stringResource(R.string.help_quickmenu_title),
         onDismiss = onDismiss,
     ) {
-        HelpIntro(stringResource(R.string.help_pillmenu_intro))
+        HelpIntro(stringResource(R.string.help_quickmenu_intro))
 
-        HelpSection(stringResource(R.string.help_pillmenu_section_mirror))
+        HelpSection(stringResource(R.string.help_quickmenu_section_mirror))
         HelpEntry(
             icon = Icons.Rounded.PlayArrow,
-            label = stringResource(R.string.help_pillmenu_start_label),
-            description = stringResource(R.string.help_pillmenu_start_desc),
+            label = stringResource(R.string.help_quickmenu_start_label),
+            description = stringResource(R.string.help_quickmenu_start_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Pause,
-            label = stringResource(R.string.help_pillmenu_freeze_label),
-            description = stringResource(R.string.help_pillmenu_freeze_desc),
+            label = stringResource(R.string.help_quickmenu_freeze_label),
+            description = stringResource(R.string.help_quickmenu_freeze_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.pill_menu_screen_mirroring),
-            description = stringResource(R.string.help_pillmenu_viewport_desc),
+            label = stringResource(R.string.quick_menu_screen_mirroring),
+            description = stringResource(R.string.help_quickmenu_viewport_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.CameraAlt,
-            label = stringResource(R.string.help_pillmenu_screenshot_label),
-            description = stringResource(R.string.help_pillmenu_screenshot_desc),
+            label = stringResource(R.string.help_quickmenu_screenshot_label),
+            description = stringResource(R.string.help_quickmenu_screenshot_desc),
         )
 
-        HelpSection(stringResource(R.string.help_pillmenu_section_macropad))
+        HelpSection(stringResource(R.string.help_quickmenu_section_macropad))
         HelpEntry(
-            label = stringResource(R.string.pill_menu_profile_label),
-            description = stringResource(R.string.help_pillmenu_profiles_desc),
+            label = stringResource(R.string.quick_menu_profile_label),
+            description = stringResource(R.string.help_quickmenu_profiles_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.pill_menu_layout_label),
-            description = stringResource(R.string.help_pillmenu_layouts_desc),
+            label = stringResource(R.string.quick_menu_layout_label),
+            description = stringResource(R.string.help_quickmenu_layouts_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.pill_menu_edit_layout),
-            description = stringResource(R.string.help_pillmenu_edit_desc),
+            label = stringResource(R.string.quick_menu_edit_layout),
+            description = stringResource(R.string.help_quickmenu_edit_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Settings,
-            label = stringResource(R.string.pill_menu_global_settings),
-            description = stringResource(R.string.help_pillmenu_settings_desc),
+            label = stringResource(R.string.quick_menu_global_settings),
+            description = stringResource(R.string.help_quickmenu_settings_desc),
         )
         HelpEntry(
             icon = Icons.AutoMirrored.Rounded.HelpOutline,
-            label = stringResource(R.string.help_pillmenu_help_label),
-            description = stringResource(R.string.help_pillmenu_help_desc),
+            label = stringResource(R.string.help_quickmenu_help_label),
+            description = stringResource(R.string.help_quickmenu_help_desc),
         )
     }
 }

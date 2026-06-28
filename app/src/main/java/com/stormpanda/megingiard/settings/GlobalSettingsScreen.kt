@@ -90,9 +90,6 @@ fun GlobalSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
-    val showMirrorControlLabels by viewModel.showMirrorControlLabels.collectAsState()
-    val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
-    val mirrorAutoStart by viewModel.mirrorAutoStart.collectAsState()
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
@@ -189,6 +186,7 @@ fun GlobalSettingsScreen(
                     selectedSectionFilter = selectedSectionFilter,
                     onSelectAll = { selectedSectionFilter = null },
                     onSelectGeneral = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
+                    onSelectAutomation = { selectedSectionFilter = SettingsSectionFilter.AUTOMATION },
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
@@ -200,37 +198,10 @@ fun GlobalSettingsScreen(
                         title = stringResource(R.string.settings_section_general),
                         colors = colors,
                     ) {
-                        OverlayPositionRow(
-                            overlayAtBottom = overlayAtBottom,
-                            onChanged = { viewModel.setOverlayAtBottom(it) }
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_show_mirror_control_labels),
-                            description = stringResource(R.string.settings_show_mirror_control_labels_desc),
-                            checked = showMirrorControlLabels,
-                            onCheckedChange = { viewModel.setShowMirrorControlLabels(it) },
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_show_fullscreen_exit_hints),
-                            description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
-                            checked = showFullscreenExitHints,
-                            onCheckedChange = { viewModel.setShowFullscreenExitHints(it) },
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_mirror_auto_start),
-                            description = stringResource(R.string.settings_mirror_auto_start_desc),
-                            checked = mirrorAutoStart,
-                            onCheckedChange = { viewModel.setMirrorAutoStart(it) },
-                        )
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_auto_switch_profiles),
-                            description = stringResource(R.string.settings_auto_switch_profiles_desc),
-                            checked = autoSwitchProfiles,
-                            onCheckedChange = { viewModel.setAutoSwitchProfiles(it) },
+                        LanguagePickerRow(
+                            language = appLanguage,
+                            accentColor = effectiveAccent,
+                            onChanged = { viewModel.setAppLanguage(it) }
                         )
                         AppDivider()
                         RememberSettingRow(
@@ -240,6 +211,33 @@ fun GlobalSettingsScreen(
                             onCheckedChange = { viewModel.setExcludeFromRecents(it) },
                         )
                         AppDivider()
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
+                            description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
+                            checked = gamepadSwapFaceButtons,
+                            onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_privileged_mode),
+                        colors = colors,
+                    ) {
+                        PrivdSettingsCard(
+                            viewModel = viewModel,
+                            onShowWizard = { showPrivdWizard = true },
+                            onShowDeadzoneDialog = { showDeadzoneDialog = true },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.AUTOMATION) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_automation),
+                        colors = colors,
+                    ) {
                         AppSettingsRow(
                             onClick = {
                                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
@@ -308,17 +306,11 @@ fun GlobalSettingsScreen(
                             )
                         }
                         AppDivider()
-                        LanguagePickerRow(
-                            language = appLanguage,
-                            accentColor = effectiveAccent,
-                            onChanged = { viewModel.setAppLanguage(it) }
-                        )
-                        AppDivider()
                         RememberSettingRow(
-                            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
-                            description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
-                            checked = gamepadSwapFaceButtons,
-                            onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                            label = stringResource(R.string.settings_auto_switch_profiles),
+                            description = stringResource(R.string.settings_auto_switch_profiles_desc),
+                            checked = autoSwitchProfiles,
+                            onCheckedChange = { viewModel.setAutoSwitchProfiles(it) },
                         )
                     }
                 }
@@ -340,6 +332,11 @@ fun GlobalSettingsScreen(
                                 onClick = { showColorPicker = true }
                             )
                         }
+                        AppDivider()
+                        OverlayPositionRow(
+                            overlayAtBottom = overlayAtBottom,
+                            onChanged = { viewModel.setOverlayAtBottom(it) }
+                        )
                     }
                 }
 
@@ -381,18 +378,7 @@ fun GlobalSettingsScreen(
                     }
                 }
 
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_privileged_mode),
-                        colors = colors,
-                    ) {
-                        PrivdSettingsCard(
-                            viewModel = viewModel,
-                            onShowWizard = { showPrivdWizard = true },
-                            onShowDeadzoneDialog = { showDeadzoneDialog = true },
-                        )
-                    }
-                }
+
 
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
                     SettingsSection(
@@ -637,40 +623,36 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
 
         HelpSection(stringResource(R.string.settings_section_general))
         HelpEntry(
-            label = stringResource(R.string.settings_overlay_position),
-            description = stringResource(R.string.help_settings_overlay_position_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_show_mirror_control_labels),
-            description = stringResource(R.string.help_settings_mirror_labels_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_show_fullscreen_exit_hints),
-            description = stringResource(R.string.help_settings_exit_hints_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_mirror_auto_start),
-            description = stringResource(R.string.help_settings_mirror_autostart_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_auto_switch_profiles),
-            description = stringResource(R.string.help_settings_auto_profile_desc),
+            label = stringResource(R.string.settings_language),
+            description = stringResource(R.string.help_settings_language_desc),
         )
         HelpEntry(
             label = stringResource(R.string.settings_exclude_from_recents),
             description = stringResource(R.string.help_settings_recents_desc),
         )
         HelpEntry(
+            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
+            description = stringResource(R.string.help_settings_gamepad_swap_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_section_privileged_mode))
+        HelpEntry(
+            label = stringResource(R.string.privd_title),
+            description = stringResource(R.string.help_settings_privd_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.privd_deadzone_title),
+            description = stringResource(R.string.help_settings_deadzone_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_section_automation))
+        HelpEntry(
             label = stringResource(R.string.settings_accessibility_status),
             description = stringResource(R.string.help_settings_accessibility_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.settings_language),
-            description = stringResource(R.string.help_settings_language_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
-            description = stringResource(R.string.help_settings_gamepad_swap_desc),
+            label = stringResource(R.string.settings_auto_switch_profiles),
+            description = stringResource(R.string.help_settings_auto_profile_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_appearance))
@@ -681,6 +663,10 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpEntry(
             label = stringResource(R.string.settings_accent_color),
             description = stringResource(R.string.help_settings_accent_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_overlay_position),
+            description = stringResource(R.string.help_settings_overlay_position_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_data))
@@ -711,15 +697,7 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             description = stringResource(R.string.help_settings_import_profile_desc),
         )
 
-        HelpSection(stringResource(R.string.settings_section_privileged_mode))
-        HelpEntry(
-            label = stringResource(R.string.privd_title),
-            description = stringResource(R.string.help_settings_privd_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.privd_deadzone_title),
-            description = stringResource(R.string.help_settings_deadzone_desc),
-        )
+
 
         HelpSection(stringResource(R.string.settings_section_diagnostics))
         HelpEntry(

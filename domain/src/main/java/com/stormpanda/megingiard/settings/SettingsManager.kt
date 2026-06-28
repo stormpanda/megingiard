@@ -73,8 +73,6 @@ object SettingsManager {
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
 
 
-    private val _autoStartCapture = MutableStateFlow(false)
-    val autoStartCapture: StateFlow<Boolean> = _autoStartCapture.asStateFlow()
 
     private val _autoSwitchProfiles = MutableStateFlow(true)
     val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
@@ -91,11 +89,6 @@ object SettingsManager {
     private val _overlayAtBottom = MutableStateFlow(false)
     val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
 
-    private val _showMirrorControlLabels = MutableStateFlow(false)
-    val showMirrorControlLabels: StateFlow<Boolean> = _showMirrorControlLabels.asStateFlow()
-
-    private val _showFullscreenExitHints = MutableStateFlow(true)
-    val showFullscreenExitHints: StateFlow<Boolean> = _showFullscreenExitHints.asStateFlow()
 
     private val _showWelcomeTutorial = MutableStateFlow(true)
     val showWelcomeTutorial: StateFlow<Boolean> = _showWelcomeTutorial.asStateFlow()
@@ -103,8 +96,8 @@ object SettingsManager {
     private val _showMacroEditorTutorial = MutableStateFlow(true)
     val showMacroEditorTutorial: StateFlow<Boolean> = _showMacroEditorTutorial.asStateFlow()
 
-    private val _showPillTutorial = MutableStateFlow(true)
-    val showPillTutorial: StateFlow<Boolean> = _showPillTutorial.asStateFlow()
+    private val _showQuickMenuTutorial = MutableStateFlow(true)
+    val showQuickMenuTutorial: StateFlow<Boolean> = _showQuickMenuTutorial.asStateFlow()
 
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
@@ -165,17 +158,15 @@ object SettingsManager {
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
 
-                    _autoStartCapture.value = prefs[KEY_AUTO_START_CAPTURE] ?: false
                     _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
                     _excludeFromRecents.value = prefs[KEY_EXCLUDE_FROM_RECENTS] ?: false
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
-                    _showMirrorControlLabels.value = prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] ?: false
-                    _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
+
                     _showWelcomeTutorial.value = prefs[KEY_SHOW_WELCOME_TUTORIAL] ?: true
                     _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
-                    _showPillTutorial.value = prefs[KEY_SHOW_PILL_TUTORIAL] ?: true
+                    _showQuickMenuTutorial.value = prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] ?: true
                     MirrorSettings.loadFrom(prefs)
                     KeyboardSettings.loadFrom(prefs)
                     TouchpadSettings.loadFrom(prefs)
@@ -208,15 +199,6 @@ object SettingsManager {
         }
     }
 
-    fun setAutoStartCapture(value: Boolean) {
-        AppLog.d(TAG, "setAutoStartCapture($value)")
-        _autoStartCapture.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_AUTO_START_CAPTURE] = value
-            }
-        }
-    }
 
     fun setShowWelcomeTutorial(value: Boolean) {
         AppLog.d(TAG, "setShowWelcomeTutorial($value)")
@@ -242,13 +224,13 @@ object SettingsManager {
         }
     }
 
-    fun setShowPillTutorial(value: Boolean) {
-        AppLog.d(TAG, "setShowPillTutorial($value)")
-        _showPillTutorial.value = value
+    fun setShowQuickMenuTutorial(value: Boolean) {
+        AppLog.d(TAG, "setShowQuickMenuTutorial($value)")
+        _showQuickMenuTutorial.value = value
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
-                    prefs[KEY_SHOW_PILL_TUTORIAL] = value
+                    prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] = value
                 }
             }
         }
@@ -258,13 +240,13 @@ object SettingsManager {
         AppLog.d(TAG, "resetAllTutorials()")
         _showWelcomeTutorial.value = true
         _showMacroEditorTutorial.value = true
-        _showPillTutorial.value = true
+        _showQuickMenuTutorial.value = true
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
                     prefs[KEY_SHOW_WELCOME_TUTORIAL] = true
                     prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
-                    prefs[KEY_SHOW_PILL_TUTORIAL] = true
+                    prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] = true
                 }
             }
         }
@@ -320,25 +302,7 @@ object SettingsManager {
         }
     }
 
-    fun setShowMirrorControlLabels(value: Boolean) {
-        AppLog.d(TAG, "setShowMirrorControlLabels($value)")
-        _showMirrorControlLabels.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_SHOW_MIRROR_CONTROL_LABELS] = value
-            }
-        }
-    }
 
-    fun setShowFullscreenExitHints(value: Boolean) {
-        AppLog.d(TAG, "setShowFullscreenExitHints($value)")
-        _showFullscreenExitHints.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] = value
-            }
-        }
-    }
 
     // Mirror setters + session save/restore live in [MirrorSettings].
 

@@ -560,7 +560,7 @@ internal fun InlineLayoutSettingsOverlay(
         AppTextField(
             value = nameText,
             onValueChange = { nameText = it },
-            label = { Text(stringResource(R.string.pill_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+            label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             isError = hasError,

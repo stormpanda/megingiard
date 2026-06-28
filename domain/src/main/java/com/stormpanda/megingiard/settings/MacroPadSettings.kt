@@ -60,21 +60,6 @@ object MacroPadSettings {
     private val _gamepadSwapFaceButtons = MutableStateFlow(false)
     val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
 
-    private val _privdGamepadMergeEnabled = MutableStateFlow(false)
-    /** Per-feature flag for [com.stormpanda.megingiard.privd.PrivdFeature.GAMEPAD_MERGE]. */
-    val privdGamepadMergeEnabled: StateFlow<Boolean> = _privdGamepadMergeEnabled.asStateFlow()
-
-    private val _privdGamepadRecordingEnabled = MutableStateFlow(false)
-    /** Per-feature flag for [com.stormpanda.megingiard.privd.PrivdFeature.GAMEPAD_RECORDING]. */
-    val privdGamepadRecordingEnabled: StateFlow<Boolean> = _privdGamepadRecordingEnabled.asStateFlow()
-
-    private val _privdMirrorEnabled = MutableStateFlow(false)
-    /**
-     * When true (and [com.stormpanda.megingiard.privd.PrivdManager] is RUNNING),
-     * mirroring is performed via direct SurfaceControl output instead of
-     * MediaProjection. Default off.
-     */
-    val privdMirrorEnabled: StateFlow<Boolean> = _privdMirrorEnabled.asStateFlow()
 
     private val _privdAutoConnect = MutableStateFlow(false)
     /**
@@ -109,9 +94,6 @@ object MacroPadSettings {
         _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
         _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
-        _privdGamepadMergeEnabled.value = prefs[KEY_PRIVD_GAMEPAD_MERGE_ENABLED] ?: false
-        _privdGamepadRecordingEnabled.value = prefs[KEY_PRIVD_GAMEPAD_RECORDING_ENABLED] ?: false
-        _privdMirrorEnabled.value = prefs[KEY_PRIVD_MIRROR_ENABLED] ?: false
         _privdAutoConnect.value = prefs[KEY_PRIVD_AUTO_CONNECT] ?: false
         _deadzoneLeft.value  = prefs[KEY_PRIVD_DEADZONE_LEFT]  ?: PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
@@ -154,23 +136,6 @@ object MacroPadSettings {
         scope.launch { dataStore.edit { prefs -> prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] = value } }
     }
 
-    fun setPrivdGamepadMergeEnabled(value: Boolean) {
-        AppLog.d(TAG, "setPrivdGamepadMergeEnabled($value)")
-        _privdGamepadMergeEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_GAMEPAD_MERGE_ENABLED] = value } }
-    }
-
-    fun setPrivdGamepadRecordingEnabled(value: Boolean) {
-        AppLog.d(TAG, "setPrivdGamepadRecordingEnabled($value)")
-        _privdGamepadRecordingEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_GAMEPAD_RECORDING_ENABLED] = value } }
-    }
-
-    fun setPrivdMirrorEnabled(value: Boolean) {
-        AppLog.d(TAG, "setPrivdMirrorEnabled($value)")
-        _privdMirrorEnabled.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_MIRROR_ENABLED] = value } }
-    }
 
     fun setPrivdAutoConnect(value: Boolean) {
         AppLog.d(TAG, "setPrivdAutoConnect($value)")

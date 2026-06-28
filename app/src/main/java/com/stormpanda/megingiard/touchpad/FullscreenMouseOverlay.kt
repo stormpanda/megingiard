@@ -39,10 +39,6 @@ import kotlinx.coroutines.withContext
 
 private const val TAG = "FullscreenMouseOverlay"
 private const val FMO_BG_ALPHA = 0.85f
-private const val FMO_HINT_AUTO_HIDE_MS = 2800L
-private val FMO_HINT_PADDING = 12.dp
-private val FMO_HINT_CORNER = 12.dp
-private const val FMO_HINT_BG_ALPHA = 0.9f
 
 /**
  * Full-screen transparent overlay that captures all touch as relative mouse input.
@@ -65,19 +61,9 @@ fun FullscreenMouseOverlay() {
     val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val showExitHints by SettingsManager.showFullscreenExitHints.collectAsState()
 
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
-    var showHint by remember { mutableStateOf(showExitHints) }
-
-    LaunchedEffect(showExitHints) {
-        showHint = showExitHints
-        if (showExitHints) {
-            delay(FMO_HINT_AUTO_HIDE_MS)
-            showHint = false
-        }
-    }
 
     LaunchedEffect(Unit) {
         AppLog.i(TAG, "start: starting MouseInjector")
@@ -148,18 +134,5 @@ fun FullscreenMouseOverlay() {
                     }
                 }
             }
-    ) {
-        if (showHint) {
-            Text(
-                text = stringResource(R.string.overlay_exit_hint_swipe),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .align(if (overlayAtBottom) Alignment.TopCenter else Alignment.BottomCenter)
-                    .padding(FMO_HINT_PADDING)
-                    .background(colors.surface.copy(alpha = FMO_HINT_BG_ALPHA), RoundedCornerShape(FMO_HINT_CORNER))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-        }
-    }
+    )
 }

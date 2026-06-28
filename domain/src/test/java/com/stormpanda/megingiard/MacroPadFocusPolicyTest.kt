@@ -25,12 +25,12 @@ class MacroPadFocusPolicyTest {
     }
 
     @Test
-    fun `pill menu restores app focus`() {
+    fun `quick menu restores app focus`() {
         assertFalse(
             shouldKeepPrimaryGameFocus(
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
-                    isPillMenuOpen = true,
+                    isQuickMenuOpen = true,
                 )
             )
         )
@@ -100,13 +100,13 @@ class MacroPadFocusPolicyTest {
 
     @Test
     fun `interactive overlay takes priority over fullscreen keyboard in clearing focus`() {
-        // PillMenu open + keyboard active: interactive overlay wins, app needs focus.
+        // QuickMenu open + keyboard active: interactive overlay wins, app needs focus.
         assertFalse(
             shouldKeepPrimaryGameFocus(
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
                     isFullscreenKeyboardActive = false,
-                    isPillMenuOpen = true,
+                    isQuickMenuOpen = true,
                 )
             )
         )

@@ -33,7 +33,7 @@ import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import java.util.Locale
 
-private const val TAG = "PillMenuComponents"
+private const val TAG = "QuickMenuComponents"
 
 @Composable
 internal fun SectionLabel(text: String, colors: AppColors) {
@@ -94,7 +94,7 @@ internal fun LayoutRow(
 }
 
 @Composable
-internal fun PillActionChip(
+internal fun QuickMenuActionChip(
     label:    String,
     icon:     ImageVector,
     colors:   AppColors,

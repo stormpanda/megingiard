@@ -26,10 +26,6 @@ In the current implementation, the Virtual Touchpad is mapped to the `FullScreen
 - In relative mouse mode, the overlay dimming provides clear visual feedback of the active touchpad session. No custom touch pointer/circle is rendered, as the primary screen's native OS mouse cursor provides the active visual feedback.
 - If absolute Touch Mode were to be used, the domain-level gesture processor tracks finger positions via `touchPos` for visual feedback if needed.
 
-### FR-T3: Exit Hint
-
-- An auto-fading exit hint (`R.string.overlay_exit_hint_swipe`) is shown on entry (at the top or bottom of the screen depending on the overlay position setting) to instruct the user on how to close the touchpad (via an edge swipe).
-- This hint automatically fades out after a short duration (`FMO_HINT_AUTO_HIDE_MS = 2800L`) when enabled in global settings.
 
 ### FR-T4: No Special Permissions Required
 
@@ -43,7 +39,7 @@ In the current implementation, the Virtual Touchpad is mapped to the `FullScreen
 - **Tap-to-click:** When enabled, a single short tap (below a slop of `20f` pixels and a timeout of `200ms`) sends a left-button click (down + up) via `MouseInjector`.
 - **Two-finger tap:** When enabled, a two-finger short tap sends a right-button click via `MouseInjector`.
 - Only the **primary pointer** (first finger down) drives cursor movement; additional fingers are tracked solely for two-finger tap detection.
-- When the Pill Menu is visible, all pointer changes are consumed to ensure touches do not bleed through, before closing the menu.
+- When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through, before closing the menu.
 
 ---
 
@@ -149,7 +145,7 @@ Dismissal on the secondary display reuses the existing swipe-to-close path in `B
 
 | File                          | Layer           | Responsibility                                                                        |
 | ----------------------------- | --------------- | ------------------------------------------------------------------------------------- |
-| `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, exit hint, pointer event loop              |
+| `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, pointer event loop                        |
 | `TouchpadGestureProcessor.kt` | `:domain` Logic | Compose-free gesture tracking; mouse (relative + taps) and touch (absolute) processor |
 | `TouchpadSettings.kt`         | `:domain` Logic | Persistent settings for touchpad mode (tap-to-click, two-finger-tap, etc.)            |
 | `MouseInjector.kt`            | `:domain` Logic | Public relative mouse injection facade (LMB/RMB clicks, scroll, move deltas)          |

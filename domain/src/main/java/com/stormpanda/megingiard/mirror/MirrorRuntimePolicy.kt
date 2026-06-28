@@ -5,7 +5,6 @@ data class MirrorRuntimePolicyState(
     val promptInFlight: Boolean,
     val isOnValidScreen: Boolean,
     val isCapturing: Boolean,
-    val globalAutoStart: Boolean,
     val layoutId: String?,
     val layoutWantsMirror: Boolean,
     val autoStartSuppressed: Boolean,
@@ -16,7 +15,7 @@ data class MirrorRuntimePolicyState(
      * strategy (privd vs. MediaProjection consent) can be selected.
      */
     val privdMirrorConnecting: Boolean = false,
-    /** True if welcome onboarding or pill swipe tutorial is actively shown. */
+    /** True if welcome onboarding or quick menu swipe tutorial is actively shown. */
     val tutorialsActive: Boolean = false,
 )
 
@@ -42,7 +41,6 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
         state.isCapturing && !state.layoutWantsMirror -> MirrorRuntimeAction.STOP
 
         state.layoutWantsMirror &&
-            state.globalAutoStart &&
             !state.autoStartSuppressed &&
             !state.isCapturing &&
             !state.promptInFlight &&

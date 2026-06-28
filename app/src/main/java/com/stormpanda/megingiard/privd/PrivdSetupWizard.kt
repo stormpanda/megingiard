@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.privd
 
 import android.app.ActivityOptions
+import android.content.ComponentName
 import android.content.Intent
 import android.provider.Settings
 import android.view.Display
@@ -154,12 +155,46 @@ internal fun PrivdSetupWizardDialog(
             when (step) {
                 0 -> StepEnableWireless(
                     onOpenSettings = {
-                        val intent = Intent(Settings.ACTION_SETTINGS).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        val devOptionsEnabled = Settings.Global.getInt(
+                            context.contentResolver,
+                            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+                            0
+                        ) != 0
+
+                        val intentsToTry = if (devOptionsEnabled) {
+                            listOf(
+                                // 1. Try to open Wireless Debugging directly
+                                Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
+                                    component = ComponentName(
+                                        "com.android.settings",
+                                        "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging"
+                                    )
+                                },
+                                // 2. Try to open Developer Options directly
+                                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+                                // 3. Fallback to general settings
+                                Intent(Settings.ACTION_SETTINGS)
+                            )
+                        } else {
+                            listOf(
+                                // If disabled, go straight to general settings
+                                Intent(Settings.ACTION_SETTINGS)
+                            )
                         }
-                        val options = ActivityOptions.makeBasic()
-                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                        context.startActivity(intent, options.toBundle())
+
+                        val options = ActivityOptions.makeBasic().apply {
+                            setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        }
+
+                        for (intent in intentsToTry) {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try {
+                                context.startActivity(intent, options.toBundle())
+                                break
+                            } catch (e: Exception) {
+                                // Fallback to next intent in the list
+                            }
+                        }
                     },
                     onNext = { step = 1 },
                 )

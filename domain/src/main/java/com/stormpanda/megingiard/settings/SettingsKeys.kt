@@ -18,13 +18,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
  * widens access within `:domain`.
  */
 
-internal val KEY_AUTO_START_CAPTURE = booleanPreferencesKey("auto_start_capture")
 internal val KEY_AUTO_SWITCH_PROFILES = booleanPreferencesKey("auto_switch_profiles")
 internal val KEY_EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_recents")
 internal val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
 internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
-internal val KEY_SHOW_MIRROR_CONTROL_LABELS = booleanPreferencesKey("show_mirror_control_labels")
-internal val KEY_SHOW_FULLSCREEN_EXIT_HINTS = booleanPreferencesKey("show_fullscreen_exit_hints")
+
 
 // Mirror touch projection settings
 internal val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
@@ -69,9 +67,6 @@ internal val KEY_SKIP_GAMEPAD_RECORD_DIALOG = booleanPreferencesKey("skip_gamepa
 internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
 
 // Privileged Mode — per-feature enable flags (only effective while PrivdManager is RUNNING)
-internal val KEY_PRIVD_GAMEPAD_MERGE_ENABLED = booleanPreferencesKey("privd_gamepad_merge_enabled")
-internal val KEY_PRIVD_GAMEPAD_RECORDING_ENABLED = booleanPreferencesKey("privd_gamepad_recording_enabled")
-internal val KEY_PRIVD_MIRROR_ENABLED = booleanPreferencesKey("privd_mirror_enabled")
 
 // Privileged Mode — auto-connect on app start once the user has bootstrapped at least once.
 internal val KEY_PRIVD_AUTO_CONNECT = booleanPreferencesKey("privd_auto_connect")
@@ -91,7 +86,7 @@ internal val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projecti
 // Tutorials persistence
 internal val KEY_SHOW_WELCOME_TUTORIAL = booleanPreferencesKey("show_welcome_tutorial")
 internal val KEY_SHOW_MACRO_EDITOR_TUTORIAL = booleanPreferencesKey("show_macro_editor_tutorial")
-internal val KEY_SHOW_PILL_TUTORIAL = booleanPreferencesKey("show_pill_tutorial")
+internal val KEY_SHOW_QUICK_MENU_TUTORIAL = booleanPreferencesKey("show_quick_menu_tutorial")
 
 // Internal backups storage key — isolated from SECTION_MAP export/import
 internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
@@ -102,11 +97,10 @@ internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_THEME_MODE,
     KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
-    KEY_SHOW_MIRROR_CONTROL_LABELS, KEY_SHOW_FULLSCREEN_EXIT_HINTS,
     KEY_AUTO_SWITCH_PROFILES, KEY_EXCLUDE_FROM_RECENTS,
 )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_AUTO_START_CAPTURE, KEY_PINCH_WHILE_PROJECTING,
+    KEY_PINCH_WHILE_PROJECTING,
     KEY_REMEMBER_VIEWPORT, KEY_REMEMBER_LOCK, KEY_REMEMBER_PROJECTION,
 )
 private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> = setOf(
@@ -120,9 +114,6 @@ private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_MACROPAD_AMBIENT_DIM,
     KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
     KEY_GAMEPAD_SWAP_FACE_BUTTONS,
-    KEY_PRIVD_GAMEPAD_MERGE_ENABLED,
-    KEY_PRIVD_GAMEPAD_RECORDING_ENABLED,
-    KEY_PRIVD_MIRROR_ENABLED,
     KEY_PRIVD_AUTO_CONNECT,
     KEY_PRIVD_DEADZONE_LEFT,
     KEY_PRIVD_DEADZONE_RIGHT,

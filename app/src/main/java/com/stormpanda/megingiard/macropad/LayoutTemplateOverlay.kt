@@ -44,7 +44,7 @@ internal data class TemplateOption(
 
 /**
  * Unified layout template overlay — name input + template selection.
- * Used by both [MacroPadEditor] and [PillMenu] for creating new layouts.
+ * Used by both [MacroPadEditor] and [QuickMenu] for creating new layouts.
  */
 @Composable
 internal fun NewLayoutOverlay(
@@ -98,7 +98,7 @@ internal fun NewLayoutOverlay(
             AppTextField(
                 value         = text,
                 onValueChange = { text = it },
-                label         = { Text(stringResource(R.string.pill_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+                label         = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
                 singleLine    = true,
                 modifier      = Modifier.fillMaxWidth(),
                 isError       = hasError,

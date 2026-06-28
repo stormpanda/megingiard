@@ -327,14 +327,14 @@ class MainActivity : ComponentActivity() {
             combine(
                 AppStateManager.isFullscreenKeyboardActive,
                 AppStateManager.isOnValidScreen,
-                AppStateManager.isPillMenuOpen,
+                AppStateManager.isQuickMenuOpen,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
             ) { values ->
                 val fullscreenKeyboard = values[0] as Boolean
                 val onValidScreen = values[1] as Boolean
-                val pillMenuOpen = values[2] as Boolean
+                val quickMenuOpen = values[2] as Boolean
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
@@ -342,7 +342,7 @@ class MainActivity : ComponentActivity() {
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = onValidScreen,
                         isFullscreenKeyboardActive = fullscreenKeyboard,
-                        isPillMenuOpen = pillMenuOpen,
+                        isQuickMenuOpen = quickMenuOpen,
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
@@ -404,7 +404,7 @@ class MainActivity : ComponentActivity() {
                 val observer = LifecycleEventObserver { _, event ->
                     when (event) {
                         Lifecycle.Event.ON_RESUME -> {
-                            AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value} autoStart=${SettingsManager.autoStartCapture.value}")
+                            AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value}")
                             AppStateManager.setActivityResumed(true)
                             // Clear the user-leaving flag: the user has returned to the app.
                             AppStateManager.setUserLeaving(false)
@@ -439,46 +439,42 @@ class MainActivity : ComponentActivity() {
             // gate when not already running), false means this layout should not mirror.
             LaunchedEffect(isOnValidScreen) {
                 var lastPolicyLayoutId: String? = null
-                // True while privd mirror is enabled and the daemon is still connecting
+                // True while privd mirror daemon is still connecting
                 // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
                 // auto-start so the strategy decision waits for the daemon to settle.
                 val privdMirrorConnectingFlow = combine(
-                    MacroPadSettings.privdMirrorEnabled,
                     MacroPadSettings.privdAutoConnect,
                     PrivdManager.state,
-                ) { enabled, autoConnect, privdState ->
-                    enabled && (privdState == PrivdState.CONNECTING ||
+                ) { autoConnect, privdState ->
+                    privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
-                        (privdState == PrivdState.OFF && autoConnect))
+                        (privdState == PrivdState.OFF && autoConnect)
                 }
                 combine(
                     AppStateManager.promptInFlight,
                     AppStateManager.mirrorAutoStartSuppressedLayoutId,
                     ScreenCaptureManager.isCapturing,
-                    SettingsManager.autoStartCapture,
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     SettingsManager.showWelcomeTutorial,
-                    SettingsManager.showPillTutorial,
+                    SettingsManager.showQuickMenuTutorial,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
                     val capturing = values[2] as Boolean
-                    val globalAutoStart = values[3] as Boolean
-                    val currentLayout = values[4] as? PadLayout
-                    val onValidScreen = values[5] as Boolean
-                    val showWelcome = values[6] as Boolean
-                    val showPill = values[7] as Boolean
+                    val currentLayout = values[3] as? PadLayout
+                    val onValidScreen = values[4] as Boolean
+                    val showWelcome = values[5] as Boolean
+                    val showQuickMenu = values[6] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
                         isOnValidScreen = onValidScreen,
                         isCapturing = capturing,
-                        globalAutoStart = globalAutoStart,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
-                        tutorialsActive = showWelcome || showPill,
+                        tutorialsActive = showWelcome || showQuickMenu,
                     )
                 }
                     .combine(privdMirrorConnectingFlow) { policy, connecting ->
@@ -657,9 +653,8 @@ class MainActivity : ComponentActivity() {
         * privd connection.
      */
     private fun startMirrorByPolicy() {
-        val privdEnabled = MacroPadSettings.privdMirrorEnabled.value
         val privdRunning = PrivdManager.state.value == PrivdState.RUNNING
-        val strategy = selectMirrorStrategy(privdEnabled, privdRunning)
+        val strategy = selectMirrorStrategy(privdRunning)
         when (strategy) {
             MirrorStrategy.PRIVILEGED -> {
                 AppLog.i(TAG, "startMirrorByPolicy: privd path")

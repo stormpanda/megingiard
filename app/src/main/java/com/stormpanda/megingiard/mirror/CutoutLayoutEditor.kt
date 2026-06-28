@@ -687,7 +687,7 @@ fun CutoutLayoutEditor(
 
                         ToolbarIconButton(
                             icon = Icons.Rounded.Settings,
-                            contentDescription = stringResource(R.string.pill_menu_ambient_settings),
+                            contentDescription = stringResource(R.string.quick_menu_ambient_settings),
                             color = colors.accent,
                             label = stringResource(R.string.mirror_editor_toolbar_settings),
                             modifier = Modifier.weight(1f),

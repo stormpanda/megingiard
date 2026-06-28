@@ -35,7 +35,7 @@ data class AppColors(
     val onSurfaceSecondary: Color,
     /** Subtle divider lines. */
     val divider: Color,
-    /** Semi-transparent floating control pill (mirror, pill menu). */
+    /** Semi-transparent floating control Quick Menu (mirror, quick menu). */
     val controlOverlay: Color,
     /** Text / icons on the control overlay. */
     val onControlOverlay: Color,
@@ -63,20 +63,20 @@ data class AppColors(
     val accent: Color,
     /** Text / icons on accent / highlighted buttons. */
     val onAccent: Color,
-    /** Always-visible pull-tab pill colour (already includes the desired alpha). */
-    val pillIdleColor: Color,
-    /** Active mode indicator dot inside the navigation pill. */
+    /** Always-visible pull-tab quick menu bar colour (already includes the desired alpha). */
+    val quickMenuBarIdleColor: Color,
+    /** Active mode indicator dot inside the navigation bar. */
     val controlIndicatorActive: Color,
-    /** Background of the navigation pill (overrides accent for custom-accent themes). */
-    val navPillBody: Color,
+    /** Background of the navigation bar (overrides accent for custom-accent themes). */
+    val navQuickMenuBody: Color,
     /** Background of mirror control buttons. */
     val buttonBody: Color,
-    /** Border/outline of the pill menu control overlay container. */
+    /** Border/outline of the quick menu control overlay container. */
     val controlOverlayBorder: Color,
-    /** Border/outline of the navigation pill. */
-    val navPillBorder: Color,
-    /** Border/outline of the mirror control pill. */
-    val mirrorPillBorder: Color,
+    /** Border/outline of the navigation bar. */
+    val navQuickMenuBorder: Color,
+    /** Border/outline of the mirror control bar. */
+    val mirrorQuickMenuBorder: Color,
     /** Icon tint on mirror control buttons. */
     val buttonIconTint: Color,
     /** Destructive / error action color (delete buttons, confirm-destructive text). */
@@ -108,7 +108,7 @@ data class AppColors(
 // Default accent for Dark/Light — overridden at runtime by SettingsManager.accentColor.
 private val DEFAULT_DARK_LIGHT_ACCENT = Color(0xFFCC0000)
 
-private val DARK_PILL_IDLE  = Color.White.copy(alpha = 0.4f)
+private val DARK_QM_BAR_IDLE  = Color.White.copy(alpha = 0.4f)
 
 private val darkPalette = AppColors(
     appBackground          = Color(0xFF121212),
@@ -129,13 +129,13 @@ private val darkPalette = AppColors(
     accentBorder           = Color.White.copy(alpha = 0.3f),
     accent                 = DEFAULT_DARK_LIGHT_ACCENT,
     onAccent               = Color.White,
-    pillIdleColor          = DARK_PILL_IDLE,
+    quickMenuBarIdleColor  = DARK_QM_BAR_IDLE,
     controlIndicatorActive = Color.White,
-    navPillBody            = DEFAULT_DARK_LIGHT_ACCENT,
+    navQuickMenuBody       = DEFAULT_DARK_LIGHT_ACCENT,
     buttonBody             = DEFAULT_DARK_LIGHT_ACCENT,
     controlOverlayBorder   = Color.Transparent,
-    navPillBorder          = Color.Transparent,
-    mirrorPillBorder       = Color.Transparent,
+    navQuickMenuBorder     = Color.Transparent,
+    mirrorQuickMenuBorder  = Color.Transparent,
     buttonIconTint         = Color.White,
     error                  = Color(0xFFCF6679),
     onError                = Color.White,
@@ -148,7 +148,7 @@ private val darkPalette = AppColors(
     settingsSeparator      = Color.White.copy(alpha = 0.10f),
 )
 
-private val LIGHT_PILL_IDLE = Color.White.copy(alpha = 0.4f)
+private val LIGHT_QM_BAR_IDLE = Color.White.copy(alpha = 0.4f)
 
 private val lightPalette = AppColors(
     appBackground          = Color(0xFFF2F2F7),
@@ -169,13 +169,13 @@ private val lightPalette = AppColors(
     accentBorder           = Color(0xFF1C1C1E).copy(alpha = 0.2f),
     accent                 = DEFAULT_DARK_LIGHT_ACCENT,
     onAccent               = Color.White,
-    pillIdleColor          = LIGHT_PILL_IDLE,
+    quickMenuBarIdleColor  = LIGHT_QM_BAR_IDLE,
     controlIndicatorActive = Color(0xFF1C1C1E),
-    navPillBody            = DEFAULT_DARK_LIGHT_ACCENT,
+    navQuickMenuBody       = DEFAULT_DARK_LIGHT_ACCENT,
     buttonBody             = DEFAULT_DARK_LIGHT_ACCENT,
     controlOverlayBorder   = Color(0xFF1C1C1E).copy(alpha = 0.12f),
-    navPillBorder          = Color(0xFF1C1C1E).copy(alpha = 0.12f),
-    mirrorPillBorder       = Color.Transparent,
+    navQuickMenuBorder     = Color(0xFF1C1C1E).copy(alpha = 0.12f),
+    mirrorQuickMenuBorder  = Color.Transparent,
     buttonIconTint         = Color.White,
     error                  = Color(0xFFB00020),
     onError                = Color.White,
@@ -200,7 +200,7 @@ private val CP_SURFACE2        = Color(0xFF2E1115)   // elevated / dragged surfa
 private val CP_TEXT            = Color(0xFFB41B1D)   // vivid red text
 private val CP_DARK_RED        = Color(0xFFA00000)   // dark red for overlay and button text
 private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section headers
-private val CP_PILL_IDLE       = Color.White.copy(alpha = 0.4f)
+private val CP_QM_BAR_IDLE       = Color.White.copy(alpha = 0.4f)
 
 private val cyberpunkPalette = AppColors(
     appBackground          = CP_BG,
@@ -221,13 +221,13 @@ private val cyberpunkPalette = AppColors(
     accentBorder           = CP_ACCENT.copy(alpha = 0.35f),
     accent                 = CP_ACCENT,
     onAccent               = CP_DARK_RED,
-    pillIdleColor          = CP_PILL_IDLE,
+    quickMenuBarIdleColor  = CP_QM_BAR_IDLE,
     controlIndicatorActive = CP_ACCENT,
-    navPillBody            = CP_SURFACE,
+    navQuickMenuBody       = CP_SURFACE,
     buttonBody             = CP_SURFACE,
     controlOverlayBorder   = CP_DARK_RED,
-    navPillBorder          = CP_ACCENT,
-    mirrorPillBorder       = Color.Transparent,
+    navQuickMenuBorder     = CP_ACCENT,
+    mirrorQuickMenuBorder  = Color.Transparent,
     buttonIconTint         = CP_ACCENT,
     error                  = CP_ACCENT,
     onError                = CP_DARK_RED,
@@ -255,7 +255,7 @@ fun paletteFor(mode: ThemeMode, userAccent: Color? = null): AppColors {
     }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent
-        base.copy(accent = eff, navPillBody = eff, buttonBody = eff, sectionHeaderColor = eff)
+        base.copy(accent = eff, navQuickMenuBody = eff, buttonBody = eff, sectionHeaderColor = eff)
     } else base
 }
 

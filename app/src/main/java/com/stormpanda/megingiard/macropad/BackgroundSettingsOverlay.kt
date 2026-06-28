@@ -226,7 +226,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                         Text(
                             text = buildAnnotatedString {
                                 withStyle(SpanStyle(color = colors.onSurface)) {
-                                    append(stringResource(R.string.pill_menu_ambient_settings))
+                                    append(stringResource(R.string.quick_menu_ambient_settings))
                                 }
                                 withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
                                     append(" (${currentLayout.name})")

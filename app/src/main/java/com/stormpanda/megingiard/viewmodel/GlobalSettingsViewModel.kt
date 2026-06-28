@@ -46,10 +46,8 @@ class GlobalSettingsViewModel : ViewModel() {
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val appLanguage: StateFlow<AppLanguage> = SettingsManager.appLanguage
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
-    val showMirrorControlLabels: StateFlow<Boolean> = SettingsManager.showMirrorControlLabels
-    val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
+
     val showWelcomeTutorial: StateFlow<Boolean> = SettingsManager.showWelcomeTutorial
-    val mirrorAutoStart: StateFlow<Boolean> = SettingsManager.autoStartCapture
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
@@ -57,9 +55,6 @@ class GlobalSettingsViewModel : ViewModel() {
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
     val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
-    val privdGamepadMergeEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadMergeEnabled
-    val privdGamepadRecordingEnabled: StateFlow<Boolean> = MacroPadSettings.privdGamepadRecordingEnabled
-    val privdMirrorEnabled: StateFlow<Boolean> = MacroPadSettings.privdMirrorEnabled
     val privdAutoConnect: StateFlow<Boolean> = MacroPadSettings.privdAutoConnect
     val privdDeadzoneLeft: StateFlow<Float>  = MacroPadSettings.deadzoneLeft
     val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
@@ -71,11 +66,9 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
-    fun setShowMirrorControlLabels(value: Boolean) = SettingsManager.setShowMirrorControlLabels(value)
-    fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
+
     fun setShowWelcomeTutorial(value: Boolean) = SettingsManager.setShowWelcomeTutorial(value)
     fun resetAllTutorials() = SettingsManager.resetAllTutorials()
-    fun setMirrorAutoStart(value: Boolean) = SettingsManager.setAutoStartCapture(value)
     fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
     fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
@@ -97,9 +90,6 @@ class GlobalSettingsViewModel : ViewModel() {
      */
     fun privdDisconnect() = PrivdManager.disconnect()
 
-    fun setPrivdGamepadMergeEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadMergeEnabled(value)
-    fun setPrivdGamepadRecordingEnabled(value: Boolean) = MacroPadSettings.setPrivdGamepadRecordingEnabled(value)
-    fun setPrivdMirrorEnabled(value: Boolean) = MacroPadSettings.setPrivdMirrorEnabled(value)
     fun setPrivdAutoConnect(value: Boolean) = MacroPadSettings.setPrivdAutoConnect(value)
     fun setPrivdDeadzoneLeft(value: Float)  = MacroPadSettings.setDeadzoneLeft(value)
     fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)
