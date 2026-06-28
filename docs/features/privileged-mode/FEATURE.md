@@ -124,9 +124,15 @@ Flow:
 
 1. **Wizard step 1** shows step-by-step instructions for enabling Wireless
    Debugging (Developer Options unlock → Wireless Debugging ON → "Pair device
-   with pairing code"). An "Open system settings" button launches
-   `Settings.ACTION_SETTINGS` via `ActivityOptions.setLaunchDisplayId(
-Display.DEFAULT_DISPLAY)` so it opens on the primary screen.
+   with pairing code"). An "Open system settings" button dynamically routes the
+   user to settings on the primary display (`Display.DEFAULT_DISPLAY`):
+   - If Developer Options are enabled, it attempts to open the **Wireless Debugging**
+     screen directly (via the `android.service.quicksettings.action.QS_TILE_PREFERENCES`
+     intent targeting the wireless debugging tile component), falling back to the
+     main **Developer Options** screen (`Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS`),
+     and finally to general **Settings** (`Settings.ACTION_SETTINGS`).
+   - If Developer Options are disabled, it goes directly to general **Settings**
+     (`Settings.ACTION_SETTINGS`) so the user can navigate to the About page and unlock it.
 2. **Wizard step 2** collects host (IP), port (5-digit), and 6-digit
    pairing code from the system dialog and calls
    `PrivdAdbConnectionManager.pair(host, port, code)`. Pairing speaks the
