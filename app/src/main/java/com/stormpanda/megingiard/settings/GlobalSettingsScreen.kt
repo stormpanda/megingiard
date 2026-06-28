@@ -198,13 +198,6 @@ fun GlobalSettingsScreen(
                         title = stringResource(R.string.settings_section_general),
                         colors = colors,
                     ) {
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_exclude_from_recents),
-                            description = stringResource(R.string.settings_exclude_from_recents_desc),
-                            checked = excludeFromRecents,
-                            onCheckedChange = { viewModel.setExcludeFromRecents(it) },
-                        )
-                        AppDivider()
                         LanguagePickerRow(
                             language = appLanguage,
                             accentColor = effectiveAccent,
@@ -212,10 +205,30 @@ fun GlobalSettingsScreen(
                         )
                         AppDivider()
                         RememberSettingRow(
+                            label = stringResource(R.string.settings_exclude_from_recents),
+                            description = stringResource(R.string.settings_exclude_from_recents_desc),
+                            checked = excludeFromRecents,
+                            onCheckedChange = { viewModel.setExcludeFromRecents(it) },
+                        )
+                        AppDivider()
+                        RememberSettingRow(
                             label = stringResource(R.string.settings_gamepad_swap_face_buttons),
                             description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
                             checked = gamepadSwapFaceButtons,
                             onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_privileged_mode),
+                        colors = colors,
+                    ) {
+                        PrivdSettingsCard(
+                            viewModel = viewModel,
+                            onShowWizard = { showPrivdWizard = true },
+                            onShowDeadzoneDialog = { showDeadzoneDialog = true },
                         )
                     }
                 }
@@ -365,18 +378,7 @@ fun GlobalSettingsScreen(
                     }
                 }
 
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_privileged_mode),
-                        colors = colors,
-                    ) {
-                        PrivdSettingsCard(
-                            viewModel = viewModel,
-                            onShowWizard = { showPrivdWizard = true },
-                            onShowDeadzoneDialog = { showDeadzoneDialog = true },
-                        )
-                    }
-                }
+
 
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
                     SettingsSection(
@@ -621,16 +623,26 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
 
         HelpSection(stringResource(R.string.settings_section_general))
         HelpEntry(
-            label = stringResource(R.string.settings_exclude_from_recents),
-            description = stringResource(R.string.help_settings_recents_desc),
-        )
-        HelpEntry(
             label = stringResource(R.string.settings_language),
             description = stringResource(R.string.help_settings_language_desc),
         )
         HelpEntry(
+            label = stringResource(R.string.settings_exclude_from_recents),
+            description = stringResource(R.string.help_settings_recents_desc),
+        )
+        HelpEntry(
             label = stringResource(R.string.settings_gamepad_swap_face_buttons),
             description = stringResource(R.string.help_settings_gamepad_swap_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_section_privileged_mode))
+        HelpEntry(
+            label = stringResource(R.string.privd_title),
+            description = stringResource(R.string.help_settings_privd_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.privd_deadzone_title),
+            description = stringResource(R.string.help_settings_deadzone_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_automation))
@@ -685,15 +697,7 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             description = stringResource(R.string.help_settings_import_profile_desc),
         )
 
-        HelpSection(stringResource(R.string.settings_section_privileged_mode))
-        HelpEntry(
-            label = stringResource(R.string.privd_title),
-            description = stringResource(R.string.help_settings_privd_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.privd_deadzone_title),
-            description = stringResource(R.string.help_settings_deadzone_desc),
-        )
+
 
         HelpSection(stringResource(R.string.settings_section_diagnostics))
         HelpEntry(
