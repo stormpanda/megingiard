@@ -327,7 +327,7 @@ Open Settings to create a layout.</string>
 
     <!-- Privileged Mode -->
     <string name="privd_title">Privileged Mode</string>
-    <string name="privd_description">Lets Megingiard write directly to system input devices that the regular app sandbox cannot reach. Required for some advanced features (see below). Connection runs over the device\'s own ADB shell — no root, no external server.</string>
+    <string name="privd_description">Improves compatibility and enhances certain features. See help for more info.</string>
     <string name="privd_status_off">Off</string>
     <string name="privd_status_connecting">Connecting…</string>
     <string name="privd_status_bootstrapping">Bootstrapping…</string>
@@ -843,7 +843,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_import_desc">Restores your profiles and configurations from a previously saved .mgrd file or daily automatic backup. Overwrites current configurations upon confirmation.</string>
     <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
     <string name="help_settings_import_profile_desc">Adds a shared profile from another user to your collection. This operation is safe and will not modify or overwrite your existing profiles.</string>
-    <string name="help_settings_privd_desc">Recommended for advanced gaming. Connects to a background helper via ADB to enable physical gamepad macro recording and high-speed kernel-level touch injection.</string>
+    <string name="help_settings_privd_desc">Establishes a background helper connection via Wireless Debugging to write to system input devices not accessible by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Privileged Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Pill Menu overlay without screen mirroring being active.</string>
     <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>
     <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a GitHub issue or developer report.</string>

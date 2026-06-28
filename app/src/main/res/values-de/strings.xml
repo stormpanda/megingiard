@@ -282,7 +282,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Privilegierter Modus -->
     <string name="privd_title">Privilegierter Modus</string>
-    <string name="privd_description">Erlaubt Megingiard, direkt in System-Eingabegeräte zu schreiben, die die normale App-Sandbox nicht erreicht. Wird für einige erweiterte Funktionen benötigt (siehe unten). Die Verbindung läuft über die geräteeigene ADB-Shell — kein Root, kein externer Server.</string>
+    <string name="privd_description">Verbessert die Kompatibilität und erweitert bestimmte Funktionen. Siehe Hilfe für weitere Informationen.</string>
     <string name="privd_status_off">Aus</string>
     <string name="privd_status_connecting">Verbinde…</string>
     <string name="privd_status_bootstrapping">Einrichten…</string>
@@ -849,7 +849,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_import_desc">Stellt Profile und Einstellungen aus einer .mgrd-Datei oder einem automatischen täglichen Backup wieder her. Überschreibt aktuelle Profile.</string>
     <string name="help_settings_export_profile_desc">Speichert ein einzelnes Profil in eine Datei, um Tasten-Layout und Makros mit anderen Spielern zu teilen, ohne deine gesamte Konfiguration freizugeben.</string>
     <string name="help_settings_import_profile_desc">Fügt ein geteiltes Profil eines anderen Spielers deiner Sammlung hinzu. Vorhandene eigene Profile werden dabei nicht verändert oder überschrieben.</string>
-    <string name="help_settings_privd_desc">Empfohlen für fortgeschrittenes Gaming. Ermöglicht physische Gamepad-Makroaufzeichnung und präzisere Touch-Injektion per ADB-Verbindung im Hintergrund.</string>
+    <string name="help_settings_privd_desc">Richtet eine Hintergrundverbindung per Wireless Debugging ein, um auf System-Eingabegeräte zuzugreifen, die für normale Apps gesperrt sind. Dies ermöglicht:\n\n• Gamepad-Zusammenführung: Kombiniert virtuelle und physische Controller, sodass Spiele nur einen Controller sehen (erhöht die Kompatibilität).\n• Physische Gamepad-Aufnahme: Nimmt Makros direkt von deinem physischen Controller auf.\n• Privilegiertes Screen Mirroring: Startet die Bildschirmübertragung ohne die ständige Android-Sicherheitsabfrage.\n• Screenshots: Erstellt Screenshots des Hauptbildschirms direkt aus dem Pill-Menü-Overlay, ohne dass die Bildschirmübertragung aktiv sein muss.</string>
     <string name="help_settings_deadzone_desc">Verhindert, dass Rauschen oder Drift der Analogsticks aufgenommen werden. Gleiche diese Werte für beste Genauigkeit mit den Totzonen-Einstellungen deines Thor ab.</string>
     <string name="help_settings_log_level_desc">Im Normalbetrieb auf Warn oder Info belassen. Nur bei der Fehlersuche auf Debug oder Verbose stellen, um detaillierte Logs aufzuzeichnen.</string>
     <string name="help_settings_save_log_desc">Exportiert das aktuelle System-Log. Generiere dieses direkt nach einem Fehler oder Absturz, um es an einen Entwicklerbericht anzuhängen.</string>
