@@ -141,6 +141,12 @@ _The Privileged Mode settings card. Each privileged feature — Gamepad Merge, G
 
 There is no Google Play Store listing; APK side-loading is the official distribution channel.
 
+### Automated Updates with Obtainium
+
+To automatically track releases and install updates directly on your device, you can add Megingiard to **[Obtainium](https://github.com/ImranR98/Obtainium)**.
+
+- In the app, click on **Settings → Configuration → Add to Obtainium**.
+
 ---
 
 ## First Launch / Quick Start

@@ -380,6 +380,7 @@ internal fun ConfigSection(
     onShowRestoreBackupDialog: () -> Unit,
     onShowProfileExportDialog: () -> Unit,
     onImportPreviewReady: (MegingiardExport) -> Unit,
+    onAddToObtainium: () -> Unit,
 ) {
     val pendingImport by ConfigManager.pendingInAppParsedImport.collectAsState()
     LaunchedEffect(pendingImport) {
@@ -413,5 +414,12 @@ internal fun ConfigSection(
         description = stringResource(R.string.settings_config_import_profile_desc),
         accentColor = effectiveAccent,
         onClick = { ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE) },
+    )
+    AppDivider()
+    ConfigActionRow(
+        label = stringResource(R.string.settings_add_to_obtainium),
+        description = stringResource(R.string.settings_add_to_obtainium_desc),
+        accentColor = effectiveAccent,
+        onClick = onAddToObtainium,
     )
 }

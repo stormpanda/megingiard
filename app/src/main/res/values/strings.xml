@@ -209,6 +209,8 @@ Open Settings to create a layout.</string>
     <string name="settings_config_export_profile_desc">Export a MacroPad profile as a .mgrd file for sharing</string>
     <string name="settings_config_import_profile">Import shared profile</string>
     <string name="settings_config_import_profile_desc">Add a MacroPad profile from a .mgrd file</string>
+    <string name="settings_add_to_obtainium">Add to Obtainium</string>
+    <string name="settings_add_to_obtainium_desc">Pre-fill the repository link in Obtainium for automatic updates</string>
     <string name="config_export_default_filename">megingiard_%s.mgrd</string>
 
     <!-- Export metadata dialog -->
@@ -843,6 +845,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_import_desc">Restores your profiles and configurations from a previously saved .mgrd file or daily automatic backup. Overwrites current configurations upon confirmation.</string>
     <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
     <string name="help_settings_import_profile_desc">Adds a shared profile from another user to your collection. This operation is safe and will not modify or overwrite your existing profiles.</string>
+    <string name="help_settings_add_to_obtainium_desc">Opens Obtainium (if installed) with the pre-filled Megingiard repository link. If Obtainium is not installed, it opens the Obtainium GitHub releases page in the browser.</string>
     <string name="help_settings_privd_desc">Establishes a background helper connection via Wireless Debugging to write to system input devices not accessible by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Privileged Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
     <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>

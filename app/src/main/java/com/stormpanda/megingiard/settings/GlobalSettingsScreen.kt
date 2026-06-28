@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import android.app.ActivityOptions
 import android.view.Display
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.Lifecycle
@@ -77,6 +78,9 @@ private const val TAG = "GlobalSettingsScreen"
 
 private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
 private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
+
+private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingiard"
+private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -374,6 +378,30 @@ fun GlobalSettingsScreen(
                             onShowRestoreBackupDialog = { showRestoreBackupDialog = true },
                             onShowProfileExportDialog = { showProfileExportDialog = true },
                             onImportPreviewReady = { showImportPreviewDialog = it },
+                            onAddToObtainium = {
+                                val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    val options = ActivityOptions.makeBasic()
+                                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                    context.startActivity(intent, options.toBundle())
+                                    AppLog.d(TAG, "Launched Obtainium deep link: $deepLink")
+                                } catch (e: Exception) {
+                                    AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
+                                    try {
+                                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(GS_OBTAINIUM_FALLBACK_URL)).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        val options = ActivityOptions.makeBasic()
+                                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                        context.startActivity(browserIntent, options.toBundle())
+                                    } catch (ex: Exception) {
+                                        AppLog.e(TAG, "Failed to open browser fallback: ${ex.message}")
+                                    }
+                                }
+                            }
                         )
                     }
                 }
@@ -695,6 +723,10 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpEntry(
             label = stringResource(R.string.settings_config_import_profile),
             description = stringResource(R.string.help_settings_import_profile_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_add_to_obtainium),
+            description = stringResource(R.string.help_settings_add_to_obtainium_desc),
         )
 
 
