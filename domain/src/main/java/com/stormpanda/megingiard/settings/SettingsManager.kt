@@ -89,8 +89,6 @@ object SettingsManager {
     private val _overlayAtBottom = MutableStateFlow(false)
     val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
 
-    private val _showFullscreenExitHints = MutableStateFlow(true)
-    val showFullscreenExitHints: StateFlow<Boolean> = _showFullscreenExitHints.asStateFlow()
 
     private val _showWelcomeTutorial = MutableStateFlow(true)
     val showWelcomeTutorial: StateFlow<Boolean> = _showWelcomeTutorial.asStateFlow()
@@ -165,7 +163,7 @@ object SettingsManager {
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
-                    _showFullscreenExitHints.value = prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] ?: true
+
                     _showWelcomeTutorial.value = prefs[KEY_SHOW_WELCOME_TUTORIAL] ?: true
                     _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
                     _showPillTutorial.value = prefs[KEY_SHOW_PILL_TUTORIAL] ?: true
@@ -304,15 +302,7 @@ object SettingsManager {
         }
     }
 
-    fun setShowFullscreenExitHints(value: Boolean) {
-        AppLog.d(TAG, "setShowFullscreenExitHints($value)")
-        _showFullscreenExitHints.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_SHOW_FULLSCREEN_EXIT_HINTS] = value
-            }
-        }
-    }
+
 
     // Mirror setters + session save/restore live in [MirrorSettings].
 

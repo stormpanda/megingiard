@@ -44,8 +44,7 @@
     <string name="mirror_edge_blend_strength_max">Max</string>
     <string name="mirror_fps_label">FPS Limit</string>
     <string name="mirror_fps_value">%1$d FPS</string>
-    <string name="settings_show_fullscreen_exit_hints">Show fullscreen exit hints</string>
-    <string name="settings_show_fullscreen_exit_hints_desc">Show an auto-fading hint for leaving fullscreen overlays</string>
+
     <string name="settings_auto_switch_profiles">Auto-switch profiles</string>
     <string name="settings_auto_switch_profiles_desc">Automatically switch the MacroPad profile when a mapped app is launched on the primary screen</string>
     <string name="settings_exclude_from_recents">Exclude from Recents</string>
@@ -427,7 +426,7 @@ Open Settings to create a layout.</string>
     <string name="settings_section_collapse">Collapse section</string>
     <string name="settings_name_error_empty">Name cannot be empty.</string>
     <string name="settings_name_error_duplicate">This name already exists.</string>
-    <string name="overlay_exit_hint_swipe">Swipe from the pill edge to close this fullscreen overlay.</string>
+
     <string name="wrong_screen_retry">Retry detection</string>
     <string name="wrong_screen_help_title">Setup &amp; Placement Instructions</string>
     <string name="wrong_screen_help_step1">1. Re-open Megingiard on the secondary screen, then tap \"Retry\".</string>
@@ -596,7 +595,7 @@ Open Settings to create a layout.</string>
     <string name="cd_more_options">More options</string>
 
     <!-- Idle Pill -->
-    <string name="pill_x_close">× close</string>
+
 
     <!-- Pill Menu -->
     <string name="pill_menu_profile_label">Profile</string>
@@ -831,7 +830,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_title">Settings — Help</string>
     <string name="help_settings_intro">Global Settings apply to the whole app and persist across sessions. Use the section jump row at the top to scroll quickly to a specific group.</string>
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Pill Menu easier to swipe open without shifting your thumbs.</string>
-    <string name="help_settings_exit_hints_desc">Recommended for new users. The virtual keyboard and touchpad run in immersive fullscreen mode; this hint ensures you always remember the exit gestures/buttons.</string>
+
     <string name="help_settings_auto_profile_desc">Essential for seamless gaming. Links macro profiles to specific apps so your custom buttons switch instantly when launching a game, without manual menu navigation.</string>
     <string name="help_settings_recents_desc">Keeps your Android Recents menu clean. Recommended if you launch Megingiard once and control it entirely via the edge Pill overlay while gaming.</string>
     <string name="help_settings_accessibility_desc">Required for automatic profile switching. Android permissions require this service to detect which game is active on the primary screen. Tap this row to configure.</string>

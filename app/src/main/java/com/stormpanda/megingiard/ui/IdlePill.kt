@@ -34,7 +34,6 @@ private val IP_PILL_TOP_PADDING = 6.dp
 private val IP_PILL_IDLE_WIDTH = 72.dp
 private val IP_PILL_IDLE_HEIGHT = 4.dp
 private val IP_PILL_SHADOW_ELEVATION = 3.dp
-private val IP_CLOSE_LABEL_PADDING = 5.dp
 
 /** Vertical space this pill occupies at the screen edge. Screens can inset by this amount. */
 val PILL_INSET: Dp = IP_PILL_TOP_PADDING + IP_PILL_IDLE_HEIGHT + 3.dp
@@ -57,50 +56,18 @@ fun IdlePill(modifier: Modifier = Modifier) {
     if (previewConfig != null || isViewportEditActive) return
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val isAnyModalActive by AppStateManager.isAnyModalActive.collectAsState()
     val isPillMenuOpen by AppStateManager.isPillMenuOpen.collectAsState()
     val colors = LocalAppColors.current
 
     Box(modifier = modifier.fillMaxSize()) {
         // Pill tab + conditional "× close" label
-        Column(
+        PillTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
             modifier = Modifier.align(
                 if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
-            ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (!overlayAtBottom) {
-                // Pill at top → label below (toward screen interior)
-                PillTab(overlayAtBottom = false, colors = colors)
-                AnimatedVisibility(
-                    visible = isAnyModalActive,
-                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
-                    exit  = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
-                ) {
-                    Text(
-                        text = stringResource(R.string.pill_x_close),
-                        color = colors.onSurface.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(bottom = IP_CLOSE_LABEL_PADDING),
-                    )
-                }
-            } else {
-                // Pill at bottom → label above (toward screen interior)
-                AnimatedVisibility(
-                    visible = isAnyModalActive,
-                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-                    exit  = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
-                ) {
-                    Text(
-                        text = stringResource(R.string.pill_x_close),
-                        color = colors.onSurface.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(top = IP_CLOSE_LABEL_PADDING),
-                    )
-                }
-                PillTab(overlayAtBottom = true, colors = colors)
-            }
-        }
+            )
+        )
 
         // Pill Menu overlay — rendered as a sibling so it covers MacroPadScreen
         PillMenu(
@@ -111,10 +78,13 @@ fun IdlePill(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun PillTab(overlayAtBottom: Boolean, colors: AppColors) {
+private fun PillTab(overlayAtBottom: Boolean, colors: AppColors, modifier: Modifier = Modifier) {
     Box(
-        modifier = (if (overlayAtBottom) Modifier.padding(bottom = IP_PILL_TOP_PADDING)
-                    else Modifier.padding(top = IP_PILL_TOP_PADDING))
+        modifier = modifier
+            .then(
+                if (overlayAtBottom) Modifier.padding(bottom = IP_PILL_TOP_PADDING)
+                else Modifier.padding(top = IP_PILL_TOP_PADDING)
+            )
             .shadow(
                 elevation = IP_PILL_SHADOW_ELEVATION,
                 shape = RoundedCornerShape(50),

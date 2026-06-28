@@ -34,7 +34,6 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     val kbFullscreen: StateFlow<Boolean> = KeyboardSettings.kbFullscreen
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = KeyboardSettings.kbMouseBtnPos
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
-    val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
     val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
 
     val controller = KeyRepeatController(viewModelScope)

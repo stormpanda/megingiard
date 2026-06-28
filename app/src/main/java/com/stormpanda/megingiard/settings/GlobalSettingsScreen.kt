@@ -90,7 +90,6 @@ fun GlobalSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
-    val showFullscreenExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
@@ -199,13 +198,6 @@ fun GlobalSettingsScreen(
                         title = stringResource(R.string.settings_section_general),
                         colors = colors,
                     ) {
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_show_fullscreen_exit_hints),
-                            description = stringResource(R.string.settings_show_fullscreen_exit_hints_desc),
-                            checked = showFullscreenExitHints,
-                            onCheckedChange = { viewModel.setShowFullscreenExitHints(it) },
-                        )
-                        AppDivider()
                         RememberSettingRow(
                             label = stringResource(R.string.settings_exclude_from_recents),
                             description = stringResource(R.string.settings_exclude_from_recents_desc),
@@ -628,10 +620,6 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpIntro(stringResource(R.string.help_settings_intro))
 
         HelpSection(stringResource(R.string.settings_section_general))
-        HelpEntry(
-            label = stringResource(R.string.settings_show_fullscreen_exit_hints),
-            description = stringResource(R.string.help_settings_exit_hints_desc),
-        )
         HelpEntry(
             label = stringResource(R.string.settings_exclude_from_recents),
             description = stringResource(R.string.help_settings_recents_desc),

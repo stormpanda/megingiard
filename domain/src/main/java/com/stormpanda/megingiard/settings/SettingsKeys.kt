@@ -22,7 +22,7 @@ internal val KEY_AUTO_SWITCH_PROFILES = booleanPreferencesKey("auto_switch_profi
 internal val KEY_EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_recents")
 internal val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
 internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
-internal val KEY_SHOW_FULLSCREEN_EXIT_HINTS = booleanPreferencesKey("show_fullscreen_exit_hints")
+
 
 // Mirror touch projection settings
 internal val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
@@ -97,7 +97,6 @@ internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_THEME_MODE,
     KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
-    KEY_SHOW_FULLSCREEN_EXIT_HINTS,
     KEY_AUTO_SWITCH_PROFILES, KEY_EXCLUDE_FROM_RECENTS,
 )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(

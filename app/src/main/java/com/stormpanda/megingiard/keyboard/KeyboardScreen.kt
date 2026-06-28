@@ -55,9 +55,6 @@ private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
 private val KB_IME_BOTTOM_PADDING = 56.dp
 private val KB_PILL_INSET = PILL_INSET
-private const val KB_EXIT_HINT_AUTO_HIDE_MS = 2800L
-private const val KB_EXIT_HINT_BG_ALPHA = 0.9f
-private val KB_EXIT_HINT_PADDING = 12.dp
 
 private const val TAG = "KeyboardScreen"
 
@@ -74,7 +71,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
     val effectiveFullscreen = forcedLayout != null || kbFullscreen
     val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsState()
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
-    val showExitHints by viewModel.showFullscreenExitHints.collectAsState()
     val isPillMenuOpen by viewModel.isPillMenuOpen.collectAsState()
     val isPillMenuOpenState = rememberUpdatedState(isPillMenuOpen)
     val colors = LocalAppColors.current
@@ -123,15 +119,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
         animationSpec = tween(KB_TRACKPOINT_FADE_MS),
         label = "trackpointAlpha"
     )
-    var showExitHint by remember { mutableStateOf(showExitHints) }
-
-    LaunchedEffect(showExitHints) {
-        showExitHint = showExitHints
-        if (showExitHints) {
-            delay(KB_EXIT_HINT_AUTO_HIDE_MS)
-            showExitHint = false
-        }
-    }
 
     Box(
         modifier = modifier
@@ -319,18 +306,5 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
             }
         }
 
-        if (showExitHint) {
-            Text(
-                text = stringResource(R.string.overlay_exit_hint_swipe),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .align(if (overlayAtBottom) Alignment.TopCenter else Alignment.BottomCenter)
-                    .padding(KB_EXIT_HINT_PADDING)
-                    .background(colors.surface.copy(alpha = KB_EXIT_HINT_BG_ALPHA), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-        }
     }
 }

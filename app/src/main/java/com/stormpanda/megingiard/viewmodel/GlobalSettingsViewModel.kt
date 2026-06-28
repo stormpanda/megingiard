@@ -46,7 +46,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val appLanguage: StateFlow<AppLanguage> = SettingsManager.appLanguage
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
-    val showFullscreenExitHints: StateFlow<Boolean> = SettingsManager.showFullscreenExitHints
+
     val showWelcomeTutorial: StateFlow<Boolean> = SettingsManager.showWelcomeTutorial
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
@@ -66,7 +66,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
-    fun setShowFullscreenExitHints(value: Boolean) = SettingsManager.setShowFullscreenExitHints(value)
+
     fun setShowWelcomeTutorial(value: Boolean) = SettingsManager.setShowWelcomeTutorial(value)
     fun resetAllTutorials() = SettingsManager.resetAllTutorials()
     fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)

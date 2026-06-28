@@ -49,8 +49,7 @@
     <string name="mirror_edge_blend_strength_max">Max</string>
     <string name="mirror_fps_label">FPS-Limit</string>
     <string name="mirror_fps_value">%1$d FPS</string>
-    <string name="settings_show_fullscreen_exit_hints">Vollbild-Beenden-Hinweise anzeigen</string>
-    <string name="settings_show_fullscreen_exit_hints_desc">Automatisch ausgeblendeten Hinweis zum Verlassen von Vollbild-Overlays anzeigen</string>
+
     <string name="settings_auto_switch_profiles">Profile autom. wechseln</string>
     <string name="settings_auto_switch_profiles_desc">Automatisches Wechseln des MacroPad-Profils, wenn eine verknüpfte App auf dem Hauptbildschirm gestartet wird</string>
     <string name="settings_exclude_from_recents">Aus \"Letzte Apps\" ausschließen</string>
@@ -502,7 +501,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_section_collapse">Abschnitt zuklappen</string>
     <string name="settings_name_error_empty">Name darf nicht leer sein.</string>
     <string name="settings_name_error_duplicate">Dieser Name existiert bereits.</string>
-    <string name="overlay_exit_hint_swipe">Vom Rand-Pill wischen, um dieses Vollbild-Overlay zu schließen.</string>
+
     <string name="wrong_screen_retry">Erkennung wiederholen</string>
     <string name="wrong_screen_help_title">Anweisungen zur Einrichtung &amp; Platzierung</string>
     <string name="wrong_screen_help_step1">1. Öffne Megingiard erneut auf dem sekundären Bildschirm, und tippe auf \"Erkennung wiederholen\".</string>
@@ -606,7 +605,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="cd_record_gamepad">Gamepad-Eingabe aufnehmen</string>
 
     <!-- Idle Pill -->
-    <string name="pill_x_close">× schließen</string>
+
 
     <!-- Pill Menu -->
     <string name="pill_menu_profile_label">Profil</string>
@@ -837,7 +836,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_title">Einstellungen — Hilfe</string>
     <string name="help_settings_intro">Die globalen Einstellungen gelten für die gesamte App und bleiben zwischen Sitzungen erhalten. Nutze die Abschnitts-Sprungleiste oben, um schnell zu einer bestimmten Gruppe zu scrollen.</string>
     <string name="help_settings_overlay_position_desc">Empfohlen, wenn deine Hände das Gerät so halten, dass deine Daumen natürlich in der Nähe der Unterkante ruhen. Das Pill-Menü lässt sich so leichter wischen.</string>
-    <string name="help_settings_exit_hints_desc">Empfohlen für neue Benutzer. Da virtuelle Tastatur und Touchpad im Vollbildmodus laufen, erinnert dich dieser Hinweis stets an die Beendengesten.</string>
+
     <string name="help_settings_auto_profile_desc">Sorgt für nahtloses Gaming. Verknüpft Makroprofile mit Apps, sodass deine Tasten beim Starten eines Spiels automatisch wechseln.</string>
     <string name="help_settings_recents_desc">Hält deine Übersicht der zuletzt geöffneten Apps aufgeräumt. Empfohlen, wenn du Megingiard komplett über die Pill-Menü-Steuerung steuerst.</string>
     <string name="help_settings_accessibility_desc">Erforderlich für automatische Profilwechsel, damit Megingiard das aktive Spiel im Vordergrund erkennen darf. Tippe zum Konfigurieren.</string>
