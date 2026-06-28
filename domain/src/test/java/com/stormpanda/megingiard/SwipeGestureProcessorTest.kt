@@ -19,7 +19,7 @@ class SwipeGestureProcessorTest {
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    /** Creates a top-edge processor (pill at top). */
+    /** Creates a top-edge processor (quick menu bar at top). */
     private fun topProcessor(
         onTouchingChanged: (Boolean) -> Unit = {},
         onEdgeSwipe: () -> Unit = {},
@@ -31,7 +31,7 @@ class SwipeGestureProcessorTest {
         onEdgeSwipe       = onEdgeSwipe,
     )
 
-    /** Creates a bottom-edge processor (pill at bottom). */
+    /** Creates a bottom-edge processor (quick menu bar at bottom). */
     private fun bottomProcessor(
         onTouchingChanged: (Boolean) -> Unit = {},
         onEdgeSwipe: () -> Unit = {},
@@ -175,34 +175,34 @@ class SwipeGestureProcessorTest {
         assertFalse(p.isNearEdge)
     }
 
-    // ── pill-zone horizontal constraints ──────────────────────────────────────
+    // ── quick-menu-bar-zone horizontal constraints ────────────────────────────
 
     @Test
-    fun `isNearEdge is true when press lands in edge zone and within pill zone`() {
+    fun `isNearEdge is true when press lands in edge zone and within quick menu bar zone`() {
         val p = SwipeGestureProcessor(
             edgeZonePx = EDGE_ZONE_PX,
             swipeThresholdPx = THRESHOLD_PX,
             overlayAtBottom = false,
-            pillZoneWidthPx = 100f,
+            quickMenuBarZoneWidthPx = 100f,
             onTouchingChanged = {},
             onEdgeSwipe = {},
         )
-        // container width = 400f -> center = 200f -> pill zone = [150f, 250f]
+        // container width = 400f -> center = 200f -> quick menu bar zone = [150f, 250f]
         p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 180f, containerWidth = 400f)
         assertTrue(p.isNearEdge)
     }
 
     @Test
-    fun `isNearEdge is false when press lands in edge zone but outside pill zone`() {
+    fun `isNearEdge is false when press lands in edge zone but outside quick menu bar zone`() {
         val p = SwipeGestureProcessor(
             edgeZonePx = EDGE_ZONE_PX,
             swipeThresholdPx = THRESHOLD_PX,
             overlayAtBottom = false,
-            pillZoneWidthPx = 100f,
+            quickMenuBarZoneWidthPx = 100f,
             onTouchingChanged = {},
             onEdgeSwipe = {},
         )
-        // container width = 400f -> center = 200f -> pill zone = [150f, 250f]
+        // container width = 400f -> center = 200f -> quick menu bar zone = [150f, 250f]
         p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 100f, containerWidth = 400f)
         assertFalse(p.isNearEdge)
     }

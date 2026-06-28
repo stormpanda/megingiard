@@ -39,7 +39,7 @@ import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.blockPointerEvents
-import com.stormpanda.megingiard.ui.IdlePill
+import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -58,7 +58,7 @@ private const val AM_SCREEN_PADDING_DP = 0
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
 private val AM_SWIPE_EDGE_ZONE = 40.dp
 private val AM_SWIPE_THRESHOLD = 25.dp
-private val AM_SWIPE_PILL_ZONE_WIDTH = 120.dp
+private val AM_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val AM_PERCENT_DIVISOR = 100f
 
 
@@ -77,7 +77,7 @@ private const val TAG = "BackgroundMacroPadOverlay"
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
+internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsState()
     val layout by MacroPadState.activeLayout.collectAsState()
@@ -91,9 +91,9 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
-    val pillZoneWidthPx = with(density) { AM_SWIPE_PILL_ZONE_WIDTH.toPx() }
-    val swipeProcessor = remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, pillZoneWidthPx) {
-        SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, pillZoneWidthPx)
+    val quickMenuBarZoneWidthPx = with(density) { AM_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+    val swipeProcessor = remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx) {
+        SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
     }
 
     // Effective dim: overridden to 0 when peeking
@@ -101,18 +101,18 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
 
     // Single watcher: stop injectors according to overlay state, restart when all closed.
     // Mirrors MacroPadViewModel.watchInjectorLifecycle() — must use the same combine()+
-    // collectLatest+delay pattern so that rapid PillMenu-close→Ambient-open transitions
+    // collectLatest+delay pattern so that rapid QuickMenu-close→Ambient-open transitions
     // do not cause a spurious injector restart.
     LaunchedEffect(Unit) {
         combine(
-            AppStateManager.isPillMenuOpen,
+            AppStateManager.isQuickMenuOpen,
             AppStateManager.isEditorActive,
             AppStateManager.isBackgroundSettingsActive,
             AppStateManager.isFullscreenKeyboardActive,
             AppStateManager.isFullscreenMouseActive,
             AppStateManager.isViewportEditActive,
         ) { array ->
-            val pillMenu = array[0]
+            val quickMenu = array[0]
             val editor = array[1]
             val ambient = array[2]
             val kb = array[3]
@@ -121,7 +121,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
             val stopAll = editor || ambient || kb || mouse || vp
             AmbientInjectorGate(
                 stopKeyboard = stopAll,
-                stopMouseAndGamepad = stopAll || pillMenu,
+                stopMouseAndGamepad = stopAll || quickMenu,
             )
         }.distinctUntilChanged()
         .collectLatest { gate ->
@@ -133,7 +133,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
                     MouseInjector.stop()
                 }
                 gate.stopMouseAndGamepad -> {
-                    AppLog.d(TAG, "pill menu open → stopping gamepad/mouse injectors")
+                    AppLog.d(TAG, "quick menu open → stopping gamepad/mouse injectors")
                     GamepadInjector.stop()
                     MouseInjector.stop()
                 }
@@ -167,7 +167,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, pillZoneWidthPx, previewConfig == null) {
+            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx, previewConfig == null) {
                 if (previewConfig != null) return@pointerInput
                 awaitPointerEventScope {
                     while (true) {
@@ -319,7 +319,7 @@ internal fun BackgroundMacroPadOverlay(showIdlePill: Boolean = true) {
             }
         }
 
-        if (showIdlePill) IdlePill()
+        if (showQuickMenuBar) QuickMenuBar()
     }
 }
 

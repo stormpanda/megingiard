@@ -49,7 +49,7 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     val offsetY: StateFlow<Float> = MirrorViewportController.offsetY
 
     // ── Overlay/settings ────────────────────────────────────────────────────
-    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
+    val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val isTouching: StateFlow<Boolean> = AppStateManager.isTouching
     private val _overlayTimeoutMs = MutableStateFlow(MIRROR_CONTROLS_AUTO_HIDE_MS)

@@ -327,14 +327,14 @@ class MainActivity : ComponentActivity() {
             combine(
                 AppStateManager.isFullscreenKeyboardActive,
                 AppStateManager.isOnValidScreen,
-                AppStateManager.isPillMenuOpen,
+                AppStateManager.isQuickMenuOpen,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
             ) { values ->
                 val fullscreenKeyboard = values[0] as Boolean
                 val onValidScreen = values[1] as Boolean
-                val pillMenuOpen = values[2] as Boolean
+                val quickMenuOpen = values[2] as Boolean
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
@@ -342,7 +342,7 @@ class MainActivity : ComponentActivity() {
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = onValidScreen,
                         isFullscreenKeyboardActive = fullscreenKeyboard,
-                        isPillMenuOpen = pillMenuOpen,
+                        isQuickMenuOpen = quickMenuOpen,
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
@@ -457,7 +457,7 @@ class MainActivity : ComponentActivity() {
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     SettingsManager.showWelcomeTutorial,
-                    SettingsManager.showPillTutorial,
+                    SettingsManager.showQuickMenuTutorial,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
@@ -465,7 +465,7 @@ class MainActivity : ComponentActivity() {
                     val currentLayout = values[3] as? PadLayout
                     val onValidScreen = values[4] as Boolean
                     val showWelcome = values[5] as Boolean
-                    val showPill = values[6] as Boolean
+                    val showQuickMenu = values[6] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -474,7 +474,7 @@ class MainActivity : ComponentActivity() {
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
-                        tutorialsActive = showWelcome || showPill,
+                        tutorialsActive = showWelcome || showQuickMenu,
                     )
                 }
                     .combine(privdMirrorConnectingFlow) { policy, connecting ->

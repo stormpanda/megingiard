@@ -96,8 +96,8 @@ object SettingsManager {
     private val _showMacroEditorTutorial = MutableStateFlow(true)
     val showMacroEditorTutorial: StateFlow<Boolean> = _showMacroEditorTutorial.asStateFlow()
 
-    private val _showPillTutorial = MutableStateFlow(true)
-    val showPillTutorial: StateFlow<Boolean> = _showPillTutorial.asStateFlow()
+    private val _showQuickMenuTutorial = MutableStateFlow(true)
+    val showQuickMenuTutorial: StateFlow<Boolean> = _showQuickMenuTutorial.asStateFlow()
 
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
@@ -166,7 +166,7 @@ object SettingsManager {
 
                     _showWelcomeTutorial.value = prefs[KEY_SHOW_WELCOME_TUTORIAL] ?: true
                     _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
-                    _showPillTutorial.value = prefs[KEY_SHOW_PILL_TUTORIAL] ?: true
+                    _showQuickMenuTutorial.value = prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] ?: true
                     MirrorSettings.loadFrom(prefs)
                     KeyboardSettings.loadFrom(prefs)
                     TouchpadSettings.loadFrom(prefs)
@@ -224,13 +224,13 @@ object SettingsManager {
         }
     }
 
-    fun setShowPillTutorial(value: Boolean) {
-        AppLog.d(TAG, "setShowPillTutorial($value)")
-        _showPillTutorial.value = value
+    fun setShowQuickMenuTutorial(value: Boolean) {
+        AppLog.d(TAG, "setShowQuickMenuTutorial($value)")
+        _showQuickMenuTutorial.value = value
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
-                    prefs[KEY_SHOW_PILL_TUTORIAL] = value
+                    prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] = value
                 }
             }
         }
@@ -240,13 +240,13 @@ object SettingsManager {
         AppLog.d(TAG, "resetAllTutorials()")
         _showWelcomeTutorial.value = true
         _showMacroEditorTutorial.value = true
-        _showPillTutorial.value = true
+        _showQuickMenuTutorial.value = true
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
                     prefs[KEY_SHOW_WELCOME_TUTORIAL] = true
                     prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
-                    prefs[KEY_SHOW_PILL_TUTORIAL] = true
+                    prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] = true
                 }
             }
         }

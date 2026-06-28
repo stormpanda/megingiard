@@ -42,7 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.PILL_INSET
+import com.stormpanda.megingiard.ui.QUICK_MENU_BAR_INSET
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 import kotlinx.coroutines.delay
 
@@ -54,7 +54,7 @@ private val KEY_PADDING_H = 2.dp
 private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
 private val KB_IME_BOTTOM_PADDING = 56.dp
-private val KB_PILL_INSET = PILL_INSET
+private val KB_QUICK_MENU_BAR_INSET = QUICK_MENU_BAR_INSET
 
 private const val TAG = "KeyboardScreen"
 
@@ -71,8 +71,8 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
     val effectiveFullscreen = forcedLayout != null || kbFullscreen
     val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsState()
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
-    val isPillMenuOpen by viewModel.isPillMenuOpen.collectAsState()
-    val isPillMenuOpenState = rememberUpdatedState(isPillMenuOpen)
+    val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsState()
+    val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
     val colors = LocalAppColors.current
     val accentColor = colors.accent
     val controller = viewModel.controller
@@ -129,12 +129,12 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Main)
-                        // While the pill menu overlay is visible, block new key input.
-                        if (isPillMenuOpenState.value) {
+                        // While the quick menu overlay is visible, block new key input.
+                        if (isQuickMenuOpenState.value) {
                             when (event.type) {
                                 PointerEventType.Press -> {
                                     if (event.changes.none { it.isConsumed }) {
-                                        viewModel.closePillMenu()
+                                        viewModel.closeQuickMenu()
                                     }
                                     event.changes.forEach { it.consume() }
                                     continue
@@ -221,8 +221,8 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                     .padding(
                         start = 4.dp,
                         end = 4.dp,
-                        top = if (overlayAtBottom) 4.dp else KB_PILL_INSET,
-                        bottom = if (effectiveFullscreen) (if (overlayAtBottom) KB_PILL_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
+                        top = if (overlayAtBottom) 4.dp else KB_QUICK_MENU_BAR_INSET,
+                        bottom = if (effectiveFullscreen) (if (overlayAtBottom) KB_QUICK_MENU_BAR_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
                     ),
                 verticalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -264,7 +264,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                     .align(Alignment.Center)
                     .alpha(trackpointAlpha)
                     .background(colors.keyBackground, RoundedCornerShape(8.dp))
-                    .border(2.dp, colors.navPillBorder, RoundedCornerShape(8.dp)),
+                    .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

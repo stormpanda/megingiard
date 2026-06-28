@@ -101,7 +101,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_title">Edit Layout</string>
     <string name="macropad_editor_title_edit_profile">Edit Profile</string>
     <string name="layout_settings_visibility_title">Show in overlays</string>
-    <string name="layout_settings_visibility_desc">Participate in Pill Menu selector and Next/Previous navigation.</string>
+    <string name="layout_settings_visibility_desc">Participate in Quick Menu selector and Next/Previous navigation.</string>
     <string name="macropad_editor_done">Save</string>
     <string name="macropad_editor_add_button">Add Button</string>
     <string name="macropad_editor_add">Add</string>
@@ -594,21 +594,21 @@ Open Settings to create a layout.</string>
 
     <string name="cd_more_options">More options</string>
 
-    <!-- Idle Pill -->
+    <!-- Quick Menu Bar -->
 
 
-    <!-- Pill Menu -->
-    <string name="pill_menu_profile_label">Profile</string>
-    <string name="pill_menu_layout_label">Layout</string>
-    <string name="pill_menu_new_profile">New Profile</string>
-    <string name="pill_menu_new_layout">New Layout</string>
-    <string name="pill_menu_edit_layout">Edit Profile/Layout</string>
-    <string name="pill_menu_ambient_settings">Screen Mirroring Settings</string>
-    <string name="pill_menu_screen_mirroring">Screen Mirroring</string>
-    <string name="pill_menu_global_settings">Global Settings</string>
-    <string name="pill_menu_dismiss_dialog">Dismiss dialog</string>
-    <string name="pill_menu_profile_name_hint">Profile name</string>
-    <string name="pill_menu_layout_name_hint">Layout name</string>
+    <!-- Quick Menu -->
+    <string name="quick_menu_profile_label">Profile</string>
+    <string name="quick_menu_layout_label">Layout</string>
+    <string name="quick_menu_new_profile">New Profile</string>
+    <string name="quick_menu_new_layout">New Layout</string>
+    <string name="quick_menu_edit_layout">Edit Profile/Layout</string>
+    <string name="quick_menu_ambient_settings">Screen Mirroring Settings</string>
+    <string name="quick_menu_screen_mirroring">Screen Mirroring</string>
+    <string name="quick_menu_global_settings">Global Settings</string>
+    <string name="quick_menu_dismiss_dialog">Dismiss dialog</string>
+    <string name="quick_menu_profile_name_hint">Profile name</string>
+    <string name="quick_menu_layout_name_hint">Layout name</string>
     <string name="cd_layout_prev">Previous layout</string>
     <string name="cd_layout_next">Next layout</string>
     <string name="cd_viewport_edit">Edit viewport</string>
@@ -716,7 +716,7 @@ Open Settings to create a layout.</string>
     <string name="help_editor_profile_options_desc">Tap the options (three dots) icon to rename, duplicate, reorder, or delete profiles.</string>
     <string name="help_editor_section_layouts">Layouts</string>
     <string name="help_editor_layouts_label">Layout chips</string>
-    <string name="help_editor_layouts_desc">A profile can have multiple layouts. Only enabled layouts appear in the Pill Menu for quick switching. Long-press and drag a layout chip to reorder them.</string>
+    <string name="help_editor_layouts_desc">A profile can have multiple layouts. Only enabled layouts appear in the Quick Menu for quick switching. Long-press and drag a layout chip to reorder them.</string>
     <string name="help_editor_add_layout_label">Add layout</string>
     <string name="help_editor_add_layout_desc">Tap the add (+) button next to the Layouts header to create a new layout inside the current profile.</string>
     <string name="help_editor_layout_options_label">Layout options</string>
@@ -829,10 +829,10 @@ Open Settings to create a layout.</string>
     <!-- Global Settings help -->
     <string name="help_settings_title">Settings — Help</string>
     <string name="help_settings_intro">Global Settings apply to the whole app and persist across sessions. Use the section jump row at the top to scroll quickly to a specific group.</string>
-    <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Pill Menu easier to swipe open without shifting your thumbs.</string>
+    <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Quick Menu easier to swipe open without shifting your thumbs.</string>
 
     <string name="help_settings_auto_profile_desc">Essential for seamless gaming. Links macro profiles to specific apps so your custom buttons switch instantly when launching a game, without manual menu navigation.</string>
-    <string name="help_settings_recents_desc">Keeps your Android Recents menu clean. Recommended if you launch Megingiard once and control it entirely via the edge Pill overlay while gaming.</string>
+    <string name="help_settings_recents_desc">Keeps your Android Recents menu clean. Recommended if you launch Megingiard once and control it entirely via the edge quick menu bar overlay while gaming.</string>
     <string name="help_settings_accessibility_desc">Required for automatic profile switching. Android permissions require this service to detect which game is active on the primary screen. Tap this row to configure.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English or German depending on your preference.</string>
     <string name="help_settings_gamepad_swap_desc">Enable this if you prefer the Nintendo layout (A on right, B on bottom) over the default Xbox layout (A on bottom, B on right) for gamepad macro actions.</string>
@@ -843,29 +843,29 @@ Open Settings to create a layout.</string>
     <string name="help_settings_import_desc">Restores your profiles and configurations from a previously saved .mgrd file or daily automatic backup. Overwrites current configurations upon confirmation.</string>
     <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
     <string name="help_settings_import_profile_desc">Adds a shared profile from another user to your collection. This operation is safe and will not modify or overwrite your existing profiles.</string>
-    <string name="help_settings_privd_desc">Establishes a background helper connection via Wireless Debugging to write to system input devices not accessible by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Privileged Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Pill Menu overlay without screen mirroring being active.</string>
+    <string name="help_settings_privd_desc">Establishes a background helper connection via Wireless Debugging to write to system input devices not accessible by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Privileged Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
     <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>
     <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a GitHub issue or developer report.</string>
 
-    <!-- Pill Menu help -->
-    <string name="help_pillmenu_title">Quick Menu — Help</string>
-    <string name="help_pillmenu_intro">The Quick Menu (Pill Menu) gives you fast access to profiles, layouts, and the most common actions — all without leaving your current game. Tap the pill on the screen edge to open it; tap the scrim to close.</string>
-    <string name="help_pillmenu_section_mirror">Mirror controls (top card)</string>
-    <string name="help_pillmenu_start_label">Start / Stop mirroring</string>
-    <string name="help_pillmenu_start_desc">Starts or stops the screen mirroring capture. When mirroring is active the top card expands to show additional controls.</string>
-    <string name="help_pillmenu_freeze_label">Freeze / Unfreeze</string>
-    <string name="help_pillmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
-    <string name="help_pillmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
-    <string name="help_pillmenu_screenshot_label">Take Screenshot</string>
-    <string name="help_pillmenu_screenshot_desc">Takes a screenshot of the main screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
-    <string name="help_pillmenu_section_macropad">MacroPad controls (bottom card)</string>
-    <string name="help_pillmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
-    <string name="help_pillmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
-    <string name="help_pillmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
-    <string name="help_pillmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
-    <string name="help_pillmenu_help_label">Help (this screen)</string>
-    <string name="help_pillmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
+    <!-- Quick Menu help -->
+    <string name="help_quickmenu_title">Quick Menu — Help</string>
+    <string name="help_quickmenu_intro">The Quick Menu gives you fast access to profiles, layouts, and the most common actions — all without leaving your current game. Tap the quick menu bar on the screen edge to open it; tap the scrim to close.</string>
+    <string name="help_quickmenu_section_mirror">Mirror controls (top card)</string>
+    <string name="help_quickmenu_start_label">Start / Stop mirroring</string>
+    <string name="help_quickmenu_start_desc">Starts or stops the screen mirroring capture. When mirroring is active the top card expands to show additional controls.</string>
+    <string name="help_quickmenu_freeze_label">Freeze / Unfreeze</string>
+    <string name="help_quickmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
+    <string name="help_quickmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
+    <string name="help_quickmenu_screenshot_label">Take Screenshot</string>
+    <string name="help_quickmenu_screenshot_desc">Takes a screenshot of the main screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
+    <string name="help_quickmenu_section_macropad">MacroPad controls (bottom card)</string>
+    <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
+    <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
+    <string name="help_quickmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
+    <string name="help_quickmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
+    <string name="help_quickmenu_help_label">Help (this screen)</string>
+    <string name="help_quickmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
 
     <!-- Welcome Tutorial & Reset -->
     <string name="welcome_title">Welcome to Megingiard!</string>
@@ -893,8 +893,8 @@ Open Settings to create a layout.</string>
     <string name="macro_tutorial_btn_got_it">Got it</string>
     <string name="macro_tutorial_btn_dont_show">Don\'t show again</string>
 
-    <!-- Pill Tutorial -->
-    <string name="pill_tutorial_title">Opening the Menu</string>
-    <string name="pill_tutorial_body">Swipe the pill indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.</string>
+    <!-- Quick Menu Tutorial -->
+    <string name="quick_menu_tutorial_title">Opening the Menu</string>
+    <string name="quick_menu_tutorial_body">Swipe the quick menu bar indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.</string>
 
 </resources>

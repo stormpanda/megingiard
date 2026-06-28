@@ -56,7 +56,7 @@ Identify the affected feature area and read the relevant documentation in full:
 | Virtual Touchpad         | `docs/features/touchpad/FEATURE.md` |
 | Virtual Keyboard         | `docs/features/keyboard/FEATURE.md` |
 | MacroPad / Layout Editor | `docs/features/macropad/FEATURE.md` |
-| Pill Menu                | `docs/features/pillmenu/FEATURE.md` |
+| Quick Menu               | `docs/features/quickmenu/FEATURE.md` |
 | Design System / Theming  | `docs/features/theming/FEATURE.md`  |
 | Config Export/Import     | `docs/features/config/FEATURE.md`   |
 | Overall architecture     | `docs/ARCHITECTURE.md`              |

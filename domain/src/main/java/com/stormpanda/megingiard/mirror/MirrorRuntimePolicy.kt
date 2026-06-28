@@ -15,7 +15,7 @@ data class MirrorRuntimePolicyState(
      * strategy (privd vs. MediaProjection consent) can be selected.
      */
     val privdMirrorConnecting: Boolean = false,
-    /** True if welcome onboarding or pill swipe tutorial is actively shown. */
+    /** True if welcome onboarding or quick menu swipe tutorial is actively shown. */
     val tutorialsActive: Boolean = false,
 )
 

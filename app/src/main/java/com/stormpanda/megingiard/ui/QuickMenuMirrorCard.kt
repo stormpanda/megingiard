@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 
-private const val TAG = "PillMirrorCard"
+private const val TAG = "QuickMenuMirrorCard"
 
 @Composable
 internal fun MirrorControlCard(
@@ -96,7 +96,7 @@ internal fun MirrorControlCard(
             )
             Spacer(Modifier.width(PM_SCREEN_MIRRORING_SPACER_W))
             Text(
-                text  = stringResource(R.string.pill_menu_screen_mirroring),
+                text  = stringResource(R.string.quick_menu_screen_mirroring),
                 color = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
                 style = MaterialTheme.typography.bodyMedium,
             )

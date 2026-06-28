@@ -39,7 +39,7 @@ In the current implementation, the Virtual Touchpad is mapped to the `FullScreen
 - **Tap-to-click:** When enabled, a single short tap (below a slop of `20f` pixels and a timeout of `200ms`) sends a left-button click (down + up) via `MouseInjector`.
 - **Two-finger tap:** When enabled, a two-finger short tap sends a right-button click via `MouseInjector`.
 - Only the **primary pointer** (first finger down) drives cursor movement; additional fingers are tracked solely for two-finger tap detection.
-- When the Pill Menu is visible, all pointer changes are consumed to ensure touches do not bleed through, before closing the menu.
+- When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through, before closing the menu.
 
 ---
 

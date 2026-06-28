@@ -160,19 +160,19 @@ object AppStateManager {
         _isFilePickerOpen.value = open
     }
 
-    // ── Pill Menu ─────────────────────────────────────────────────────────────
+    // ── Quick Menu ────────────────────────────────────────────────────────────
 
-    private val _isPillMenuOpen = MutableStateFlow(false)
-    val isPillMenuOpen: StateFlow<Boolean> = _isPillMenuOpen.asStateFlow()
+    private val _isQuickMenuOpen = MutableStateFlow(false)
+    val isQuickMenuOpen: StateFlow<Boolean> = _isQuickMenuOpen.asStateFlow()
 
-    fun openPillMenu() {
-        AppLog.i(TAG, "openPillMenu")
-        _isPillMenuOpen.value = true
+    fun openQuickMenu() {
+        AppLog.i(TAG, "openQuickMenu")
+        _isQuickMenuOpen.value = true
     }
 
-    fun closePillMenu() {
-        AppLog.i(TAG, "closePillMenu")
-        _isPillMenuOpen.value = false
+    fun closeQuickMenu() {
+        AppLog.i(TAG, "closeQuickMenu")
+        _isQuickMenuOpen.value = false
     }
 
     // ── Modal overlay states ──────────────────────────────────────────────────
@@ -239,7 +239,7 @@ object AppStateManager {
 
     /**
      * True whenever any fullscreen modal overlay is showing.
-     * Drives "× close" label on [IdlePill][com.stormpanda.megingiard.ui.IdlePill].
+     * Drives "× close" label on [QuickMenuBar][com.stormpanda.megingiard.ui.QuickMenuBar].
      */
     val isAnyModalActive: StateFlow<Boolean> = combine(
         _isFullscreenKeyboardActive,
@@ -321,11 +321,11 @@ object AppStateManager {
      * Dispatches to the correct action based on current navigation state.
      */
     fun handleEdgeSwipe() {
-        AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} pillMenu=${_isPillMenuOpen.value}")
+        AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} quickMenu=${_isQuickMenuOpen.value}")
         when {
             isAnyModalActive.value  -> closeActiveModal()
-            _isPillMenuOpen.value   -> closePillMenu()
-            else                    -> openPillMenu()
+            _isQuickMenuOpen.value   -> closeQuickMenu()
+            else                    -> openQuickMenu()
         }
     }
 

@@ -3,7 +3,7 @@ package com.stormpanda.megingiard
 private const val TAG = "SwipeGestureProcessor"
 
 /**
- * Reusable edge-zone swipe detector for revealing the pill menu overlay.
+ * Reusable edge-zone swipe detector for revealing the quick menu overlay.
  *
  * The same swipe logic is used in [MainAppScreen] and [MirrorScreen].
  * This processor is Compose-free: it accepts raw coordinates and dimensions
@@ -18,7 +18,7 @@ class SwipeGestureProcessor(
     private val edgeZonePx: Float,
     private val swipeThresholdPx: Float,
     private val overlayAtBottom: Boolean,
-    private val pillZoneWidthPx: Float? = null,
+    private val quickMenuBarZoneWidthPx: Float? = null,
     private val onTouchingChanged: (Boolean) -> Unit = { AppStateManager.setTouching(it) },
     private val onEdgeSwipe: () -> Unit = { AppStateManager.handleEdgeSwipe() },
 ) {
@@ -33,9 +33,9 @@ class SwipeGestureProcessor(
         containerWidth: Float = 0f,
     ) {
         onTouchingChanged(true)
-        val inPillZoneX = if (pillZoneWidthPx != null && containerWidth > 0f) {
+        val inQuickMenuBarZoneX = if (quickMenuBarZoneWidthPx != null && containerWidth > 0f) {
             val center = containerWidth / 2f
-            pointerX >= center - pillZoneWidthPx / 2f && pointerX <= center + pillZoneWidthPx / 2f
+            pointerX >= center - quickMenuBarZoneWidthPx / 2f && pointerX <= center + quickMenuBarZoneWidthPx / 2f
         } else {
             true
         }
@@ -43,7 +43,7 @@ class SwipeGestureProcessor(
             pointerY >= containerHeight - edgeZonePx
         } else {
             pointerY <= edgeZonePx
-        }) && inPillZoneX
+        }) && inQuickMenuBarZoneX
         swipeStartY = if (nearEdge) pointerY else Float.NaN
         swipeTriggered = false
     }

@@ -39,7 +39,7 @@
 | `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
 | `docs/features/macropad/FEATURE.md`        | MacroPad — profiles, layouts, and custom macro triggers & execution                      |
 | `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |
-| `docs/features/pillmenu/FEATURE.md`        | Idle Pill & Pill Menu — navigation overlays & mirror control cards                       |
+| `docs/features/quickmenu/FEATURE.md`        | Quick Menu Bar & Quick Menu — navigation overlays & mirror control cards                 |
 | `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
 | `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
 | `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
@@ -209,7 +209,7 @@ Across all modules, files are organized into feature-centric packages. Keep thes
 * `mirror/` — Screen mirroring presentation views, viewport math, and capture-session managers.
 * `keyboard/` — Virtual keyboard Composable layouts, key caps, and key injector services.
 * `input/` / `privd/` — Local socket IPC clients, ADB-Wireless wizards, and evdev/uinput wrappers.
-* `ui/` — Design system constants, AppTheme palette factories, and reusable edge overlay pill menus.
+* `ui/` — Design system constants, AppTheme palette factories, and reusable edge overlay quick menu bars.
 
 **Rule:** New feature modules get their own sub-package. Shared UI components belong in `:app/.../ui/`. Business logic with no Android UI dependency belongs in `:domain`. Pure data types and constants belong in `:core`.
 

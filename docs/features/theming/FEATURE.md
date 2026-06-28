@@ -55,7 +55,7 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `onSurface`              | Primary text                                                                                                                       |
 | `onSurfaceSecondary`     | Secondary / hint text                                                                                                              |
 | `divider`                | Subtle separator lines                                                                                                             |
-| `controlOverlay`         | Floating control pill background                                                                                                   |
+| `controlOverlay`         | Floating control Quick Menu background                                                                                             |
 | `onControlOverlay`       | Text / icons on the control overlay                                                                                                |
 | `fingerCircle`           | Finger-indicator circle — always white-tinted (theme-invariant)                                                                    |
 | `keyBackground`          | Key face (normal)                                                                                                                  |
@@ -67,13 +67,13 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `accentBorder`           | Accent-colour swatch border                                                                                                        |
 | `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
 | `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined)                                                            |
-| `pillIdleColor`          | Always-visible pull-tab pill colour                                                                                                |
-| `controlIndicatorActive` | Active mode indicator dot in the navigation pill                                                                                   |
-| `navPillBody`            | Navigation pill background (tracks accent in Dark/Light)                                                                           |
+| `quickMenuBarIdleColor`  | Always-visible pull-tab quick menu bar colour                                                                                      |
+| `controlIndicatorActive` | Active mode indicator dot in the navigation bar                                                                                   |
+| `navQuickMenuBody`       | Navigation bar background (tracks accent in Dark/Light)                                                                           |
 | `buttonBody`             | Mirror control button background (tracks accent in Dark/Light)                                                                     |
 | `controlOverlayBorder`   | Border/outline of the carousel control overlay container                                                                           |
-| `navPillBorder`          | Border/outline of the navigation pill                                                                                              |
-| `mirrorPillBorder`       | Border/outline of the mirror control pill                                                                                          |
+| `navQuickMenuBorder`     | Border/outline of the navigation bar                                                                                               |
+| `mirrorQuickMenuBorder`  | Border/outline of the mirror control bar                                                                                           |
 | `buttonIconTint`         | Icon tint on mirror control buttons                                                                                                |
 | `error`                  | Destructive/error action color                                                                                                     |
 | `onError`                | Text/icons on error-colored surfaces                                                                                               |
@@ -91,7 +91,7 @@ Three palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `lightPalette` — white/light-grey surfaces with near-black text.
-- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules. The pull-tab pill uses `CP_PILL_IDLE` (`Color.White.copy(alpha = 0.4f)`), consistent with the per-palette `DARK_PILL_IDLE` and `LIGHT_PILL_IDLE` constants in the other themes.
+- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules. The pull-tab quick menu bar uses `CP_QM_BAR_IDLE` (`Color.White.copy(alpha = 0.4f)`), consistent with the per-palette `DARK_QM_BAR_IDLE` and `LIGHT_QM_BAR_IDLE` constants in the other themes.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -173,7 +173,7 @@ All settings rows across the app (Global Settings, Keyboard/Touchpad tool settin
 - Use `AppDivider` everywhere a visible horizontal rule is needed — settings rows, content lists, dialog dividers, and card separators alike.
 - The `divider` token is reserved for non-row guide lines drawn directly on a Canvas (e.g. `MacroVerticalTimeline`).
 
-**`pillIdleColor` — per-palette constants:** Each palette defines its own named constant (`DARK_PILL_IDLE`, `LIGHT_PILL_IDLE`, `CP_PILL_IDLE`), all set to `Color.White.copy(alpha = 0.4f)`. This ensures consistent pull-tab visibility across Dark, Light, and Cyberpunk themes while keeping theme-specific constants for future divergence.
+**`quickMenuBarIdleColor` — per-palette constants:** Each palette defines its own named constant (`DARK_QM_BAR_IDLE`, `LIGHT_QM_BAR_IDLE`, `CP_QM_BAR_IDLE`), all set to `Color.White.copy(alpha = 0.4f)`. This ensures consistent pull-tab visibility across Dark, Light, and Cyberpunk themes while keeping theme-specific constants for future divergence.
 
 **Background ownership rule:** Settings rows are transparent. The parent `Column` that groups a set of settings rows is responsible for setting `Modifier.background(colors.surface)`. This is why `GlobalSettingsScreen.SettingsSection` and `BackgroundSettingsOverlay` wrap their row groups in `Column(modifier = Modifier.fillMaxWidth().background(colors.surface))` rather than per-row backgrounds.
 

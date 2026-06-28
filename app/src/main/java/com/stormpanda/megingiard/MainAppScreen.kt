@@ -66,10 +66,10 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
-import com.stormpanda.megingiard.ui.IdlePill
+import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
-import com.stormpanda.megingiard.ui.PillTutorialDialog
+import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -77,7 +77,7 @@ import kotlinx.coroutines.launch
 private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
 private val MAS_SWIPE_THRESHOLD = 25.dp
-private val MAS_SWIPE_PILL_ZONE_WIDTH = 120.dp
+private val MAS_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
@@ -97,24 +97,24 @@ fun MainAppScreen() {
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
-    val showPillTutorial by SettingsManager.showPillTutorial.collectAsState()
-    var showPillLocal by remember { mutableStateOf(true) }
+    val showQuickMenuTutorial by SettingsManager.showQuickMenuTutorial.collectAsState()
+    var showQuickMenuLocal by remember { mutableStateOf(true) }
 
     LaunchedEffect(showWelcomeTutorial) {
         if (showWelcomeTutorial) {
             showWelcomeLocal = true
         }
     }
-    LaunchedEffect(showPillTutorial) {
-        if (showPillTutorial) {
-            showPillLocal = true
+    LaunchedEffect(showQuickMenuTutorial) {
+        if (showQuickMenuTutorial) {
+            showQuickMenuLocal = true
         }
     }
 
     val density = LocalDensity.current
     val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
-    val pillZoneWidthPx = with(density) { MAS_SWIPE_PILL_ZONE_WIDTH.toPx() }
+    val quickMenuBarZoneWidthPx = with(density) { MAS_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
@@ -168,7 +168,7 @@ fun MainAppScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(overlayAtBottom, isValidScreen) {
-                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, pillZoneWidthPx)
+                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -211,7 +211,7 @@ fun MainAppScreen() {
             // MacroPad is the sole content screen
             MacroPadScreen()
 
-            // Fullscreen modal overlays — rendered above MacroPad but below IdlePill.
+            // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
             // Suppressed when ambient mode is active: the overlays are rendered on the
             // secondary display inside MirrorPresentation instead.
             if (isFullscreenMouseActive && !isCapturing) FullscreenMouseOverlay()
@@ -240,10 +240,10 @@ fun MainAppScreen() {
                 )
             }
 
-            // Idle Pill + Pill Menu overlay — hidden while editor or ambient settings
+            // Quick Menu Bar + Quick Menu overlay — hidden while editor or ambient settings
             // are open because those modals render their own full-screen chrome.
             if (!isEditorActive && !isBackgroundSettingsActive) {
-                IdlePill()
+                QuickMenuBar()
             }
         }
 
@@ -267,12 +267,12 @@ fun MainAppScreen() {
                     SettingsManager.setShowWelcomeTutorial(false)
                 }
             )
-        } else if (showPillTutorial && showPillLocal) {
-            PillTutorialDialog(
+        } else if (showQuickMenuTutorial && showQuickMenuLocal) {
+            QuickMenuTutorialDialog(
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
-                    showPillLocal = false
-                    SettingsManager.setShowPillTutorial(false)
+                    showQuickMenuLocal = false
+                    SettingsManager.setShowQuickMenuTutorial(false)
                 }
             )
         }

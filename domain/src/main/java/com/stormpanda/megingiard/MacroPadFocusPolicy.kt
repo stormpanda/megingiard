@@ -5,7 +5,7 @@ private const val TAG = "MacroPadFocusPolicy"
 data class MacroPadFocusPolicyState(
     val isMacroPadSurfaceActive: Boolean,
     val isFullscreenKeyboardActive: Boolean = false,
-    val isPillMenuOpen: Boolean = false,
+    val isQuickMenuOpen: Boolean = false,
     val isFilePickerOpen: Boolean = false,
     val isEditorActive: Boolean = false,
     val isBackgroundSettingsActive: Boolean = false,
@@ -17,7 +17,7 @@ data class MacroPadFocusPolicyState(
  * still receives touch input.
  */
 fun shouldKeepPrimaryGameFocus(state: MacroPadFocusPolicyState): Boolean {
-    val hasInteractiveOverlay = state.isPillMenuOpen ||
+    val hasInteractiveOverlay = state.isQuickMenuOpen ||
         state.isFilePickerOpen ||
         state.isEditorActive ||
         state.isBackgroundSettingsActive

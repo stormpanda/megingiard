@@ -42,7 +42,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 - **Edge Blending & Circular Shapes:** Apply additive edge gradients (up to 100 dp) to create seamless transitions without dark seams between adjacent cutouts, or toggle cutouts to render as perfect circles.
 - **Temporal Motion Smoothing:** Select between Off, Light, Medium, or Strong temporal filtering (exponential moving average) to stabilize UI elements in individual cutouts.
 - **Follow Touch Mode:** Real-time touch tracking on the primary screen. The mirror viewport automatically centers on the spot last touched on the primary screen at your current zoom level, with optional movement smoothing. Can be configured to temporarily disable during macro execution to prevent movement conflicts.
-- **Customizable Controls:** Fully integrate mirror controls (Start / Stop / Freeze / Viewport reset) directly as buttons onto your custom MacroPad layouts, or use the always-present controls in the Pill Menu overlay.
+- **Customizable Controls:** Fully integrate mirror controls (Start / Stop / Freeze / Viewport reset) directly as buttons onto your custom MacroPad layouts, or use the always-present controls in the Quick Menu overlay.
 
 ### 2. MacroPad Central Mode
 
@@ -65,9 +65,9 @@ Given its hardware-specific approach and advanced features, this project is exte
 - **Sub-Millisecond Response:** Touch events are injected straight into the kernel input stream via native binaries (`/dev/uinput`) with less than 1ms latency.
 - **Multi-Tap Gestures:** Simple and reliable gestures: single tap for Left Mouse Button, double tap for Right Mouse Button, and triple tap for Middle Mouse Button.
 
-### 5. Pill Menu & Immersive UI
+### 5. Quick Menu & Immersive UI
 
-- **Always-Visible Edge Pill:** A tiny swipe affordance overlay on the bottom secondary display. Inward swipe opens the Pill Menu, letting you switch profiles/tools, toggle mirroring, or open settings without ever leaving your current layout.
+- **Always-Visible Edge Quick Menu Bar:** A tiny swipe affordance overlay on the bottom secondary display. Inward swipe opens the Quick Menu, letting you switch profiles/tools, toggle mirroring, or open settings without ever leaving your current layout.
 - **Dark Gaming Aesthetics:** Borderless immersive fullscreen styling designed to respect the dark environment of secondary display gaming and prevent distraction from the main screen.
 
 ---
@@ -116,11 +116,11 @@ _Macro recording in progress. Tap buttons on the secondary screen (or use your p
 
 ---
 
-### Pill Menu
+### Quick Menu
 
-![The edge pill menu expanded in dark theme, showing tool and profile switcher options](./assets/screenshots/Pill_Menu_Dark-BOTTOM.png)
+![The edge quick menu expanded in dark theme, showing tool and profile switcher options](./assets/screenshots/Pill_Menu_Dark-BOTTOM.png)
 
-_The Pill Menu — swipe the edge pill inward to switch between Mirror, MacroPad, Keyboard, and Touchpad, change profiles, control the mirror, or open settings. Everything accessible without leaving your current screen._
+_The Quick Menu — swipe the edge quick menu bar inward to switch between Mirror, MacroPad, Keyboard, and Touchpad, change profiles, control the mirror, or open settings. Everything accessible without leaving your current screen._
 
 ---
 
@@ -150,7 +150,7 @@ There is no Google Play Store listing; APK side-loading is the official distribu
    - Go to Android Settings → Accessibility → Installed Apps / Downloaded Services.
    - Select **Megingiard Accessibility Service** and enable it.
    - Toggle **Auto-switch profiles** in Megingiard's Global Settings.
-3. **Access Pill Menu:** **Swipe the edge pill** (visible on the bottom edge of the secondary screen) inward. From here, you can:
+3. **Access Quick Menu:** **Swipe the edge quick menu bar** (visible on the bottom edge of the secondary screen) inward. From here, you can:
    - Switch active tools (Mirror, MacroPad, Keyboard, Touchpad).
    - Pick layouts and profiles.
    - Start, freeze, or stop the screen mirror.
@@ -254,7 +254,7 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 **The mirror screen is black.**
 
-> Try stopping and restarting the mirror from the Pill Menu. If the screen remains black, open a GitHub issue specifying your current app version and replication steps.
+> Try stopping and restarting the mirror from the Quick Menu. If the screen remains black, open a GitHub issue specifying your current app version and replication steps.
 
 **Android requests screen recording permission on every mirror start.**
 

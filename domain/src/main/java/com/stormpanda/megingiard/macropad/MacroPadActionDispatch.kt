@@ -49,7 +49,7 @@ fun injectActionDown(action: PadAction) {
         is PadAction.BackgroundPeek          -> { AppLog.d(TAG, "actionDown: BackgroundPeek"); MacroPadState.togglePeek() }
         is PadAction.LayoutNext             -> { AppLog.d(TAG, "actionDown: LayoutNext"); MacroPadState.nextLayout() }
         is PadAction.LayoutPrevious         -> { AppLog.d(TAG, "actionDown: LayoutPrevious"); MacroPadState.previousLayout() }
-        is PadAction.ProfileSwitcher        -> { AppLog.d(TAG, "actionDown: ProfileSwitcher"); AppStateManager.openPillMenu() }
+        is PadAction.ProfileSwitcher        -> { AppLog.d(TAG, "actionDown: ProfileSwitcher"); AppStateManager.openQuickMenu() }
         is PadAction.FullScreenMouse        -> { AppLog.d(TAG, "actionDown: FullScreenMouse sens=${action.sensitivity}"); AppStateManager.setFullscreenMouseActive(true, action.sensitivity) }
         is PadAction.FullScreenKeyboard     -> { AppLog.d(TAG, "actionDown: FullScreenKeyboard layout=${action.layout}"); AppStateManager.setFullscreenKeyboardActive(true, action.layout) }
         is PadAction.MirrorPlayStop         -> {

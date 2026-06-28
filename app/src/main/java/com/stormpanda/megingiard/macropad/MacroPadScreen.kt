@@ -178,8 +178,8 @@ internal fun PadSurface(
     val context      = LocalContext.current
     val vibrator     = remember { context.getSystemService(Vibrator::class.java) }
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
-    val isPillMenuOpen      by viewModel.isPillMenuOpen.collectAsState()
-    val isPillMenuOpenState  = rememberUpdatedState(isPillMenuOpen)
+    val isQuickMenuOpen      by viewModel.isQuickMenuOpen.collectAsState()
+    val isQuickMenuOpenState  = rememberUpdatedState(isQuickMenuOpen)
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
@@ -227,8 +227,8 @@ internal fun PadSurface(
                                 val w       = canvasSize.width.toFloat().coerceAtLeast(1f)
                                 val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
 
-                                // Block input while pill menu overlay is open
-                                if (isPillMenuOpenState.value && event.type != PointerEventType.Release) {
+                                // Block input while quick menu overlay is open
+                                if (isQuickMenuOpenState.value && event.type != PointerEventType.Release) {
                                     event.changes.forEach { it.consume() }
                                     continue
                                 }

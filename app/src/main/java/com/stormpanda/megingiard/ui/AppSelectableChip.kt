@@ -24,10 +24,10 @@ import androidx.compose.ui.unit.dp
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared selectable chip — used across MacroPad, Timeline, StepEdit, Settings,
-// and PillMenu to ensure a single source of truth for chip appearance.
+// and QuickMenu to ensure a single source of truth for chip appearance.
 //
-// Appearance: fully-rounded pill, accent-filled when selected,
-// navPillBody at 50 % alpha when unselected, 1 dp controlOverlayBorder.
+// Appearance: fully-rounded, accent-filled when selected,
+// navQuickMenuBody at 50 % alpha when unselected, 1 dp controlOverlayBorder.
 // ─────────────────────────────────────────────────────────────────────────────
 
 private val CHIP_CORNER = 20.dp
@@ -72,7 +72,7 @@ fun AppSelectableChip(
             .clip(RoundedCornerShape(CHIP_CORNER))
             .background(
                 (if (selected) colors.accent.copy(alpha = 0.85f)
-                else colors.navPillBody.copy(alpha = 0.5f))
+                 else colors.navQuickMenuBody.copy(alpha = 0.5f))
                     .copy(alpha = (if (selected) 0.85f else 0.5f) * effectiveAlpha),
             )
             .border(

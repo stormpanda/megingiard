@@ -39,7 +39,7 @@ private data class InjectorGate(
  * and hit-test engine.
  *
  * Injector lifecycle rule:
- *   - Pill Menu open: stop mouse/gamepad injectors only.
+ *   - Quick Menu open: stop mouse/gamepad injectors only.
  *   - Blocking modal open (Editor/Ambient Settings) or system prompt in flight:
  *     stop all injectors including keyboard.
  *   - Restart as soon as all guards are clear.
@@ -52,7 +52,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
 
     val activeProfile: StateFlow<PadProfile?> = MacroPadState.activeProfile
     val activeLayout: StateFlow<PadLayout?> = MacroPadState.activeLayout
-    val isPillMenuOpen: StateFlow<Boolean> = AppStateManager.isPillMenuOpen
+    val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
 
     fun createHitTestEngine(
         buttonUnitDpToPx: (Float) -> Float,
@@ -63,14 +63,14 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
      * Starts a long-lived watcher that reacts to menu/modal/prompt flags.
      * Called once from [MacroPadScreen]'s LaunchedEffect(Unit).
      *
-     * Pill Menu open → stop mouse/gamepad immediately.
+     * Quick Menu open → stop mouse/gamepad immediately.
      * Blocking modal open or prompt in flight → stop all injectors immediately.
      * When all guards are clear → restart injectors for the active profile.
      */
     fun watchInjectorLifecycle(context: Context) {
         viewModelScope.launch {
             combine(
-                AppStateManager.isPillMenuOpen,
+                AppStateManager.isQuickMenuOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
                 AppStateManager.promptInFlight,
@@ -78,7 +78,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                 AppStateManager.isFullscreenMouseActive,
                 AppStateManager.isViewportEditActive,
             ) { array ->
-                val pillMenu = array[0]
+                val quickMenu = array[0]
                 val editor = array[1]
                 val ambient = array[2]
                 val prompt = array[3]
@@ -88,7 +88,7 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                 val stopAll = editor || ambient || prompt || kb || mouse || vp
                 InjectorGate(
                     stopKeyboard = stopAll,
-                    stopMouseAndGamepad = stopAll || pillMenu,
+                    stopMouseAndGamepad = stopAll || quickMenu,
                 )
             }.distinctUntilChanged()
             .collectLatest { gate ->
@@ -100,12 +100,12 @@ class MacroPadViewModel(application: Application) : AndroidViewModel(application
                         MouseInjector.stop()
                     }
                     gate.stopMouseAndGamepad -> {
-                        AppLog.i(TAG, "pill menu open \u2192 stopping gamepad/mouse injectors")
+                        AppLog.i(TAG, "quick menu open \u2192 stopping gamepad/mouse injectors")
                         GamepadInjector.stop()
                         MouseInjector.stop()
                     }
                     else -> {
-                        // Absorb rapid transitions (e.g. PillMenu closes then Editor opens
+                        // Absorb rapid transitions (e.g. QuickMenu closes then Editor opens
                         // in the same frame).  collectLatest will cancel this branch
                         // if any gate flips back to stop-mode within the delay window,
                         // preventing

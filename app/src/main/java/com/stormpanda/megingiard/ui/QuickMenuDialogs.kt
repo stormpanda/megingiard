@@ -36,7 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 
-private const val TAG = "PillMenuDialogs"
+private const val TAG = "QuickMenuDialogs"
 
 @Composable
 internal fun InTreeNameInputDialog(
@@ -55,7 +55,7 @@ internal fun InTreeNameInputDialog(
             existing.equals(normalizedName, ignoreCase = true)
     }
     val hasError = normalizedName.isEmpty() || isDuplicate
-    val dismissContentDescription = stringResource(R.string.pill_menu_dismiss_dialog)
+    val dismissContentDescription = stringResource(R.string.quick_menu_dismiss_dialog)
     Box(
         modifier = Modifier
             .fillMaxSize(),

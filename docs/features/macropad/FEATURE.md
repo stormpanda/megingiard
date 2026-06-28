@@ -69,7 +69,7 @@ Each button supports one of the following actions:
 - Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
 - When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
 - The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
-- During normal MacroPad use on the secondary display, the hosting Activity window is marked `FLAG_NOT_FOCUSABLE` so touch input on the MacroPad does not steal focus from a primary-display game that owns Android pointer capture. The flag is cleared while PillMenu, file picker, editor, or background settings overlays are open because those screens may need focused app input.
+- During normal MacroPad use on the secondary display, the hosting Activity window is marked `FLAG_NOT_FOCUSABLE` so touch input on the MacroPad does not steal focus from a primary-display game that owns Android pointer capture. The flag is cleared while QuickMenu, file picker, editor, or background settings overlays are open because those screens may need focused app input.
 
 ### FR-P5: Trackpoint Button
 
@@ -86,7 +86,7 @@ Each button supports one of the following actions:
 
 - The MacroPad MUST support **simultaneous presses** of multiple buttons via multi-touch.
 - Each finger is independently tracked by `PointerId`; down and up events are matched per pointer so no button is accidentally stuck in the pressed state.
-- The gesture detector scope incorporates a `try-finally` block that invokes `engine.releaseAll()` to ensure both visual highlighted states and virtual input injections are cleanly released if a gesture is cancelled by system interruptions (such as status bar pull-down, system back gestures, or the Pill Menu overlay taking focus).
+- The gesture detector scope incorporates a `try-finally` block that invokes `engine.releaseAll()` to ensure both visual highlighted states and virtual input injections are cleanly released if a gesture is cancelled by system interruptions (such as status bar pull-down, system back gestures, or the Quick Menu overlay taking focus).
 - Attempting to press a button whose required injector type is disabled MUST show a temporary inline feedback message in the MacroPad surface.
 
 ### FR-P6: No Special Permissions Required
@@ -116,11 +116,11 @@ Each button supports one of the following actions:
   - **Physical pass-through (requires Privileged Mode with gamepad recording enabled and daemon running):** Reads the physical controller's raw evdev stream via `PhysicalGamepadRecordingManager`. The daemon subscribes to the physical device node (`SUB GAMEPAD`) without an exclusive grab, so the target game continues to receive the same input simultaneously. Button presses become `GamepadButtonTap` steps, D-Pad hat changes become `DPadTap` steps, and analog stick movement becomes `JoystickPath` steps containing all accumulated `PathSample` entries. A gesture begins when the stick exceeds the per-stick dead-zone threshold (read from `MacroPadSettings.deadzoneLeft` / `deadzoneRight`) and ends when it returns inside the dead zone; any open gesture at stop time is force-closed with the last known position. All samples within a gesture are stored verbatim — no decimation is applied. **End-of-step invariant:** `JoystickPath.durationMs` is always strictly greater than the largest `PathSample.offsetMs` (the recorder uses `lastOffsetMs + 1`), and the compiler additionally skips any sample whose offset would land at or after `durationMs`. This guarantees the end-of-step neutral reset event is the last event at the step's end timestamp and the stick returns to neutral.
 - **`MacroStepEditDialog` editing of recorded steps:** `JoystickPath` and `TouchPath` are treated as recorded, non-editable step types. The dialog renders a read-only summary (e.g. stick and sample count for joysticks, or sample points count for gestures) and exposes only the timing controls (start / duration). The path sample list is preserved verbatim by the dialog's `copy()` builder; switching to a different step type is intentionally disabled.
 - The editor includes **Undo** and **Redo** as icon buttons for step mutations (add/edit/delete/recorded-touch insertion), visible only when in **List/Edit** mode.
-- Mode switching is exposed as two always-visible chips (**List/Edit / Liste/Bearbeiten** and **Timeline / Zeitleiste**) with a leading **View/Ansicht** label, using the same visual style as the Idle Pill Profile/Layout selector chips.
+- Mode switching is exposed as two always-visible chips (**List/Edit / Liste/Bearbeiten** and **Timeline / Zeitleiste**) with a leading **View/Ansicht** label, using the same visual style as the Quick Menu Bar Profile/Layout selector chips.
 - The control header (Undo/Redo and global **Shift mode** 3-chip selector) uses compact vertical spacing to preserve vertical space and is hidden in **Timeline** mode to maximize screen real estate.
 - The editor includes a global **Shift mode** selector (default: **End Δ**) whose value pre-fills the per-step selector in `MacroStepEditDialog`.
 - `MacroStepEditDialog` contains its own **Shift mode** 3-chip selector. The mode selected here is what is actually applied when saving the step.
-- In `MacroStepEditDialog`, step-type chips use the same visual style as Idle Pill selector chips and include leading icons (controller icon for Gamepad, stick icon for Joystick, and D-pad-like grid icon for D-Pad).
+- In `MacroStepEditDialog`, step-type chips use the same visual style as Quick Menu Bar selector chips and include leading icons (controller icon for Gamepad, stick icon for Joystick, and D-pad-like grid icon for D-Pad).
 - Shift behavior (implemented in `applyShiftSubsequent()` in `:core`, governed by `ShiftMode`):
   - **`ShiftMode.NONE`** — only the edited step is replaced; no other step moves.
   - **`ShiftMode.START_DELTA`** — steps whose `startTimeMs ≥ oldStep.endTimeMs` are shifted by `newStart − oldStart`. A pure duration change produces a zero start-delta, so nothing else moves.
@@ -151,10 +151,10 @@ Each button supports one of the following actions:
 
 - Each profile MUST support **multiple named layouts** (`PadLayout`). Each layout has its own button list, enabled/disabled state, and background display settings.
 - Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
-- Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable **layout bar** with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
-- Each layout chip has an **enable/disable toggle** and, when more than one layout exists, a delete action. Disabled layouts are skipped in the Pill Menu layout list in use mode.
+- Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable layout bar with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
+- Each layout chip has an **enable/disable toggle** and, when more than one layout exists, a delete action. Disabled layouts are skipped in the Quick Menu layout list in use mode.
 - **At least one layout must remain enabled** — disabling the last enabled layout is prevented.
-- A new layout can be created as **blank** or from a **template**. The unified `NewLayoutOverlay` (used in both the MacroPad Editor and PillMenu) lists all layouts from all profiles; selecting one deep-copies its settings, buttons, and cutouts with new UUIDs. The template list is **scrollable with a maximum height limit** and includes small padding above and below for consistent visual spacing.
+- A new layout can be created as **blank** or from a **template**. The unified `NewLayoutOverlay` (used in both the MacroPad Editor and QuickMenu) lists all layouts from all profiles; selecting one deep-copies its settings, buttons, and cutouts with new UUIDs. The template list is **scrollable with a maximum height limit** and includes small padding above and below for consistent visual spacing.
 - Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all enabled layouts** in the profile (via `withSyncedDeviceFlags()`).
 - Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). If a stored `PadProfile` does not contain a `layouts` list, a default layout named "Layout 1" is created on load, populated with the profile's top-level `buttons` list.
 
@@ -164,7 +164,7 @@ Each button supports one of the following actions:
 - Enabled via a **toggle** in MacroPad tool settings (default: off).
 - When Background Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
 - When background display is enabled and capturing is active, the `MirrorPresentation` renders `BackgroundMacroPadOverlay` instead of `MirrorScreen`. On the primary screen, `MainAppScreen` shows an empty black placeholder instead of `MacroPadScreen` (the pad is rendered on the Presentation).
-- In background display mode, the **Idle Pill** MUST remain visible on the secondary display, and edge swipes from the configured pill edge MUST open/close the Pill Menu so users can always access navigation/actions even if no mirror-control button exists in the current layout.
+- In background display mode, the **Quick Menu Bar** MUST remain visible on the secondary display, and edge swipes from the configured bar edge MUST open/close the Quick Menu so users can always access navigation/actions even if no mirror-control button exists in the current layout.
 - **Per-layout background settings:** Dimming parameters are stored **per layout** in `PadLayout` (not globally).
 - **Background Settings Overlay** (`BackgroundSettingsOverlay`): Configures the active layout's dimming parameters, edge blending, layout-wide touch tracking, and per-cutout smoothing settings.
 - **Slider Preview Mode:** Live-preview dimming value on the secondary display.
@@ -408,7 +408,7 @@ PadProfile
         PadLayout
         ├── id: String          (UUID)
         ├── name: String
-        ├── enabled: Boolean    (default true — disabled layouts hidden in Pill Menu)
+        ├── enabled: Boolean    (default true — disabled layouts hidden in Quick Menu)
         ├── buttons: List<PadButton>
         ├── ambientDim: Float              (0–0.9, default 0)
         ├── ambientVignetteEnabled: Boolean (default false)
@@ -558,7 +558,7 @@ DisposableEffect(Unit) {
 }
 ```
 
-The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. The same stop/restart pattern is also used by `PillMenu` and `BackgroundSettingsOverlay` — injectors are stopped while these modals are open so the Android soft IME can appear for text input fields. `BackgroundMacroPadOverlay` additionally observes `isPillMenuOpen` and stops/restarts injectors when the PillMenu opens from inside the Presentation window.
+The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. The same stop/restart pattern is also used by `QuickMenu` and `BackgroundSettingsOverlay` — injectors are stopped while these modals are open so the Android soft IME can appear for text input fields. `BackgroundMacroPadOverlay` additionally observes `isQuickMenuOpen` and stops/restarts injectors when the QuickMenu opens from inside the Presentation window.
 
 ### Hit Testing
 

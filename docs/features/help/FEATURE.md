@@ -89,7 +89,7 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 | `MacroTimelineEditor.kt` | `MacroTimelineHelpModal` |
 | `BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` |
 | `GlobalSettingsScreen.kt` | `GlobalSettingsHelpModal` |
-| `PillMenu.kt` | `PillMenuHelpModal` |
+| `QuickMenu.kt` | `QuickMenuHelpModal` |
 | `CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` |
 
 ### State management
@@ -104,11 +104,11 @@ To onboard new users, the app chains two introductory popups upon the first laun
    - A `WelcomeTutorialDialog` is shown on first launch to introduce Megingiard\'s features and highlight the in-app help (?) buttons.
    - It only contains a single "Got it" button, which dismisses the modal and flags it as completed (writing `showWelcomeTutorial = false` to Settings) so that it is never shown again.
    
-2. **Pill Swipe Onboarding Dialog:**
+2. **Quick Menu Swipe Onboarding Dialog:**
    - Appears immediately after the welcome modal is closed for the first time.
-   - Explains how to swipe the edge-anchored pill indicator to open the Quick Menu (Pill Menu).
+   - Explains how to swipe the edge-anchored quick menu bar indicator to open the Quick Menu.
    - Renders a styled modal containing a "Got it" button that marks the tutorial as completed.
-   - Displays an animated bouncing arrow pointing directly at the pill's edge location (aligned top or bottom center depending on the user's overlay placement setting).
+   - Displays an animated bouncing arrow pointing directly at the quick menu bar's edge location (aligned top or bottom center depending on the user's overlay placement setting).
 
 Both tutorial flags can be reset simultaneously under **Global Settings** -> **Data** -> **Reset tutorials** to show these onboarding experiences again.
 
@@ -137,14 +137,14 @@ help_close_cd  — content description for the Close button
 |---|---|
 | `ui/HelpModal.kt` | Shared `HelpModal`, `HelpIconButton`, `HelpEntry`, `HelpSection`, `HelpIntro` composables |
 | `ui/WelcomeTutorialDialog.kt` | First-boot welcome onboarding dialog |
-| `ui/PillTutorialDialog.kt` | Swipe menu affordance onboarding dialog |
+| `ui/QuickMenuTutorialDialog.kt` | Swipe menu affordance onboarding dialog |
 | `ui/MacroEditorTutorialDialog.kt` | Macro editor onboarding tutorial dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
 | `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |
 | `macropad/MacroTimelineEditor.kt` | `MacroTimelineHelpModal` content + icon wiring |
 | `macropad/BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` content + icon wiring |
 | `settings/GlobalSettingsScreen.kt` | `GlobalSettingsHelpModal` content + icon wiring |
-| `ui/PillMenu.kt` | `PillMenuHelpModal` content + icon wiring |
+| `ui/QuickMenu.kt` | `QuickMenuHelpModal` content + icon wiring |
 | `mirror/CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` content + icon wiring |
 | `res/values/strings.xml` | English help and onboarding strings (prefix `help_` / `welcome_`) |
 | `res/values-de/strings.xml` | German help and onboarding strings (prefix `help_` / `welcome_`) |

@@ -88,7 +88,7 @@ internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 /**
  * Full-screen MacroPad layout editor.
  *
- * Opened from the Pill Menu. Allows the user to:
+ * Opened from the Quick Menu. Allows the user to:
  * - Create, rename, and delete profiles
  * - Add, configure, reposition, and delete buttons
  * - Toggle the trackpoint area
@@ -295,7 +295,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
         // New layout (name input + template selection)
         if (showNewLayoutDialog && profile != null) {
-            val defaultLayoutName = stringResource(R.string.pill_menu_new_layout)
+            val defaultLayoutName = stringResource(R.string.quick_menu_new_layout)
             NewLayoutOverlay(
                 profiles    = profiles,
                 existingLayoutNames = profile.layouts.map { it.name },
@@ -694,7 +694,7 @@ private fun EditorBody(
         // 1. Profile section header
         item(key = "section_profile") {
             EditorSectionHeader(
-                textRes = R.string.pill_menu_profile_label,
+                textRes = R.string.quick_menu_profile_label,
                 actionIcon = Icons.Rounded.Add,
                 actionContentDescription = stringResource(R.string.settings_macropad_new_profile),
                 onActionClick = onNewProfile

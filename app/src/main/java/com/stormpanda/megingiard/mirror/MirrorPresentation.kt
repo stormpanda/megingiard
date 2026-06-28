@@ -52,7 +52,7 @@ import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
-import com.stormpanda.megingiard.ui.IdlePill
+import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -114,7 +114,7 @@ import com.stormpanda.megingiard.input.TouchInjector
 
 private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
-private val MP_SWIPE_PILL_ZONE_WIDTH = 120.dp
+private val MP_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
 
@@ -356,7 +356,7 @@ class MirrorPresentation(
                         val density = LocalDensity.current
                         val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
                         val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
-                        val pillZoneWidthPx = with(density) { MP_SWIPE_PILL_ZONE_WIDTH.toPx() }
+                        val quickMenuBarZoneWidthPx = with(density) { MP_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
                         val projectionController = remember(edgeZonePx, overlayAtBottom) {
                             TouchProjectionController(edgeZonePx, overlayAtBottom)
                         }
@@ -396,9 +396,9 @@ class MirrorPresentation(
                                 // dismiss-swipe works even when FullscreenMouseOverlay or
                                 // KeyboardScreen is the hit-test target.
                                 // Only active while a fullscreen overlay is shown.
-                                .pointerInput(isFullscreenMouseActive, isFullscreenKeyboardActive, overlayAtBottom, pillZoneWidthPx) {
+                                .pointerInput(isFullscreenMouseActive, isFullscreenKeyboardActive, overlayAtBottom, quickMenuBarZoneWidthPx) {
                                     if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
-                                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, pillZoneWidthPx)
+                                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
                                     awaitPointerEventScope {
                                         while (true) {
                                             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -509,10 +509,10 @@ class MirrorPresentation(
 
 
                             // Layer 2: BackgroundMacroPadOverlay — always rendered when active
-                            // so IdlePill remains visible in all modes. Internally dims
+                             // so QuickMenuBar remains visible in all modes. Internally dims
                             // buttons during viewport edit.
                             if (capturing) {
-                                BackgroundMacroPadOverlay(showIdlePill = false)
+                                BackgroundMacroPadOverlay(showQuickMenuBar = false)
                             }
 
                             // Layer 3: Viewport edit gesture overlay — transparent fullscreen
@@ -546,13 +546,13 @@ class MirrorPresentation(
                                 )
                             }
 
-                            // Layer 6: IdlePill — always the topmost layer so the swipe
-                            // affordance and PillMenu are never covered by fullscreen
+                            // Layer 6: QuickMenuBar — always the topmost layer so the swipe
+                            // affordance and QuickMenu are never covered by fullscreen
                             // overlays (keyboard / mouse). Suppressed inside
-                            // BackgroundMacroPadOverlay (showIdlePill = false) to ensure
-                            // only one IdlePill instance exists at a time.
+                            // BackgroundMacroPadOverlay (showQuickMenuBar = false) to ensure
+                            // only one QuickMenuBar instance exists at a time.
                             if (capturing) {
-                                IdlePill()
+                                QuickMenuBar()
                             }
 
                             ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
@@ -575,16 +575,16 @@ class MirrorPresentation(
         scope.launch {
             combine(
                 AppStateManager.isFullscreenKeyboardActive,
-                AppStateManager.isPillMenuOpen,
+                AppStateManager.isQuickMenuOpen,
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
-            ) { fullscreenKeyboard, pillMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
+            ) { fullscreenKeyboard, quickMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = true,
                         isFullscreenKeyboardActive = fullscreenKeyboard,
-                        isPillMenuOpen = pillMenuOpen,
+                        isQuickMenuOpen = quickMenuOpen,
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
@@ -624,7 +624,7 @@ class MirrorPresentation(
                 // can interact with them.  Without this the Presentation window
                 // (TYPE_PRIVATE_PRESENTATION), which sits above regular Activities, would
                 // block input entirely.
-                // NOTE: isPillMenuOpen intentionally excluded — PillMenu renders inside
+                // NOTE: isQuickMenuOpen intentionally excluded — QuickMenu renders inside
                 // the Presentation's own ComposeView; hiding would pause mirroring.
                 //
                 // ambientPreviewActive: during preview mode the Presentation stays visible

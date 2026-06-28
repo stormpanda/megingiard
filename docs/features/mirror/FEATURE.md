@@ -19,7 +19,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M2: Cutout Layout Editor (Placement & Sizing)
 
-- Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the Pill Menu control card. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled.
+- Sizing and placement of cutouts MUST only be active when the user explicitly enters **Screen Mirroring edit mode** (`isViewportEditActive = true`) via the Quick Menu control card. Outside of this mode, cutout configurations are locked and interactive layout adjustments are disabled.
 - While Screen Mirroring edit mode is active, users MUST be able to arrange cutout destination bounds on the secondary display:
   - **Selection**: Tapping a cutout selects it.
   - **Moving**: Dragging a cutout box moves it across the secondary display.
@@ -29,27 +29,27 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M3: Freeze Frame
 
-- A **Freeze** button MUST be available in the Mirror Control Card of the Pill Menu.
+- A **Freeze** button MUST be available in the Mirror Control Card of the Quick Menu.
 - Activating Freeze MUST capture the current live frame as a high-resolution static image ("frozen frame").
 - The frozen frame MUST remain fully interactive: entering Screen Mirroring edit mode allows moving and resizing the cutouts on the frozen frame identically to the live mode.
 - **Unfreezing** resumes the live mirror from the current live state.
 - The frozen frame serves as a reference (e.g. for in-game puzzles or map details) without consuming resources on the live stream.
 
-### FR-M4: Controls Access & Pill Menu
+### FR-M4: Controls Access & Quick Menu
 
-- All mirror controls (Play/Stop, Freeze/Unfreeze, and Screen Mirroring edit button) MUST reside inside the **Mirror Control Card** at the top of the **Pill Menu** overlay, while **Touch Projection** is configured on a per-cutout level in the background settings overlay.
-- An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on pill position) over the idle pill indicator MUST show the **Pill Menu** overlay panel.
+- All mirror controls (Play/Stop, Freeze/Unfreeze, and Screen Mirroring edit button) MUST reside inside the **Mirror Control Card** at the top of the **Quick Menu** overlay, while **Touch Projection** is configured on a per-cutout level in the background settings overlay.
+- An **edge swipe** (swipe up from bottom edge or swipe down from top edge, depending on quick menu bar position) over the quick menu bar indicator MUST show the **Quick Menu** overlay panel.
 - The **Mirror Control Card** hosts the Play/Stop and Freeze/Unfreeze icon buttons on the right, and the **Screen Mirroring** action button (with an Edit icon) on the left.
 - Clicking the **Screen Mirroring** button enters the Screen Mirroring edit mode (cutout layout editor). The layout editor toolbar contains a settings cogwheel button to open the background settings overlay (`BackgroundSettingsOverlay`).
-- There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Pill Menu overlay until it is manually dismissed by tapping the scrim or close elements.
-- Mirror control icon buttons in the Pill Menu MUST use ergonomic touch targets (minimum 48 dp).
+- There is **no tap-anywhere overlay** on the mirror surface itself, and **no auto-hide timers** exist for these controls. Controls remain accessible inside the Quick Menu overlay until it is manually dismissed by tapping the scrim or close elements.
+- Mirror control icon buttons in the Quick Menu MUST use ergonomic touch targets (minimum 48 dp).
 - Mirror control labels MUST be shown below icon buttons to improve discoverability.
 
 ### FR-M5: Stop Mirroring
 
-- A **Stop** button MUST be available inside the Mirror Control Card of the Pill Menu.
+- A **Stop** button MUST be available inside the Mirror Control Card of the Quick Menu.
 - Stopping MUST release the `MediaProjection` (or privileged binder session) and cease all capture activity.
-- After stopping, the Pill Menu control card updates to show a "Play" button to re-initiate capture with a new consent/direct flow.
+- After stopping, the Quick Menu control card updates to show a "Play" button to re-initiate capture with a new consent/direct flow.
 
 ### FR-M6: View Lock (Legacy background-only state)
 
@@ -61,7 +61,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Touch Projection is configured on a per-cutout level in the layout settings overlay.
 - When active for any cutout, touch events inside that cutout on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
 - The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, check if touch projection is enabled for that cutout, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them.
-- Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Pill Menu.
+- Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Quick Menu.
 - When the user's finger moves outside the visible content area of the matched cutout, an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
 - Enabling Touch Projection on any cutout MUST automatically activate View Lock internally (preventing manual viewport zoom/pan gestures in background logic while maintaining support for follow-touch tracking).
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
@@ -169,7 +169,7 @@ Primary Display
 
 - **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the `SurfaceView` — bypassing CPU composition entirely (the Android Hardware Composer routes the signal via DRM kernel buffers).
 - **`MirrorPresentation`** is an `android.app.Presentation` instance anchored to the secondary physical display (`displayId != DEFAULT_DISPLAY`, auto-discovered via `DisplayManager`). It contains both the `SurfaceView` (hardware buffer recipient) and a `ComposeView` (UI overlay with `MirrorScreen`).
-- **Presentation focus policy:** while the Presentation hosts the ambient MacroPad and no PillMenu/editor/settings/file-picker overlay is open, its window is marked `FLAG_NOT_FOCUSABLE`. This allows the secondary display to keep receiving touch input without stealing focus from a primary-display game that owns Android pointer capture.
+- **Presentation focus policy:** while the Presentation hosts the ambient MacroPad and no QuickMenu/editor/settings/file-picker overlay is open, its window is marked `FLAG_NOT_FOCUSABLE`. This allows the secondary display to keep receiving touch input without stealing focus from a primary-display game that owns Android pointer capture.
 - **`SurfaceView.setZOrderMediaOverlay(true)`** is critical: without it, the hardware buffer renders _behind_ the window background, producing a black screen even though GPU rendering succeeds.
 
 ### Architecture: Privileged Capture Pipeline (FR-M9)
