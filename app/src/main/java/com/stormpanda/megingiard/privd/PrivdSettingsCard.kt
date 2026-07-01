@@ -146,24 +146,6 @@ internal fun PrivdSettingsCard(
             color = colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodySmall,
         )
-        val errorRes = when (lastError) {
-            PrivdError.DAEMON_UNREACHABLE     -> R.string.privd_error_daemon_unreachable
-            PrivdError.PAIRING_FAILED         -> R.string.privd_error_pairing_failed
-            PrivdError.ADB_DISCOVERY_FAILED   -> R.string.privd_error_adb_discovery_failed
-            PrivdError.ADB_CONNECT_FAILED     -> R.string.privd_error_adb_connect_failed
-            PrivdError.BOOTSTRAP_PUSH_FAILED       -> R.string.privd_error_bootstrap_push_failed
-            PrivdError.BOOTSTRAP_SPAWN_FAILED      -> R.string.privd_error_bootstrap_spawn_failed
-            PrivdError.BOOTSTRAP_PROVISION_FAILED  -> R.string.privd_error_bootstrap_provision_failed
-            null                                   -> null
-        }
-        if (state == PrivdState.FAILED && errorRes != null) {
-            Spacer(Modifier.height(PR_BUTTON_GAP))
-            Text(
-                text = stringResource(errorRes),
-                color = colors.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
 
         Spacer(Modifier.height(PR_BUTTON_GAP))
 
@@ -217,9 +199,24 @@ internal fun PrivdSettingsCard(
                 style = MaterialTheme.typography.bodySmall,
             )
         } else {
+            val specificErrorRes = if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
+                when (lastError) {
+                    PrivdError.PAIRING_FAILED         -> R.string.privd_error_pairing_failed
+                    PrivdError.ADB_DISCOVERY_FAILED   -> R.string.privd_error_adb_discovery_failed
+                    PrivdError.ADB_CONNECT_FAILED     -> R.string.privd_error_adb_connect_failed
+                    PrivdError.BOOTSTRAP_PUSH_FAILED       -> R.string.privd_error_bootstrap_push_failed
+                    PrivdError.BOOTSTRAP_SPAWN_FAILED      -> R.string.privd_error_bootstrap_spawn_failed
+                    PrivdError.BOOTSTRAP_PROVISION_FAILED  -> R.string.privd_error_bootstrap_provision_failed
+                    else                                   -> null
+                }
+            } else {
+                null
+            }
+
             val infoStringRes = when {
                 state == PrivdState.RUNNING -> R.string.privd_info_running
                 state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
+                specificErrorRes != null -> specificErrorRes
                 hasCredentials == false -> R.string.privd_info_no_credentials
                 wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
                 wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
@@ -228,6 +225,7 @@ internal fun PrivdSettingsCard(
             infoStringRes?.let { resId ->
                 val textColor = when {
                     state == PrivdState.RUNNING -> colors.actionColorSystem
+                    specificErrorRes != null -> colors.error
                     hasCredentials == false -> colors.onSurfaceSecondary
                     wirelessDebuggingActive == false -> colors.error
                     else -> colors.actionColorSystem
