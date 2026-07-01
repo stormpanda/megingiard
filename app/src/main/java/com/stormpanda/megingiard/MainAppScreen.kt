@@ -104,31 +104,12 @@ fun MainAppScreen() {
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
-    val showAdbPrompt by MacroPadSettings.privdShowAdbPrompt.collectAsState()
-    val privdState by PrivdManager.state.collectAsState()
-    var hasAdbCredentials by remember { mutableStateOf<Boolean?>(null) }
-    var userSkippedPrompt by remember { mutableStateOf(false) }
-    var showPromptDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(privdState, showAdbPrompt, hasAdbCredentials, userSkippedPrompt) {
-        if (privdState == PrivdState.FAILED &&
-            showAdbPrompt &&
-            hasAdbCredentials == true &&
-            !userSkippedPrompt
-        ) {
-            showPromptDialog = true
-        }
-    }
+    val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
 
     LaunchedEffect(isBackgroundSettingsActive) {
         if (isBackgroundSettingsActive) {
-            userSkippedPrompt = true
-            showPromptDialog = false
+            AppStateManager.setPrivdPromptActive(false)
         }
-    }
-
-    LaunchedEffect(showPromptDialog) {
-        AppStateManager.setPrivdPromptActive(showPromptDialog)
     }
 
 
@@ -152,13 +133,7 @@ fun MainAppScreen() {
     val quickMenuBarZoneWidthPx = with(density) { MAS_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
     val context = LocalContext.current
-    LaunchedEffect(context) {
-        withContext(Dispatchers.IO) {
-            val keyFile = File(context.noBackupFilesDir, "privd_adb_key.bin")
-            val certFile = File(context.noBackupFilesDir, "privd_adb_cert.bin")
-            hasAdbCredentials = keyFile.exists() && certFile.exists()
-        }
-    }
+
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
@@ -327,11 +302,10 @@ fun MainAppScreen() {
                     }
                 },
                 onSkip = {
-                    userSkippedPrompt = true
-                    showPromptDialog = false
+                    AppStateManager.setPrivdPromptActive(false)
                 },
                 onDone = {
-                    showPromptDialog = false
+                    AppStateManager.setPrivdPromptActive(false)
                 }
             )
         }

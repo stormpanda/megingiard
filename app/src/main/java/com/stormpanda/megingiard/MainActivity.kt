@@ -370,6 +370,14 @@ class MainActivity : ComponentActivity() {
                         withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
                     }
                 }
+                if (state == PrivdState.FAILED) {
+                    val showPromptPref = MacroPadSettings.privdShowAdbPrompt.value
+                    val credentialsExist = File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
+                        File(noBackupFilesDir, "privd_adb_cert.bin").exists()
+                    if (showPromptPref && credentialsExist && !AppStateManager.isBackgroundSettingsActive.value) {
+                        AppStateManager.setPrivdPromptActive(true)
+                    }
+                }
             }
         }
         lifecycleScope.launch {
