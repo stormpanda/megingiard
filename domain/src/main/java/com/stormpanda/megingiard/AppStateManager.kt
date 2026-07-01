@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
@@ -183,13 +186,30 @@ object AppStateManager {
     private val _isFullscreenMouseActive = MutableStateFlow(false)
     val isFullscreenMouseActive: StateFlow<Boolean> = _isFullscreenMouseActive.asStateFlow()
 
-    private val _isPrivdPromptActive = MutableStateFlow(false)
-    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptActive.asStateFlow()
+    private val _hasAdbCredentials = MutableStateFlow(false)
+    val hasAdbCredentials: StateFlow<Boolean> = _hasAdbCredentials.asStateFlow()
 
-    fun setPrivdPromptActive(active: Boolean) {
-        AppLog.d(TAG, "setPrivdPromptActive($active)")
-        _isPrivdPromptActive.value = active
+    fun setHasAdbCredentials(has: Boolean) {
+        AppLog.d(TAG, "setHasAdbCredentials($has)")
+        _hasAdbCredentials.value = has
     }
+
+    private val _isPrivdPromptDismissed = MutableStateFlow(false)
+    val isPrivdPromptDismissed: StateFlow<Boolean> = _isPrivdPromptDismissed.asStateFlow()
+
+    fun setPrivdPromptDismissed(dismissed: Boolean) {
+        AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
+        _isPrivdPromptDismissed.value = dismissed
+    }
+
+    val isPrivdPromptActive: StateFlow<Boolean> = combine(
+        PrivdManager.state,
+        MacroPadSettings.privdShowAdbPrompt,
+        _hasAdbCredentials,
+        _isPrivdPromptDismissed,
+    ) { state, showPromptPref, hasCreds, dismissed ->
+        state == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
+    }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
@@ -298,6 +318,7 @@ object AppStateManager {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
+            _isPrivdPromptDismissed.value = true
         } else {
             _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
         }

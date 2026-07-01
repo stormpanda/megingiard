@@ -266,6 +266,10 @@ class MainActivity : ComponentActivity() {
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
 
+        val hasCreds = File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
+            File(noBackupFilesDir, "privd_adb_cert.bin").exists()
+        AppStateManager.setHasAdbCredentials(hasCreds)
+
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
 
@@ -368,14 +372,6 @@ class MainActivity : ComponentActivity() {
                         triggered = true
                         AppLog.i(TAG, "Auto-connecting Privileged Mode")
                         withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
-                    }
-                }
-                if (state == PrivdState.FAILED) {
-                    val showPromptPref = MacroPadSettings.privdShowAdbPrompt.value
-                    val credentialsExist = File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
-                        File(noBackupFilesDir, "privd_adb_cert.bin").exists()
-                    if (showPromptPref && credentialsExist && !AppStateManager.isBackgroundSettingsActive.value) {
-                        AppStateManager.setPrivdPromptActive(true)
                     }
                 }
             }
