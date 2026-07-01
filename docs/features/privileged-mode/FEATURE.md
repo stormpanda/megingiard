@@ -50,14 +50,15 @@ every device since Android 11 (API 30).
   pairing dialog → pushing and starting the daemon binary → verifying the
   connection. No external computer or USB cable is required.
 
-### FR-PV6: Auto-Connect On App Start
-
 - After a successful first-time setup, the app MUST silently re-open the
   daemon socket on every cold start so users do not need to re-run the
-  wizard after each reboot.
-- The auto-connect toggle MUST be exposed as a Switch row in the settings
-  card and MUST be settable manually as well as automatically after a
-  successful bootstrap.
+  wizard after each reboot. Auto-connect is unconditionally active.
+
+### FR-PV7: Reconnection Prompt Modal on App Start
+
+- If Privileged Mode has been previously set up (saved ADB credentials exist) but the connection fails on app start (e.g. because Wireless Debugging was disabled after reboot), the app shows a modal dialog prompting the user to re-enable Privileged Mode.
+- The modal uses the same wording as the global settings "call to action" texts with the same color coding, and has a Connect button to retry and a Skip button to dismiss.
+- A toggle in Global Settings allows users to enable/disable showing this prompt dialog on app start (default: true/enabled).
 
 ### FR-PV5: No Always-Connected Requirement
 
@@ -218,6 +219,16 @@ The results are presented to the user as clear, localized guidance messages in t
 - **Wireless Debugging Disabled:** "Wireless Debugging is inactive. Please enable Wireless Debugging in Developer Options."
 - **Wireless Debugging Active, Disconnected:** "Wireless Debugging is active. Tap Connect to start Privileged Mode."
 - **Connecting:** "Connecting to daemon..."
+
+### Reconnection Prompt Dialog
+
+If the auto-connection sequence fails on app start (state becomes `FAILED`) but saved credentials exist (`hasCredentials == true`), a reconnection prompt dialog is shown to the user on startup (provided the "Show reconnect prompt" setting is enabled). 
+
+This dialog uses the same wording and colors as the settings status messages. It has two actions:
+1. **Connect:** Triggers a background retry connect sequence.
+2. **Skip:** Dismisses the dialog for this app run session.
+
+Opening the Global Settings screen also automatically suppresses/skips the dialog to avoid overlapping layouts.
 
 ### Security Model
 

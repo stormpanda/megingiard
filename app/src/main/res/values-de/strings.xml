@@ -297,8 +297,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
     <string name="privd_ping_fail">Keine Antwort vom Daemon. Die Verbindung ist möglicherweise abgebrochen.</string>
 
-    <string name="privd_auto_connect">Beim App-Start automatisch verbinden</string>
-    <string name="privd_auto_connect_desc">Wenn aktiviert, öffnet Megingiard den Daemon-Socket beim Start lautlos erneut. Wird nach erfolgreicher Erst-Einrichtung automatisch gesetzt.</string>
+    <string name="privd_show_reconnect_prompt">Wiederverbindungshinweis anzeigen</string>
+    <string name="privd_show_reconnect_prompt_desc">Zeigt beim App-Start einen Dialog an, wenn die Verbindung zum privilegierten Helfer-Daemon fehlschlägt.</string>
+    <string name="privd_reconnect_prompt_title">Privilegierten Modus reaktivieren</string>
+    <string name="privd_reconnect_prompt_skip">Überspringen</string>
 
 
 

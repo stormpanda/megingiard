@@ -344,8 +344,10 @@ Open Settings to create a layout.</string>
     <string name="privd_ping_ok">Daemon responded — connection is healthy.</string>
     <string name="privd_ping_fail">No response from daemon. The connection may be stale.</string>
 
-    <string name="privd_auto_connect">Auto-connect on app start</string>
-    <string name="privd_auto_connect_desc">When enabled, Megingiard silently re-opens the daemon socket on launch. Set automatically after a successful first-time setup.</string>
+    <string name="privd_show_reconnect_prompt">Show reconnect prompt</string>
+    <string name="privd_show_reconnect_prompt_desc">Show a dialog on app start if the connection to the privileged helper daemon fails.</string>
+    <string name="privd_reconnect_prompt_title">Re-enable Privileged Mode</string>
+    <string name="privd_reconnect_prompt_skip">Skip</string>
 
 
 

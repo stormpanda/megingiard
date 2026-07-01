@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.settings.RememberSettingRow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -91,6 +92,7 @@ internal fun PrivdSettingsCard(
 
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
+    val showAdbPrompt by viewModel.privdShowAdbPrompt.collectAsState()
     val colors = LocalAppColors.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -240,6 +242,14 @@ internal fun PrivdSettingsCard(
 
 
 
+
+        AppDivider()
+        RememberSettingRow(
+            label = stringResource(R.string.privd_show_reconnect_prompt),
+            description = stringResource(R.string.privd_show_reconnect_prompt_desc),
+            checked = showAdbPrompt,
+            onCheckedChange = { viewModel.setPrivdShowAdbPrompt(it) },
+        )
 
         // ── Dead-zone configuration row ──────────────────────────────────────
         AppDivider()

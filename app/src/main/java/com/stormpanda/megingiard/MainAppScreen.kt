@@ -72,6 +72,13 @@ import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
+import java.io.File
+import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
+import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.settings.MacroPadSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainAppScreen"
@@ -97,6 +104,18 @@ fun MainAppScreen() {
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
+    val showAdbPrompt by MacroPadSettings.privdShowAdbPrompt.collectAsState()
+    val privdState by PrivdManager.state.collectAsState()
+    var hasAdbCredentials by remember { mutableStateOf<Boolean?>(null) }
+    var userSkippedPrompt by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isBackgroundSettingsActive) {
+        if (isBackgroundSettingsActive) {
+            userSkippedPrompt = true
+        }
+    }
+
+
     val showQuickMenuTutorial by SettingsManager.showQuickMenuTutorial.collectAsState()
     var showQuickMenuLocal by remember { mutableStateOf(true) }
 
@@ -117,6 +136,13 @@ fun MainAppScreen() {
     val quickMenuBarZoneWidthPx = with(density) { MAS_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
     val context = LocalContext.current
+    LaunchedEffect(context) {
+        withContext(Dispatchers.IO) {
+            val keyFile = File(context.noBackupFilesDir, "privd_adb_key.bin")
+            val certFile = File(context.noBackupFilesDir, "privd_adb_cert.bin")
+            hasAdbCredentials = keyFile.exists() && certFile.exists()
+        }
+    }
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
@@ -276,6 +302,24 @@ fun MainAppScreen() {
                 }
             )
         }
+        
+        if (showAdbPrompt &&
+            hasAdbCredentials == true &&
+            privdState == PrivdState.FAILED &&
+            !userSkippedPrompt
+        ) {
+            PrivdReconnectPromptDialog(
+                onConnect = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        PrivdManager.connect(context)
+                    }
+                },
+                onSkip = {
+                    userSkippedPrompt = true
+                }
+            )
+        }
+
 
         importError?.let { error ->
             AlertDialog(

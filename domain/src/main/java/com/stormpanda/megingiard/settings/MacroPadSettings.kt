@@ -60,6 +60,9 @@ object MacroPadSettings {
     private val _gamepadSwapFaceButtons = MutableStateFlow(false)
     val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
 
+    private val _privdShowAdbPrompt = MutableStateFlow(true)
+    /** Whether to show a modal prompt on app start if reconnection to the daemon fails. */
+    val privdShowAdbPrompt: StateFlow<Boolean> = _privdShowAdbPrompt.asStateFlow()
 
 
     private val _deadzoneLeft  = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
@@ -87,7 +90,7 @@ object MacroPadSettings {
         _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
         _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
-
+        _privdShowAdbPrompt.value = prefs[KEY_PRIVD_SHOW_ADB_PROMPT] ?: true
         _deadzoneLeft.value  = prefs[KEY_PRIVD_DEADZONE_LEFT]  ?: PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
 
@@ -127,6 +130,12 @@ object MacroPadSettings {
         AppLog.d(TAG, "setGamepadSwapFaceButtons($value)")
         _gamepadSwapFaceButtons.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] = value } }
+    }
+
+    fun setPrivdShowAdbPrompt(value: Boolean) {
+        AppLog.d(TAG, "setPrivdShowAdbPrompt($value)")
+        _privdShowAdbPrompt.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_SHOW_ADB_PROMPT] = value } }
     }
 
 
