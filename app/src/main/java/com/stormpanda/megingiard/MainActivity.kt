@@ -374,6 +374,14 @@ class MainActivity : ComponentActivity() {
                         withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
                     }
                 }
+                if (state == PrivdState.FAILED) {
+                    val showPromptPref = MacroPadSettings.privdShowAdbPrompt.value
+                    val credentialsExist = AppStateManager.hasAdbCredentials.value
+                    val dismissed = AppStateManager.isPrivdPromptDismissed.value
+                    if (showPromptPref && credentialsExist && !dismissed && !AppStateManager.isBackgroundSettingsActive.value) {
+                        AppStateManager.setPrivdPromptShowing(true)
+                    }
+                }
             }
         }
         lifecycleScope.launch {
@@ -453,8 +461,9 @@ class MainActivity : ComponentActivity() {
                     MacroPadSettings.privdShowAdbPrompt,
                     AppStateManager.hasAdbCredentials,
                     AppStateManager.isPrivdPromptDismissed,
-                ) { privdState, showPromptPref, hasCreds, dismissed ->
-                    val promptActive = privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
+                    AppStateManager.isPrivdPromptShowing,
+                ) { privdState, showPromptPref, hasCreds, dismissed, promptShowing ->
+                    val promptActive = promptShowing || (privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed)
                     privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
                         privdState == PrivdState.OFF ||

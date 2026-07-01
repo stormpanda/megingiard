@@ -202,14 +202,15 @@ object AppStateManager {
         _isPrivdPromptDismissed.value = dismissed
     }
 
-    val isPrivdPromptActive: StateFlow<Boolean> = combine(
-        PrivdManager.state,
-        MacroPadSettings.privdShowAdbPrompt,
-        _hasAdbCredentials,
-        _isPrivdPromptDismissed,
-    ) { state, showPromptPref, hasCreds, dismissed ->
-        state == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
-    }.stateIn(scope, SharingStarted.Eagerly, false)
+    private val _isPrivdPromptShowing = MutableStateFlow(false)
+    val isPrivdPromptShowing: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
+
+    fun setPrivdPromptShowing(showing: Boolean) {
+        AppLog.d(TAG, "setPrivdPromptShowing($showing)")
+        _isPrivdPromptShowing.value = showing
+    }
+
+    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
 
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
@@ -319,6 +320,7 @@ object AppStateManager {
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
             _isPrivdPromptDismissed.value = true
+            _isPrivdPromptShowing.value = false
         } else {
             _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
         }

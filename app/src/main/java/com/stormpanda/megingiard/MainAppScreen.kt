@@ -108,6 +108,7 @@ fun MainAppScreen() {
 
     LaunchedEffect(isBackgroundSettingsActive) {
         if (isBackgroundSettingsActive) {
+            AppStateManager.setPrivdPromptShowing(false)
             AppStateManager.setPrivdPromptDismissed(true)
         }
     }
@@ -302,9 +303,11 @@ fun MainAppScreen() {
                     }
                 },
                 onSkip = {
+                    AppStateManager.setPrivdPromptShowing(false)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
                 onDone = {
+                    AppStateManager.setPrivdPromptShowing(false)
                     AppStateManager.setPrivdPromptDismissed(true)
                 }
             )
