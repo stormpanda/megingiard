@@ -373,7 +373,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_error_bootstrap_provision_failed">Authentifizierungsschlüssel konnte nicht übertragen werden. Führe den Einrichtungsassistenten erneut aus.</string>
     <string name="privd_info_running">Privilegiert-Modus ist aktiv und läuft.</string>
     <string name="privd_info_no_credentials">Keine Kopplungs-Anmeldedaten gefunden. Bitte führe den Einrichtungsassistenten aus.</string>
-    <string name="privd_info_wireless_disabled">Drahtloses Debugging ist inaktiv. Bitte aktiviere Drahtloses Debugging in den Entwickleroptionen.</string>
+    <string name="privd_info_wireless_disabled">Drahtloses Debugging ist inaktiv. Bitte aktiviere es in den Entwicklereinstellungen und versuche es erneut.</string>
     <string name="privd_info_wireless_active_disconnected">Drahtloses Debugging ist aktiv. Tippe auf Verbinden, um den Privilegiert-Modus zu starten.</string>
     <string name="privd_info_connecting">Verbindung zum Daemon wird hergestellt…</string>
 

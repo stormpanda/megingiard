@@ -127,6 +127,10 @@ fun MainAppScreen() {
         }
     }
 
+    LaunchedEffect(showPromptDialog) {
+        AppStateManager.setPrivdPromptActive(showPromptDialog)
+    }
+
 
     val showQuickMenuTutorial by SettingsManager.showQuickMenuTutorial.collectAsState()
     var showQuickMenuLocal by remember { mutableStateOf(true) }

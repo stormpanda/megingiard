@@ -183,6 +183,14 @@ object AppStateManager {
     private val _isFullscreenMouseActive = MutableStateFlow(false)
     val isFullscreenMouseActive: StateFlow<Boolean> = _isFullscreenMouseActive.asStateFlow()
 
+    private val _isPrivdPromptActive = MutableStateFlow(false)
+    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptActive.asStateFlow()
+
+    fun setPrivdPromptActive(active: Boolean) {
+        AppLog.d(TAG, "setPrivdPromptActive($active)")
+        _isPrivdPromptActive.value = active
+    }
+
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
 

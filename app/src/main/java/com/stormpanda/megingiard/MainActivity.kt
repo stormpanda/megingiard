@@ -444,10 +444,14 @@ class MainActivity : ComponentActivity() {
                 // True while privd mirror daemon is still connecting
                 // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
                 // auto-start so the strategy decision waits for the daemon to settle.
-                val privdMirrorConnectingFlow = PrivdManager.state.map { privdState ->
+                val privdMirrorConnectingFlow = combine(
+                    PrivdManager.state,
+                    AppStateManager.isPrivdPromptActive,
+                ) { privdState, promptActive ->
                     privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
-                        privdState == PrivdState.OFF
+                        privdState == PrivdState.OFF ||
+                        promptActive
                 }
                 combine(
                     AppStateManager.promptInFlight,
