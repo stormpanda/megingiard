@@ -202,6 +202,21 @@ manually killed daemon after an update: `RUNNING → FAILED` triggers one fresh
 connect attempt, so the newly deployed daemon binary can be picked up without a
 full app restart.
 
+### Wireless Debugging & Credentials Status Check
+
+To guide users when Privileged Mode is offline, `GlobalSettingsViewModel` exposes a reactive background checker `checkPrivilegedModeStatus(context)`. The settings card triggers this check via a `LaunchedEffect(state)` on entering the Global Settings screen and whenever the connection state changes.
+
+It performs the following checks:
+1. **Credentials Presence:** Verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
+2. **Wireless Debugging Activity:** Reads the system property `service.adb.tls.port` via a fast `getprop` command to see if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
+
+The results are presented to the user as clear, localized guidance messages in the settings card:
+- **Running:** "Privileged Mode is active and running."
+- **No Credentials:** "No pairing credentials found. Please run the setup wizard to pair this device."
+- **Wireless Debugging Disabled:** "Wireless Debugging is inactive. Please enable Wireless Debugging in Developer Options."
+- **Wireless Debugging Active, Disconnected:** "Wireless Debugging is active. Tap Connect to start Privileged Mode."
+- **Connecting:** "Connecting to daemon..."
+
 ### Security Model
 
 Privileged Mode crosses the app sandbox boundary by delegating selected kernel I/O to `megingiard_privd`, a shell-UID helper started through ADB Wireless Debugging. The socket is therefore treated as a privileged command channel: every connection must authenticate before feature commands are accepted.

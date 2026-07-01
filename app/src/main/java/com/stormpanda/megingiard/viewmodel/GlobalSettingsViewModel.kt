@@ -22,6 +22,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
+import java.io.File
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 import com.stormpanda.megingiard.config.InternalBackup
 
@@ -60,6 +63,12 @@ class GlobalSettingsViewModel : ViewModel() {
     val privdDeadzoneLeft: StateFlow<Float>  = MacroPadSettings.deadzoneLeft
     val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
     val privdBootstrapStage: StateFlow<BootstrapStage> = PrivdBootstrapper.stage
+
+    private val _isWirelessDebuggingActive = MutableStateFlow<Boolean?>(null)
+    val isWirelessDebuggingActive: StateFlow<Boolean?> = _isWirelessDebuggingActive.asStateFlow()
+
+    private val _hasCredentials = MutableStateFlow<Boolean?>(null)
+    val hasCredentials: StateFlow<Boolean?> = _hasCredentials.asStateFlow()
 
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
     fun setThemeMode(mode: ThemeMode) = SettingsManager.setThemeMode(mode)
@@ -146,5 +155,32 @@ class GlobalSettingsViewModel : ViewModel() {
      */
     fun checkAccessibilityActive(context: Context): Boolean {
         return MegingiardAccessibilityService.isEnabled(context)
+    }
+
+    fun checkPrivilegedModeStatus(context: Context) {
+        val appContext = context.applicationContext
+        viewModelScope.launch(Dispatchers.IO) {
+            val keyFile = File(appContext.noBackupFilesDir, "privd_adb_key.bin")
+            val certFile = File(appContext.noBackupFilesDir, "privd_adb_cert.bin")
+            _hasCredentials.value = keyFile.exists() && certFile.exists()
+
+            var proc: Process? = null
+            val port = try {
+                proc = ProcessBuilder("getprop", "service.adb.tls.port")
+                    .redirectErrorStream(true)
+                    .start()
+                val output = proc.inputStream.bufferedReader().use { reader ->
+                    reader.readLine()?.trim().orEmpty()
+                }
+                proc.waitFor(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
+                output.toIntOrNull() ?: 0
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to read service.adb.tls.port: $e")
+                proc?.destroyForcibly()
+                0
+            }
+            _isWirelessDebuggingActive.value = port > 0
+            AppLog.d(TAG, "checkPrivilegedModeStatus: hasCredentials=${_hasCredentials.value} isWirelessDebuggingActive=${_isWirelessDebuggingActive.value}")
+        }
     }
 }

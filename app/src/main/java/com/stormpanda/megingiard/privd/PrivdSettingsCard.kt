@@ -29,6 +29,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -97,6 +98,13 @@ internal fun PrivdSettingsCard(
 
     var pingResult by remember { mutableStateOf<Boolean?>(null) }
     var isPinging by remember { mutableStateOf(false) }
+
+    val wirelessDebuggingActive by viewModel.isWirelessDebuggingActive.collectAsState()
+    val hasCredentials by viewModel.hasCredentials.collectAsState()
+
+    LaunchedEffect(state) {
+        viewModel.checkPrivilegedModeStatus(context)
+    }
 
     Column(
         modifier = Modifier
@@ -197,8 +205,9 @@ internal fun PrivdSettingsCard(
             }
         }
 
-        // ── Ping result ─────────────────────────────────────────────────────
-        pingResult?.let { ok ->
+        // ── Ping result / Status Guidance ──────────────────────────────────
+        if (pingResult != null) {
+            val ok = pingResult!!
             Spacer(Modifier.height(PR_BUTTON_GAP))
             Text(
                 text = stringResource(
@@ -207,6 +216,29 @@ internal fun PrivdSettingsCard(
                 color = if (ok) colors.actionColorSystem else colors.error,
                 style = MaterialTheme.typography.bodySmall,
             )
+        } else {
+            val infoStringRes = when {
+                state == PrivdState.RUNNING -> R.string.privd_info_running
+                state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
+                hasCredentials == false -> R.string.privd_info_no_credentials
+                wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
+                wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
+                else -> null
+            }
+            infoStringRes?.let { resId ->
+                val textColor = when {
+                    state == PrivdState.RUNNING -> colors.actionColorSystem
+                    hasCredentials == false -> colors.onSurfaceSecondary
+                    wirelessDebuggingActive == false -> colors.error
+                    else -> colors.actionColorSystem
+                }
+                Spacer(Modifier.height(PR_BUTTON_GAP))
+                Text(
+                    text = stringResource(resId),
+                    color = textColor,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         // ── Auto-connect toggle ─────────────────────────────────────────────
