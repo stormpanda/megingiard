@@ -967,8 +967,17 @@ static int serve_client(int client_fd) {
 }
 
 static void detach_from_shell(void) {
-    /* Call setsid() and ignore SIGHUP *before* redirecting stdout to /dev/null,
-     * so that SIGHUP immunity is established before the spawning ADB shell exits. */
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        exit(1);
+    }
+    if (pid > 0) {
+        /* Parent process exits. This closes stdout and signals the shell to exit. */
+        exit(0);
+    }
+
+    /* Child process continues. Start a new session. */
     setsid();
     signal(SIGHUP, SIG_IGN);
 

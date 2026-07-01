@@ -427,10 +427,10 @@ object PrivdBootstrapper {
         // not have been fully reaped yet when the shell continues to the next command,
         // causing the new binary to fail with EADDRINUSE and exit immediately.
         val killCmd = "kill -9 \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null; sleep 1"
-        // Run the daemon in the background but do NOT redirect its stdout to /dev/null
-        // at the shell level. This allows us to read the readiness token (R, N, or E)
-        // printed by the daemon after it establishes SIGHUP immunity and detaches.
-        val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH &"
+        // Run the daemon in the foreground. Since the daemon forks inside
+        // detach_from_shell(), the parent exits immediately after writing the
+        // token, which cleanly closes the shell stdout pipe without any race.
+        val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->

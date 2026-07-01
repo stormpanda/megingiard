@@ -315,7 +315,7 @@ spawn command can detect success:
 | `N\n` | No suitable gamepad found, daemon exits 1                     |
 | `E\n` | Generic startup failure (e.g. socket bind), daemon exits 1    |
 
-> **Note:** The bootstrapper spawns the daemon process and reads its stdout stream directly. The daemon prints `R\n`, `N\n`, or `E\n` after calling `setsid()` and registering the `SIGHUP` signal handler, but before it redirects its own standard streams to `/dev/null`. This ensures that SIGHUP immunity is established before the spawning ADB shell channel is closed by the app, eliminating any race conditions. The bootstrapper decodes this token to verify daemon readiness or immediately fail with a descriptive error.
+> **Note:** The bootstrapper spawns the daemon process in the foreground and reads its stdout stream directly. The daemon prints `R\n`, `N\n`, or `E\n` and forks inside `detach_from_shell()`. The parent process exits immediately (which cleanly closes the stdout pipe and terminates the shell), while the child daemon starts a new session (`setsid()`), ignores `SIGHUP`, and redirects standard streams to `/dev/null`. This fork-detach sequence guarantees that SIGHUP immunity is fully established before the shell channel is closed, preventing any race conditions. The bootstrapper decodes this token to verify daemon readiness or immediately fail with a descriptive error.
 
 ### State Machine
 
