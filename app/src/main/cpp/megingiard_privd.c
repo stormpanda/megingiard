@@ -967,8 +967,11 @@ static int serve_client(int client_fd) {
 }
 
 static void detach_from_shell(void) {
-    /* After signalling readiness on stdout, fully detach so the spawning ADB
-     * shell can exit without sending SIGHUP. */
+    /* Call setsid() and ignore SIGHUP *before* redirecting stdout to /dev/null,
+     * so that SIGHUP immunity is established before the spawning ADB shell exits. */
+    setsid();
+    signal(SIGHUP, SIG_IGN);
+
     int devnull = open("/dev/null", O_RDWR);
     if (devnull >= 0) {
         dup2(devnull, STDIN_FILENO);
@@ -976,9 +979,6 @@ static void detach_from_shell(void) {
         dup2(devnull, STDERR_FILENO);
         if (devnull > STDERR_FILENO) close(devnull);
     }
-    setsid();
-    /* Ignore SIGHUP just in case. */
-    signal(SIGHUP, SIG_IGN);
 }
 
 int main(int argc, char *argv[]) {

@@ -427,12 +427,40 @@ object PrivdBootstrapper {
         // not have been fully reaped yet when the shell continues to the next command,
         // causing the new binary to fail with EADDRINUSE and exit immediately.
         val killCmd = "kill -9 \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null; sleep 1"
-        val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH </dev/null >/dev/null 2>&1 &\necho $SPAWN_OK_MARKER"
+        // Run the daemon in the background but do NOT redirect its stdout to /dev/null
+        // at the shell level. This allows us to read the readiness token (R, N, or E)
+        // printed by the daemon after it establishes SIGHUP immunity and detaches.
+        val cmd = "shell:$killCmd; $DAEMON_REMOTE_PATH &"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->
-            // Don't write anything; just read the marker.
-            readUntilMarker(s, SPAWN_OK_MARKER)
+            val reader = BufferedReader(InputStreamReader(s.openInputStream()))
+            val deadline = System.currentTimeMillis() + SHELL_READ_TIMEOUT_MS
+            while (System.currentTimeMillis() < deadline) {
+                val line = try {
+                    reader.readLine()
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "spawnDaemon read failed: $e")
+                    null
+                }
+                if (line != null) {
+                    val cleanLine = line.trim()
+                    if (cleanLine == "R") {
+                        AppLog.i(TAG, "spawnDaemon: daemon reported readiness (R)")
+                        return true
+                    }
+                    if (cleanLine == "N") {
+                        AppLog.w(TAG, "spawnDaemon: daemon reported no gamepad found (N)")
+                        return false
+                    }
+                    if (cleanLine == "E") {
+                        AppLog.w(TAG, "spawnDaemon: daemon reported generic bind/startup error (E)")
+                        return false
+                    }
+                }
+            }
+            AppLog.w(TAG, "spawnDaemon: timeout waiting for daemon readiness token")
+            false
         }
     }
 

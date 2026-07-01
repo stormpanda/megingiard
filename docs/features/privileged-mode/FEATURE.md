@@ -315,12 +315,7 @@ spawn command can detect success:
 | `N\n` | No suitable gamepad found, daemon exits 1                     |
 | `E\n` | Generic startup failure (e.g. socket bind), daemon exits 1    |
 
-> **Note:** The spawn command redirects the daemon's stdout/stderr to
-> `/dev/null` before it detaches, so `R/N/E` is only readable during the
-> brief window before `setsid()`. The bootstrapper reads stdout via the ADB
-> shell stream using a separate `echo MGRD_SPAWN_OK` marker to confirm the
-> spawn command itself completed; actual daemon readiness is verified by the
-> subsequent LocalSocket retry loop (`PrivdManager.verifyConnect()`).
+> **Note:** The bootstrapper spawns the daemon process and reads its stdout stream directly. The daemon prints `R\n`, `N\n`, or `E\n` after calling `setsid()` and registering the `SIGHUP` signal handler, but before it redirects its own standard streams to `/dev/null`. This ensures that SIGHUP immunity is established before the spawning ADB shell channel is closed by the app, eliminating any race conditions. The bootstrapper decodes this token to verify daemon readiness or immediately fail with a descriptive error.
 
 ### State Machine
 
