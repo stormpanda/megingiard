@@ -108,10 +108,22 @@ fun MainAppScreen() {
     val privdState by PrivdManager.state.collectAsState()
     var hasAdbCredentials by remember { mutableStateOf<Boolean?>(null) }
     var userSkippedPrompt by remember { mutableStateOf(false) }
+    var showPromptDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(privdState, showAdbPrompt, hasAdbCredentials, userSkippedPrompt) {
+        if (privdState == PrivdState.FAILED &&
+            showAdbPrompt &&
+            hasAdbCredentials == true &&
+            !userSkippedPrompt
+        ) {
+            showPromptDialog = true
+        }
+    }
 
     LaunchedEffect(isBackgroundSettingsActive) {
         if (isBackgroundSettingsActive) {
             userSkippedPrompt = true
+            showPromptDialog = false
         }
     }
 
@@ -303,11 +315,7 @@ fun MainAppScreen() {
             )
         }
         
-        if (showAdbPrompt &&
-            hasAdbCredentials == true &&
-            privdState == PrivdState.FAILED &&
-            !userSkippedPrompt
-        ) {
+        if (showPromptDialog) {
             PrivdReconnectPromptDialog(
                 onConnect = {
                     coroutineScope.launch(Dispatchers.IO) {
@@ -316,6 +324,10 @@ fun MainAppScreen() {
                 },
                 onSkip = {
                     userSkippedPrompt = true
+                    showPromptDialog = false
+                },
+                onDone = {
+                    showPromptDialog = false
                 }
             )
         }

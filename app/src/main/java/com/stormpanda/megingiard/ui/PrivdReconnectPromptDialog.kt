@@ -36,6 +36,7 @@ private const val TAG = "PrivdPromptDialog"
 fun PrivdReconnectPromptDialog(
     onConnect: () -> Unit,
     onSkip: () -> Unit,
+    onDone: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     val state by PrivdManager.state.collectAsState()
@@ -99,7 +100,11 @@ fun PrivdReconnectPromptDialog(
         containerColor = colors.surface,
         onDismissRequest = {
             AppLog.d(TAG, "Privd reconnect prompt dialog dismissed via request")
-            onSkip()
+            if (state == PrivdState.RUNNING) {
+                onDone()
+            } else {
+                onSkip()
+            }
         },
         title = {
             Text(
@@ -128,31 +133,48 @@ fun PrivdReconnectPromptDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    AppLog.d(TAG, "Privd reconnect prompt dialog connect clicked")
-                    onConnect()
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.accent,
-                    contentColor = colors.onAccent,
-                ),
-                enabled = state != PrivdState.RUNNING && state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING
-            ) {
-                Text(stringResource(R.string.privd_action_connect))
+            if (state == PrivdState.RUNNING) {
+                Button(
+                    onClick = {
+                        AppLog.d(TAG, "Privd reconnect prompt dialog done clicked")
+                        onDone()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.accent,
+                        contentColor = colors.onAccent,
+                    )
+                ) {
+                    Text(stringResource(R.string.privd_reconnect_prompt_done))
+                }
+            } else {
+                Button(
+                    onClick = {
+                        AppLog.d(TAG, "Privd reconnect prompt dialog connect clicked")
+                        onConnect()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.accent,
+                        contentColor = colors.onAccent,
+                    ),
+                    enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING
+                ) {
+                    Text(stringResource(R.string.privd_action_connect))
+                }
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = {
-                    AppLog.d(TAG, "Privd reconnect prompt dialog skip clicked")
-                    onSkip()
-                },
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = colors.onSurfaceSecondary,
-                )
-            ) {
-                Text(stringResource(R.string.privd_reconnect_prompt_skip))
+            if (state != PrivdState.RUNNING) {
+                TextButton(
+                    onClick = {
+                        AppLog.d(TAG, "Privd reconnect prompt dialog skip clicked")
+                        onSkip()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = colors.onSurfaceSecondary,
+                    )
+                ) {
+                    Text(stringResource(R.string.privd_reconnect_prompt_skip))
+                }
             }
         }
     )
