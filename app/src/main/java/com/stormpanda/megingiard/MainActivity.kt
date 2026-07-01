@@ -450,8 +450,11 @@ class MainActivity : ComponentActivity() {
                 // auto-start so the strategy decision waits for the daemon to settle.
                 val privdMirrorConnectingFlow = combine(
                     PrivdManager.state,
-                    AppStateManager.isPrivdPromptActive,
-                ) { privdState, promptActive ->
+                    MacroPadSettings.privdShowAdbPrompt,
+                    AppStateManager.hasAdbCredentials,
+                    AppStateManager.isPrivdPromptDismissed,
+                ) { privdState, showPromptPref, hasCreds, dismissed ->
+                    val promptActive = privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
                     privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
                         privdState == PrivdState.OFF ||
