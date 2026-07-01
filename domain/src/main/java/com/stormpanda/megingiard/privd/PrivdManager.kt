@@ -132,12 +132,12 @@ object PrivdManager {
     private val _lastError = MutableStateFlow<PrivdError?>(null)
     val lastError: StateFlow<PrivdError?> = _lastError.asStateFlow()
 
-    /**
-     * Attempts to connect to the running daemon.
-     * Returns `true` on success.
-     */
+    private var _isManuallyDisconnected = false
+    val isManuallyDisconnected: Boolean get() = _isManuallyDisconnected
+
     fun connect(context: Context): Boolean {
         AppLog.i(TAG, "connect() called (current state=${_state.value})")
+        _isManuallyDisconnected = false
         _state.value = PrivdState.CONNECTING
         _lastError.value = null
         val ok = PrivdClient.connect()
@@ -167,6 +167,7 @@ object PrivdManager {
      */
     fun disconnect() {
         AppLog.i(TAG, "disconnect()")
+        _isManuallyDisconnected = true
         clientObserverJob?.cancel()
         clientObserverJob = null
         PrivdClient.disconnect()
@@ -194,6 +195,7 @@ object PrivdManager {
      * connected.
      */
     internal fun verifyConnect(): Boolean {
+        _isManuallyDisconnected = false
         val ok = PrivdClient.connect()
         if (ok) {
             _state.value = PrivdState.RUNNING
