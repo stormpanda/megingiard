@@ -83,16 +83,16 @@ fun PrivdReconnectPromptDialog(
     val infoStringRes = when {
         state == PrivdState.RUNNING -> R.string.privd_info_running
         state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
-        specificErrorRes != null -> specificErrorRes
         isWirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
+        specificErrorRes != null -> specificErrorRes
         isWirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
         else -> null
     }
 
     val textColor = when {
         state == PrivdState.RUNNING -> colors.actionColorSystem
-        specificErrorRes != null -> colors.error
         isWirelessDebuggingActive == false -> colors.error
+        specificErrorRes != null -> colors.error
         else -> colors.actionColorSystem
     }
 

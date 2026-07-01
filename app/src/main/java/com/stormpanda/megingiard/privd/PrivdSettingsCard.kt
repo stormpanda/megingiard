@@ -217,18 +217,18 @@ internal fun PrivdSettingsCard(
             val infoStringRes = when {
                 state == PrivdState.RUNNING -> R.string.privd_info_running
                 state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
-                specificErrorRes != null -> specificErrorRes
                 hasCredentials == false -> R.string.privd_info_no_credentials
                 wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
+                specificErrorRes != null -> specificErrorRes
                 wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
                 else -> null
             }
             infoStringRes?.let { resId ->
                 val textColor = when {
                     state == PrivdState.RUNNING -> colors.actionColorSystem
-                    specificErrorRes != null -> colors.error
                     hasCredentials == false -> colors.onSurfaceSecondary
                     wirelessDebuggingActive == false -> colors.error
+                    specificErrorRes != null -> colors.error
                     else -> colors.actionColorSystem
                 }
                 Spacer(Modifier.height(PR_BUTTON_GAP))
