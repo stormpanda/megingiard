@@ -89,7 +89,6 @@ internal fun PrivdSettingsCard(
     val state by viewModel.privdState.collectAsState()
     val lastError by viewModel.privdLastError.collectAsState()
 
-    val autoConnect by viewModel.privdAutoConnect.collectAsState()
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val colors = LocalAppColors.current
@@ -239,32 +238,7 @@ internal fun PrivdSettingsCard(
             }
         }
 
-        // ── Auto-connect toggle ─────────────────────────────────────────────
-        Spacer(Modifier.height(PR_BUTTON_GAP))
-        AppDivider()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = PR_ROW_V_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.privd_auto_connect),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = stringResource(R.string.privd_auto_connect_desc),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Switch(
-                checked = autoConnect,
-                onCheckedChange = { viewModel.setPrivdAutoConnect(it) },
-            )
-        }
+
 
 
         // ── Dead-zone configuration row ──────────────────────────────────────

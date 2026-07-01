@@ -361,14 +361,9 @@ class MainActivity : ComponentActivity() {
         // Settings if needed.
         lifecycleScope.launch {
             var triggered = false
-            combine(
-                MacroPadSettings.privdAutoConnect,
-                PrivdManager.state,
-            ) { auto, state ->
-                auto to state
-            }.collect { (autoConnect, state) ->
+            PrivdManager.state.collect { state ->
                 when {
-                    !autoConnect || state == PrivdState.RUNNING -> triggered = false
+                    state == PrivdState.RUNNING -> triggered = false
                     (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered && !PrivdManager.isManuallyDisconnected -> {
                         triggered = true
                         AppLog.i(TAG, "Auto-connecting Privileged Mode")
@@ -449,13 +444,10 @@ class MainActivity : ComponentActivity() {
                 // True while privd mirror daemon is still connecting
                 // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
                 // auto-start so the strategy decision waits for the daemon to settle.
-                val privdMirrorConnectingFlow = combine(
-                    MacroPadSettings.privdAutoConnect,
-                    PrivdManager.state,
-                ) { autoConnect, privdState ->
+                val privdMirrorConnectingFlow = PrivdManager.state.map { privdState ->
                     privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
-                        (privdState == PrivdState.OFF && autoConnect)
+                        privdState == PrivdState.OFF
                 }
                 combine(
                     AppStateManager.promptInFlight,

@@ -61,13 +61,6 @@ object MacroPadSettings {
     val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
 
 
-    private val _privdAutoConnect = MutableStateFlow(false)
-    /**
-     * When true, the app silently calls `PrivdManager.connect()` on startup
-     * (assumes the daemon was previously bootstrapped and is still running).
-     * Set to true automatically after a successful first-time bootstrap.
-     */
-    val privdAutoConnect: StateFlow<Boolean> = _privdAutoConnect.asStateFlow()
 
     private val _deadzoneLeft  = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
     /** Dead zone radius for the left analog stick during physical gamepad recording (0.0–1.0). */
@@ -94,7 +87,7 @@ object MacroPadSettings {
         _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
         _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
-        _privdAutoConnect.value = prefs[KEY_PRIVD_AUTO_CONNECT] ?: false
+
         _deadzoneLeft.value  = prefs[KEY_PRIVD_DEADZONE_LEFT]  ?: PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
 
@@ -137,11 +130,6 @@ object MacroPadSettings {
     }
 
 
-    fun setPrivdAutoConnect(value: Boolean) {
-        AppLog.d(TAG, "setPrivdAutoConnect($value)")
-        _privdAutoConnect.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_AUTO_CONNECT] = value } }
-    }
 
     fun setDeadzoneLeft(value: Float) {
         AppLog.d(TAG, "setDeadzoneLeft($value)")
