@@ -28,6 +28,9 @@ import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -156,6 +159,12 @@ class MirrorPresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x${srcHeight}")
+        window?.let { win ->
+            WindowCompat.getInsetsController(win, win.decorView).apply {
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsetsCompat.Type.systemBars())
+            }
+        }
         setPresentationFocusMode(
             keepPrimaryFocus = shouldKeepPrimaryGameFocus(
                 MacroPadFocusPolicyState(isMacroPadSurfaceActive = true)
