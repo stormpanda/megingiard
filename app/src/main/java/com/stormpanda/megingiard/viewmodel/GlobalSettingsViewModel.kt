@@ -44,9 +44,10 @@ class GlobalSettingsViewModel : ViewModel() {
     val accentColor: StateFlow<Int> = SettingsManager.accentColor
     val themeMode: StateFlow<ThemeMode> = SettingsManager.themeMode
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
+    val overlayFadeOut: StateFlow<Boolean> = SettingsManager.overlayFadeOut
     val appLanguage: StateFlow<AppLanguage> = SettingsManager.appLanguage
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
-
+    
     val showWelcomeTutorial: StateFlow<Boolean> = SettingsManager.showWelcomeTutorial
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
@@ -63,6 +64,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
     fun setThemeMode(mode: ThemeMode) = SettingsManager.setThemeMode(mode)
     fun setOverlayAtBottom(value: Boolean) = SettingsManager.setOverlayAtBottom(value)
+    fun setOverlayFadeOut(value: Boolean) = SettingsManager.setOverlayFadeOut(value)
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()

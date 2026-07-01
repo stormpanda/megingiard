@@ -24,8 +24,8 @@ the universal "go back" mechanism throughout the app.
 
 ### FR-PM1: Quick Menu Bar — Always-Visible Affordance
 
-- A slim rounded bar tab MUST always be rendered at the configured screen edge
-  (`SettingsManager.overlayAtBottom` controls top vs. bottom placement).
+- A slim rounded bar tab MUST be rendered at the configured screen edge
+  (`SettingsManager.overlayAtBottom` controls top vs. bottom placement). By default, it is always visible. If `SettingsManager.overlayFadeOut` is enabled, the bar tab automatically fades out after 3 seconds of inactivity.
 - The bar tab occupies `QUICK_MENU_BAR_INSET` (≈ 13 dp) of vertical space at the edge. Screens that render
   content edge-to-edge SHOULD inset by this amount to avoid overlap.
 - The bar tab is **purely visual** — it does not capture touch events. The edge-swipe gesture is
@@ -157,6 +157,7 @@ which routes to open, close, or modal-dismiss as appropriate.
 | `ScreenCaptureManager.screenshotRequested` | `ScreenCaptureManager` | "Screenshot" button |
 | `MacroPadState.activeProfile` | `MacroPadState` | Profile chip tap / new profile |
 | `MacroPadState.activeLayout` | `MacroPadState` | Layout chip tap / new layout |
+| `SettingsManager.overlayFadeOut` | `SettingsManager` | Global Settings toggle |
 
 `isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of the
 interactive overlays (`isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,

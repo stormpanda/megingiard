@@ -101,6 +101,25 @@ internal fun OverlayPositionRow(
     }
 }
 
+@Composable
+internal fun OverlayFadeOutRow(
+    fadeEnabled: Boolean,
+    onChanged: (Boolean) -> Unit,
+) {
+    val colors = LocalAppColors.current
+    AppSettingsRow {
+        SettingLabelColumn(
+            label = stringResource(R.string.settings_overlay_fade_out),
+            subtitle = stringResource(R.string.settings_overlay_fade_out_desc),
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = fadeEnabled,
+            onCheckedChange = onChanged,
+        )
+    }
+}
+
 internal fun ThemeMode.displayNameResId(): Int = when (this) {
     ThemeMode.DARK -> R.string.theme_dark
     ThemeMode.LIGHT -> R.string.theme_light

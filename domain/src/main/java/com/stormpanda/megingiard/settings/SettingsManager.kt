@@ -89,6 +89,9 @@ object SettingsManager {
     private val _overlayAtBottom = MutableStateFlow(false)
     val overlayAtBottom: StateFlow<Boolean> = _overlayAtBottom.asStateFlow()
 
+    private val _overlayFadeOut = MutableStateFlow(false)
+    val overlayFadeOut: StateFlow<Boolean> = _overlayFadeOut.asStateFlow()
+
 
     private val _showWelcomeTutorial = MutableStateFlow(true)
     val showWelcomeTutorial: StateFlow<Boolean> = _showWelcomeTutorial.asStateFlow()
@@ -163,6 +166,7 @@ object SettingsManager {
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
+                    _overlayFadeOut.value = prefs[KEY_OVERLAY_FADE_OUT] ?: false
 
                     _showWelcomeTutorial.value = prefs[KEY_SHOW_WELCOME_TUTORIAL] ?: true
                     _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
@@ -298,6 +302,16 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs ->
                 prefs[KEY_OVERLAY_AT_BOTTOM] = value
+            }
+        }
+    }
+
+    fun setOverlayFadeOut(value: Boolean) {
+        AppLog.d(TAG, "setOverlayFadeOut($value)")
+        _overlayFadeOut.value = value
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_OVERLAY_FADE_OUT] = value
             }
         }
     }

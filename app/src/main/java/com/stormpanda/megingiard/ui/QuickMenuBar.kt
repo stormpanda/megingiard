@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,19 +17,28 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.delay
 
 private const val TAG = "QuickMenuBar"
+
+private const val QM_BAR_FADE_OUT_DELAY_MS = 3000L
+private const val QM_BAR_FADE_OUT_DURATION_MS = 1000
+private const val QM_BAR_ALPHA_VISIBLE = 1f
+private const val QM_BAR_ALPHA_FADED = 0f
 
 // ── Dimensions ──────────────────────────────────────────────────────────────
 private val QM_BAR_TOP_PADDING = 6.dp
@@ -54,17 +65,31 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     if (previewConfig != null || isViewportEditActive) return
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
     val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
     val colors = LocalAppColors.current
+
+    val alpha = remember { Animatable(QM_BAR_ALPHA_VISIBLE) }
+    LaunchedEffect(isQuickMenuOpen, overlayFadeOut) {
+        if (overlayFadeOut && !isQuickMenuOpen) {
+            alpha.snapTo(QM_BAR_ALPHA_VISIBLE)
+            delay(QM_BAR_FADE_OUT_DELAY_MS)
+            alpha.animateTo(QM_BAR_ALPHA_FADED, animationSpec = tween(QM_BAR_FADE_OUT_DURATION_MS))
+        } else {
+            alpha.snapTo(QM_BAR_ALPHA_VISIBLE)
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         // Bar tab
         QuickMenuBarTab(
             overlayAtBottom = overlayAtBottom,
             colors = colors,
-            modifier = Modifier.align(
-                if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
-            )
+            modifier = Modifier
+                .align(
+                    if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
+                )
+                .graphicsLayer(alpha = alpha.value)
         )
 
         // Quick Menu overlay — rendered as a sibling so it covers MacroPadScreen

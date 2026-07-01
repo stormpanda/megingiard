@@ -35,6 +35,8 @@
     <string name="theme_light">Light</string>
     <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Place controls at bottom</string>
+    <string name="settings_overlay_fade_out">Fade out controls</string>
+    <string name="settings_overlay_fade_out_desc">Fade out the quick menu bar overlay after a few seconds of inactivity</string>
     <string name="mirror_edge_blend_label">Edge blending</string>
     <string name="mirror_edge_blend_label_value">%1$d</string>
     <string name="mirror_edge_blend_strength_off">Off</string>
@@ -832,6 +834,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_title">Settings — Help</string>
     <string name="help_settings_intro">Global Settings apply to the whole app and persist across sessions. Use the section jump row at the top to scroll quickly to a specific group.</string>
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Quick Menu easier to swipe open without shifting your thumbs.</string>
+    <string name="help_settings_overlay_fade_out_desc">Fades out the edge quick menu bar visually after a few seconds. The swipe gestures will still register normally even when the bar is fully invisible, allowing you to open the Quick Menu anytime.</string>
 
     <string name="help_settings_auto_profile_desc">Essential for seamless gaming. Links macro profiles to specific apps so your custom buttons switch instantly when launching a game, without manual menu navigation.</string>
     <string name="help_settings_recents_desc">Keeps your Android Recents menu clean. Recommended if you launch Megingiard once and control it entirely via the edge quick menu bar overlay while gaming.</string>
@@ -898,6 +901,6 @@ Open Settings to create a layout.</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
-    <string name="quick_menu_tutorial_body">Swipe the quick menu bar indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.</string>
+    <string name="quick_menu_tutorial_body">Swipe the quick menu bar indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.\n\nNote: You can configure the bar to fade out automatically in Global Settings (Appearance) if you prefer a cleaner look. This behavior is disabled by default.</string>
 
 </resources>

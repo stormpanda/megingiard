@@ -91,6 +91,7 @@ fun GlobalSettingsScreen(
     val accentColorArgb by viewModel.accentColor.collectAsState()
     val accentColor = Color(accentColorArgb)
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
+    val overlayFadeOut by viewModel.overlayFadeOut.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
@@ -340,6 +341,11 @@ fun GlobalSettingsScreen(
                         OverlayPositionRow(
                             overlayAtBottom = overlayAtBottom,
                             onChanged = { viewModel.setOverlayAtBottom(it) }
+                        )
+                        AppDivider()
+                        OverlayFadeOutRow(
+                            fadeEnabled = overlayFadeOut,
+                            onChanged = { viewModel.setOverlayFadeOut(it) }
                         )
                     }
                 }
@@ -695,6 +701,10 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpEntry(
             label = stringResource(R.string.settings_overlay_position),
             description = stringResource(R.string.help_settings_overlay_position_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_overlay_fade_out),
+            description = stringResource(R.string.help_settings_overlay_fade_out_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_data))
