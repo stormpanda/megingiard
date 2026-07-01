@@ -168,9 +168,7 @@ Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`
 for the X.509 serial number, ensuring a cryptographically-strong positive value.
 
-The daemon binary in `/data/local/tmp` survives until reboot; thereafter
-the push step is replayed on the next launch (cold-boot recovery is the
-responsibility of the auto-connect retry path or a fresh wizard run).
+The daemon binary in `/data/local/tmp` survives until reboot; thereafter, the next start of the app (or auto-connect invocation) replays the push/spawn step in the background if the user previously completed the setup wizard.
 
 ### Auto-Connect Hook
 
@@ -184,11 +182,17 @@ combine(MacroPadSettings.privdAutoConnect, PrivdManager.state) { auto, state ->
     !autoConnect || state == PrivdState.RUNNING -> triggered = false
     (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
       triggered = true
-      withContext(Dispatchers.IO) { PrivdManager.connect() }
+      AppLog.i(TAG, "Auto-connecting Privileged Mode")
+      withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
     }
-    }
+  }
 }
 ```
+
+When `PrivdManager.connect(context)` is invoked:
+1. It first attempts a direct local abstract Unix socket connection via `PrivdClient.connect()`.
+2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
+3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port, connects to the local ADB server, pushes and spawns the daemon, and connects the socket.
 
 The `triggered` guard ensures auto-connect runs at most once for a given
 OFF/FAILED transition and therefore cannot spin in a tight retry loop when the

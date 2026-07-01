@@ -80,10 +80,11 @@ class GlobalSettingsViewModel : ViewModel() {
      * Initiates a connection to the daemon socket asynchronously on [Dispatchers.IO].
      * The result is reflected in [privdState] — no return value.
      */
-    fun privdConnect() {
+    fun privdConnect(context: Context) {
         AppLog.i(TAG, "privdConnect()")
+        val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
-            PrivdManager.connect()
+            PrivdManager.connect(appContext)
         }
     }
 

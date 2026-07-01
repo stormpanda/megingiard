@@ -372,7 +372,7 @@ class MainActivity : ComponentActivity() {
                     (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
                         triggered = true
                         AppLog.i(TAG, "Auto-connecting Privileged Mode")
-                        withContext(Dispatchers.IO) { PrivdManager.connect() }
+                        withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
                     }
                 }
             }

@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
@@ -91,6 +92,7 @@ internal fun PrivdSettingsCard(
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val colors = LocalAppColors.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var pingResult by remember { mutableStateOf<Boolean?>(null) }
@@ -184,7 +186,7 @@ internal fun PrivdSettingsCard(
                 }
             } else {
                 Button(
-                    onClick = { viewModel.privdConnect() },
+                    onClick = { viewModel.privdConnect(context) },
                     enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
                 ) {
                     Text(stringResource(R.string.privd_action_connect))
