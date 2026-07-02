@@ -452,12 +452,16 @@ class MainActivity : ComponentActivity() {
                     PrivdManager.state,
                     AppStateManager.isPrivdPromptActive,
                     AppStateManager.hasAdbCredentials,
-                ) { privdState, promptActive, hasCreds ->
+                    MacroPadSettings.privdShowAdbPrompt,
+                    AppStateManager.isPrivdPromptDismissed,
+                ) { privdState, promptActive, hasCreds, showPromptPref, dismissed ->
                     val autoConnectPending = hasCreds && !PrivdManager.isManuallyDisconnected
+                    val promptShouldShow = privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
                     privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
                         (privdState == PrivdState.OFF && autoConnectPending) ||
-                        promptActive
+                        promptActive ||
+                        promptShouldShow
                 }
                 combine(
                     AppStateManager.promptInFlight,
