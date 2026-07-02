@@ -83,6 +83,7 @@ import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
+import com.stormpanda.megingiard.mirror.isPrivdMirrorConnecting
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -455,13 +456,14 @@ class MainActivity : ComponentActivity() {
                     MacroPadSettings.privdShowAdbPrompt,
                     AppStateManager.isPrivdPromptDismissed,
                 ) { privdState, promptActive, hasCreds, showPromptPref, dismissed ->
-                    val autoConnectPending = hasCreds && !PrivdManager.isManuallyDisconnected
-                    val promptShouldShow = privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
-                    privdState == PrivdState.CONNECTING ||
-                        privdState == PrivdState.BOOTSTRAPPING ||
-                        (privdState == PrivdState.OFF && autoConnectPending) ||
-                        promptActive ||
-                        promptShouldShow
+                    isPrivdMirrorConnecting(
+                        privdState = privdState,
+                        promptActive = promptActive,
+                        hasCreds = hasCreds,
+                        showPromptPref = showPromptPref,
+                        dismissed = dismissed,
+                        isManuallyDisconnected = PrivdManager.isManuallyDisconnected
+                    )
                 }
                 combine(
                     AppStateManager.promptInFlight,
