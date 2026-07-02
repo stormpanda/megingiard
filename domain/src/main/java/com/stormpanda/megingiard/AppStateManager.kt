@@ -50,6 +50,24 @@ object AppStateManager {
                 lastActiveLayoutId = newId
             }
         }
+        scope.launch {
+            combine(
+                PrivdManager.state,
+                MacroPadSettings.privdShowAdbPrompt,
+                _hasAdbCredentials,
+                _isPrivdPromptDismissed,
+                _isBackgroundSettingsActive
+            ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
+                if (state == PrivdState.RUNNING) {
+                    _isPrivdPromptDismissed.value = false
+                }
+                if (dismissed || bgSettingsActive) {
+                    _isPrivdPromptShowing.value = false
+                } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
+                    _isPrivdPromptShowing.value = true
+                }
+            }.collect {}
+        }
     }
 
 
@@ -205,15 +223,8 @@ object AppStateManager {
         _isPrivdPromptDismissed.value = dismissed
     }
 
-    val isPrivdPromptActive: StateFlow<Boolean> = combine(
-        PrivdManager.state,
-        MacroPadSettings.privdShowAdbPrompt,
-        _hasAdbCredentials,
-        _isPrivdPromptDismissed,
-        _isBackgroundSettingsActive
-    ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
-        state == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed && !bgSettingsActive
-    }.stateIn(scope, SharingStarted.Eagerly, false)
+    private val _isPrivdPromptShowing = MutableStateFlow(false)
+    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
 
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
