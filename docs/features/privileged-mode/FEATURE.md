@@ -173,16 +173,14 @@ The daemon binary in `/data/local/tmp` survives until reboot; thereafter, the ne
 
 ### Auto-Connect Hook
 
-Auto-connect is mandatory and always active. The user toggle has been removed from the UI, and the settings store property `privdAutoConnect` is hardcoded to return `true`.
+Auto-connect is mandatory and always active on app startup. The user toggle and its datastore preference `privdAutoConnect` have been completely removed from the codebase.
 
 `MainActivity.onCreate()` installs a long-lived collector to automatically start or re-bootstrap the daemon:
 
 ```kotlin
-combine(MacroPadSettings.privdAutoConnect, PrivdManager.state) { auto, state ->
-  auto to state
-}.collect { (autoConnect, state) ->
+PrivdManager.state.collect { state ->
   when {
-    !autoConnect || state == PrivdState.RUNNING -> triggered = false
+    state == PrivdState.RUNNING -> triggered = false
     (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered && !PrivdManager.isManuallyDisconnected -> {
       triggered = true
       AppLog.i(TAG, "Auto-connecting Privileged Mode")

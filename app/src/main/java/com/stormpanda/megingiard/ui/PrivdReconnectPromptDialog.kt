@@ -47,9 +47,9 @@ fun PrivdReconnectPromptDialog(
     var isWirelessDebuggingActive by remember { mutableStateOf<Boolean?>(null) }
 
     LaunchedEffect(state) {
-        withContext(Dispatchers.IO) {
+        val port = withContext(Dispatchers.IO) {
             var proc: Process? = null
-            val port = try {
+            try {
                 proc = ProcessBuilder("getprop", "service.adb.tls.port")
                     .redirectErrorStream(true)
                     .start()
@@ -61,8 +61,8 @@ fun PrivdReconnectPromptDialog(
             } finally {
                 proc?.destroyForcibly()
             }
-            isWirelessDebuggingActive = port > 0
         }
+        isWirelessDebuggingActive = port > 0
     }
 
     LaunchedEffect(Unit) {

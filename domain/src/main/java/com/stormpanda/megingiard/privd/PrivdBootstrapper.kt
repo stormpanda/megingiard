@@ -438,25 +438,23 @@ object PrivdBootstrapper {
             val deadline = System.currentTimeMillis() + SHELL_READ_TIMEOUT_MS
             while (System.currentTimeMillis() < deadline) {
                 val line = try {
-                    reader.readLine()
+                    reader.readLine() ?: return@use false
                 } catch (e: Exception) {
                     AppLog.w(TAG, "spawnDaemon read failed: $e")
-                    null
+                    return@use false
                 }
-                if (line != null) {
-                    val cleanLine = line.trim()
-                    if (cleanLine == "R") {
-                        AppLog.i(TAG, "spawnDaemon: daemon reported readiness (R)")
-                        return true
-                    }
-                    if (cleanLine == "N") {
-                        AppLog.w(TAG, "spawnDaemon: daemon reported no gamepad found (N)")
-                        return false
-                    }
-                    if (cleanLine == "E") {
-                        AppLog.w(TAG, "spawnDaemon: daemon reported generic bind/startup error (E)")
-                        return false
-                    }
+                val cleanLine = line.trim()
+                if (cleanLine == "R") {
+                    AppLog.i(TAG, "spawnDaemon: daemon reported readiness (R)")
+                    return@use true
+                }
+                if (cleanLine == "N") {
+                    AppLog.w(TAG, "spawnDaemon: daemon reported no gamepad found (N)")
+                    return@use false
+                }
+                if (cleanLine == "E") {
+                    AppLog.w(TAG, "spawnDaemon: daemon reported generic bind/startup error (E)")
+                    return@use false
                 }
             }
             AppLog.w(TAG, "spawnDaemon: timeout waiting for daemon readiness token")

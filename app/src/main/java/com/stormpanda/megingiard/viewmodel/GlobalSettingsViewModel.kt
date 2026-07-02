@@ -177,8 +177,9 @@ class GlobalSettingsViewModel : ViewModel() {
                 output.toIntOrNull() ?: 0
             } catch (e: Exception) {
                 AppLog.w(TAG, "Failed to read service.adb.tls.port: $e")
-                proc?.destroyForcibly()
                 0
+            } finally {
+                proc?.destroyForcibly()
             }
             _isWirelessDebuggingActive.value = port > 0
             AppLog.d(TAG, "checkPrivilegedModeStatus: hasCredentials=${_hasCredentials.value} isWirelessDebuggingActive=${_isWirelessDebuggingActive.value}")

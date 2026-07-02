@@ -463,10 +463,11 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.isPrivdPromptDismissed,
                     AppStateManager.isPrivdPromptShowing,
                 ) { privdState, showPromptPref, hasCreds, dismissed, promptShowing ->
+                    val autoConnectPending = hasCreds && !PrivdManager.isManuallyDisconnected
                     val promptActive = promptShowing || (privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed)
                     privdState == PrivdState.CONNECTING ||
                         privdState == PrivdState.BOOTSTRAPPING ||
-                        privdState == PrivdState.OFF ||
+                        (privdState == PrivdState.OFF && autoConnectPending) ||
                         promptActive
                 }
                 combine(
