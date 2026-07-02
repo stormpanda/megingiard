@@ -38,37 +38,7 @@ object AppStateManager {
     // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    init {
-        scope.launch {
-            var lastActiveLayoutId: String? = null
-            MacroPadState.activeLayout.collect { layout ->
-                val newId = layout?.id
-                if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
-                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
-                    closeActiveModal()
-                }
-                lastActiveLayoutId = newId
-            }
-        }
-        scope.launch {
-            combine(
-                PrivdManager.state,
-                MacroPadSettings.privdShowAdbPrompt,
-                _hasAdbCredentials,
-                _isPrivdPromptDismissed,
-                _isBackgroundSettingsActive
-            ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
-                if (state == PrivdState.RUNNING) {
-                    _isPrivdPromptDismissed.value = false
-                }
-                if (dismissed || bgSettingsActive) {
-                    _isPrivdPromptShowing.value = false
-                } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
-                    _isPrivdPromptShowing.value = true
-                }
-            }.collect {}
-        }
-    }
+
 
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -372,4 +342,35 @@ object AppStateManager {
         }
     }
 
+    init {
+        scope.launch {
+            var lastActiveLayoutId: String? = null
+            MacroPadState.activeLayout.collect { layout ->
+                val newId = layout?.id
+                if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
+                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
+                    closeActiveModal()
+                }
+                lastActiveLayoutId = newId
+            }
+        }
+        scope.launch {
+            combine(
+                PrivdManager.state,
+                MacroPadSettings.privdShowAdbPrompt,
+                _hasAdbCredentials,
+                _isPrivdPromptDismissed,
+                _isBackgroundSettingsActive
+            ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
+                if (state == PrivdState.RUNNING) {
+                    _isPrivdPromptDismissed.value = false
+                }
+                if (dismissed || bgSettingsActive) {
+                    _isPrivdPromptShowing.value = false
+                } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
+                    _isPrivdPromptShowing.value = true
+                }
+            }.collect {}
+        }
+    }
 }

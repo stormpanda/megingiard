@@ -129,6 +129,10 @@ object PrivdManager {
     private val _state = MutableStateFlow(PrivdState.OFF)
     val state: StateFlow<PrivdState> = _state.asStateFlow()
 
+    internal fun setStateForTesting(state: PrivdState) {
+        _state.value = state
+    }
+
     private val _lastError = MutableStateFlow<PrivdError?>(null)
     val lastError: StateFlow<PrivdError?> = _lastError.asStateFlow()
 
