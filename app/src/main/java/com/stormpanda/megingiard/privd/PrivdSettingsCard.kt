@@ -73,13 +73,14 @@ private val PR_DIALOG_PCT_WIDTH = 52.dp
  *
  * Shows the current connection state (OFF / BOOTSTRAPPING / CONNECTING / RUNNING / FAILED),
  * a Connect / Disconnect button, a Test button (round-trips a `PING` to the
- * daemon), the auto-connect toggle, the on-device bootstrap wizard, and the
+ * daemon), the show reconnect prompt toggle, the on-device bootstrap wizard, and the
  * per-feature sub-toggles.
  *
  * Bootstrap (Meilenstein B): the user opens the wizard, pairs the device with
  * its own ADB Wireless-Debugging service, and the wizard pushes the daemon
- * binary + spawns it. After a successful run, [GlobalSettingsViewModel.setPrivdAutoConnect]
- * is set to `true` so future app starts silently call `PrivdManager.connect()`.
+ * binary + spawns it. After a successful run, future app starts silently call
+ * `PrivdManager.connect()` automatically, prompting the user if reconnection fails
+ * (unless disabled via the reconnect prompt preference toggle).
  */
 @Composable
 internal fun PrivdSettingsCard(

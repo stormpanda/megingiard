@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
@@ -191,6 +194,9 @@ object AppStateManager {
         _hasAdbCredentials.value = has
     }
 
+    private val _isBackgroundSettingsActive = MutableStateFlow(false)
+    val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
+
     private val _isPrivdPromptDismissed = MutableStateFlow(false)
     val isPrivdPromptDismissed: StateFlow<Boolean> = _isPrivdPromptDismissed.asStateFlow()
 
@@ -199,15 +205,15 @@ object AppStateManager {
         _isPrivdPromptDismissed.value = dismissed
     }
 
-    private val _isPrivdPromptShowing = MutableStateFlow(false)
-    val isPrivdPromptShowing: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
-
-    fun setPrivdPromptShowing(showing: Boolean) {
-        AppLog.d(TAG, "setPrivdPromptShowing($showing)")
-        _isPrivdPromptShowing.value = showing
-    }
-
-    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
+    val isPrivdPromptActive: StateFlow<Boolean> = combine(
+        PrivdManager.state,
+        MacroPadSettings.privdShowAdbPrompt,
+        _hasAdbCredentials,
+        _isPrivdPromptDismissed,
+        _isBackgroundSettingsActive
+    ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
+        state == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed && !bgSettingsActive
+    }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
@@ -228,8 +234,7 @@ object AppStateManager {
         _selectedCutoutId.value = id
     }
 
-    private val _isBackgroundSettingsActive = MutableStateFlow(false)
-    val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
+
     private var wasViewportEditActiveBeforeSettings = false
 
     /**
@@ -317,7 +322,6 @@ object AppStateManager {
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
             _isPrivdPromptDismissed.value = true
-            _isPrivdPromptShowing.value = false
         } else {
             _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
         }

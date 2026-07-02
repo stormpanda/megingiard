@@ -197,11 +197,10 @@ When `PrivdManager.connect(context)` is invoked:
 
 The `triggered` guard ensures auto-connect runs at most once for a given
 OFF/FAILED transition and therefore cannot spin in a tight retry loop when the
-daemon is unreachable. The guard resets when Privileged Mode reaches `RUNNING`
-or when auto-connect is disabled. This lets the app recover from a dropped or
-manually killed daemon after an update: `RUNNING → FAILED` triggers one fresh
-connect attempt, so the newly deployed daemon binary can be picked up without a
-full app restart.
+daemon is unreachable. The guard resets when Privileged Mode reaches `RUNNING`.
+This lets the app recover from a dropped or manually killed daemon after an
+update: `RUNNING → FAILED` triggers one fresh connect attempt, so the newly
+deployed daemon binary can be picked up without a full app restart.
 
 ### Wireless Debugging & Credentials Status Check
 
