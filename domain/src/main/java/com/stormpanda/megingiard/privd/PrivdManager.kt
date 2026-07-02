@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.privd
 
+import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -127,15 +129,19 @@ object PrivdManager {
     private val _state = MutableStateFlow(PrivdState.OFF)
     val state: StateFlow<PrivdState> = _state.asStateFlow()
 
+    internal fun setStateForTesting(state: PrivdState) {
+        _state.value = state
+    }
+
     private val _lastError = MutableStateFlow<PrivdError?>(null)
     val lastError: StateFlow<PrivdError?> = _lastError.asStateFlow()
 
-    /**
-     * Attempts to connect to the running daemon.
-     * Returns `true` on success.
-     */
-    fun connect(): Boolean {
+    private var _isManuallyDisconnected = false
+    val isManuallyDisconnected: Boolean get() = _isManuallyDisconnected
+
+    fun connect(context: Context): Boolean {
         AppLog.i(TAG, "connect() called (current state=${_state.value})")
+        _isManuallyDisconnected = false
         _state.value = PrivdState.CONNECTING
         _lastError.value = null
         val ok = PrivdClient.connect()
@@ -143,12 +149,21 @@ object PrivdManager {
             _state.value = PrivdState.RUNNING
             AppLog.i(TAG, "Privileged Mode is RUNNING")
             startClientObserver()
-        } else {
-            _state.value = PrivdState.FAILED
-            _lastError.value = PrivdError.DAEMON_UNREACHABLE
-            AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable")
+            return true
         }
-        return ok
+
+        // Direct connect failed. Check if we have credentials to perform background bootstrap.
+        val keyFile = File(context.noBackupFilesDir, "privd_adb_key.bin")
+        val certFile = File(context.noBackupFilesDir, "privd_adb_cert.bin")
+        if (keyFile.exists() && certFile.exists()) {
+            AppLog.i(TAG, "Direct connect failed. Saved ADB credentials found, attempting background bootstrap.")
+            return PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")
+        }
+
+        _state.value = PrivdState.FAILED
+        _lastError.value = PrivdError.DAEMON_UNREACHABLE
+        AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable and no saved ADB credentials")
+        return false
     }
 
     /**
@@ -156,6 +171,7 @@ object PrivdManager {
      */
     fun disconnect() {
         AppLog.i(TAG, "disconnect()")
+        _isManuallyDisconnected = true
         clientObserverJob?.cancel()
         clientObserverJob = null
         PrivdClient.disconnect()
@@ -183,6 +199,7 @@ object PrivdManager {
      * connected.
      */
     internal fun verifyConnect(): Boolean {
+        _isManuallyDisconnected = false
         val ok = PrivdClient.connect()
         if (ok) {
             _state.value = PrivdState.RUNNING

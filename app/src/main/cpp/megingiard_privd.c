@@ -967,8 +967,20 @@ static int serve_client(int client_fd) {
 }
 
 static void detach_from_shell(void) {
-    /* After signalling readiness on stdout, fully detach so the spawning ADB
-     * shell can exit without sending SIGHUP. */
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork");
+        exit(1);
+    }
+    if (pid > 0) {
+        /* Parent process exits. This closes stdout and signals the shell to exit. */
+        exit(0);
+    }
+
+    /* Child process continues. Start a new session. */
+    setsid();
+    signal(SIGHUP, SIG_IGN);
+
     int devnull = open("/dev/null", O_RDWR);
     if (devnull >= 0) {
         dup2(devnull, STDIN_FILENO);
@@ -976,9 +988,6 @@ static void detach_from_shell(void) {
         dup2(devnull, STDERR_FILENO);
         if (devnull > STDERR_FILENO) close(devnull);
     }
-    setsid();
-    /* Ignore SIGHUP just in case. */
-    signal(SIGHUP, SIG_IGN);
 }
 
 int main(int argc, char *argv[]) {

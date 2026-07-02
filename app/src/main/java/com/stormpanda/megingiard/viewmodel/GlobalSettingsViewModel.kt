@@ -22,10 +22,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
+import java.io.File
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 import com.stormpanda.megingiard.config.InternalBackup
 
 private const val TAG = "GlobalSettingsVM"
+private const val GETPROP_TIMEOUT_MS = 2000L
 
 /**
  * ViewModel for [GlobalSettingsScreen] — exposes the app-global settings state
@@ -56,10 +61,16 @@ class GlobalSettingsViewModel : ViewModel() {
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
     val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
-    val privdAutoConnect: StateFlow<Boolean> = MacroPadSettings.privdAutoConnect
     val privdDeadzoneLeft: StateFlow<Float>  = MacroPadSettings.deadzoneLeft
     val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
+    val privdShowAdbPrompt: StateFlow<Boolean> = MacroPadSettings.privdShowAdbPrompt
     val privdBootstrapStage: StateFlow<BootstrapStage> = PrivdBootstrapper.stage
+
+    private val _isWirelessDebuggingActive = MutableStateFlow<Boolean?>(null)
+    val isWirelessDebuggingActive: StateFlow<Boolean?> = _isWirelessDebuggingActive.asStateFlow()
+
+    private val _hasCredentials = MutableStateFlow<Boolean?>(null)
+    val hasCredentials: StateFlow<Boolean?> = _hasCredentials.asStateFlow()
 
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
     fun setThemeMode(mode: ThemeMode) = SettingsManager.setThemeMode(mode)
@@ -80,10 +91,11 @@ class GlobalSettingsViewModel : ViewModel() {
      * Initiates a connection to the daemon socket asynchronously on [Dispatchers.IO].
      * The result is reflected in [privdState] — no return value.
      */
-    fun privdConnect() {
+    fun privdConnect(context: Context) {
         AppLog.i(TAG, "privdConnect()")
+        val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
-            PrivdManager.connect()
+            PrivdManager.connect(appContext)
         }
     }
 
@@ -92,9 +104,9 @@ class GlobalSettingsViewModel : ViewModel() {
      */
     fun privdDisconnect() = PrivdManager.disconnect()
 
-    fun setPrivdAutoConnect(value: Boolean) = MacroPadSettings.setPrivdAutoConnect(value)
     fun setPrivdDeadzoneLeft(value: Float)  = MacroPadSettings.setDeadzoneLeft(value)
     fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)
+    fun setPrivdShowAdbPrompt(value: Boolean) = MacroPadSettings.setPrivdShowAdbPrompt(value)
     fun privdResetBootstrapStage() = PrivdBootstrapper.resetStage()
 
     /**
@@ -135,7 +147,6 @@ class GlobalSettingsViewModel : ViewModel() {
             val ok = withContext(Dispatchers.IO) {
                 PrivdBootstrapper.bootstrapAndConnect(appContext, host)
             }
-            if (ok) MacroPadSettings.setPrivdAutoConnect(true)
             onResult(ok)
         }
     }
@@ -145,5 +156,38 @@ class GlobalSettingsViewModel : ViewModel() {
      */
     fun checkAccessibilityActive(context: Context): Boolean {
         return MegingiardAccessibilityService.isEnabled(context)
+    }
+
+    fun checkPrivilegedModeStatus(context: Context) {
+        val appContext = context.applicationContext
+        viewModelScope.launch(Dispatchers.IO) {
+            val keyFile = File(appContext.noBackupFilesDir, "privd_adb_key.bin")
+            val certFile = File(appContext.noBackupFilesDir, "privd_adb_cert.bin")
+            _hasCredentials.value = keyFile.exists() && certFile.exists()
+
+            var proc: Process? = null
+            val port = try {
+                proc = ProcessBuilder("getprop", "service.adb.tls.port")
+                    .redirectErrorStream(true)
+                    .start()
+                val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                if (exited) {
+                    val output = proc.inputStream.bufferedReader().use { reader ->
+                        reader.readLine()?.trim().orEmpty()
+                    }
+                    output.toIntOrNull() ?: 0
+                } else {
+                    AppLog.w(TAG, "getprop service.adb.tls.port timed out after $GETPROP_TIMEOUT_MS ms")
+                    0
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to read service.adb.tls.port: $e")
+                0
+            } finally {
+                proc?.destroyForcibly()
+            }
+            _isWirelessDebuggingActive.value = port > 0
+            AppLog.d(TAG, "checkPrivilegedModeStatus: hasCredentials=${_hasCredentials.value} isWirelessDebuggingActive=${_isWirelessDebuggingActive.value}")
+        }
     }
 }

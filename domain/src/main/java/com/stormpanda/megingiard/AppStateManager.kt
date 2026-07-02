@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
@@ -35,19 +38,7 @@ object AppStateManager {
     // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    init {
-        scope.launch {
-            var lastActiveLayoutId: String? = null
-            MacroPadState.activeLayout.collect { layout ->
-                val newId = layout?.id
-                if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
-                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
-                    closeActiveModal()
-                }
-                lastActiveLayoutId = newId
-            }
-        }
-    }
+
 
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -183,6 +174,28 @@ object AppStateManager {
     private val _isFullscreenMouseActive = MutableStateFlow(false)
     val isFullscreenMouseActive: StateFlow<Boolean> = _isFullscreenMouseActive.asStateFlow()
 
+    private val _hasAdbCredentials = MutableStateFlow(false)
+    val hasAdbCredentials: StateFlow<Boolean> = _hasAdbCredentials.asStateFlow()
+
+    fun setHasAdbCredentials(has: Boolean) {
+        AppLog.d(TAG, "setHasAdbCredentials($has)")
+        _hasAdbCredentials.value = has
+    }
+
+    private val _isBackgroundSettingsActive = MutableStateFlow(false)
+    val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
+
+    private val _isPrivdPromptDismissed = MutableStateFlow(false)
+    val isPrivdPromptDismissed: StateFlow<Boolean> = _isPrivdPromptDismissed.asStateFlow()
+
+    fun setPrivdPromptDismissed(dismissed: Boolean) {
+        AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
+        _isPrivdPromptDismissed.value = dismissed
+    }
+
+    private val _isPrivdPromptShowing = MutableStateFlow(false)
+    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
+
     private val _isViewportEditActive = MutableStateFlow(false)
     val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
 
@@ -202,8 +215,7 @@ object AppStateManager {
         _selectedCutoutId.value = id
     }
 
-    private val _isBackgroundSettingsActive = MutableStateFlow(false)
-    val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
+
     private var wasViewportEditActiveBeforeSettings = false
 
     /**
@@ -290,6 +302,7 @@ object AppStateManager {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
+            _isPrivdPromptDismissed.value = true
         } else {
             _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
         }
@@ -329,4 +342,35 @@ object AppStateManager {
         }
     }
 
+    init {
+        scope.launch {
+            var lastActiveLayoutId: String? = null
+            MacroPadState.activeLayout.collect { layout ->
+                val newId = layout?.id
+                if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
+                    AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
+                    closeActiveModal()
+                }
+                lastActiveLayoutId = newId
+            }
+        }
+        scope.launch {
+            combine(
+                PrivdManager.state,
+                MacroPadSettings.privdShowAdbPrompt,
+                _hasAdbCredentials,
+                _isPrivdPromptDismissed,
+                _isBackgroundSettingsActive
+            ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
+                if (state == PrivdState.RUNNING) {
+                    _isPrivdPromptDismissed.value = false
+                }
+                if (dismissed || bgSettingsActive) {
+                    _isPrivdPromptShowing.value = false
+                } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
+                    _isPrivdPromptShowing.value = true
+                }
+            }.collect {}
+        }
+    }
 }

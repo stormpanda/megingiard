@@ -297,8 +297,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
     <string name="privd_ping_fail">Keine Antwort vom Daemon. Die Verbindung ist möglicherweise abgebrochen.</string>
 
-    <string name="privd_auto_connect">Beim App-Start automatisch verbinden</string>
-    <string name="privd_auto_connect_desc">Wenn aktiviert, öffnet Megingiard den Daemon-Socket beim Start lautlos erneut. Wird nach erfolgreicher Erst-Einrichtung automatisch gesetzt.</string>
+    <string name="privd_show_reconnect_prompt">Wiederverbindungshinweis anzeigen</string>
+    <string name="privd_show_reconnect_prompt_desc">Zeigt beim App-Start einen Dialog an, wenn die Verbindung zum privilegierten Helfer-Daemon fehlschlägt.</string>
+    <string name="privd_reconnect_prompt_title">Privilegierten Modus reaktivieren</string>
+    <string name="privd_reconnect_prompt_skip">Überspringen</string>
+    <string name="privd_reconnect_prompt_done">Fertig</string>
 
 
 
@@ -368,6 +371,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_error_bootstrap_push_failed">Daemon-Binary konnte nicht übertragen werden. Prüfe den verfügbaren Speicher unter /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Daemon-Prozess konnte nicht gestartet werden.</string>
     <string name="privd_error_bootstrap_provision_failed">Authentifizierungsschlüssel konnte nicht übertragen werden. Führe den Einrichtungsassistenten erneut aus.</string>
+    <string name="privd_info_running">Privilegiert-Modus ist aktiv und läuft.</string>
+    <string name="privd_info_no_credentials">Keine Kopplungs-Anmeldedaten gefunden. Bitte führe den Einrichtungsassistenten aus.</string>
+    <string name="privd_info_wireless_disabled">Drahtloses Debugging ist inaktiv. Bitte aktiviere es in den Entwicklereinstellungen und versuche es erneut.</string>
+    <string name="privd_info_wireless_active_disconnected">Drahtloses Debugging ist aktiv. Tippe auf Verbinden, um den Privilegiert-Modus zu starten.</string>
+    <string name="privd_info_connecting">Verbindung zum Daemon wird hergestellt…</string>
 
     <!-- Exit confirmation dialog -->
     <string name="exit_dialog_title">Megingiard beenden</string>
@@ -857,6 +865,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_add_to_obtainium_desc">Öffnet Obtainium (falls installiert) mit dem vorausgefüllten Megingiard-Repository-Link. Falls Obtainium nicht installiert ist, wird die GitHub-Seite von Obtainium im Browser geöffnet.</string>
     <string name="help_settings_privd_desc">Richtet eine Hintergrundverbindung per Wireless Debugging ein, um auf System-Eingabegeräte zuzugreifen, die für normale Apps gesperrt sind. Dies ermöglicht:\n\n• Gamepad-Zusammenführung: Kombiniert virtuelle und physische Controller, sodass Spiele nur einen Controller sehen (erhöht die Kompatibilität).\n• Physische Gamepad-Aufnahme: Nimmt Makros direkt von deinem physischen Controller auf.\n• Privilegiertes Screen Mirroring: Startet die Bildschirmübertragung ohne die ständige Android-Sicherheitsabfrage.\n• Screenshots: Erstellt Screenshots des Hauptbildschirms direkt aus dem Schnellmenü-Overlay, ohne dass die Bildschirmübertragung aktiv sein muss.</string>
     <string name="help_settings_deadzone_desc">Verhindert, dass Rauschen oder Drift der Analogsticks aufgenommen werden. Gleiche diese Werte für beste Genauigkeit mit den Totzonen-Einstellungen deines Thor ab.</string>
+    <string name="help_settings_reconnect_prompt_desc">Wenn aktiv, wird beim App-Start ein Dialog angezeigt, falls die Verbindung zum privilegierten Daemon fehlschlägt, damit Sie sie direkt wiederherstellen können.</string>
     <string name="help_settings_log_level_desc">Im Normalbetrieb auf Warn oder Info belassen. Nur bei der Fehlersuche auf Debug oder Verbose stellen, um detaillierte Logs aufzuzeichnen.</string>
     <string name="help_settings_save_log_desc">Exportiert das aktuelle System-Log. Generiere dieses direkt nach einem Fehler oder Absturz, um es an einen Entwicklerbericht anzuhängen.</string>
 

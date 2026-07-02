@@ -72,6 +72,9 @@ import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
+import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
+import com.stormpanda.megingiard.privd.PrivdManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainAppScreen"
@@ -97,6 +100,15 @@ fun MainAppScreen() {
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
+    val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
+
+    LaunchedEffect(isBackgroundSettingsActive) {
+        if (isBackgroundSettingsActive) {
+            AppStateManager.setPrivdPromptDismissed(true)
+        }
+    }
+
+
     val showQuickMenuTutorial by SettingsManager.showQuickMenuTutorial.collectAsState()
     var showQuickMenuLocal by remember { mutableStateOf(true) }
 
@@ -117,6 +129,7 @@ fun MainAppScreen() {
     val quickMenuBarZoneWidthPx = with(density) { MAS_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
     val context = LocalContext.current
+
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
@@ -276,6 +289,23 @@ fun MainAppScreen() {
                 }
             )
         }
+        
+        if (showPromptDialog) {
+            PrivdReconnectPromptDialog(
+                onConnect = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        PrivdManager.connect(context)
+                    }
+                },
+                onSkip = {
+                    AppStateManager.setPrivdPromptDismissed(true)
+                },
+                onDone = {
+                    AppStateManager.setPrivdPromptDismissed(true)
+                }
+            )
+        }
+
 
         importError?.let { error ->
             AlertDialog(

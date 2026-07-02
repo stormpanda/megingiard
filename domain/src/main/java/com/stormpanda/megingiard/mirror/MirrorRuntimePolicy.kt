@@ -1,5 +1,28 @@
 package com.stormpanda.megingiard.mirror
 
+import com.stormpanda.megingiard.privd.PrivdState
+
+/**
+ * Calculates whether screen mirroring auto-start should be blocked because the
+ * privileged helper daemon is currently connecting or has failed and is awaiting user action.
+ */
+fun isPrivdMirrorConnecting(
+    privdState: PrivdState,
+    promptActive: Boolean,
+    hasCreds: Boolean,
+    showPromptPref: Boolean,
+    dismissed: Boolean,
+    isManuallyDisconnected: Boolean
+): Boolean {
+    val autoConnectPending = hasCreds && !isManuallyDisconnected
+    val promptShouldShow = privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
+    return privdState == PrivdState.CONNECTING ||
+        privdState == PrivdState.BOOTSTRAPPING ||
+        (privdState == PrivdState.OFF && autoConnectPending) ||
+        promptActive ||
+        promptShouldShow
+}
+
 /** Runtime inputs for reconciling the active layout's persisted mirror preference. */
 data class MirrorRuntimePolicyState(
     val promptInFlight: Boolean,

@@ -7,7 +7,6 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
 /build
 /app/build
 /app/release
@@ -16,7 +15,8 @@
 /mirrorserver/build
 /captures
 /screenshots
-megingiard.jks
+.DS_Store
+.kotlin
 .externalNativeBuild
 .cxx
 local.properties

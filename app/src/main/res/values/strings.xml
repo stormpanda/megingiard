@@ -344,8 +344,11 @@ Open Settings to create a layout.</string>
     <string name="privd_ping_ok">Daemon responded — connection is healthy.</string>
     <string name="privd_ping_fail">No response from daemon. The connection may be stale.</string>
 
-    <string name="privd_auto_connect">Auto-connect on app start</string>
-    <string name="privd_auto_connect_desc">When enabled, Megingiard silently re-opens the daemon socket on launch. Set automatically after a successful first-time setup.</string>
+    <string name="privd_show_reconnect_prompt">Show reconnect prompt</string>
+    <string name="privd_show_reconnect_prompt_desc">Show a dialog on app start if the connection to the privileged helper daemon fails.</string>
+    <string name="privd_reconnect_prompt_title">Re-enable Privileged Mode</string>
+    <string name="privd_reconnect_prompt_skip">Skip</string>
+    <string name="privd_reconnect_prompt_done">Done</string>
 
 
 
@@ -415,6 +418,11 @@ Open Settings to create a layout.</string>
     <string name="privd_error_bootstrap_push_failed">Failed to push the daemon binary. Check available storage in /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Failed to start the daemon process.</string>
     <string name="privd_error_bootstrap_provision_failed">Failed to provision the authentication key. Re-run the setup wizard.</string>
+    <string name="privd_info_running">Privileged Mode is active and running.</string>
+    <string name="privd_info_no_credentials">No pairing credentials found. Please run the setup wizard to pair this device.</string>
+    <string name="privd_info_wireless_disabled">Wireless Debugging is inactive. Please enable it in the developer settings and try again.</string>
+    <string name="privd_info_wireless_active_disconnected">Wireless Debugging is active. Tap Connect to start Privileged Mode.</string>
+    <string name="privd_info_connecting">Connecting to daemon…</string>
     <string name="settings_jump_all">All</string>
     <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">General</string>
@@ -851,6 +859,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_add_to_obtainium_desc">Opens Obtainium (if installed) with the pre-filled Megingiard repository link. If Obtainium is not installed, it opens the Obtainium GitHub releases page in the browser.</string>
     <string name="help_settings_privd_desc">Establishes a background helper connection via Wireless Debugging to write to system input devices not accessible by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Privileged Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
     <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
+    <string name="help_settings_reconnect_prompt_desc">If active, shows a helpful reconnect wizard dialog on app start if the background helper connection drops, allowing you to pair and resume instantly.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>
     <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a GitHub issue or developer report.</string>
 

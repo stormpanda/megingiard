@@ -50,14 +50,15 @@ every device since Android 11 (API 30).
   pairing dialog → pushing and starting the daemon binary → verifying the
   connection. No external computer or USB cable is required.
 
-### FR-PV6: Auto-Connect On App Start
-
 - After a successful first-time setup, the app MUST silently re-open the
   daemon socket on every cold start so users do not need to re-run the
-  wizard after each reboot.
-- The auto-connect toggle MUST be exposed as a Switch row in the settings
-  card and MUST be settable manually as well as automatically after a
-  successful bootstrap.
+  wizard after each reboot. Auto-connect is unconditionally active.
+
+### FR-PV7: Reconnection Prompt Modal on App Start
+
+- If Privileged Mode has been previously set up (saved ADB credentials exist) but the connection fails on app start (e.g. because Wireless Debugging was disabled after reboot), the app shows a modal dialog prompting the user to re-enable Privileged Mode.
+- The modal uses the same wording as the global settings "call to action" texts with the same color coding, and has a Connect button to retry and a Skip button to dismiss.
+- A toggle in Global Settings allows users to enable/disable showing this prompt dialog on app start (default: true/enabled).
 
 ### FR-PV5: No Always-Connected Requirement
 
@@ -168,35 +169,63 @@ Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`
 for the X.509 serial number, ensuring a cryptographically-strong positive value.
 
-The daemon binary in `/data/local/tmp` survives until reboot; thereafter
-the push step is replayed on the next launch (cold-boot recovery is the
-responsibility of the auto-connect retry path or a fresh wizard run).
+The daemon binary in `/data/local/tmp` survives until reboot; thereafter, the next start of the app (or auto-connect invocation) replays the push/spawn step in the background if the user previously completed the setup wizard.
 
 ### Auto-Connect Hook
 
-`MainActivity.onCreate()` installs a long-lived collector:
+Auto-connect is mandatory and always active on app startup. The user toggle and its datastore preference `privdAutoConnect` have been completely removed from the codebase.
+
+`MainActivity.onCreate()` installs a long-lived collector to automatically start or re-bootstrap the daemon:
 
 ```kotlin
-combine(MacroPadSettings.privdAutoConnect, PrivdManager.state) { auto, state ->
-  auto to state
-}.collect { (autoConnect, state) ->
+PrivdManager.state.collect { state ->
   when {
-    !autoConnect || state == PrivdState.RUNNING -> triggered = false
-    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
+    state == PrivdState.RUNNING -> triggered = false
+    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered && !PrivdManager.isManuallyDisconnected -> {
       triggered = true
-      withContext(Dispatchers.IO) { PrivdManager.connect() }
+      AppLog.i(TAG, "Auto-connecting Privileged Mode")
+      withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
     }
-    }
+  }
 }
 ```
 
+When `PrivdManager.connect(context)` is invoked:
+1. It first attempts a direct local abstract Unix socket connection via `PrivdClient.connect()`.
+2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
+3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port, connects to the local ADB server, pushes and spawns the daemon, and connects the socket.
+
 The `triggered` guard ensures auto-connect runs at most once for a given
 OFF/FAILED transition and therefore cannot spin in a tight retry loop when the
-daemon is unreachable. The guard resets when Privileged Mode reaches `RUNNING`
-or when auto-connect is disabled. This lets the app recover from a dropped or
-manually killed daemon after an update: `RUNNING → FAILED` triggers one fresh
-connect attempt, so the newly deployed daemon binary can be picked up without a
-full app restart.
+daemon is unreachable. The guard resets when Privileged Mode reaches `RUNNING`.
+This lets the app recover from a dropped or manually killed daemon after an
+update: `RUNNING → FAILED` triggers one fresh connect attempt, so the newly
+deployed daemon binary can be picked up without a full app restart.
+
+### Wireless Debugging & Credentials Status Check
+
+To guide users when Privileged Mode is offline, `GlobalSettingsViewModel` exposes a reactive background checker `checkPrivilegedModeStatus(context)`. The settings card triggers this check via a `LaunchedEffect(state)` on entering the Global Settings screen and whenever the connection state changes.
+
+It performs the following checks:
+1. **Credentials Presence:** Verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
+2. **Wireless Debugging Activity:** Reads the system property `service.adb.tls.port` via a fast `getprop` command to see if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
+
+The results are presented to the user as clear, localized guidance messages in the settings card:
+- **Running:** "Privileged Mode is active and running."
+- **No Credentials:** "No pairing credentials found. Please run the setup wizard to pair this device."
+- **Wireless Debugging Disabled:** "Wireless Debugging is inactive. Please enable Wireless Debugging in Developer Options."
+- **Wireless Debugging Active, Disconnected:** "Wireless Debugging is active. Tap Connect to start Privileged Mode."
+- **Connecting:** "Connecting to daemon..."
+
+### Reconnection Prompt Dialog
+
+If the auto-connection sequence fails on app start (state becomes `FAILED`) but saved credentials exist (`hasCredentials == true`), a reconnection prompt dialog is shown to the user on startup (provided the "Show reconnect prompt" setting is enabled). 
+
+This dialog uses the same wording and colors as the settings status messages. It has two actions:
+1. **Connect:** Triggers a background retry connect sequence.
+2. **Skip:** Dismisses the dialog for this app run session.
+
+Opening the Global Settings screen also automatically suppresses/skips the dialog to avoid overlapping layouts.
 
 ### Security Model
 
@@ -296,12 +325,7 @@ spawn command can detect success:
 | `N\n` | No suitable gamepad found, daemon exits 1                     |
 | `E\n` | Generic startup failure (e.g. socket bind), daemon exits 1    |
 
-> **Note:** The spawn command redirects the daemon's stdout/stderr to
-> `/dev/null` before it detaches, so `R/N/E` is only readable during the
-> brief window before `setsid()`. The bootstrapper reads stdout via the ADB
-> shell stream using a separate `echo MGRD_SPAWN_OK` marker to confirm the
-> spawn command itself completed; actual daemon readiness is verified by the
-> subsequent LocalSocket retry loop (`PrivdManager.verifyConnect()`).
+> **Note:** The bootstrapper spawns the daemon process in the foreground and reads its stdout stream directly. The daemon prints `R\n`, `N\n`, or `E\n` and forks inside `detach_from_shell()`. The parent process exits immediately (which cleanly closes the stdout pipe and terminates the shell), while the child daemon starts a new session (`setsid()`), ignores `SIGHUP`, and redirects standard streams to `/dev/null`. This fork-detach sequence guarantees that SIGHUP immunity is fully established before the shell channel is closed, preventing any race conditions. The bootstrapper decodes this token to verify daemon readiness or immediately fail with a descriptive error.
 
 ### State Machine
 

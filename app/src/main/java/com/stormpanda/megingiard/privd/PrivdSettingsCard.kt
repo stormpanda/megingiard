@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.settings.RememberSettingRow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -29,6 +30,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
@@ -70,13 +73,14 @@ private val PR_DIALOG_PCT_WIDTH = 52.dp
  *
  * Shows the current connection state (OFF / BOOTSTRAPPING / CONNECTING / RUNNING / FAILED),
  * a Connect / Disconnect button, a Test button (round-trips a `PING` to the
- * daemon), the auto-connect toggle, the on-device bootstrap wizard, and the
+ * daemon), the show reconnect prompt toggle, the on-device bootstrap wizard, and the
  * per-feature sub-toggles.
  *
  * Bootstrap (Meilenstein B): the user opens the wizard, pairs the device with
  * its own ADB Wireless-Debugging service, and the wizard pushes the daemon
- * binary + spawns it. After a successful run, [GlobalSettingsViewModel.setPrivdAutoConnect]
- * is set to `true` so future app starts silently call `PrivdManager.connect()`.
+ * binary + spawns it. After a successful run, future app starts silently call
+ * `PrivdManager.connect()` automatically, prompting the user if reconnection fails
+ * (unless disabled via the reconnect prompt preference toggle).
  */
 @Composable
 internal fun PrivdSettingsCard(
@@ -87,14 +91,22 @@ internal fun PrivdSettingsCard(
     val state by viewModel.privdState.collectAsState()
     val lastError by viewModel.privdLastError.collectAsState()
 
-    val autoConnect by viewModel.privdAutoConnect.collectAsState()
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
+    val showAdbPrompt by viewModel.privdShowAdbPrompt.collectAsState()
     val colors = LocalAppColors.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var pingResult by remember { mutableStateOf<Boolean?>(null) }
     var isPinging by remember { mutableStateOf(false) }
+
+    val wirelessDebuggingActive by viewModel.isWirelessDebuggingActive.collectAsState()
+    val hasCredentials by viewModel.hasCredentials.collectAsState()
+
+    LaunchedEffect(state) {
+        viewModel.checkPrivilegedModeStatus(context)
+    }
 
     Column(
         modifier = Modifier
@@ -136,24 +148,6 @@ internal fun PrivdSettingsCard(
             color = colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodySmall,
         )
-        val errorRes = when (lastError) {
-            PrivdError.DAEMON_UNREACHABLE     -> R.string.privd_error_daemon_unreachable
-            PrivdError.PAIRING_FAILED         -> R.string.privd_error_pairing_failed
-            PrivdError.ADB_DISCOVERY_FAILED   -> R.string.privd_error_adb_discovery_failed
-            PrivdError.ADB_CONNECT_FAILED     -> R.string.privd_error_adb_connect_failed
-            PrivdError.BOOTSTRAP_PUSH_FAILED       -> R.string.privd_error_bootstrap_push_failed
-            PrivdError.BOOTSTRAP_SPAWN_FAILED      -> R.string.privd_error_bootstrap_spawn_failed
-            PrivdError.BOOTSTRAP_PROVISION_FAILED  -> R.string.privd_error_bootstrap_provision_failed
-            null                                   -> null
-        }
-        if (state == PrivdState.FAILED && errorRes != null) {
-            Spacer(Modifier.height(PR_BUTTON_GAP))
-            Text(
-                text = stringResource(errorRes),
-                color = colors.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
 
         Spacer(Modifier.height(PR_BUTTON_GAP))
 
@@ -184,7 +178,7 @@ internal fun PrivdSettingsCard(
                 }
             } else {
                 Button(
-                    onClick = { viewModel.privdConnect() },
+                    onClick = { viewModel.privdConnect(context) },
                     enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
                 ) {
                     Text(stringResource(R.string.privd_action_connect))
@@ -195,8 +189,9 @@ internal fun PrivdSettingsCard(
             }
         }
 
-        // ── Ping result ─────────────────────────────────────────────────────
-        pingResult?.let { ok ->
+        // ── Ping result / Status Guidance ──────────────────────────────────
+        if (pingResult != null) {
+            val ok = pingResult!!
             Spacer(Modifier.height(PR_BUTTON_GAP))
             Text(
                 text = stringResource(
@@ -205,35 +200,57 @@ internal fun PrivdSettingsCard(
                 color = if (ok) colors.actionColorSystem else colors.error,
                 style = MaterialTheme.typography.bodySmall,
             )
-        }
+        } else {
+            val specificErrorRes = if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
+                when (lastError) {
+                    PrivdError.PAIRING_FAILED         -> R.string.privd_error_pairing_failed
+                    PrivdError.ADB_DISCOVERY_FAILED   -> R.string.privd_error_adb_discovery_failed
+                    PrivdError.ADB_CONNECT_FAILED     -> R.string.privd_error_adb_connect_failed
+                    PrivdError.BOOTSTRAP_PUSH_FAILED       -> R.string.privd_error_bootstrap_push_failed
+                    PrivdError.BOOTSTRAP_SPAWN_FAILED      -> R.string.privd_error_bootstrap_spawn_failed
+                    PrivdError.BOOTSTRAP_PROVISION_FAILED  -> R.string.privd_error_bootstrap_provision_failed
+                    else                                   -> null
+                }
+            } else {
+                null
+            }
 
-        // ── Auto-connect toggle ─────────────────────────────────────────────
-        Spacer(Modifier.height(PR_BUTTON_GAP))
-        AppDivider()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = PR_ROW_V_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+            val infoStringRes = when {
+                state == PrivdState.RUNNING -> R.string.privd_info_running
+                state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
+                hasCredentials == false -> R.string.privd_info_no_credentials
+                wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
+                specificErrorRes != null -> specificErrorRes
+                wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
+                else -> null
+            }
+            infoStringRes?.let { resId ->
+                val textColor = when {
+                    state == PrivdState.RUNNING -> colors.actionColorSystem
+                    hasCredentials == false -> colors.onSurfaceSecondary
+                    wirelessDebuggingActive == false -> colors.error
+                    specificErrorRes != null -> colors.error
+                    else -> colors.actionColorSystem
+                }
+                Spacer(Modifier.height(PR_BUTTON_GAP))
                 Text(
-                    text = stringResource(R.string.privd_auto_connect),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = stringResource(R.string.privd_auto_connect_desc),
-                    color = colors.onSurfaceSecondary,
+                    text = stringResource(resId),
+                    color = textColor,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Switch(
-                checked = autoConnect,
-                onCheckedChange = { viewModel.setPrivdAutoConnect(it) },
-            )
         }
 
+
+
+
+        AppDivider()
+        RememberSettingRow(
+            label = stringResource(R.string.privd_show_reconnect_prompt),
+            description = stringResource(R.string.privd_show_reconnect_prompt_desc),
+            checked = showAdbPrompt,
+            onCheckedChange = { viewModel.setPrivdShowAdbPrompt(it) },
+        )
 
         // ── Dead-zone configuration row ──────────────────────────────────────
         AppDivider()

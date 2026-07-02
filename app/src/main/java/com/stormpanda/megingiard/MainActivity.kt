@@ -83,6 +83,7 @@ import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
+import com.stormpanda.megingiard.mirror.isPrivdMirrorConnecting
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -266,6 +267,10 @@ class MainActivity : ComponentActivity() {
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
 
+        val hasCreds = File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
+            File(noBackupFilesDir, "privd_adb_cert.bin").exists()
+        AppStateManager.setHasAdbCredentials(hasCreds)
+
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
 
@@ -361,18 +366,13 @@ class MainActivity : ComponentActivity() {
         // Settings if needed.
         lifecycleScope.launch {
             var triggered = false
-            combine(
-                MacroPadSettings.privdAutoConnect,
-                PrivdManager.state,
-            ) { auto, state ->
-                auto to state
-            }.collect { (autoConnect, state) ->
+            PrivdManager.state.collect { state ->
                 when {
-                    !autoConnect || state == PrivdState.RUNNING -> triggered = false
-                    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
+                    state == PrivdState.RUNNING -> triggered = false
+                    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered && !PrivdManager.isManuallyDisconnected -> {
                         triggered = true
                         AppLog.i(TAG, "Auto-connecting Privileged Mode")
-                        withContext(Dispatchers.IO) { PrivdManager.connect() }
+                        withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
                     }
                 }
             }
@@ -450,12 +450,20 @@ class MainActivity : ComponentActivity() {
                 // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
                 // auto-start so the strategy decision waits for the daemon to settle.
                 val privdMirrorConnectingFlow = combine(
-                    MacroPadSettings.privdAutoConnect,
                     PrivdManager.state,
-                ) { autoConnect, privdState ->
-                    privdState == PrivdState.CONNECTING ||
-                        privdState == PrivdState.BOOTSTRAPPING ||
-                        (privdState == PrivdState.OFF && autoConnect)
+                    AppStateManager.isPrivdPromptActive,
+                    AppStateManager.hasAdbCredentials,
+                    MacroPadSettings.privdShowAdbPrompt,
+                    AppStateManager.isPrivdPromptDismissed,
+                ) { privdState, promptActive, hasCreds, showPromptPref, dismissed ->
+                    isPrivdMirrorConnecting(
+                        privdState = privdState,
+                        promptActive = promptActive,
+                        hasCreds = hasCreds,
+                        showPromptPref = showPromptPref,
+                        dismissed = dismissed,
+                        isManuallyDisconnected = PrivdManager.isManuallyDisconnected
+                    )
                 }
                 combine(
                     AppStateManager.promptInFlight,
