@@ -23,12 +23,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 import com.stormpanda.megingiard.config.InternalBackup
 
 private const val TAG = "GlobalSettingsVM"
+private const val GETPROP_TIMEOUT_MS = 2000L
 
 /**
  * ViewModel for [GlobalSettingsScreen] — exposes the app-global settings state
@@ -171,7 +173,7 @@ class GlobalSettingsViewModel : ViewModel() {
                 val output = proc.inputStream.bufferedReader().use { reader ->
                     reader.readLine()?.trim().orEmpty()
                 }
-                proc.waitFor(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
+                proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 output.toIntOrNull() ?: 0
             } catch (e: Exception) {
                 AppLog.w(TAG, "Failed to read service.adb.tls.port: $e")

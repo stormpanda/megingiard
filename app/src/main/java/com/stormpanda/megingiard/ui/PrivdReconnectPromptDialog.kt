@@ -27,10 +27,13 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val TAG = "PrivdPromptDialog"
+private const val GETPROP_TIMEOUT_MS = 2000L
+private val PROMPT_SPACER_HEIGHT = 12.dp
 
 @Composable
 fun PrivdReconnectPromptDialog(
@@ -51,7 +54,7 @@ fun PrivdReconnectPromptDialog(
                     .redirectErrorStream(true)
                     .start()
                 val output = proc.inputStream.bufferedReader().use { it.readLine()?.trim().orEmpty() }
-                proc.waitFor(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
+                proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 output.toIntOrNull() ?: 0
             } catch (e: Exception) {
                 0
@@ -123,7 +126,7 @@ fun PrivdReconnectPromptDialog(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (infoStringRes != null) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(PROMPT_SPACER_HEIGHT))
                     Text(
                         text = stringResource(infoStringRes),
                         color = textColor,
