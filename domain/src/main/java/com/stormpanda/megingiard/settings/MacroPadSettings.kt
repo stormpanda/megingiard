@@ -138,8 +138,6 @@ object MacroPadSettings {
         scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_SHOW_ADB_PROMPT] = value } }
     }
 
-
-
     fun setDeadzoneLeft(value: Float) {
         AppLog.d(TAG, "setDeadzoneLeft($value)")
         _deadzoneLeft.value = value

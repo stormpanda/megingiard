@@ -72,13 +72,9 @@ import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import kotlin.math.roundToInt
-import java.io.File
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainAppScreen"

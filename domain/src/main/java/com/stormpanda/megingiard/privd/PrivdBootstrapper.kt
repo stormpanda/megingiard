@@ -434,28 +434,61 @@ object PrivdBootstrapper {
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->
-            val reader = BufferedReader(InputStreamReader(s.openInputStream()))
+            val input = s.openInputStream()
             val deadline = System.currentTimeMillis() + SHELL_READ_TIMEOUT_MS
+            val sb = StringBuilder()
             while (System.currentTimeMillis() < deadline) {
-                val line = try {
-                    reader.readLine() ?: return@use false
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "spawnDaemon read failed: $e")
-                    return@use false
+                if (input.available() > 0) {
+                    val c = try {
+                        input.read()
+                    } catch (e: Exception) {
+                        AppLog.w(TAG, "spawnDaemon read failed: $e")
+                        return@use false
+                    }
+                    if (c == -1) {
+                        break
+                    }
+                    val char = c.toChar()
+                    if (char == '\n' || char == '\r') {
+                        val line = sb.toString().trim()
+                        if (line.isNotEmpty()) {
+                            if (line == "R") {
+                                AppLog.i(TAG, "spawnDaemon: daemon reported readiness (R)")
+                                return@use true
+                            }
+                            if (line == "N") {
+                                AppLog.w(TAG, "spawnDaemon: daemon reported no gamepad found (N)")
+                                return@use false
+                            }
+                            if (line == "E") {
+                                AppLog.w(TAG, "spawnDaemon: daemon reported generic bind/startup error (E)")
+                                return@use false
+                            }
+                            sb.setLength(0)
+                        }
+                    } else {
+                        sb.append(char)
+                    }
+                } else {
+                    try {
+                        Thread.sleep(50)
+                    } catch (e: InterruptedException) {
+                        break
+                    }
                 }
-                val cleanLine = line.trim()
-                if (cleanLine == "R") {
-                    AppLog.i(TAG, "spawnDaemon: daemon reported readiness (R)")
-                    return@use true
-                }
-                if (cleanLine == "N") {
-                    AppLog.w(TAG, "spawnDaemon: daemon reported no gamepad found (N)")
-                    return@use false
-                }
-                if (cleanLine == "E") {
-                    AppLog.w(TAG, "spawnDaemon: daemon reported generic bind/startup error (E)")
-                    return@use false
-                }
+            }
+            val line = sb.toString().trim()
+            if (line == "R") {
+                AppLog.i(TAG, "spawnDaemon: daemon reported readiness (R)")
+                return@use true
+            }
+            if (line == "N") {
+                AppLog.w(TAG, "spawnDaemon: daemon reported no gamepad found (N)")
+                return@use false
+            }
+            if (line == "E") {
+                AppLog.w(TAG, "spawnDaemon: daemon reported generic bind/startup error (E)")
+                return@use false
             }
             AppLog.w(TAG, "spawnDaemon: timeout waiting for daemon readiness token")
             false

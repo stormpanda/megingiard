@@ -19,7 +19,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -53,10 +52,16 @@ fun PrivdReconnectPromptDialog(
                 proc = ProcessBuilder("getprop", "service.adb.tls.port")
                     .redirectErrorStream(true)
                     .start()
-                val output = proc.inputStream.bufferedReader().use { it.readLine()?.trim().orEmpty() }
-                proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                output.toIntOrNull() ?: 0
+                val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                if (exited) {
+                    val output = proc.inputStream.bufferedReader().use { it.readLine()?.trim().orEmpty() }
+                    output.toIntOrNull() ?: 0
+                } else {
+                    AppLog.w(TAG, "getprop service.adb.tls.port timed out after $GETPROP_TIMEOUT_MS ms")
+                    0
+                }
             } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to read service.adb.tls.port: $e")
                 0
             } finally {
                 proc?.destroyForcibly()
