@@ -285,9 +285,7 @@ class ScreenCaptureService : Service() {
             return startPrivdPath()
         }
         if (intent?.action == ACTION_START_SPLITPLAY) {
-            val pkg = intent.getStringExtra("PACKAGE_NAME") ?: ""
-            val taskId = intent.getStringExtra("TASK_ID") ?: ""
-            return startSplitPlayPath(pkg, taskId)
+            return startSplitPlayPath()
         }
 
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
@@ -516,8 +514,8 @@ class ScreenCaptureService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startSplitPlayPath(packageName: String, taskId: String): Int {
-        AppLog.i(TAG, "startSplitPlayPath package=$packageName taskId=$taskId")
+    private fun startSplitPlayPath(): Int {
+        AppLog.i(TAG, "startSplitPlayPath")
         isPrivilegedMode = true
         ScreenCaptureManager.setPrivilegedMirror(true)
         startForegroundNotificationConnectedDevice()
@@ -530,8 +528,6 @@ class ScreenCaptureService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-
-        splitTaskId = taskId
 
         scope.launch {
             SplitPlayManager.setStarting()
@@ -554,6 +550,32 @@ class ScreenCaptureService : Service() {
                 }
             }
 
+            val connected = SplitPlayManager.awaitDirectService(3000)
+            if (!connected) {
+                AppLog.e(TAG, "startSplitPlayPath: megingiard.direct.surface service registration timed out")
+                SplitPlayManager.setError("Daemon direct service timed out")
+                stopSelf()
+                return@launch
+            }
+
+            val taskInfo = SplitPlayManager.getTopTaskInfo()
+            var taskId = ""
+            var packageName = ""
+            if (taskInfo.isNotBlank() && taskInfo.contains(":")) {
+                val parts = taskInfo.split(":")
+                taskId = parts[0]
+                packageName = parts[1]
+            }
+
+            if (taskId.isBlank()) {
+                val pm = packageManager
+                val homeIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+                val resolveInfo = pm.resolveActivity(homeIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                packageName = resolveInfo?.activityInfo?.packageName ?: "com.ayn.launcher"
+            } else {
+                splitTaskId = taskId
+            }
+
             launch(Dispatchers.Main) {
                 val presentation = SplitPlayPresentation(this@ScreenCaptureService, secondaryDisplay)
                 splitPlayPresentation = presentation
@@ -561,7 +583,11 @@ class ScreenCaptureService : Service() {
 
                 val displayId = SplitPlayManager.startSplitPlayDisplay(packageName, 1080, 1920, 400)
                 if (displayId >= 0) {
-                    val launched = SplitPlayManager.launchGameOnDisplay(taskId, displayId)
+                    val launched = if (taskId.isNotBlank()) {
+                        SplitPlayManager.launchGameOnDisplay(taskId, displayId)
+                    } else {
+                        SplitPlayManager.launchGameOnDisplay(packageName, displayId)
+                    }
                     if (launched) {
                         val activityIntent = Intent(this@ScreenCaptureService, com.stormpanda.megingiard.splitplay.SplitPlayActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP

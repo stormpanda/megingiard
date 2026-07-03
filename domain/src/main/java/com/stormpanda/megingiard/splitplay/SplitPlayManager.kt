@@ -261,6 +261,17 @@ object SplitPlayManager {
         }
     }
 
+    suspend fun awaitDirectService(timeoutMs: Long): Boolean {
+        val start = System.currentTimeMillis()
+        while (getService(DIRECT_SURFACE_SERVICE_NAME) == null) {
+            if (System.currentTimeMillis() - start >= timeoutMs) {
+                return false
+            }
+            kotlinx.coroutines.delay(50)
+        }
+        return true
+    }
+
     private fun stopSplitPlaySession() {
         activeDisplayId = -1
         splitDisplayCallback = null
