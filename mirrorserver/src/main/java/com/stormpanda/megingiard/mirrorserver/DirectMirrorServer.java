@@ -395,9 +395,9 @@ public final class DirectMirrorServer {
             try {
                 String cmd;
                 if (componentNameOrTaskId.matches("^\\d+$")) {
-                    cmd = "cmd activity task move-to-display " + componentNameOrTaskId + " " + displayId;
+                    cmd = "/system/bin/cmd activity task move-to-display " + componentNameOrTaskId + " " + displayId;
                 } else {
-                    cmd = "am start -n " + componentNameOrTaskId + " --display " + displayId;
+                    cmd = "/system/bin/am start -n " + componentNameOrTaskId + " --display " + displayId;
                 }
                 System.err.println("DirectMirrorServer: running command: " + cmd);
                 Process process = Runtime.getRuntime().exec(cmd);
@@ -523,7 +523,7 @@ public final class DirectMirrorServer {
 
         private String getTopTaskInfo() {
             try {
-                Process process = Runtime.getRuntime().exec("dumpsys activity resumed");
+                Process process = Runtime.getRuntime().exec("/system/bin/dumpsys activity resumed");
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -560,7 +560,7 @@ public final class DirectMirrorServer {
             } catch (Throwable ignored) {}
 
             try {
-                Process process = Runtime.getRuntime().exec("dumpsys window windows");
+                Process process = Runtime.getRuntime().exec("/system/bin/dumpsys window windows");
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -589,7 +589,7 @@ public final class DirectMirrorServer {
 
         private int findTaskIdForPackage(String targetPkg) {
             try {
-                Process process = Runtime.getRuntime().exec("dumpsys activity activities");
+                Process process = Runtime.getRuntime().exec("/system/bin/dumpsys activity activities");
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String line;
                 while ((line = reader.readLine()) != null) {

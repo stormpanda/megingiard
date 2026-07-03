@@ -159,27 +159,31 @@ fun QuickMenu(
                 onSplitClick = {
                     scope.launch(Dispatchers.IO) {
                         val taskInfo = com.stormpanda.megingiard.splitplay.SplitPlayManager.getTopTaskInfo()
+                        var taskId = ""
+                        var packageName = ""
+                        
                         if (taskInfo.isNotBlank() && taskInfo.contains(":")) {
                             val parts = taskInfo.split(":")
-                            val taskId = parts[0]
-                            val packageName = parts[1]
-                            withContext(Dispatchers.Main) {
-                                onDismiss()
-                                val intent = Intent(context, ScreenCaptureService::class.java).apply {
-                                    action = "START_SPLITPLAY"
-                                    putExtra("TASK_ID", taskId)
-                                    putExtra("PACKAGE_NAME", packageName)
-                                }
-                                context.startForegroundService(intent)
+                            taskId = parts[0]
+                            packageName = parts[1]
+                        }
+                        
+                        if (taskId.isBlank()) {
+                            // Fallback: Resolve the Launcher package to split the home screen/launcher
+                            val pm = context.packageManager
+                            val homeIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+                            val resolveInfo = pm.resolveActivity(homeIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                            packageName = resolveInfo?.activityInfo?.packageName ?: "com.ayn.launcher"
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            onDismiss()
+                            val intent = Intent(context, ScreenCaptureService::class.java).apply {
+                                action = "START_SPLITPLAY"
+                                putExtra("TASK_ID", taskId)
+                                putExtra("PACKAGE_NAME", packageName)
                             }
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "No running game found to split",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            context.startForegroundService(intent)
                         }
                     }
                 },
