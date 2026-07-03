@@ -41,6 +41,7 @@
 | `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |
 | `docs/features/quickmenu/FEATURE.md`        | Quick Menu Bar & Quick Menu — navigation overlays & mirror control cards                 |
 | `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
+| `docs/features/splitplay/FEATURE.md`        | Dual-Screen Split Play — landscape-split portrait app virtual display sandbox & touch coordination |
 | `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
 | `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
 

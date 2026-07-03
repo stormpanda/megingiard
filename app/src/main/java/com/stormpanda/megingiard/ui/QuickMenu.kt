@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.ui
 
+import android.content.Intent
+import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -106,6 +108,7 @@ fun QuickMenu(
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     var showGlobalSettings by remember { mutableStateOf(false) }
     var showQuickMenuHelp by remember { mutableStateOf(false) }
+    var showSplitAppPicker by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
@@ -149,6 +152,9 @@ fun QuickMenu(
                     onDismiss()
                 },
                 onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
+                onSplitClick = {
+                    showSplitAppPicker = true
+                },
             )
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
@@ -245,6 +251,21 @@ fun QuickMenu(
         visible = showQuickMenuHelp,
         onDismiss = { showQuickMenuHelp = false },
     )
+
+    if (showSplitAppPicker) {
+        com.stormpanda.megingiard.splitplay.SplitPlayAppPickerDialog(
+            onDismiss = { showSplitAppPicker = false },
+            onAppSelected = { packageName ->
+                showSplitAppPicker = false
+                onDismiss()
+                val intent = Intent(context, ScreenCaptureService::class.java).apply {
+                    action = "START_SPLITPLAY"
+                    putExtra("PACKAGE_NAME", packageName)
+                }
+                context.startForegroundService(intent)
+            }
+        )
+    }
 }
 
 @Composable

@@ -53,6 +53,13 @@
             android:excludeFromRecents="true"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
 
+        <activity
+            android:name=".splitplay.SplitPlayActivity"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize" />
+
         <service
             android:name=".mirror.ScreenCaptureService"
             android:foregroundServiceType="mediaProjection|connectedDevice"

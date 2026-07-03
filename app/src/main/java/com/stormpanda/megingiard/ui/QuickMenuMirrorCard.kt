@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Splitscreen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +52,7 @@ internal fun MirrorControlCard(
     onToggleFreeze: () -> Unit,
     onToggleViewportEdit: () -> Unit,
     onTakeScreenshot: () -> Unit,
+    onSplitClick: () -> Unit,
 ) {
     Row(
         modifier = modifier
@@ -147,6 +149,15 @@ internal fun MirrorControlCard(
             enabled = isScreenshotEnabled,
             colors = colors,
             onClick = onTakeScreenshot,
+        )
+        MirrorControlIconButton(
+            icon = Icons.Rounded.Splitscreen,
+            contentDescription = "Split screen",
+            label = "Split",
+            tint = colors.onControlOverlay,
+            enabled = !isCapturing,
+            colors = colors,
+            onClick = onSplitClick,
         )
     }
 }

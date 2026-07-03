@@ -35,9 +35,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
+import com.stormpanda.megingiard.splitplay.SplitPlayManager
+import com.stormpanda.megingiard.splitplay.SplitPlayPresentation
+import com.stormpanda.megingiard.splitplay.SplitPlayState
+
 private const val TAG = "ScreenCaptureService"
 
 const val ACTION_START_PRIVD = "START_PRIVD"
+const val ACTION_START_SPLITPLAY = "START_SPLITPLAY"
 const val ACTION_STOP = "STOP"
 
 class ScreenCaptureService : Service() {
@@ -48,6 +53,7 @@ class ScreenCaptureService : Service() {
     private var recordingPresentation: RecordingMirrorPresentation? = null
     private var directPrivdSession: DirectPrivdMirrorSession? = null
     private var recordingPrivdSession: DirectPrivdMirrorSession? = null
+    private var splitPlayPresentation: SplitPlayPresentation? = null
     private var isPrivilegedMode = false
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
@@ -277,6 +283,10 @@ class ScreenCaptureService : Service() {
         if (intent?.action == ACTION_START_PRIVD) {
             return startPrivdPath()
         }
+        if (intent?.action == ACTION_START_SPLITPLAY) {
+            val pkg = intent.getStringExtra("PACKAGE_NAME") ?: ""
+            return startSplitPlayPath(pkg)
+        }
 
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
             ?: Activity.RESULT_CANCELED
@@ -504,6 +514,79 @@ class ScreenCaptureService : Service() {
         return START_NOT_STICKY
     }
 
+    private fun startSplitPlayPath(packageName: String): Int {
+        AppLog.i(TAG, "startSplitPlayPath package=$packageName")
+        isPrivilegedMode = true
+        ScreenCaptureManager.setPrivilegedMirror(true)
+        startForegroundNotificationConnectedDevice()
+
+        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val secondaryDisplay = displayManager.getDisplays()
+            .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        if (secondaryDisplay == null) {
+            AppLog.e(TAG, "startSplitPlayPath: no secondary display")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        scope.launch {
+            SplitPlayManager.setStarting()
+
+            var directSession = directPrivdSession
+            if (directSession == null) {
+                directSession = DirectPrivdMirrorSession(1080, 1920)
+                directPrivdSession = directSession
+                val directStarted = directSession.start()
+                if (directPrivdSession !== directSession) {
+                    directSession.release()
+                    return@launch
+                }
+                if (!directStarted) {
+                    directSession.release()
+                    directPrivdSession = null
+                    SplitPlayManager.setError("Direct privileged daemon unavailable")
+                    stopSelf()
+                    return@launch
+                }
+            }
+
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            val componentName = launchIntent?.component?.flattenToString()
+            if (componentName == null) {
+                AppLog.e(TAG, "startSplitPlayPath: failed to resolve component name for $packageName")
+                SplitPlayManager.setError("Failed to resolve game launcher activity")
+                stopSelf()
+                return@launch
+            }
+
+            launch(Dispatchers.Main) {
+                val presentation = SplitPlayPresentation(this@ScreenCaptureService, secondaryDisplay)
+                splitPlayPresentation = presentation
+                presentation.show()
+
+                val displayId = SplitPlayManager.startSplitPlayDisplay(packageName, 1080, 1920, 400)
+                if (displayId >= 0) {
+                    val launched = SplitPlayManager.launchGameOnDisplay(componentName, displayId)
+                    if (launched) {
+                        val activityIntent = Intent(this@ScreenCaptureService, com.stormpanda.megingiard.splitplay.SplitPlayActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        }
+                        startActivity(activityIntent)
+                        ScreenCaptureManager.setCapturing(true)
+                    } else {
+                        AppLog.e(TAG, "startSplitPlayPath: failed to launch game on display $displayId")
+                        SplitPlayManager.setError("Failed to launch game on virtual display")
+                        stopSelf()
+                    }
+                } else {
+                    AppLog.e(TAG, "startSplitPlayPath: failed to create virtual display")
+                    stopSelf()
+                }
+            }
+        }
+        return START_NOT_STICKY
+    }
+
     private fun updateDirectServerSurfaces() {
         if (!isPrivilegedMode) return
         directPrivdStartGeneration += 1L
@@ -605,6 +688,9 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
+        splitPlayPresentation?.dismiss()
+        splitPlayPresentation = null
+        SplitPlayManager.setInactive()
         directPrivdSession?.release()
         directPrivdSession = null
         recordingPrivdSession?.release()
