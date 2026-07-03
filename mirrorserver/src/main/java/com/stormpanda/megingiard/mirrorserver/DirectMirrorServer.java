@@ -9,6 +9,8 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.Surface;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,7 @@ public final class DirectMirrorServer {
     private static final int TRANSACTION_CREATE_SPLIT_DISPLAY = IBinder.FIRST_CALL_TRANSACTION + 1;
     private static final int TRANSACTION_LAUNCH_GAME = IBinder.FIRST_CALL_TRANSACTION + 2;
     private static final int TRANSACTION_INJECT_TOUCH = IBinder.FIRST_CALL_TRANSACTION + 3;
+    private static final int TRANSACTION_GET_TOP_PACKAGE = IBinder.FIRST_CALL_TRANSACTION + 4;
     private static final long SURFACE_DELIVERY_TIMEOUT_MS = 5_000L;
 
     private DirectMirrorServer() {}
@@ -295,6 +298,21 @@ public final class DirectMirrorServer {
                 }
             }
 
+            if (code == TRANSACTION_GET_TOP_PACKAGE) {
+                try {
+                    data.enforceInterface(DIRECT_SURFACE_DESCRIPTOR);
+                    String topInfo = getTopTaskInfo();
+                    reply.writeNoException();
+                    reply.writeString(topInfo);
+                    return true;
+                } catch (Throwable t) {
+                    System.err.println("DirectMirrorServer: GET_TOP_PACKAGE failed: " + t);
+                    reply.writeNoException();
+                    reply.writeString("");
+                    return true;
+                }
+            }
+
             return false;
         }
 
@@ -373,17 +391,22 @@ public final class DirectMirrorServer {
             }
         }
 
-        private boolean launchGameReflection(String componentName, int displayId) {
+        private boolean launchGameReflection(String componentNameOrTaskId, int displayId) {
             try {
-                String cmd = "am start -n " + componentName + " --display " + displayId;
+                String cmd;
+                if (componentNameOrTaskId.matches("^\\d+$")) {
+                    cmd = "cmd activity task move-to-display " + componentNameOrTaskId + " " + displayId;
+                } else {
+                    cmd = "am start -n " + componentNameOrTaskId + " --display " + displayId;
+                }
                 System.err.println("DirectMirrorServer: running command: " + cmd);
                 Process process = Runtime.getRuntime().exec(cmd);
                 process.waitFor();
                 int exitVal = process.exitValue();
-                System.err.println("DirectMirrorServer: am start exit value: " + exitVal);
+                System.err.println("DirectMirrorServer: command exit value: " + exitVal);
                 return exitVal == 0;
             } catch (Throwable t) {
-                System.err.println("DirectMirrorServer: failed to launch game: " + t);
+                System.err.println("DirectMirrorServer: failed to launch or move task: " + t);
                 return false;
             }
         }
@@ -496,6 +519,102 @@ public final class DirectMirrorServer {
                 t.printStackTrace();
                 return false;
             }
+        }
+
+        private String getTopTaskInfo() {
+            try {
+                Process process = Runtime.getRuntime().exec("dumpsys activity resumed");
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("ResumedActivity:")) {
+                        int braceIndex = line.indexOf('{');
+                        if (braceIndex != -1) {
+                            String sub = line.substring(braceIndex + 1);
+                            String[] parts = sub.split(" ");
+                            String pkg = "";
+                            int taskId = -1;
+                            for (String part : parts) {
+                                if (part.contains("/")) {
+                                    pkg = part.split("/")[0].trim();
+                                    if (pkg.contains("}")) {
+                                        pkg = pkg.replace("}", "");
+                                    }
+                                }
+                                if (part.startsWith("t") && part.length() > 1) {
+                                    try {
+                                        String taskIdStr = part.substring(1);
+                                        if (taskIdStr.contains("}")) {
+                                            taskIdStr = taskIdStr.replace("}", "");
+                                        }
+                                        taskId = Integer.parseInt(taskIdStr.trim());
+                                    } catch (NumberFormatException ignored) {}
+                                }
+                            }
+                            if (!pkg.isEmpty() && !pkg.equals("com.stormpanda.megingiard") && taskId != -1) {
+                                return taskId + ":" + pkg;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+
+            try {
+                Process process = Runtime.getRuntime().exec("dumpsys window windows");
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("mCurrentFocus=")) {
+                        int slashIndex = line.indexOf('/');
+                        if (slashIndex != -1) {
+                            int braceIndex = line.lastIndexOf('{', slashIndex);
+                            if (braceIndex != -1) {
+                                String pkg = line.substring(braceIndex + 1, slashIndex);
+                                String[] parts = pkg.split(" ");
+                                pkg = parts[parts.length - 1].trim();
+                                if (!pkg.equals("com.stormpanda.megingiard")) {
+                                    int taskId = findTaskIdForPackage(pkg);
+                                    if (taskId != -1) {
+                                        return taskId + ":" + pkg;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+
+            return "";
+        }
+
+        private int findTaskIdForPackage(String targetPkg) {
+            try {
+                Process process = Runtime.getRuntime().exec("dumpsys activity activities");
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("Task{") || line.contains("TASK")) {
+                        int hashIndex = line.indexOf('#');
+                        if (hashIndex != -1) {
+                            String sub = line.substring(hashIndex + 1);
+                            String[] parts = sub.split(" ");
+                            try {
+                                int taskId = Integer.parseInt(parts[0].trim());
+                                for (int i = 0; i < 10; i++) {
+                                    String subLine = reader.readLine();
+                                    if (subLine == null || subLine.contains("Task{") || subLine.contains("TASK")) {
+                                        break;
+                                    }
+                                    if (subLine.contains(targetPkg)) {
+                                        return taskId;
+                                    }
+                                }
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+            return -1;
         }
     }
 }

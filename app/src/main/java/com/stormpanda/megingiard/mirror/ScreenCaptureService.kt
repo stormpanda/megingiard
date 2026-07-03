@@ -54,6 +54,7 @@ class ScreenCaptureService : Service() {
     private var directPrivdSession: DirectPrivdMirrorSession? = null
     private var recordingPrivdSession: DirectPrivdMirrorSession? = null
     private var splitPlayPresentation: SplitPlayPresentation? = null
+    private var splitTaskId: String? = null
     private var isPrivilegedMode = false
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
@@ -285,7 +286,8 @@ class ScreenCaptureService : Service() {
         }
         if (intent?.action == ACTION_START_SPLITPLAY) {
             val pkg = intent.getStringExtra("PACKAGE_NAME") ?: ""
-            return startSplitPlayPath(pkg)
+            val taskId = intent.getStringExtra("TASK_ID") ?: ""
+            return startSplitPlayPath(pkg, taskId)
         }
 
         val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
@@ -514,8 +516,8 @@ class ScreenCaptureService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startSplitPlayPath(packageName: String): Int {
-        AppLog.i(TAG, "startSplitPlayPath package=$packageName")
+    private fun startSplitPlayPath(packageName: String, taskId: String): Int {
+        AppLog.i(TAG, "startSplitPlayPath package=$packageName taskId=$taskId")
         isPrivilegedMode = true
         ScreenCaptureManager.setPrivilegedMirror(true)
         startForegroundNotificationConnectedDevice()
@@ -528,6 +530,8 @@ class ScreenCaptureService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+
+        splitTaskId = taskId
 
         scope.launch {
             SplitPlayManager.setStarting()
@@ -550,15 +554,6 @@ class ScreenCaptureService : Service() {
                 }
             }
 
-            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-            val componentName = launchIntent?.component?.flattenToString()
-            if (componentName == null) {
-                AppLog.e(TAG, "startSplitPlayPath: failed to resolve component name for $packageName")
-                SplitPlayManager.setError("Failed to resolve game launcher activity")
-                stopSelf()
-                return@launch
-            }
-
             launch(Dispatchers.Main) {
                 val presentation = SplitPlayPresentation(this@ScreenCaptureService, secondaryDisplay)
                 splitPlayPresentation = presentation
@@ -566,7 +561,7 @@ class ScreenCaptureService : Service() {
 
                 val displayId = SplitPlayManager.startSplitPlayDisplay(packageName, 1080, 1920, 400)
                 if (displayId >= 0) {
-                    val launched = SplitPlayManager.launchGameOnDisplay(componentName, displayId)
+                    val launched = SplitPlayManager.launchGameOnDisplay(taskId, displayId)
                     if (launched) {
                         val activityIntent = Intent(this@ScreenCaptureService, com.stormpanda.megingiard.splitplay.SplitPlayActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -574,7 +569,7 @@ class ScreenCaptureService : Service() {
                         startActivity(activityIntent)
                         ScreenCaptureManager.setCapturing(true)
                     } else {
-                        AppLog.e(TAG, "startSplitPlayPath: failed to launch game on display $displayId")
+                        AppLog.e(TAG, "startSplitPlayPath: failed to launch/move task on display $displayId")
                         SplitPlayManager.setError("Failed to launch game on virtual display")
                         stopSelf()
                     }
@@ -675,6 +670,13 @@ class ScreenCaptureService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
+        val taskId = splitTaskId
+        if (taskId != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                SplitPlayManager.launchGameOnDisplay(taskId, 0)
+            }
+            splitTaskId = null
+        }
         scope.cancel()
         // Safety net: if the service is killed unexpectedly (system, crash) after
         // setCapturing(true) was called but before the user could press Stop, ensure

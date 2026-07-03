@@ -3,6 +3,10 @@ package com.stormpanda.megingiard.ui
 import android.content.Intent
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -106,9 +110,9 @@ fun QuickMenu(
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
+    val scope = rememberCoroutineScope()
     var showGlobalSettings by remember { mutableStateOf(false) }
     var showQuickMenuHelp by remember { mutableStateOf(false) }
-    var showSplitAppPicker by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
@@ -153,7 +157,31 @@ fun QuickMenu(
                 },
                 onTakeScreenshot = { ScreenCaptureManager.requestScreenshot() },
                 onSplitClick = {
-                    showSplitAppPicker = true
+                    scope.launch(Dispatchers.IO) {
+                        val taskInfo = com.stormpanda.megingiard.splitplay.SplitPlayManager.getTopTaskInfo()
+                        if (taskInfo.isNotBlank() && taskInfo.contains(":")) {
+                            val parts = taskInfo.split(":")
+                            val taskId = parts[0]
+                            val packageName = parts[1]
+                            withContext(Dispatchers.Main) {
+                                onDismiss()
+                                val intent = Intent(context, ScreenCaptureService::class.java).apply {
+                                    action = "START_SPLITPLAY"
+                                    putExtra("TASK_ID", taskId)
+                                    putExtra("PACKAGE_NAME", packageName)
+                                }
+                                context.startForegroundService(intent)
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "No running game found to split",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
                 },
             )
 
@@ -251,21 +279,6 @@ fun QuickMenu(
         visible = showQuickMenuHelp,
         onDismiss = { showQuickMenuHelp = false },
     )
-
-    if (showSplitAppPicker) {
-        com.stormpanda.megingiard.splitplay.SplitPlayAppPickerDialog(
-            onDismiss = { showSplitAppPicker = false },
-            onAppSelected = { packageName ->
-                showSplitAppPicker = false
-                onDismiss()
-                val intent = Intent(context, ScreenCaptureService::class.java).apply {
-                    action = "START_SPLITPLAY"
-                    putExtra("PACKAGE_NAME", packageName)
-                }
-                context.startForegroundService(intent)
-            }
-        )
-    }
 }
 
 @Composable

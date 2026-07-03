@@ -23,11 +23,12 @@ Split Play allows portrait-oriented Android games to be rotated 90° clockwise a
 - Touches MUST be translated back to the 1080x1920 portrait virtual display space, accounting for the 90° clockwise rotation.
 - Touches MUST be injected into the sandboxed virtual display using the privileged input service, supporting multi-touch (up to 10 points).
 
-### FR-SP3: App Selector Launcher
+### FR-SP3: Foreground App Splitting
 
 - A "Split" button using `Icons.Rounded.Splitscreen` MUST be available on the right of the top Quick Menu card.
-- Tapping "Split" MUST show a dialog listing all launchable applications with search capabilities.
-- Selecting an app MUST start the Split Play virtual display sandbox and launch the game inside it.
+- Tapping "Split" MUST query the privileged mirror server to determine the package name of the currently running foreground application.
+- It MUST start the Split Play virtual display sandbox and launch the resolved game package inside it, without showing any app selector dialog.
+- If no foreground game package is running, a Toast warning MUST be shown to the user.
 
 ### FR-SP4: MacroPad Overlay Integration
 
@@ -72,4 +73,3 @@ Split Play allows portrait-oriented Android games to be rotated 90° clockwise a
 | [SplitPlayRenderView.kt](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/app/src/main/java/com/stormpanda/megingiard/splitplay/SplitPlayRenderView.kt) | Custom view rendering crop and 90° CW rotation on the hardware buffer bitmaps. |
 | [SplitPlayActivity.kt](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/app/src/main/java/com/stormpanda/megingiard/splitplay/SplitPlayActivity.kt) | Renders the top half of the game on Display 0 and forwards touches. |
 | [SplitPlayPresentation.kt](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/app/src/main/java/com/stormpanda/megingiard/splitplay/SplitPlayPresentation.kt) | Renders the bottom half of the game on Display 4 with the MacroPad button overlay. |
-| [SplitPlayAppPickerDialog.kt](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/app/src/main/java/com/stormpanda/megingiard/splitplay/SplitPlayAppPickerDialog.kt) | Dialog showing launchable apps for selecting which game to start in Split Play. |

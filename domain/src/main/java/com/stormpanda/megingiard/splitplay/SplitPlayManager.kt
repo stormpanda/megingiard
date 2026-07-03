@@ -227,6 +227,40 @@ object SplitPlayManager {
         }
     }
 
+    /**
+     * Queries the privileged daemon for the taskId and package name of the currently resumed foreground activity.
+     * @return "taskId:packageName" or "" if failed
+     */
+    fun getTopTaskInfo(): String {
+        val binder = getService(DIRECT_SURFACE_SERVICE_NAME) ?: run {
+            AppLog.w(TAG, "getTopTaskInfo: direct service not registered")
+            return ""
+        }
+
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(DIRECT_SURFACE_DESCRIPTOR)
+
+            // TRANSACTION_GET_TOP_PACKAGE = FIRST_CALL_TRANSACTION + 4
+            if (!binder.transact(IBinder.FIRST_CALL_TRANSACTION + 4, data, reply, 0)) {
+                AppLog.w(TAG, "getTopTaskInfo: transact returned false")
+                return ""
+            }
+
+            reply.readException()
+            val info = reply.readString() ?: ""
+            AppLog.i(TAG, "getTopTaskInfo returned: '$info'")
+            return info
+        } catch (e: Exception) {
+            AppLog.e(TAG, "getTopTaskInfo exception", e)
+            return ""
+        } finally {
+            reply.recycle()
+            data.recycle()
+        }
+    }
+
     private fun stopSplitPlaySession() {
         activeDisplayId = -1
         splitDisplayCallback = null
