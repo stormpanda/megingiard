@@ -2,6 +2,14 @@
 
 Welcome to **Megingiard**, a bespoke companion application specifically designed for the **AYN Thor** dual-screen Android handheld. Megingiard combines deep Android hardware video stream manipulation with modern Jetpack Compose interfaces to turn your secondary display into a fully interactive tool belt: a latency-free, multi-cutout mirror of your primary screen, a virtual keyboard, a virtual touchpad, a configurable MacroPad, and a virtual gamepad — all driven by native input injection for sub-millisecond response.
 
+<p align="center">
+  <a href="https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3">
+    <img src="https://img.youtube.com/vi/vgs6X9piswA/hqdefault.jpg" alt="Megingiard Feature Overview by Rye J's Outpost" width="600">
+  </a>
+  <br>
+  <em>Megingiard Feature Overview by <a href="https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3">Rye J’s Outpost</a></em>
+</p>
+
 ---
 
 [Device Compatibility](#device-compatibility) · [Documentation](#documentation) · [Core Features](#core-features) · [Screenshots](#screenshots) · [Installation](#installation) · [Quick Start](#first-launch--quick-start) · [Privileged Mode](#privileged-mode) · [Privacy](#privacy) · [Releases](#releases) · [FAQ & Troubleshooting](#faq--troubleshooting) · [Security](#security) · [License](#license) · [Support This App](#support-this-app) · [Links](#links)
@@ -43,6 +51,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 - **Temporal Motion Smoothing:** Select between Off, Light, Medium, or Strong temporal filtering (exponential moving average) to stabilize UI elements in individual cutouts.
 - **Follow Touch Mode:** Real-time touch tracking on the primary screen. The mirror viewport automatically centers on the spot last touched on the primary screen at your current zoom level, with optional movement smoothing. Can be configured to temporarily disable during macro execution to prevent movement conflicts.
 - **Customizable Controls:** Fully integrate mirror controls (Start / Stop / Freeze / Viewport reset) directly as buttons onto your custom MacroPad layouts, or use the always-present controls in the Quick Menu overlay.
+- **See it in Action:** Watch the [screen mirroring demonstration by dylosama](https://www.youtube.com/shorts/v_UhWzfCbRQ) on YouTube Shorts.
 
 ### 2. MacroPad Central Mode
 
@@ -327,7 +336,10 @@ Megingiard is completely free to use for personal, non-commercial use. If you en
 
 ## Links
 
+📣 **Are you creating videos, guides, or posts featuring Megingiard? Reach out, and I will gladly feature your content right here!** 📣
+
+- [Megingiard Feature Overview by Rye J’s Outpost](https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3) - A detailed general feature walkthrough and overview of Megingiard.
+- [Screen Mirroring Demo by dylosama](https://www.youtube.com/shorts/v_UhWzfCbRQ) - A YouTube Short highlighting the app's latency-free, multi-cutout screen mirroring functionality in action.
 - Megingiard is featured in [GAFT (Games & Apps for AYN Thor)](https://andreyvelsk.github.io/GAFT/) - A community-curated directory of dual-screen games, companion app pairings, and Android ports for the AYN Thor, created and maintained by Andrey Velsk (@andreyvelsk).
-- Are you creating videos, guides, or posts featuring Megingiard? Reach out, and I will gladly feature your content right here!
 
 ---
