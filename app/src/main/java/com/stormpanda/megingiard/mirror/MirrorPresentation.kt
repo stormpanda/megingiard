@@ -9,6 +9,11 @@ import android.graphics.Color
 import android.os.Bundle
 import androidx.compose.ui.graphics.Color as ComposeColor
 import com.stormpanda.megingiard.AppLog
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.BitmapFactory
+import java.io.File
+import com.stormpanda.megingiard.macropad.MacroPadState
+import kotlinx.coroutines.withContext
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
@@ -577,10 +582,10 @@ class MirrorPresentation(
 
         setContentView(container)
 
-        bindStateFlows()
+        bindStateFlows(container)
     }
 
-    private fun bindStateFlows() {
+    private fun bindStateFlows(container: FrameLayout) {
         scope.launch {
             combine(
                 AppStateManager.isFullscreenKeyboardActive,
@@ -670,6 +675,41 @@ class MirrorPresentation(
                     multiCutoutContainer?.isFrozen = false
                     multiCutoutContainer?.frozenBitmap = null
                     ScreenCaptureManager.setFrozenBitmap(null)
+                }
+            }
+        }
+        scope.launch {
+            MacroPadState.activeLayout.collect { layout ->
+                val path = layout?.backgroundImagePath
+                if (path != null) {
+                    val file = File(context.filesDir, path)
+                    withContext(Dispatchers.IO) {
+                        try {
+                            if (file.exists()) {
+                                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                                withContext(Dispatchers.Main) {
+                                    if (bitmap != null) {
+                                        container.background = BitmapDrawable(context.resources, bitmap)
+                                    } else {
+                                        container.setBackgroundColor(Color.BLACK)
+                                    }
+                                }
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    container.setBackgroundColor(Color.BLACK)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
+                            withContext(Dispatchers.Main) {
+                                container.setBackgroundColor(Color.BLACK)
+                            }
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        container.setBackgroundColor(Color.BLACK)
+                    }
                 }
             }
         }
