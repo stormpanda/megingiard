@@ -410,6 +410,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_button_color_accented">Akzentfarbe</string>
     <string name="macropad_editor_button_color_neutral">Neutral</string>
 
+    <!-- Layout background image settings -->
+    <string name="layout_settings_bg_image_title">Hintergrundbild</string>
+    <string name="layout_settings_bg_image_desc">Ein benutzerdefiniertes Bild hinter den MacroPad-Tasten anzeigen</string>
+    <string name="layout_settings_bg_image_none">Keines ausgewählt</string>
+    <string name="layout_settings_bg_image_active">Benutzerdefinierter Hintergrund aktiv</string>
+    <string name="layout_settings_bg_image_pending">Neues Bild ausgewählt (ungesichert)</string>
+    <string name="layout_settings_bg_image_choose">Bild wählen</string>
+    <string name="layout_settings_bg_image_change">Bild ändern</string>
+    <string name="layout_settings_bg_image_remove">Hintergrundbild entfernen</string>
+
     <!-- Makro-Listenverwaltung -->
     <string name="macropad_macro_list_title">Makros</string>
     <string name="macropad_macro_list_new">Neues Makro</string>

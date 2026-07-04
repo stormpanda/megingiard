@@ -337,6 +337,7 @@ data class PadLayout(
     val mirrorSmoothingStrength: Int = 85,
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
+    val backgroundImagePath: String? = null,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

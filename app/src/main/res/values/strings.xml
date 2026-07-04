@@ -497,6 +497,16 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_button_color_accented">Accented</string>
     <string name="macropad_editor_button_color_neutral">Neutral</string>
 
+    <!-- Layout background image settings -->
+    <string name="layout_settings_bg_image_title">Background Image</string>
+    <string name="layout_settings_bg_image_desc">Display a custom image behind MacroPad buttons</string>
+    <string name="layout_settings_bg_image_none">None selected</string>
+    <string name="layout_settings_bg_image_active">Custom background active</string>
+    <string name="layout_settings_bg_image_pending">New image selected (unsaved)</string>
+    <string name="layout_settings_bg_image_choose">Choose Image</string>
+    <string name="layout_settings_bg_image_change">Change Image</string>
+    <string name="layout_settings_bg_image_remove">Remove Background Image</string>
+
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>
     <string name="macropad_macro_list_new">New Macro</string>

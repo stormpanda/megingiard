@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import java.io.File
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -301,6 +302,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 existingLayoutNames = profile.layouts.map { it.name },
                 accentColor = colors.accent,
                 onConfirm   = { name, templateLayout ->
+                    val layoutId = UUID.randomUUID().toString()
                     val newLayout = if (templateLayout != null) {
                         val copiedButtons = templateLayout.buttons.map { btn ->
                             btn.copy(id = UUID.randomUUID().toString())
@@ -308,11 +310,29 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         val copiedCutouts = templateLayout.mirrorCutouts.map { cutout ->
                             cutout.copy(id = UUID.randomUUID().toString())
                         }
+                        val copiedBgPath = templateLayout.backgroundImagePath?.let { oldPath ->
+                            val oldFile = File(context.filesDir, oldPath)
+                            if (oldFile.exists()) {
+                                val backgroundsDir = File(context.filesDir, "backgrounds")
+                                if (!backgroundsDir.exists()) backgroundsDir.mkdirs()
+                                val newFile = File(backgroundsDir, "bg_$layoutId")
+                                try {
+                                    oldFile.copyTo(newFile, overwrite = true)
+                                    "backgrounds/bg_$layoutId"
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to copy template background image", e)
+                                    null
+                                }
+                            } else {
+                                null
+                            }
+                        }
                         templateLayout.copy(
-                            id = UUID.randomUUID().toString(),
+                            id = layoutId,
                             name = name.ifBlank { defaultLayoutName },
                             buttons = copiedButtons,
-                            mirrorCutouts = copiedCutouts
+                            mirrorCutouts = copiedCutouts,
+                            backgroundImagePath = copiedBgPath,
                         )
                     } else {
                         val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
@@ -325,7 +345,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                             ScreenCutout.createDefault(sourceW, sourceH)
                         }
                         PadLayout(
-                            id      = UUID.randomUUID().toString(),
+                            id      = layoutId,
                             name    = name.ifBlank { defaultLayoutName },
                             buttons = emptyList(),
                             mirrorCutouts = listOf(defaultCutout),
@@ -345,6 +365,17 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 title     = stringResource(R.string.macropad_editor_delete_layout),
                 body      = pendingLayout.name,
                 onConfirm = {
+                    // Delete background file if it exists
+                    pendingLayout.backgroundImagePath?.let { path ->
+                        val file = File(context.filesDir, path)
+                        if (file.exists()) {
+                            try {
+                                file.delete()
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to delete background file $path", e)
+                            }
+                        }
+                    }
                     MacroPadState.deleteLayout(pendingLayout.id)
                     layoutPendingDelete = null
                 },
@@ -392,6 +423,19 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 title     = stringResource(R.string.macropad_editor_delete_profile),
                 body      = stringResource(R.string.macropad_editor_confirm_delete),
                 onConfirm = {
+                    // Delete background files for all layouts in this profile
+                    activeProfile.layouts.forEach { layout ->
+                        layout.backgroundImagePath?.let { path ->
+                            val file = File(context.filesDir, path)
+                            if (file.exists()) {
+                                try {
+                                    file.delete()
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to delete background file $path", e)
+                                }
+                            }
+                        }
+                    }
                     MacroPadState.deleteProfile(activeProfile.id)
                     showDeleteProfileConfirm = false
                 },
@@ -404,19 +448,22 @@ fun MacroPadEditor(onDone: () -> Unit) {
             val curLayout = activeLayout!!
             InlineLayoutSettingsOverlay(
                 title = stringResource(R.string.macropad_editor_title),
+                layoutId = curLayout.id,
                 initialName = curLayout.name,
                 initialEnabled = curLayout.enabled,
                 initialButtonColorNoMirror = curLayout.buttonColorNoMirror,
                 initialButtonColorMirror = curLayout.buttonColorMirror,
+                initialBackgroundImagePath = curLayout.backgroundImagePath,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, enabled, noMirrorStyle, mirrorStyle ->
+                onConfirm = { name, enabled, noMirrorStyle, mirrorStyle, bgImagePath ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
                             enabled = enabled,
                             buttonColorNoMirror = noMirrorStyle,
-                            buttonColorMirror = mirrorStyle
+                            buttonColorMirror = mirrorStyle,
+                            backgroundImagePath = bgImagePath,
                         )
                     )
                     showEditLayoutDialog = false

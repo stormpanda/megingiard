@@ -537,4 +537,28 @@ class MacroPadStateTest {
         assertNotEquals("btn-1", dupBtn.id)
         assertEquals(dupMacro.id, (dupBtn.action as PadAction.Macro).macroId)
     }
+
+    @Test
+    fun `updateLayout preserves and updates backgroundImagePath`() {
+        val p1Id = UUID.randomUUID().toString()
+        val layoutId = "layout-1"
+        val l1 = PadLayout(id = layoutId, name = "Lay1", backgroundImagePath = null)
+        val p1 = PadProfile(
+            id = p1Id,
+            name = "P1",
+            layouts = listOf(l1),
+            activeLayoutId = layoutId
+        )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // Verify initially null
+        assertEquals(null, MacroPadState.activeLayout.value?.backgroundImagePath)
+
+        // When updating the layout with a background image path
+        val updatedLayout = l1.copy(backgroundImagePath = "backgrounds/bg_layout-1")
+        MacroPadState.updateLayout(updatedLayout)
+
+        // Then the background image path is preserved in state
+        assertEquals("backgrounds/bg_layout-1", MacroPadState.activeLayout.value?.backgroundImagePath)
+    }
 }

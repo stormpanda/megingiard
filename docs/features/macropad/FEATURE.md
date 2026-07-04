@@ -178,6 +178,18 @@ Each button supports one of the following actions:
   - The neutral style is implemented via the `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. `MacroPadScreen` passes `neutralStyle = layout.buttonColorNoMirror == ButtonColorStyle.NEUTRAL`; `BackgroundMacroPadOverlay` passes `neutralStyle = layout.buttonColorMirror == ButtonColorStyle.NEUTRAL`.
   - These settings are persisted as part of `PadLayout` and are included in config exports automatically.
 
+### FR-P9a: Custom Background Image
+
+- Users can choose a **custom background image** to be displayed behind the MacroPad buttons.
+- The configuration is situated in the **Layout Settings** overlay of the layout editor.
+- Tapping "Choose Image" opens the system document picker (`image/*`).
+- To prevent permissions from expiring and keep layouts self-contained, the chosen image is copied to the app's internal files directory as `backgrounds/bg_<layoutId>`.
+- The `backgroundImagePath` parameter in `PadLayout` stores a relative path (e.g. `backgrounds/bg_<layoutId>`) to maintain portability and compatibility with Megingiard's profile import/export features.
+- In both **Use Mode** (`PadSurface`) and **Layout Editor** (`PadCanvas`), the image is loaded asynchronously off the main thread (`Dispatchers.IO`) and rendered centered with crop scaling (`ContentScale.Crop`) behind the buttons.
+- When a layout is deleted or its background image is removed/cleared, the associated image file on disk is deleted.
+- When a profile is deleted, all background image files for its layouts are deleted.
+- Creating a layout from a template layout (deep copy) automatically duplicates the background image file under the new layout's ID, ensuring that layouts do not share dependencies on the same file.
+
 ### FR-P10: Optional Button Icons
 
 - Any button MAY be assigned an optional **icon** from the bundled **Material Symbols Rounded** icon font.

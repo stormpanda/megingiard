@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppDivider
@@ -58,6 +59,14 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import java.io.File
 
 private const val TAG = "EditorInlineOverlays"
 
@@ -521,23 +530,40 @@ private fun getDrawableBitmap(drawable: Drawable): Bitmap {
 @Composable
 internal fun InlineLayoutSettingsOverlay(
     title: String,
+    layoutId: String,
     initialName: String,
     initialEnabled: Boolean,
     initialButtonColorNoMirror: ButtonColorStyle,
     initialButtonColorMirror: ButtonColorStyle,
+    initialBackgroundImagePath: String?,
     accentColor: Color,
     existingNames: List<String>,
-    onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle) -> Unit,
+    onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var nameText by remember { mutableStateOf(initialName) }
     var isEnabled by remember { mutableStateOf(initialEnabled) }
     var noMirrorStyle by remember { mutableStateOf(initialButtonColorNoMirror) }
     var mirrorStyle by remember { mutableStateOf(initialButtonColorMirror) }
+    var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
+    var currentBgPath by remember { mutableStateOf(initialBackgroundImagePath) }
+
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val colors = LocalAppColors.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isSaving by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            pendingImageUri = uri
+            currentBgPath = null
+        }
+    }
 
     InlineDialogOverlay(
         title = title,
@@ -547,12 +573,54 @@ internal fun InlineLayoutSettingsOverlay(
                 Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
             }
             TextButton(
-                onClick = { if (!hasError) onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle) },
-                enabled = !hasError,
+                onClick = {
+                    if (!hasError && !isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            val finalBgPath = withContext(Dispatchers.IO) {
+                                val uri = pendingImageUri
+                                if (uri != null) {
+                                    val backgroundsDir = File(context.filesDir, "backgrounds")
+                                    if (!backgroundsDir.exists()) {
+                                        backgroundsDir.mkdirs()
+                                    }
+                                    val destFile = File(backgroundsDir, "bg_$layoutId")
+                                    try {
+                                        context.contentResolver.openInputStream(uri)?.use { input ->
+                                            destFile.outputStream().use { output ->
+                                                input.copyTo(output)
+                                            }
+                                        }
+                                        "backgrounds/bg_$layoutId"
+                                    } catch (e: Exception) {
+                                        AppLog.e(TAG, "Failed to copy background image Uri $uri", e)
+                                        null
+                                    }
+                                } else if (currentBgPath == null) {
+                                    val backgroundsDir = File(context.filesDir, "backgrounds")
+                                    val destFile = File(backgroundsDir, "bg_$layoutId")
+                                    if (destFile.exists()) {
+                                        try {
+                                            destFile.delete()
+                                        } catch (e: Exception) {
+                                            AppLog.e(TAG, "Failed to delete background file", e)
+                                        }
+                                    }
+                                    null
+                                } else {
+                                    currentBgPath
+                                }
+                            }
+                            onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle, finalBgPath)
+                            isSaving = false
+                        }
+                    }
+                },
+                enabled = !hasError && !isSaving,
             ) {
                 Text(
                     text = stringResource(R.string.macropad_editor_done),
-                    color = if (!hasError) accentColor else colors.onSurfaceSecondary,
+                    color = if (!hasError && !isSaving) accentColor else colors.onSurfaceSecondary,
                 )
             }
         }
@@ -596,6 +664,67 @@ internal fun InlineLayoutSettingsOverlay(
                 checked = isEnabled,
                 onCheckedChange = { isEnabled = it }
             )
+        }
+
+        Spacer(Modifier.height(12.dp))
+        AppDivider()
+        Spacer(Modifier.height(12.dp))
+
+        // Background Image Selection Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.layout_settings_bg_image_title),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                val statusText = when {
+                    pendingImageUri != null -> stringResource(R.string.layout_settings_bg_image_pending)
+                    currentBgPath != null -> stringResource(R.string.layout_settings_bg_image_active)
+                    else -> stringResource(R.string.layout_settings_bg_image_none)
+                }
+                Text(
+                    text = statusText,
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (pendingImageUri != null || currentBgPath != null) {
+                    IconButton(
+                        onClick = {
+                            pendingImageUri = null
+                            currentBgPath = null
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = stringResource(R.string.layout_settings_bg_image_remove),
+                            tint = colors.error
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+                Button(
+                    onClick = { launcher.launch("image/*") },
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                ) {
+                    Text(
+                        text = if (pendingImageUri != null || currentBgPath != null) {
+                            stringResource(R.string.layout_settings_bg_image_change)
+                        } else {
+                            stringResource(R.string.layout_settings_bg_image_choose)
+                        },
+                        color = colors.onAccent
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(12.dp))
