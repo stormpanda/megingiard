@@ -102,8 +102,6 @@ Open Settings to create a layout.</string>
     <!-- MacroPad editor -->
     <string name="macropad_editor_title">Edit Layout</string>
     <string name="macropad_editor_title_edit_profile">Edit Profile</string>
-    <string name="layout_settings_visibility_title">Show in overlays</string>
-    <string name="layout_settings_visibility_desc">Participate in Quick Menu selector and Next/Previous navigation.</string>
     <string name="macropad_editor_done">Save</string>
     <string name="macropad_editor_add_button">Add Button</string>
     <string name="macropad_editor_add">Add</string>
@@ -287,7 +285,6 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_new">New</string>
     <string name="macropad_layout_template_title">Copy from…</string>
     <string name="macropad_layout_template_blank">Empty</string>
-    <string name="macropad_layout_name_hidden">%1$s (hidden)</string>
     <string name="macropad_reorder_profiles">Reorder Profiles</string>
     <string name="macropad_reorder_layouts">Reorder Layouts</string>
 

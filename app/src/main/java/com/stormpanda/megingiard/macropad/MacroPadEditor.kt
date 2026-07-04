@@ -301,13 +301,12 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 title = stringResource(R.string.settings_macropad_new_layout),
                 layoutId = newLayoutId,
                 initialName = "",
-                initialEnabled = true,
                 initialButtonColorNoMirror = ButtonColorStyle.ACCENTED,
                 initialButtonColorMirror = ButtonColorStyle.NEUTRAL,
                 initialBackgroundImagePath = null,
                 accentColor = colors.accent,
                 existingNames = profile.layouts.map { it.name },
-                onConfirm = { name, enabled, noMirrorStyle, mirrorStyle, bgImagePath ->
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath ->
                     val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
                     val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
                     val bottomW = ScreenCaptureManager.surfaceWidth.value
@@ -320,7 +319,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     val newLayout = PadLayout(
                         id = newLayoutId,
                         name = name,
-                        enabled = enabled,
+                        enabled = true,
                         buttonColorNoMirror = noMirrorStyle,
                         buttonColorMirror = mirrorStyle,
                         backgroundImagePath = bgImagePath,
@@ -425,17 +424,16 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 title = stringResource(R.string.macropad_editor_title),
                 layoutId = curLayout.id,
                 initialName = curLayout.name,
-                initialEnabled = curLayout.enabled,
                 initialButtonColorNoMirror = curLayout.buttonColorNoMirror,
                 initialButtonColorMirror = curLayout.buttonColorMirror,
                 initialBackgroundImagePath = curLayout.backgroundImagePath,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, enabled, noMirrorStyle, mirrorStyle, bgImagePath ->
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
-                            enabled = enabled,
+                            enabled = true,
                             buttonColorNoMirror = noMirrorStyle,
                             buttonColorMirror = mirrorStyle,
                             backgroundImagePath = bgImagePath,

@@ -376,16 +376,6 @@ object MacroPadState {
         updateProfile(profile.copy(layouts = remaining, activeLayoutId = newActiveId))
     }
 
-    fun setLayoutEnabled(layoutId: String, enabled: Boolean) {
-        val profile = activeProfile.value ?: return
-        AppLog.d(TAG, "setLayoutEnabled id=$layoutId enabled=$enabled")
-        updateProfile(profile.copy(
-            layouts = profile.layouts.map {
-                if (it.id == layoutId) it.copy(enabled = enabled) else it
-            },
-        ))
-    }
-
     fun reorderLayouts(newOrder: List<PadLayout>) {
         val profile = activeProfile.value ?: return
         AppLog.d(TAG, "reorderLayouts count=${newOrder.size}")
@@ -420,26 +410,26 @@ object MacroPadState {
         ))
     }
 
-    /** Switch to the next enabled layout, wrapping around. */
+    /** Switch to the next layout, wrapping around. */
     fun nextLayout() {
         val profile = activeProfile.value ?: return
-        val enabled = profile.layouts.filter { it.enabled }
-        if (enabled.size <= 1) return
-        val currentIndex = enabled.indexOfFirst { it.id == profile.activeLayoutId }
-        val nextIndex = (currentIndex + 1) % enabled.size
-        AppLog.d(TAG, "nextLayout: ${enabled[nextIndex].name}")
-        setActiveLayoutId(enabled[nextIndex].id)
+        val layouts = profile.layouts
+        if (layouts.size <= 1) return
+        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
+        val nextIndex = (currentIndex + 1) % layouts.size
+        AppLog.d(TAG, "nextLayout: ${layouts[nextIndex].name}")
+        setActiveLayoutId(layouts[nextIndex].id)
     }
 
-    /** Switch to the previous enabled layout, wrapping around. */
+    /** Switch to the previous layout, wrapping around. */
     fun previousLayout() {
         val profile = activeProfile.value ?: return
-        val enabled = profile.layouts.filter { it.enabled }
-        if (enabled.size <= 1) return
-        val currentIndex = enabled.indexOfFirst { it.id == profile.activeLayoutId }
-        val prevIndex = if (currentIndex <= 0) enabled.size - 1 else currentIndex - 1
-        AppLog.d(TAG, "previousLayout: ${enabled[prevIndex].name}")
-        setActiveLayoutId(enabled[prevIndex].id)
+        val layouts = profile.layouts
+        if (layouts.size <= 1) return
+        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
+        val prevIndex = if (currentIndex <= 0) layouts.size - 1 else currentIndex - 1
+        AppLog.d(TAG, "previousLayout: ${layouts[prevIndex].name}")
+        setActiveLayoutId(layouts[prevIndex].id)
     }
 
     // ─────────────────────────────────────────────────────────────────────────

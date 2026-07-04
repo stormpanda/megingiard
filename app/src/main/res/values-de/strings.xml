@@ -107,8 +107,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- MacroPad editor -->
     <string name="macropad_editor_title">Layout bearbeiten</string>
     <string name="macropad_editor_title_edit_profile">Profil bearbeiten</string>
-    <string name="layout_settings_visibility_title">In Overlays anzeigen</string>
-    <string name="layout_settings_visibility_desc">Im Schnellmenü-Auswahlelement und bei der Navigation zum nächsten/vorherigen Layout einbeziehen.</string>
     <string name="macropad_editor_done">Speichern</string>
     <string name="macropad_editor_add_button">Taste hinzufügen</string>
     <string name="macropad_editor_add">Hinzufügen</string>
@@ -241,7 +239,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_macropad_new">Neu</string>
     <string name="macropad_layout_template_title">Kopieren von…</string>
     <string name="macropad_layout_template_blank">Leer</string>
-    <string name="macropad_layout_name_hidden">%1$s (ausgeblendet)</string>
     <string name="macropad_reorder_profiles">Profile sortieren</string>
     <string name="macropad_reorder_layouts">Layouts sortieren</string>
 

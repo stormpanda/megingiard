@@ -534,17 +534,15 @@ internal fun InlineLayoutSettingsOverlay(
     title: String,
     layoutId: String,
     initialName: String,
-    initialEnabled: Boolean,
     initialButtonColorNoMirror: ButtonColorStyle,
     initialButtonColorMirror: ButtonColorStyle,
     initialBackgroundImagePath: String?,
     accentColor: Color,
     existingNames: List<String>,
-    onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle, String?) -> Unit,
+    onConfirm: (String, ButtonColorStyle, ButtonColorStyle, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var nameText by remember { mutableStateOf(initialName) }
-    var isEnabled by remember { mutableStateOf(initialEnabled) }
     var noMirrorStyle by remember { mutableStateOf(initialButtonColorNoMirror) }
     var mirrorStyle by remember { mutableStateOf(initialButtonColorMirror) }
     var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -613,7 +611,7 @@ internal fun InlineLayoutSettingsOverlay(
                                     currentBgPath
                                 }
                             }
-                            onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle, finalBgPath)
+                            onConfirm(normalizedName, noMirrorStyle, mirrorStyle, finalBgPath)
                             isSaving = false
                         }
                     }
@@ -647,35 +645,6 @@ internal fun InlineLayoutSettingsOverlay(
                     }
                 },
             )
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.layout_settings_visibility_title),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = stringResource(R.string.layout_settings_visibility_desc),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                Switch(
-                    checked = isEnabled,
-                    onCheckedChange = { isEnabled = it }
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-            AppDivider()
             Spacer(Modifier.height(12.dp))
 
             // Background Image Selection Row
