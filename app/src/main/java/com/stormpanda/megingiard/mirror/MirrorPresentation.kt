@@ -945,155 +945,160 @@ class MultiCutoutContainer(
 
         var masterViewDrawn = false
 
-        for (cutout in cutouts) {
-            val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
-            val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
-            val dx = (cutout.destX * parentW).roundToInt().toFloat()
-            val dy = (cutout.destY * parentH).roundToInt().toFloat()
-            
-            val sw = cutout.srcWidth * srcWidth
-            val sh = cutout.srcHeight * srcHeight
-            val sx = cutout.srcX * srcWidth
-            val sy = cutout.srcY * srcHeight
-
-            if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
-
-            val touchesLeft = edgeBlending && (cutout.destX > tolerance)
-            val touchesRight = edgeBlending && (cutout.destX + cutout.destWidth < 1.0f - tolerance)
-            val touchesTop = edgeBlending && (cutout.destY > tolerance)
-            val touchesBottom = edgeBlending && (cutout.destY + cutout.destHeight < 1.0f - tolerance)
-
-            val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
-            val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
-            val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
-            val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
-            val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
-
-            val saveCount = if (cutout.opacity < 1f || hasTouching) {
-                cutoutPaint.alpha = (cutout.opacity * 255).toInt()
-                if (hasTouching) {
-                    cutoutPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
-                } else {
-                    cutoutPaint.xfermode = null
-                }
-                val clipLeft = dx - leftExt
-                val clipTop = dy - topExt
-                val clipRight = dx + dw + rightExt
-                val clipBottom = dy + dh + bottomExt
-                canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
-            } else {
-                canvas.save()
-                canvas.clipRect(dx, dy, dx + dw, dy + dh)
-                0
-            }
-
-            try {
-                canvas.translate(dx, dy)
-                if (cutout.shape == CutoutShape.CIRCLE) {
-                    circlePath.reset()
-                    val r = min(dw, dh) / 2f
-                    circlePath.addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
-                    canvas.clipPath(circlePath)
-                }
-                val innerSaveCount = canvas.save()
+        val overallSaveCount = canvas.saveLayer(0f, 0f, parentW, parentH, null)
+        try {
+            for (cutout in cutouts) {
+                val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
+                val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
+                val dx = (cutout.destX * parentW).roundToInt().toFloat()
+                val dy = (cutout.destY * parentH).roundToInt().toFloat()
                 
-                val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                val isUncropped = cutout.srcWidth >= 0.999f && cutout.srcHeight >= 0.999f
-                if (cutouts.size == 1 && isFollowActive && isUncropped) {
-                    canvas.translate(viewportOffsetX, viewportOffsetY)
-                    canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+                val sw = cutout.srcWidth * srcWidth
+                val sh = cutout.srcHeight * srcHeight
+                val sx = cutout.srcX * srcWidth
+                val sy = cutout.srcY * srcHeight
 
-                    // Fit srcWidth x srcHeight into dw x dh preserving aspect ratio
-                    val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-                    val destRatio = dw / dh
-                    
-                    var fitW = dw
-                    var fitH = dh
-                    if (srcRatio > destRatio) {
-                        fitH = dw / srcRatio
+                if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) continue
+
+                val touchesLeft = edgeBlending && (cutout.destX > tolerance)
+                val touchesRight = edgeBlending && (cutout.destX + cutout.destWidth < 1.0f - tolerance)
+                val touchesTop = edgeBlending && (cutout.destY > tolerance)
+                val touchesBottom = edgeBlending && (cutout.destY + cutout.destHeight < 1.0f - tolerance)
+
+                val leftExt = if (touchesLeft) (blendW / 2f).roundToInt().toFloat() else 0f
+                val rightExt = if (touchesRight) (blendW / 2f).roundToInt().toFloat() else 0f
+                val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
+                val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
+                val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
+
+                val saveCount = if (cutout.opacity < 1f || hasTouching) {
+                    cutoutPaint.alpha = (cutout.opacity * 255).toInt()
+                    if (hasTouching) {
+                        cutoutPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
                     } else {
-                        fitW = dh * srcRatio
+                        cutoutPaint.xfermode = null
                     }
-                    
-                    // Center the fitted rectangle within dw x dh
-                    val fitX = (dw - fitW) / 2f
-                    val fitY = (dh - fitH) / 2f
-                    canvas.translate(fitX, fitY)
-
-                    val scaleX = fitW / srcWidth
-                    val scaleY = fitH / srcHeight
-                    canvas.scale(scaleX, scaleY)
+                    val clipLeft = dx - leftExt
+                    val clipTop = dy - topExt
+                    val clipRight = dx + dw + rightExt
+                    val clipBottom = dy + dh + bottomExt
+                    canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
                 } else {
-                    val scaleX = dw / sw
-                    val scaleY = dh / sh
-                    canvas.translate(-sx * scaleX, -sy * scaleY)
-                    canvas.scale(scaleX, scaleY)
+                    canvas.save()
+                    canvas.clipRect(dx, dy, dx + dw, dy + dh)
+                    0
                 }
 
-                if (isFrozen && frozenBitmap != null) {
-                    canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
-                } else if (cutout.motionSmoothing && accumulators[cutout.motionSmoothingStrength]?.accumulated != null) {
-                    canvas.drawBitmap(accumulators[cutout.motionSmoothingStrength]!!.accumulated!!, 0f, 0f, null)
-                } else if (masterView != null) {
-                    drawChild(canvas, masterView, drawTime)
-                    masterViewDrawn = true
-                }
-
-                canvas.restoreToCount(innerSaveCount)
-
-                if (cutout.shape == CutoutShape.CIRCLE) {
-                    if (edgeBlending) {
+                try {
+                    canvas.translate(dx, dy)
+                    if (cutout.shape == CutoutShape.CIRCLE) {
+                        circlePath.reset()
                         val r = min(dw, dh) / 2f
-                        val stop = maxOf(0f, r - blendW) / r
-                        val colors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
-                        val stops = floatArrayOf(0f, stop, 1f)
-                        val shader = RadialGradient(dw / 2f, dh / 2f, r, colors, stops, Shader.TileMode.CLAMP)
-                        blendPaint.shader = shader
-                        canvas.drawRect(0f, 0f, dw, dh, blendPaint)
+                        circlePath.addCircle(dw / 2f, dh / 2f, r, Path.Direction.CW)
+                        canvas.clipPath(circlePath)
+                    }
+                    val innerSaveCount = canvas.save()
+                    
+                    val isFollowActive = ScreenCaptureManager.isFollowActive.value
+                    val isUncropped = cutout.srcWidth >= 0.999f && cutout.srcHeight >= 0.999f
+                    if (cutouts.size == 1 && isFollowActive && isUncropped) {
+                        canvas.translate(viewportOffsetX, viewportOffsetY)
+                        canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)
+
+                        // Fit srcWidth x srcHeight into dw x dh preserving aspect ratio
+                        val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
+                        val destRatio = dw / dh
+                        
+                        var fitW = dw
+                        var fitH = dh
+                        if (srcRatio > destRatio) {
+                            fitH = dw / srcRatio
+                        } else {
+                            fitW = dh * srcRatio
+                        }
+                        
+                        // Center the fitted rectangle within dw x dh
+                        val fitX = (dw - fitW) / 2f
+                        val fitY = (dh - fitH) / 2f
+                        canvas.translate(fitX, fitY)
+
+                        val scaleX = fitW / srcWidth
+                        val scaleY = fitH / srcHeight
+                        canvas.scale(scaleX, scaleY)
+                    } else {
+                        val scaleX = dw / sw
+                        val scaleY = dh / sh
+                        canvas.translate(-sx * scaleX, -sy * scaleY)
+                        canvas.scale(scaleX, scaleY)
+                    }
+
+                    if (isFrozen && frozenBitmap != null) {
+                        canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
+                    } else if (cutout.motionSmoothing && accumulators[cutout.motionSmoothingStrength]?.accumulated != null) {
+                        canvas.drawBitmap(accumulators[cutout.motionSmoothingStrength]!!.accumulated!!, 0f, 0f, null)
+                    } else if (masterView != null) {
+                        drawChild(canvas, masterView, drawTime)
+                        masterViewDrawn = true
+                    }
+
+                    canvas.restoreToCount(innerSaveCount)
+
+                    if (cutout.shape == CutoutShape.CIRCLE) {
+                        if (edgeBlending) {
+                            val r = min(dw, dh) / 2f
+                            val stop = maxOf(0f, r - blendW) / r
+                            val colors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
+                            val stops = floatArrayOf(0f, stop, 1f)
+                            val shader = RadialGradient(dw / 2f, dh / 2f, r, colors, stops, Shader.TileMode.CLAMP)
+                            blendPaint.shader = shader
+                            canvas.drawRect(0f, 0f, dw, dh, blendPaint)
+                            blendPaint.shader = null
+                        }
+                    } else if (hasTouching) {
+                        if (touchesLeft) {
+                            val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
+                            val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                            blendPaint.shader = shader
+                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                        }
+                        if (touchesRight) {
+                            val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
+                            val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                            blendPaint.shader = shader
+                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                        }
+                        if (touchesTop) {
+                            val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
+                            val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
+                            blendPaint.shader = shader
+                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                        }
+                        if (touchesBottom) {
+                            val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
+                            val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
+                            blendPaint.shader = shader
+                            canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                        }
                         blendPaint.shader = null
                     }
-                } else if (hasTouching) {
-                    if (touchesLeft) {
-                        val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                        val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
-                        blendPaint.shader = shader
-                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
+                } finally {
+                    if (cutout.opacity < 1f || hasTouching) {
+                        canvas.restoreToCount(saveCount)
+                    } else {
+                        canvas.restore()
                     }
-                    if (touchesRight) {
-                        val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                        val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
-                        blendPaint.shader = shader
-                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
-                    }
-                    if (touchesTop) {
-                        val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                        val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
-                        blendPaint.shader = shader
-                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
-                    }
-                    if (touchesBottom) {
-                        val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                        val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
-                        blendPaint.shader = shader
-                        canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
-                    }
-                    blendPaint.shader = null
-                }
-            } finally {
-                if (cutout.opacity < 1f || hasTouching) {
-                    canvas.restoreToCount(saveCount)
-                } else {
-                    canvas.restore()
                 }
             }
-        }
 
-        if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
-            val saveCount = canvas.save()
-            canvas.clipRect(0f, 0f, 1f, 1f)
-            drawChild(canvas, masterView, drawTime)
-            canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
-            canvas.restoreToCount(saveCount)
+            if (!masterViewDrawn && !isFrozen && masterView != null && cutouts.isNotEmpty()) {
+                val saveCount = canvas.save()
+                canvas.clipRect(0f, 0f, 1f, 1f)
+                drawChild(canvas, masterView, drawTime)
+                canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
+                canvas.restoreToCount(saveCount)
+            }
+        } finally {
+            canvas.restoreToCount(overallSaveCount)
         }
     }
 }
