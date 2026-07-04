@@ -294,67 +294,42 @@ fun MacroPadEditor(onDone: () -> Unit) {
             )
         }
 
-        // New layout (name input + template selection)
+        // New layout (name input + visibility + background + button colors)
         if (showNewLayoutDialog && profile != null) {
-            val defaultLayoutName = stringResource(R.string.quick_menu_new_layout)
-            NewLayoutOverlay(
-                profiles    = profiles,
-                existingLayoutNames = profile.layouts.map { it.name },
+            val newLayoutId = remember(showNewLayoutDialog) { UUID.randomUUID().toString() }
+            InlineLayoutSettingsOverlay(
+                title = stringResource(R.string.settings_macropad_new_layout),
+                layoutId = newLayoutId,
+                initialName = "",
+                initialEnabled = true,
+                initialButtonColorNoMirror = ButtonColorStyle.ACCENTED,
+                initialButtonColorMirror = ButtonColorStyle.NEUTRAL,
+                initialBackgroundImagePath = null,
                 accentColor = colors.accent,
-                onConfirm   = { name, templateLayout ->
-                    val layoutId = UUID.randomUUID().toString()
-                    val newLayout = if (templateLayout != null) {
-                        val copiedButtons = templateLayout.buttons.map { btn ->
-                            btn.copy(id = UUID.randomUUID().toString())
-                        }
-                        val copiedCutouts = templateLayout.mirrorCutouts.map { cutout ->
-                            cutout.copy(id = UUID.randomUUID().toString())
-                        }
-                        val copiedBgPath = templateLayout.backgroundImagePath?.let { oldPath ->
-                            val oldFile = File(context.filesDir, oldPath)
-                            if (oldFile.exists()) {
-                                val backgroundsDir = File(context.filesDir, "backgrounds")
-                                if (!backgroundsDir.exists()) backgroundsDir.mkdirs()
-                                val newFile = File(backgroundsDir, "bg_$layoutId")
-                                try {
-                                    oldFile.copyTo(newFile, overwrite = true)
-                                    "backgrounds/bg_$layoutId"
-                                } catch (e: Exception) {
-                                    AppLog.e(TAG, "Failed to copy template background image", e)
-                                    null
-                                }
-                            } else {
-                                null
-                            }
-                        }
-                        templateLayout.copy(
-                            id = layoutId,
-                            name = name.ifBlank { defaultLayoutName },
-                            buttons = copiedButtons,
-                            mirrorCutouts = copiedCutouts,
-                            backgroundImagePath = copiedBgPath,
-                        )
+                existingNames = profile.layouts.map { it.name },
+                onConfirm = { name, enabled, noMirrorStyle, mirrorStyle, bgImagePath ->
+                    val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
+                    val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
+                    val bottomW = ScreenCaptureManager.surfaceWidth.value
+                    val bottomH = ScreenCaptureManager.surfaceHeight.value
+                    val defaultCutout = if (bottomW > 0f && bottomH > 0f) {
+                        ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
                     } else {
-                        val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
-                        val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
-                        val bottomW = ScreenCaptureManager.surfaceWidth.value
-                        val bottomH = ScreenCaptureManager.surfaceHeight.value
-                        val defaultCutout = if (bottomW > 0f && bottomH > 0f) {
-                            ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
-                        } else {
-                            ScreenCutout.createDefault(sourceW, sourceH)
-                        }
-                        PadLayout(
-                            id      = layoutId,
-                            name    = name.ifBlank { defaultLayoutName },
-                            buttons = emptyList(),
-                            mirrorCutouts = listOf(defaultCutout),
-                        )
+                        ScreenCutout.createDefault(sourceW, sourceH)
                     }
+                    val newLayout = PadLayout(
+                        id = newLayoutId,
+                        name = name,
+                        enabled = enabled,
+                        buttonColorNoMirror = noMirrorStyle,
+                        buttonColorMirror = mirrorStyle,
+                        backgroundImagePath = bgImagePath,
+                        mirrorCutouts = listOf(defaultCutout)
+                    )
                     MacroPadState.addLayout(newLayout)
                     showNewLayoutDialog = false
                 },
-                onDismiss = { showNewLayoutDialog = false },
+                onDismiss = { showNewLayoutDialog = false }
             )
         }
 

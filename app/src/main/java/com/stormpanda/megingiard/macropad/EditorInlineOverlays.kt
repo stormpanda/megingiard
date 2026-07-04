@@ -8,6 +8,8 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -625,123 +627,130 @@ internal fun InlineLayoutSettingsOverlay(
             }
         }
     ) {
-        AppTextField(
-            value = nameText,
-            onValueChange = { nameText = it },
-            label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            isError = hasError,
-            supportingText = {
-                when {
-                    normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                    isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                }
-            },
-        )
-        Spacer(Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.layout_settings_visibility_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = stringResource(R.string.layout_settings_visibility_desc),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = { isEnabled = it }
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-        AppDivider()
-        Spacer(Modifier.height(12.dp))
-
-        // Background Image Selection Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.layout_settings_bg_image_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                val statusText = when {
-                    pendingImageUri != null -> stringResource(R.string.layout_settings_bg_image_pending)
-                    currentBgPath != null -> stringResource(R.string.layout_settings_bg_image_active)
-                    else -> stringResource(R.string.layout_settings_bg_image_none)
-                }
-                Text(
-                    text = statusText,
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (pendingImageUri != null || currentBgPath != null) {
-                    IconButton(
-                        onClick = {
-                            pendingImageUri = null
-                            currentBgPath = null
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = stringResource(R.string.layout_settings_bg_image_remove),
-                            tint = colors.error
-                        )
+            AppTextField(
+                value = nameText,
+                onValueChange = { nameText = it },
+                label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                isError = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
-                    Spacer(Modifier.width(8.dp))
-                }
-                Button(
-                    onClick = { launcher.launch("image/*") },
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
-                ) {
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (pendingImageUri != null || currentBgPath != null) {
-                            stringResource(R.string.layout_settings_bg_image_change)
-                        } else {
-                            stringResource(R.string.layout_settings_bg_image_choose)
-                        },
-                        color = colors.onAccent
+                        text = stringResource(R.string.layout_settings_visibility_title),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = stringResource(R.string.layout_settings_visibility_desc),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
+
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = { isEnabled = it }
+                )
             }
+
+            Spacer(Modifier.height(12.dp))
+            AppDivider()
+            Spacer(Modifier.height(12.dp))
+
+            // Background Image Selection Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.layout_settings_bg_image_title),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    val statusText = when {
+                        pendingImageUri != null -> stringResource(R.string.layout_settings_bg_image_pending)
+                        currentBgPath != null -> stringResource(R.string.layout_settings_bg_image_active)
+                        else -> stringResource(R.string.layout_settings_bg_image_none)
+                    }
+                    Text(
+                        text = statusText,
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (pendingImageUri != null || currentBgPath != null) {
+                        IconButton(
+                            onClick = {
+                                pendingImageUri = null
+                                currentBgPath = null
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.layout_settings_bg_image_remove),
+                                tint = colors.error
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Button(
+                        onClick = { launcher.launch("image/*") },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    ) {
+                        Text(
+                            text = if (pendingImageUri != null || currentBgPath != null) {
+                                stringResource(R.string.layout_settings_bg_image_change)
+                            } else {
+                                stringResource(R.string.layout_settings_bg_image_choose)
+                            },
+                            color = colors.onAccent
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            AppDivider()
+            Spacer(Modifier.height(12.dp))
+
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_no_mirror),
+                selected = noMirrorStyle,
+                onSelect = { noMirrorStyle = it }
+            )
+            Spacer(Modifier.height(8.dp))
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_mirror),
+                selected = mirrorStyle,
+                onSelect = { mirrorStyle = it }
+            )
         }
-
-        Spacer(Modifier.height(12.dp))
-        AppDivider()
-        Spacer(Modifier.height(12.dp))
-
-        ButtonColorStyleRow(
-            label = stringResource(R.string.macropad_editor_button_color_no_mirror),
-            selected = noMirrorStyle,
-            onSelect = { noMirrorStyle = it }
-        )
-        Spacer(Modifier.height(8.dp))
-        ButtonColorStyleRow(
-            label = stringResource(R.string.macropad_editor_button_color_mirror),
-            selected = mirrorStyle,
-            onSelect = { mirrorStyle = it }
-        )
     }
 }
 
