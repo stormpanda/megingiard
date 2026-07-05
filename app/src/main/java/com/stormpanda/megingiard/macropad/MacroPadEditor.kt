@@ -306,7 +306,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialBackgroundImagePath = null,
                 accentColor = colors.accent,
                 existingNames = profile.layouts.map { it.name },
-                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath ->
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, bgChanged ->
                     val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
                     val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
                     val bottomW = ScreenCaptureManager.surfaceWidth.value
@@ -323,6 +323,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         buttonColorNoMirror = noMirrorStyle,
                         buttonColorMirror = mirrorStyle,
                         backgroundImagePath = bgImagePath,
+                        backgroundImageVersion = if (bgChanged) 1 else 0,
                         mirrorCutouts = listOf(defaultCutout)
                     )
                     MacroPadState.addLayout(newLayout)
@@ -429,7 +430,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialBackgroundImagePath = curLayout.backgroundImagePath,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath ->
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, bgChanged ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
@@ -437,6 +438,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                             buttonColorNoMirror = noMirrorStyle,
                             buttonColorMirror = mirrorStyle,
                             backgroundImagePath = bgImagePath,
+                            backgroundImageVersion = if (bgChanged) curLayout.backgroundImageVersion + 1 else curLayout.backgroundImageVersion
                         )
                     )
                     showEditLayoutDialog = false

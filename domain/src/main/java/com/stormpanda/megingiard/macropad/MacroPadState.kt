@@ -308,7 +308,8 @@ object MacroPadState {
             layout.copy(
                 id = targetLayoutId,
                 buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
-                backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" }
+                backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" },
+                backgroundImageVersion = 0
             )
         }
         
@@ -407,7 +408,8 @@ object MacroPadState {
             name = uniqueName,
             buttons = copiedButtons,
             mirrorCutouts = copiedCutouts,
-            backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" }
+            backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
+            backgroundImageVersion = 0
         )
         
         AppLog.d(TAG, "duplicateLayout layoutId=$layoutId newId=${duplicatedLayout.id} name='$uniqueName' in profile=${profile.id}")

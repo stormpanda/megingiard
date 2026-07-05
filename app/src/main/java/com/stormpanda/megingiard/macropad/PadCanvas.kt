@@ -124,27 +124,21 @@ internal fun PadCanvas(
     val padHeight     = configuration.screenHeightDp.dp - PC_SCREEN_PADDING * 2
     val gridStepPx    = with(density) { PC_GRID_STEP_DP.toPx() }
 
-    val bgImageFile = remember(layout?.backgroundImagePath) {
+    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
         val path = layout?.backgroundImagePath
         if (path != null) {
-            File(context.filesDir, path)
-        } else {
-            null
-        }
-    }
-    var bgBitmap by remember(bgImageFile) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(bgImageFile) {
-        if (bgImageFile != null) {
+            val file = File(context.filesDir, path)
             withContext(Dispatchers.IO) {
                 try {
-                    if (bgImageFile.exists()) {
-                        val decoded = BitmapFactory.decodeFile(bgImageFile.absolutePath)
+                    if (file.exists()) {
+                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
                         bgBitmap = decoded?.asImageBitmap()
                     } else {
                         bgBitmap = null
                     }
                 } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to decode background image ${bgImageFile.absolutePath}", e)
+                    AppLog.e(TAG, "Failed to decode background image ${file.absolutePath}", e)
                     bgBitmap = null
                 }
             }

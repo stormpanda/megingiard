@@ -541,7 +541,7 @@ internal fun InlineLayoutSettingsOverlay(
     initialBackgroundImagePath: String?,
     accentColor: Color,
     existingNames: List<String>,
-    onConfirm: (String, ButtonColorStyle, ButtonColorStyle, String?) -> Unit,
+    onConfirm: (String, ButtonColorStyle, ButtonColorStyle, String?, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var nameText by remember { mutableStateOf(initialName) }
@@ -579,6 +579,7 @@ internal fun InlineLayoutSettingsOverlay(
                     if (!hasError && !isSaving) {
                         isSaving = true
                         scope.launch {
+                            var bgChanged = false
                             val finalBgPath = withContext(Dispatchers.IO) {
                                 val uri = pendingImageUri
                                 if (uri != null) {
@@ -593,6 +594,7 @@ internal fun InlineLayoutSettingsOverlay(
                                                 input.copyTo(output)
                                             }
                                         }
+                                        bgChanged = true
                                         "backgrounds/bg_$layoutId"
                                     } catch (e: Exception) {
                                         AppLog.e(TAG, "Failed to copy background image Uri $uri", e)
@@ -604,6 +606,7 @@ internal fun InlineLayoutSettingsOverlay(
                                     if (destFile.exists()) {
                                         try {
                                             destFile.delete()
+                                            bgChanged = true
                                         } catch (e: Exception) {
                                             AppLog.e(TAG, "Failed to delete background file", e)
                                         }
@@ -613,7 +616,7 @@ internal fun InlineLayoutSettingsOverlay(
                                     currentBgPath
                                 }
                             }
-                            onConfirm(normalizedName, noMirrorStyle, mirrorStyle, finalBgPath)
+                            onConfirm(normalizedName, noMirrorStyle, mirrorStyle, finalBgPath, bgChanged)
                             isSaving = false
                         }
                     }
