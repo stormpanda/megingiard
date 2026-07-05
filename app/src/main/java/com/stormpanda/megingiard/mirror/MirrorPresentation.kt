@@ -1128,10 +1128,11 @@ class MultiCutoutContainer(
                 canvas.restoreToCount(saveCount)
             }
 
-            if (useAsMask && bgBitmap != null) {
-                val srcRect = Rect(0, 0, bgBitmap!!.width, bgBitmap!!.height)
+            val mask = bgBitmap
+            if (useAsMask && mask != null) {
+                val srcRect = Rect(0, 0, mask.width, mask.height)
                 val destRect = RectF(0f, 0f, parentW, parentH)
-                canvas.drawBitmap(bgBitmap!!, srcRect, destRect, null)
+                canvas.drawBitmap(mask, srcRect, destRect, null)
             }
         } finally {
             canvas.restoreToCount(overallSaveCount)
