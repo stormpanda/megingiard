@@ -125,6 +125,7 @@ private val MP_SWIPE_THRESHOLD = 25.dp
 private val MP_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
+private const val UNCROPPED_THRESHOLD = 0.999f
 
 class MirrorPresentation(
     context: Context, 
@@ -1000,7 +1001,7 @@ class MultiCutoutContainer(
                     val innerSaveCount = canvas.save()
                     
                     val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                    val isUncropped = cutout.srcWidth >= 0.999f && cutout.srcHeight >= 0.999f
+                    val isUncropped = cutout.srcWidth >= UNCROPPED_THRESHOLD && cutout.srcHeight >= UNCROPPED_THRESHOLD
                     if (cutouts.size == 1 && isFollowActive && isUncropped) {
                         canvas.translate(viewportOffsetX, viewportOffsetY)
                         canvas.scale(viewportScale, viewportScale, dw / 2f, dh / 2f)

@@ -285,13 +285,14 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
-    fun duplicateProfile(profileId: String) {
-        val sourceProfile = _profiles.value.firstOrNull { it.id == profileId } ?: return
+    fun duplicateProfile(profileId: String): Map<String, String>? {
+        val sourceProfile = _profiles.value.firstOrNull { it.id == profileId } ?: return null
         val existingNames = _profiles.value.map { it.name }
         val uniqueName = existingNames.nextUniqueName(sourceProfile.name, MP_DEFAULT_PROFILE_NAME)
         
         val newProfileId = UUID.randomUUID().toString()
         val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
+        val layoutMapping = mutableMapOf<String, String>() // source layout ID -> target layout ID
         
         // Copy macros
         val copiedMacros = sourceProfile.macros.map { macro ->
@@ -302,9 +303,12 @@ object MacroPadState {
         
         // Copy layouts
         val copiedLayouts = sourceProfile.layouts.map { layout ->
+            val targetLayoutId = UUID.randomUUID().toString()
+            layoutMapping[layout.id] = targetLayoutId
             layout.copy(
-                id = UUID.randomUUID().toString(),
-                buttons = layout.buttons.cloneWithMacroMapping(macroMapping)
+                id = targetLayoutId,
+                buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
+                backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" }
             )
         }
         
@@ -325,6 +329,7 @@ object MacroPadState {
         AppLog.d(TAG, "duplicateProfile originalId=$profileId newId=$newProfileId name='$uniqueName'")
         _profiles.value = _profiles.value + duplicated
         MacroPadSettings.saveMacroPadData()
+        return layoutMapping
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -382,9 +387,9 @@ object MacroPadState {
         updateProfile(profile.copy(layouts = newOrder))
     }
 
-    fun duplicateLayout(layoutId: String) {
-        val profile = activeProfile.value ?: return
-        val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return
+    fun duplicateLayout(layoutId: String): String? {
+        val profile = activeProfile.value ?: return null
+        val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return null
         val existingNames = profile.layouts.map { it.name }
         val uniqueName = existingNames.nextUniqueName(layout.name, MP_DEFAULT_LAYOUT_NAME)
         
@@ -396,11 +401,13 @@ object MacroPadState {
             cutout.copy(id = UUID.randomUUID().toString())
         }
         
+        val newLayoutId = UUID.randomUUID().toString()
         val duplicatedLayout = layout.copy(
-            id = UUID.randomUUID().toString(),
+            id = newLayoutId,
             name = uniqueName,
             buttons = copiedButtons,
-            mirrorCutouts = copiedCutouts
+            mirrorCutouts = copiedCutouts,
+            backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" }
         )
         
         AppLog.d(TAG, "duplicateLayout layoutId=$layoutId newId=${duplicatedLayout.id} name='$uniqueName' in profile=${profile.id}")
@@ -408,6 +415,7 @@ object MacroPadState {
             layouts = profile.layouts + duplicatedLayout,
             activeLayoutId = duplicatedLayout.id
         ))
+        return newLayoutId
     }
 
     /** Switch to the next layout, wrapping around. */

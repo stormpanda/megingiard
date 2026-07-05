@@ -71,6 +71,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 private const val TAG = "EditorInlineOverlays"
+private val LO_SPACING_DEFAULT = 12.dp
+private val LO_SPACING_SMALL = 8.dp
 
 @Composable
 internal fun InlineDialogOverlay(
@@ -645,7 +647,7 @@ internal fun InlineLayoutSettingsOverlay(
                     }
                 },
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(LO_SPACING_DEFAULT))
 
             // Background Image Selection Row
             Row(
@@ -686,7 +688,7 @@ internal fun InlineLayoutSettingsOverlay(
                                 tint = colors.error
                             )
                         }
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(LO_SPACING_SMALL))
                     }
                     Button(
                         onClick = { launcher.launch("image/*") },
@@ -704,16 +706,16 @@ internal fun InlineLayoutSettingsOverlay(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(LO_SPACING_DEFAULT))
             AppDivider()
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(LO_SPACING_DEFAULT))
 
             ButtonColorStyleRow(
                 label = stringResource(R.string.macropad_editor_button_color_no_mirror),
                 selected = noMirrorStyle,
                 onSelect = { noMirrorStyle = it }
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(LO_SPACING_SMALL))
             ButtonColorStyleRow(
                 label = stringResource(R.string.macropad_editor_button_color_mirror),
                 selected = mirrorStyle,

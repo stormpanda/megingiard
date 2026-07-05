@@ -688,6 +688,7 @@ private fun EditorBody(
     modifier:                Modifier = Modifier,
 ) {
     val colors     = LocalAppColors.current
+    val context    = LocalContext.current
     var gridMode   by remember { mutableStateOf(GridMode.OFF) }
     val profileRef by rememberUpdatedState(profile)
     val layoutRef  by rememberUpdatedState(layout)
@@ -728,7 +729,28 @@ private fun EditorBody(
                 activeProfile   = profile,
                 onSelectProfile = onSelectProfile,
                 onEditProfile   = onEditProfile,
-                onDuplicateProfile = { profile?.id?.let { MacroPadState.duplicateProfile(it) } },
+                onDuplicateProfile = {
+                    val originalProfile = profile
+                    val originalLayouts = originalProfile?.layouts ?: emptyList()
+                    val layoutMapping = originalProfile?.id?.let { MacroPadState.duplicateProfile(it) }
+                    if (layoutMapping != null) {
+                        for (origLayout in originalLayouts) {
+                            val originalPath = origLayout.backgroundImagePath
+                            val newLayoutId = layoutMapping[origLayout.id]
+                            if (originalPath != null && newLayoutId != null) {
+                                val srcFile = File(context.filesDir, originalPath)
+                                val destFile = File(context.filesDir, "backgrounds/bg_$newLayoutId")
+                                if (srcFile.exists()) {
+                                    try {
+                                        srcFile.copyTo(destFile, overwrite = true)
+                                    } catch (e: Exception) {
+                                        AppLog.e(TAG, "Failed to copy background file during profile duplication", e)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 onReorderProfiles = onReorderProfiles,
                 onDeleteProfile = onDeleteProfile,
                 modifier        = Modifier
@@ -755,7 +777,22 @@ private fun EditorBody(
                 activeLayout   = layout,
                 onSelectLayout = onSelectLayout,
                 onEditLayout   = onEditLayout,
-                onDuplicateLayout = { layout?.id?.let { MacroPadState.duplicateLayout(it) } },
+                onDuplicateLayout = {
+                    val originalLayout = layout
+                    val originalPath = originalLayout?.backgroundImagePath
+                    val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
+                    if (originalPath != null && newLayoutId != null) {
+                        val srcFile = File(context.filesDir, originalPath)
+                        val destFile = File(context.filesDir, "backgrounds/bg_$newLayoutId")
+                        if (srcFile.exists()) {
+                            try {
+                                srcFile.copyTo(destFile, overwrite = true)
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to copy background file during duplication", e)
+                            }
+                        }
+                    }
+                },
                 onCopyToProfile = onCopyToProfile,
                 onReorderLayouts = onReorderLayouts,
                 onDeleteLayout = { layout?.let { onDeleteLayoutRequested(it) } },
