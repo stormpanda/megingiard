@@ -417,6 +417,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_bg_image_change">Bild ändern</string>
     <string name="layout_settings_bg_image_remove">Hintergrundbild entfernen</string>
     <string name="layout_settings_bg_image_use_as_mask">Als Maske verwenden</string>
+    <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
 
     <!-- Makro-Listenverwaltung -->
     <string name="macropad_macro_list_title">Makros</string>

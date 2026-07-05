@@ -725,6 +725,11 @@ internal fun InlineLayoutSettingsOverlay(
                             color = colors.onSurface,
                             style = MaterialTheme.typography.bodyMedium
                         )
+                        Text(
+                            text = stringResource(R.string.layout_settings_bg_image_use_as_mask_desc),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                     Switch(
                         checked = useAsMask,
