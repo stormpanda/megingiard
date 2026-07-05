@@ -165,14 +165,11 @@ internal fun EditorLayoutChipsBar(
             items(layouts, key = { it.id }) { layout ->
                 ReorderableItem(reorderState, key = layout.id) {
                     val isActive = layout.id == activeLayout?.id
-                    val text = if (layout.enabled) layout.name else stringResource(R.string.macropad_layout_name_hidden, layout.name)
-                    val chipAlpha = if (layout.enabled) 1f else 0.45f
                     AppSelectableChip(
-                        text = text,
+                        text = layout.name,
                         selected = isActive,
                         onClick = { onSelectLayout(layout.id) },
                         modifier = Modifier
-                            .alpha(chipAlpha)
                             .then(Modifier.longPressDraggableHandle())
                     )
                 }

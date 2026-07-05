@@ -49,6 +49,17 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.AppLog
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -107,10 +118,34 @@ internal fun PadCanvas(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val colors     = LocalAppColors.current
     val density    = LocalDensity.current
+    val context    = LocalContext.current
     val configuration = LocalConfiguration.current
     val padWidth      = configuration.screenWidthDp.dp  - PC_SCREEN_PADDING * 2
     val padHeight     = configuration.screenHeightDp.dp - PC_SCREEN_PADDING * 2
     val gridStepPx    = with(density) { PC_GRID_STEP_DP.toPx() }
+
+    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
+        val path = layout?.backgroundImagePath
+        if (path != null) {
+            val file = File(context.filesDir, path)
+            withContext(Dispatchers.IO) {
+                try {
+                    if (file.exists()) {
+                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        bgBitmap = decoded?.asImageBitmap()
+                    } else {
+                        bgBitmap = null
+                    }
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to decode background image ${file.absolutePath}", e)
+                    bgBitmap = null
+                }
+            }
+        } else {
+            bgBitmap = null
+        }
+    }
 
     val padModifier = Modifier
         .width(padWidth)
@@ -121,6 +156,14 @@ internal fun PadCanvas(
         .onSizeChanged { canvasSize = it }
 
     Box(modifier = padModifier) {
+        if (bgBitmap != null) {
+            Image(
+                bitmap = bgBitmap!!,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
         // Grid overlay — drawn behind buttons
         if (gridMode != GridMode.OFF && canvasSize.width > 0 && canvasSize.height > 0) {
             GridOverlay(

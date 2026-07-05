@@ -8,6 +8,8 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppDivider
@@ -58,8 +61,18 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import java.io.File
 
 private const val TAG = "EditorInlineOverlays"
+private val LO_SPACING_DEFAULT = 12.dp
+private val LO_SPACING_SMALL = 8.dp
 
 @Composable
 internal fun InlineDialogOverlay(
@@ -521,23 +534,38 @@ private fun getDrawableBitmap(drawable: Drawable): Bitmap {
 @Composable
 internal fun InlineLayoutSettingsOverlay(
     title: String,
+    layoutId: String,
     initialName: String,
-    initialEnabled: Boolean,
     initialButtonColorNoMirror: ButtonColorStyle,
     initialButtonColorMirror: ButtonColorStyle,
+    initialBackgroundImagePath: String?,
     accentColor: Color,
     existingNames: List<String>,
-    onConfirm: (String, Boolean, ButtonColorStyle, ButtonColorStyle) -> Unit,
+    onConfirm: (String, ButtonColorStyle, ButtonColorStyle, String?, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var nameText by remember { mutableStateOf(initialName) }
-    var isEnabled by remember { mutableStateOf(initialEnabled) }
     var noMirrorStyle by remember { mutableStateOf(initialButtonColorNoMirror) }
     var mirrorStyle by remember { mutableStateOf(initialButtonColorMirror) }
+    var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
+    var currentBgPath by remember { mutableStateOf(initialBackgroundImagePath) }
+
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val colors = LocalAppColors.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isSaving by remember { mutableStateOf(false) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            pendingImageUri = uri
+            currentBgPath = null
+        }
+    }
 
     InlineDialogOverlay(
         title = title,
@@ -547,72 +575,156 @@ internal fun InlineLayoutSettingsOverlay(
                 Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
             }
             TextButton(
-                onClick = { if (!hasError) onConfirm(normalizedName, isEnabled, noMirrorStyle, mirrorStyle) },
-                enabled = !hasError,
+                onClick = {
+                    if (!hasError && !isSaving) {
+                        isSaving = true
+                        scope.launch {
+                            var bgChanged = false
+                            val finalBgPath = withContext(Dispatchers.IO) {
+                                val uri = pendingImageUri
+                                if (uri != null) {
+                                    val backgroundsDir = File(context.filesDir, "backgrounds")
+                                    if (!backgroundsDir.exists()) {
+                                        backgroundsDir.mkdirs()
+                                    }
+                                    val destFile = File(backgroundsDir, "bg_$layoutId")
+                                    try {
+                                        context.contentResolver.openInputStream(uri)?.use { input ->
+                                            destFile.outputStream().use { output ->
+                                                input.copyTo(output)
+                                            }
+                                        }
+                                        bgChanged = true
+                                        "backgrounds/bg_$layoutId"
+                                    } catch (e: Exception) {
+                                        AppLog.e(TAG, "Failed to copy background image Uri $uri", e)
+                                        null
+                                    }
+                                } else if (currentBgPath == null) {
+                                    val backgroundsDir = File(context.filesDir, "backgrounds")
+                                    val destFile = File(backgroundsDir, "bg_$layoutId")
+                                    if (destFile.exists()) {
+                                        try {
+                                            destFile.delete()
+                                            bgChanged = true
+                                        } catch (e: Exception) {
+                                            AppLog.e(TAG, "Failed to delete background file", e)
+                                        }
+                                    }
+                                    null
+                                } else {
+                                    currentBgPath
+                                }
+                            }
+                            onConfirm(normalizedName, noMirrorStyle, mirrorStyle, finalBgPath, bgChanged)
+                            isSaving = false
+                        }
+                    }
+                },
+                enabled = !hasError && !isSaving,
             ) {
                 Text(
                     text = stringResource(R.string.macropad_editor_done),
-                    color = if (!hasError) accentColor else colors.onSurfaceSecondary,
+                    color = if (!hasError && !isSaving) accentColor else colors.onSurfaceSecondary,
                 )
             }
         }
     ) {
-        AppTextField(
-            value = nameText,
-            onValueChange = { nameText = it },
-            label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            isError = hasError,
-            supportingText = {
-                when {
-                    normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                    isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                }
-            },
-        )
-        Spacer(Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.layout_settings_visibility_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = stringResource(R.string.layout_settings_visibility_desc),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall
-                )
+            AppTextField(
+                value = nameText,
+                onValueChange = { nameText = it },
+                label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                isError = hasError,
+                supportingText = {
+                    when {
+                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                    }
+                },
+            )
+            Spacer(Modifier.height(LO_SPACING_DEFAULT))
+
+            // Background Image Selection Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.layout_settings_bg_image_title),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    val statusText = when {
+                        pendingImageUri != null -> stringResource(R.string.layout_settings_bg_image_pending)
+                        currentBgPath != null -> stringResource(R.string.layout_settings_bg_image_active)
+                        else -> stringResource(R.string.layout_settings_bg_image_none)
+                    }
+                    Text(
+                        text = statusText,
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (pendingImageUri != null || currentBgPath != null) {
+                        IconButton(
+                            onClick = {
+                                pendingImageUri = null
+                                currentBgPath = null
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.layout_settings_bg_image_remove),
+                                tint = colors.error
+                            )
+                        }
+                        Spacer(Modifier.width(LO_SPACING_SMALL))
+                    }
+                    Button(
+                        onClick = { launcher.launch("image/*") },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    ) {
+                        Text(
+                            text = if (pendingImageUri != null || currentBgPath != null) {
+                                stringResource(R.string.layout_settings_bg_image_change)
+                            } else {
+                                stringResource(R.string.layout_settings_bg_image_choose)
+                            },
+                            color = colors.onAccent
+                        )
+                    }
+                }
             }
 
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = { isEnabled = it }
+            Spacer(Modifier.height(LO_SPACING_DEFAULT))
+            AppDivider()
+            Spacer(Modifier.height(LO_SPACING_DEFAULT))
+
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_no_mirror),
+                selected = noMirrorStyle,
+                onSelect = { noMirrorStyle = it }
+            )
+            Spacer(Modifier.height(LO_SPACING_SMALL))
+            ButtonColorStyleRow(
+                label = stringResource(R.string.macropad_editor_button_color_mirror),
+                selected = mirrorStyle,
+                onSelect = { mirrorStyle = it }
             )
         }
-
-        Spacer(Modifier.height(12.dp))
-        AppDivider()
-        Spacer(Modifier.height(12.dp))
-
-        ButtonColorStyleRow(
-            label = stringResource(R.string.macropad_editor_button_color_no_mirror),
-            selected = noMirrorStyle,
-            onSelect = { noMirrorStyle = it }
-        )
-        Spacer(Modifier.height(8.dp))
-        ButtonColorStyleRow(
-            label = stringResource(R.string.macropad_editor_button_color_mirror),
-            selected = mirrorStyle,
-            onSelect = { mirrorStyle = it }
-        )
     }
 }
 

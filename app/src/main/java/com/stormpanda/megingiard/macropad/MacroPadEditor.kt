@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import java.io.File
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -293,48 +294,42 @@ fun MacroPadEditor(onDone: () -> Unit) {
             )
         }
 
-        // New layout (name input + template selection)
+        // New layout (name input + visibility + background + button colors)
         if (showNewLayoutDialog && profile != null) {
-            val defaultLayoutName = stringResource(R.string.quick_menu_new_layout)
-            NewLayoutOverlay(
-                profiles    = profiles,
-                existingLayoutNames = profile.layouts.map { it.name },
+            val newLayoutId = remember(showNewLayoutDialog) { UUID.randomUUID().toString() }
+            InlineLayoutSettingsOverlay(
+                title = stringResource(R.string.settings_macropad_new_layout),
+                layoutId = newLayoutId,
+                initialName = "",
+                initialButtonColorNoMirror = ButtonColorStyle.ACCENTED,
+                initialButtonColorMirror = ButtonColorStyle.NEUTRAL,
+                initialBackgroundImagePath = null,
                 accentColor = colors.accent,
-                onConfirm   = { name, templateLayout ->
-                    val newLayout = if (templateLayout != null) {
-                        val copiedButtons = templateLayout.buttons.map { btn ->
-                            btn.copy(id = UUID.randomUUID().toString())
-                        }
-                        val copiedCutouts = templateLayout.mirrorCutouts.map { cutout ->
-                            cutout.copy(id = UUID.randomUUID().toString())
-                        }
-                        templateLayout.copy(
-                            id = UUID.randomUUID().toString(),
-                            name = name.ifBlank { defaultLayoutName },
-                            buttons = copiedButtons,
-                            mirrorCutouts = copiedCutouts
-                        )
+                existingNames = profile.layouts.map { it.name },
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, bgChanged ->
+                    val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
+                    val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
+                    val bottomW = ScreenCaptureManager.surfaceWidth.value
+                    val bottomH = ScreenCaptureManager.surfaceHeight.value
+                    val defaultCutout = if (bottomW > 0f && bottomH > 0f) {
+                        ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
                     } else {
-                        val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
-                        val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
-                        val bottomW = ScreenCaptureManager.surfaceWidth.value
-                        val bottomH = ScreenCaptureManager.surfaceHeight.value
-                        val defaultCutout = if (bottomW > 0f && bottomH > 0f) {
-                            ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
-                        } else {
-                            ScreenCutout.createDefault(sourceW, sourceH)
-                        }
-                        PadLayout(
-                            id      = UUID.randomUUID().toString(),
-                            name    = name.ifBlank { defaultLayoutName },
-                            buttons = emptyList(),
-                            mirrorCutouts = listOf(defaultCutout),
-                        )
+                        ScreenCutout.createDefault(sourceW, sourceH)
                     }
+                    val newLayout = PadLayout(
+                        id = newLayoutId,
+                        name = name,
+                        enabled = true,
+                        buttonColorNoMirror = noMirrorStyle,
+                        buttonColorMirror = mirrorStyle,
+                        backgroundImagePath = bgImagePath,
+                        backgroundImageVersion = if (bgChanged) 1 else 0,
+                        mirrorCutouts = listOf(defaultCutout)
+                    )
                     MacroPadState.addLayout(newLayout)
                     showNewLayoutDialog = false
                 },
-                onDismiss = { showNewLayoutDialog = false },
+                onDismiss = { showNewLayoutDialog = false }
             )
         }
 
@@ -345,6 +340,17 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 title     = stringResource(R.string.macropad_editor_delete_layout),
                 body      = pendingLayout.name,
                 onConfirm = {
+                    // Delete background file if it exists
+                    pendingLayout.backgroundImagePath?.let { path ->
+                        val file = File(context.filesDir, path)
+                        if (file.exists()) {
+                            try {
+                                file.delete()
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to delete background file $path", e)
+                            }
+                        }
+                    }
                     MacroPadState.deleteLayout(pendingLayout.id)
                     layoutPendingDelete = null
                 },
@@ -392,6 +398,19 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 title     = stringResource(R.string.macropad_editor_delete_profile),
                 body      = stringResource(R.string.macropad_editor_confirm_delete),
                 onConfirm = {
+                    // Delete background files for all layouts in this profile
+                    activeProfile.layouts.forEach { layout ->
+                        layout.backgroundImagePath?.let { path ->
+                            val file = File(context.filesDir, path)
+                            if (file.exists()) {
+                                try {
+                                    file.delete()
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to delete background file $path", e)
+                                }
+                            }
+                        }
+                    }
                     MacroPadState.deleteProfile(activeProfile.id)
                     showDeleteProfileConfirm = false
                 },
@@ -404,19 +423,22 @@ fun MacroPadEditor(onDone: () -> Unit) {
             val curLayout = activeLayout!!
             InlineLayoutSettingsOverlay(
                 title = stringResource(R.string.macropad_editor_title),
+                layoutId = curLayout.id,
                 initialName = curLayout.name,
-                initialEnabled = curLayout.enabled,
                 initialButtonColorNoMirror = curLayout.buttonColorNoMirror,
                 initialButtonColorMirror = curLayout.buttonColorMirror,
+                initialBackgroundImagePath = curLayout.backgroundImagePath,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, enabled, noMirrorStyle, mirrorStyle ->
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, bgChanged ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
-                            enabled = enabled,
+                            enabled = true,
                             buttonColorNoMirror = noMirrorStyle,
-                            buttonColorMirror = mirrorStyle
+                            buttonColorMirror = mirrorStyle,
+                            backgroundImagePath = bgImagePath,
+                            backgroundImageVersion = if (bgChanged) curLayout.backgroundImageVersion + 1 else curLayout.backgroundImageVersion
                         )
                     )
                     showEditLayoutDialog = false
@@ -668,6 +690,7 @@ private fun EditorBody(
     modifier:                Modifier = Modifier,
 ) {
     val colors     = LocalAppColors.current
+    val context    = LocalContext.current
     var gridMode   by remember { mutableStateOf(GridMode.OFF) }
     val profileRef by rememberUpdatedState(profile)
     val layoutRef  by rememberUpdatedState(layout)
@@ -708,7 +731,28 @@ private fun EditorBody(
                 activeProfile   = profile,
                 onSelectProfile = onSelectProfile,
                 onEditProfile   = onEditProfile,
-                onDuplicateProfile = { profile?.id?.let { MacroPadState.duplicateProfile(it) } },
+                onDuplicateProfile = {
+                    val originalProfile = profile
+                    val originalLayouts = originalProfile?.layouts ?: emptyList()
+                    val layoutMapping = originalProfile?.id?.let { MacroPadState.duplicateProfile(it) }
+                    if (layoutMapping != null) {
+                        for (origLayout in originalLayouts) {
+                            val originalPath = origLayout.backgroundImagePath
+                            val newLayoutId = layoutMapping[origLayout.id]
+                            if (originalPath != null && newLayoutId != null) {
+                                val srcFile = File(context.filesDir, originalPath)
+                                val destFile = File(context.filesDir, "backgrounds/bg_$newLayoutId")
+                                if (srcFile.exists()) {
+                                    try {
+                                        srcFile.copyTo(destFile, overwrite = true)
+                                    } catch (e: Exception) {
+                                        AppLog.e(TAG, "Failed to copy background file during profile duplication", e)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 onReorderProfiles = onReorderProfiles,
                 onDeleteProfile = onDeleteProfile,
                 modifier        = Modifier
@@ -735,7 +779,22 @@ private fun EditorBody(
                 activeLayout   = layout,
                 onSelectLayout = onSelectLayout,
                 onEditLayout   = onEditLayout,
-                onDuplicateLayout = { layout?.id?.let { MacroPadState.duplicateLayout(it) } },
+                onDuplicateLayout = {
+                    val originalLayout = layout
+                    val originalPath = originalLayout?.backgroundImagePath
+                    val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
+                    if (originalPath != null && newLayoutId != null) {
+                        val srcFile = File(context.filesDir, originalPath)
+                        val destFile = File(context.filesDir, "backgrounds/bg_$newLayoutId")
+                        if (srcFile.exists()) {
+                            try {
+                                srcFile.copyTo(destFile, overwrite = true)
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to copy background file during duplication", e)
+                            }
+                        }
+                    }
+                },
                 onCopyToProfile = onCopyToProfile,
                 onReorderLayouts = onReorderLayouts,
                 onDeleteLayout = { layout?.let { onDeleteLayoutRequested(it) } },

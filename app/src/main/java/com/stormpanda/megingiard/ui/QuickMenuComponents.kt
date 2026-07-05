@@ -76,13 +76,13 @@ internal fun LayoutRow(
     colors: AppColors,
     onLayoutSelected: (String) -> Unit,
 ) {
-    val enabledLayouts = activeProfile?.layouts?.filter { it.enabled } ?: emptyList()
+    val layouts = activeProfile?.layouts ?: emptyList()
 
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(PM_CHIP_SPACING),
     ) {
-        items(enabledLayouts, key = { it.id }) { layout ->
+        items(layouts, key = { it.id }) { layout ->
             SelectableChip(
                 text = layout.name,
                 isSelected = layout.id == activeLayout?.id,

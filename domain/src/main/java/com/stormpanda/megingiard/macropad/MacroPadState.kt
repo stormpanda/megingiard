@@ -285,13 +285,14 @@ object MacroPadState {
         MacroPadSettings.saveMacroPadData()
     }
 
-    fun duplicateProfile(profileId: String) {
-        val sourceProfile = _profiles.value.firstOrNull { it.id == profileId } ?: return
+    fun duplicateProfile(profileId: String): Map<String, String>? {
+        val sourceProfile = _profiles.value.firstOrNull { it.id == profileId } ?: return null
         val existingNames = _profiles.value.map { it.name }
         val uniqueName = existingNames.nextUniqueName(sourceProfile.name, MP_DEFAULT_PROFILE_NAME)
         
         val newProfileId = UUID.randomUUID().toString()
         val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
+        val layoutMapping = mutableMapOf<String, String>() // source layout ID -> target layout ID
         
         // Copy macros
         val copiedMacros = sourceProfile.macros.map { macro ->
@@ -302,9 +303,13 @@ object MacroPadState {
         
         // Copy layouts
         val copiedLayouts = sourceProfile.layouts.map { layout ->
+            val targetLayoutId = UUID.randomUUID().toString()
+            layoutMapping[layout.id] = targetLayoutId
             layout.copy(
-                id = UUID.randomUUID().toString(),
-                buttons = layout.buttons.cloneWithMacroMapping(macroMapping)
+                id = targetLayoutId,
+                buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
+                backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" },
+                backgroundImageVersion = 0
             )
         }
         
@@ -325,6 +330,7 @@ object MacroPadState {
         AppLog.d(TAG, "duplicateProfile originalId=$profileId newId=$newProfileId name='$uniqueName'")
         _profiles.value = _profiles.value + duplicated
         MacroPadSettings.saveMacroPadData()
+        return layoutMapping
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -376,25 +382,15 @@ object MacroPadState {
         updateProfile(profile.copy(layouts = remaining, activeLayoutId = newActiveId))
     }
 
-    fun setLayoutEnabled(layoutId: String, enabled: Boolean) {
-        val profile = activeProfile.value ?: return
-        AppLog.d(TAG, "setLayoutEnabled id=$layoutId enabled=$enabled")
-        updateProfile(profile.copy(
-            layouts = profile.layouts.map {
-                if (it.id == layoutId) it.copy(enabled = enabled) else it
-            },
-        ))
-    }
-
     fun reorderLayouts(newOrder: List<PadLayout>) {
         val profile = activeProfile.value ?: return
         AppLog.d(TAG, "reorderLayouts count=${newOrder.size}")
         updateProfile(profile.copy(layouts = newOrder))
     }
 
-    fun duplicateLayout(layoutId: String) {
-        val profile = activeProfile.value ?: return
-        val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return
+    fun duplicateLayout(layoutId: String): String? {
+        val profile = activeProfile.value ?: return null
+        val layout = profile.layouts.firstOrNull { it.id == layoutId } ?: return null
         val existingNames = profile.layouts.map { it.name }
         val uniqueName = existingNames.nextUniqueName(layout.name, MP_DEFAULT_LAYOUT_NAME)
         
@@ -406,11 +402,14 @@ object MacroPadState {
             cutout.copy(id = UUID.randomUUID().toString())
         }
         
+        val newLayoutId = UUID.randomUUID().toString()
         val duplicatedLayout = layout.copy(
-            id = UUID.randomUUID().toString(),
+            id = newLayoutId,
             name = uniqueName,
             buttons = copiedButtons,
-            mirrorCutouts = copiedCutouts
+            mirrorCutouts = copiedCutouts,
+            backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
+            backgroundImageVersion = 0
         )
         
         AppLog.d(TAG, "duplicateLayout layoutId=$layoutId newId=${duplicatedLayout.id} name='$uniqueName' in profile=${profile.id}")
@@ -418,28 +417,29 @@ object MacroPadState {
             layouts = profile.layouts + duplicatedLayout,
             activeLayoutId = duplicatedLayout.id
         ))
+        return newLayoutId
     }
 
-    /** Switch to the next enabled layout, wrapping around. */
+    /** Switch to the next layout, wrapping around. */
     fun nextLayout() {
         val profile = activeProfile.value ?: return
-        val enabled = profile.layouts.filter { it.enabled }
-        if (enabled.size <= 1) return
-        val currentIndex = enabled.indexOfFirst { it.id == profile.activeLayoutId }
-        val nextIndex = (currentIndex + 1) % enabled.size
-        AppLog.d(TAG, "nextLayout: ${enabled[nextIndex].name}")
-        setActiveLayoutId(enabled[nextIndex].id)
+        val layouts = profile.layouts
+        if (layouts.size <= 1) return
+        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
+        val nextIndex = (currentIndex + 1) % layouts.size
+        AppLog.d(TAG, "nextLayout: ${layouts[nextIndex].name}")
+        setActiveLayoutId(layouts[nextIndex].id)
     }
 
-    /** Switch to the previous enabled layout, wrapping around. */
+    /** Switch to the previous layout, wrapping around. */
     fun previousLayout() {
         val profile = activeProfile.value ?: return
-        val enabled = profile.layouts.filter { it.enabled }
-        if (enabled.size <= 1) return
-        val currentIndex = enabled.indexOfFirst { it.id == profile.activeLayoutId }
-        val prevIndex = if (currentIndex <= 0) enabled.size - 1 else currentIndex - 1
-        AppLog.d(TAG, "previousLayout: ${enabled[prevIndex].name}")
-        setActiveLayoutId(enabled[prevIndex].id)
+        val layouts = profile.layouts
+        if (layouts.size <= 1) return
+        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
+        val prevIndex = if (currentIndex <= 0) layouts.size - 1 else currentIndex - 1
+        AppLog.d(TAG, "previousLayout: ${layouts[prevIndex].name}")
+        setActiveLayoutId(layouts[prevIndex].id)
     }
 
     // ─────────────────────────────────────────────────────────────────────────

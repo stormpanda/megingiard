@@ -246,6 +246,13 @@ if (srcRatio > targetRatio) {
 
 The `SurfaceView` uses `setFixedSize(srcWidth, srcHeight)` so the hardware buffer allocation exactly matches the source resolution. The rendered display size is constrained via `FrameLayout.LayoutParams`.
 
+### Custom Background Image Support
+
+- `MirrorPresentation` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
+- When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap` and applied as a `BitmapDrawable` background on the root presentation `FrameLayout` container.
+- If no background image is set (or it is removed), the presentation container falls back to a solid `Color.BLACK`.
+- The background image fills any letterboxing/pillarboxing margins, as well as the unused spaces outside of active viewport cutouts.
+
 ### Cutout Layout Editor & Viewport Centering
 
 The layout editor (`CutoutLayoutEditor`) allows user interaction for moving and resizing cutouts, and crop configuration.

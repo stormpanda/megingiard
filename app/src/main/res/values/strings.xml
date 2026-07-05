@@ -102,8 +102,6 @@ Open Settings to create a layout.</string>
     <!-- MacroPad editor -->
     <string name="macropad_editor_title">Edit Layout</string>
     <string name="macropad_editor_title_edit_profile">Edit Profile</string>
-    <string name="layout_settings_visibility_title">Show in overlays</string>
-    <string name="layout_settings_visibility_desc">Participate in Quick Menu selector and Next/Previous navigation.</string>
     <string name="macropad_editor_done">Save</string>
     <string name="macropad_editor_add_button">Add Button</string>
     <string name="macropad_editor_add">Add</string>
@@ -287,7 +285,6 @@ Open Settings to create a layout.</string>
     <string name="settings_macropad_new">New</string>
     <string name="macropad_layout_template_title">Copy from…</string>
     <string name="macropad_layout_template_blank">Empty</string>
-    <string name="macropad_layout_name_hidden">%1$s (hidden)</string>
     <string name="macropad_reorder_profiles">Reorder Profiles</string>
     <string name="macropad_reorder_layouts">Reorder Layouts</string>
 
@@ -496,6 +493,16 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_button_color_mirror">Button color (while mirroring)</string>
     <string name="macropad_editor_button_color_accented">Accented</string>
     <string name="macropad_editor_button_color_neutral">Neutral</string>
+
+    <!-- Layout background image settings -->
+    <string name="layout_settings_bg_image_title">Background Image</string>
+    <string name="layout_settings_bg_image_desc">Display a custom image behind MacroPad buttons</string>
+    <string name="layout_settings_bg_image_none">None selected</string>
+    <string name="layout_settings_bg_image_active">Custom background active</string>
+    <string name="layout_settings_bg_image_pending">New image selected (unsaved)</string>
+    <string name="layout_settings_bg_image_choose">Choose Image</string>
+    <string name="layout_settings_bg_image_change">Change Image</string>
+    <string name="layout_settings_bg_image_remove">Remove Background Image</string>
 
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>

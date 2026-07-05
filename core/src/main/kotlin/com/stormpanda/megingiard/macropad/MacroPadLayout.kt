@@ -4,6 +4,7 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shape enums
@@ -337,6 +338,8 @@ data class PadLayout(
     val mirrorSmoothingStrength: Int = 85,
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
+    val backgroundImagePath: String? = null,
+    @Transient val backgroundImageVersion: Int = 0,
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

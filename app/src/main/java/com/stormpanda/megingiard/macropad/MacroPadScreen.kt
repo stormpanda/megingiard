@@ -45,6 +45,14 @@ import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 import kotlinx.coroutines.delay
 
@@ -182,6 +190,29 @@ internal fun PadSurface(
     val isQuickMenuOpenState  = rememberUpdatedState(isQuickMenuOpen)
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
+    var bgBitmap by remember(layout.backgroundImagePath, layout.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(layout.backgroundImagePath, layout.backgroundImageVersion) {
+        val path = layout.backgroundImagePath
+        if (path != null) {
+            val file = File(context.filesDir, path)
+            withContext(Dispatchers.IO) {
+                try {
+                    if (file.exists()) {
+                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        bgBitmap = decoded?.asImageBitmap()
+                    } else {
+                        bgBitmap = null
+                    }
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to decode background image ${file.absolutePath}", e)
+                    bgBitmap = null
+                }
+            }
+        } else {
+            bgBitmap = null
+        }
+    }
+
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine = remember(profile, layout) {
         viewModel.createHitTestEngine(
@@ -291,6 +322,15 @@ internal fun PadSurface(
                     }
                 }
         ) {
+            if (bgBitmap != null && !transparentBackground) {
+                Image(
+                    bitmap = bgBitmap!!,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
             // Render buttons (filtered by peek state)
             val visibleButtons = if (isPeekActive) {
                 layout.buttons.filter { it.action is PadAction.BackgroundPeek }
