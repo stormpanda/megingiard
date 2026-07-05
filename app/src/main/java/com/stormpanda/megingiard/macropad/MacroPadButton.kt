@@ -89,6 +89,7 @@ private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_
 private val MP_AMBIENT_NEUTRAL_BG     = Color.White
 private val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
 private val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
+private val MP_BTN_BACKING_COLOR      = Color(0x80121212)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Individual pad button
@@ -233,10 +234,12 @@ internal fun PadButton(
                             this.alpha = MP_BTN_DISABLED_ALPHA
                         }
                         drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                        drawRect(color = MP_BTN_BACKING_COLOR)
                         drawRect(brush = bgBrush)
                         drawContent()
                         drawContext.canvas.restore()
                     } else {
+                        drawRect(color = MP_BTN_BACKING_COLOR)
                         drawRect(brush = bgBrush)
                         drawContent()
                     }

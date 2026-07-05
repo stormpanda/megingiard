@@ -96,6 +96,7 @@ private const val PC_RADIAL_EXTRA_RINGS = 3
 
 // Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
 private const val PC_BTN_GRADIENT_OUTER    = 0.9f
+private val PC_BTN_BACKING_COLOR           = Color(0x80121212)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid mode
@@ -314,10 +315,12 @@ private fun DraggableButton(
                             this.alpha = ED_BTN_DISABLED_ALPHA
                         }
                         drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                        drawRect(color = PC_BTN_BACKING_COLOR)
                         drawRect(brush = bgBrush)
                         drawContent()
                         drawContext.canvas.restore()
                     } else {
+                        drawRect(color = PC_BTN_BACKING_COLOR)
                         drawRect(brush = bgBrush)
                         drawContent()
                     }
