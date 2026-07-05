@@ -339,6 +339,7 @@ data class PadLayout(
     val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
     val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
     val backgroundImagePath: String? = null,
+    val useBackgroundImageAsMask: Boolean = false,
     @Transient val backgroundImageVersion: Int = 0,
 )
 

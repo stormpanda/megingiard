@@ -539,9 +539,10 @@ internal fun InlineLayoutSettingsOverlay(
     initialButtonColorNoMirror: ButtonColorStyle,
     initialButtonColorMirror: ButtonColorStyle,
     initialBackgroundImagePath: String?,
+    initialUseAsMask: Boolean,
     accentColor: Color,
     existingNames: List<String>,
-    onConfirm: (String, ButtonColorStyle, ButtonColorStyle, String?, Boolean) -> Unit,
+    onConfirm: (String, ButtonColorStyle, ButtonColorStyle, String?, Boolean, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var nameText by remember { mutableStateOf(initialName) }
@@ -549,6 +550,7 @@ internal fun InlineLayoutSettingsOverlay(
     var mirrorStyle by remember { mutableStateOf(initialButtonColorMirror) }
     var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
     var currentBgPath by remember { mutableStateOf(initialBackgroundImagePath) }
+    var useAsMask by remember { mutableStateOf(initialUseAsMask) }
 
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
@@ -616,7 +618,7 @@ internal fun InlineLayoutSettingsOverlay(
                                     currentBgPath
                                 }
                             }
-                            onConfirm(normalizedName, noMirrorStyle, mirrorStyle, finalBgPath, bgChanged)
+                            onConfirm(normalizedName, noMirrorStyle, mirrorStyle, finalBgPath, useAsMask, bgChanged)
                             isSaving = false
                         }
                     }
@@ -683,6 +685,7 @@ internal fun InlineLayoutSettingsOverlay(
                             onClick = {
                                 pendingImageUri = null
                                 currentBgPath = null
+                                useAsMask = false
                             }
                         ) {
                             Icon(
@@ -706,6 +709,32 @@ internal fun InlineLayoutSettingsOverlay(
                             color = colors.onAccent
                         )
                     }
+                }
+            }
+
+            if (pendingImageUri != null || currentBgPath != null) {
+                Spacer(Modifier.height(LO_SPACING_DEFAULT))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.layout_settings_bg_image_use_as_mask),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = stringResource(R.string.layout_settings_bg_image_use_as_mask_desc),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = useAsMask,
+                        onCheckedChange = { useAsMask = it }
+                    )
                 }
             }
 

@@ -561,4 +561,28 @@ class MacroPadStateTest {
         // Then the background image path is preserved in state
         assertEquals("backgrounds/bg_layout-1", MacroPadState.activeLayout.value?.backgroundImagePath)
     }
+
+    @Test
+    fun `updateLayout preserves and updates useBackgroundImageAsMask`() {
+        val p1Id = UUID.randomUUID().toString()
+        val layoutId = "layout-1"
+        val l1 = PadLayout(id = layoutId, name = "Lay1", useBackgroundImageAsMask = false)
+        val p1 = PadProfile(
+            id = p1Id,
+            name = "P1",
+            layouts = listOf(l1),
+            activeLayoutId = layoutId
+        )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // Verify initially false
+        assertEquals(false, MacroPadState.activeLayout.value?.useBackgroundImageAsMask)
+
+        // When updating the layout with useBackgroundImageAsMask = true
+        val updatedLayout = l1.copy(useBackgroundImageAsMask = true)
+        MacroPadState.updateLayout(updatedLayout)
+
+        // Then it is preserved in state
+        assertEquals(true, MacroPadState.activeLayout.value?.useBackgroundImageAsMask)
+    }
 }

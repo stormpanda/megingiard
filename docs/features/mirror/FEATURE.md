@@ -246,12 +246,12 @@ if (srcRatio > targetRatio) {
 
 The `SurfaceView` uses `setFixedSize(srcWidth, srcHeight)` so the hardware buffer allocation exactly matches the source resolution. The rendered display size is constrained via `FrameLayout.LayoutParams`.
 
-### Custom Background Image Support
+### Custom Background Image & Masking Support
 
 - `MirrorPresentation` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
-- When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap` and applied as a `BitmapDrawable` background on the root presentation `FrameLayout` container.
-- If no background image is set (or it is removed), the presentation container falls back to a solid `Color.BLACK`.
-- The background image fills any letterboxing/pillarboxing margins, as well as the unused spaces outside of active viewport cutouts.
+- When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap`.
+- **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied as a `BitmapDrawable` background on the root presentation `FrameLayout` container. The mirrored cutouts are drawn on top. If no background image is set (or it is removed), the presentation container falls back to a solid `Color.BLACK`.
+- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to the `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, the bitmap is drawn *on top* of the rendered mirrored cutouts, serving as an overlay mask. The root container background is set to solid `Color.BLACK`. This allows the mirrored screen viewports to show through any transparent regions in the background image.
 
 ### Cutout Layout Editor & Viewport Centering
 

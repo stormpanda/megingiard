@@ -42,7 +42,6 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -51,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.AppLog
 import android.graphics.BitmapFactory
+import android.content.Context
+import android.view.WindowManager
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.ImageBitmap
@@ -120,9 +121,10 @@ internal fun PadCanvas(
     val colors     = LocalAppColors.current
     val density    = LocalDensity.current
     val context    = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val padWidth      = configuration.screenWidthDp.dp  - PC_SCREEN_PADDING * 2
-    val padHeight     = configuration.screenHeightDp.dp - PC_SCREEN_PADDING * 2
+    val windowManager = remember { context.getSystemService(Context.WINDOW_SERVICE) as WindowManager }
+    val bounds        = windowManager.currentWindowMetrics.bounds
+    val padWidth      = with(density) { bounds.width().toDp() } - PC_SCREEN_PADDING * 2
+    val padHeight     = with(density) { bounds.height().toDp() } - PC_SCREEN_PADDING * 2
     val gridStepPx    = with(density) { PC_GRID_STEP_DP.toPx() }
 
     var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
