@@ -21,6 +21,8 @@ import android.view.Gravity
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.SurfaceTexture
 import android.view.Surface
 import android.view.TextureView
@@ -682,6 +684,7 @@ class MirrorPresentation(
         scope.launch {
             MacroPadState.activeLayout.collect { layout ->
                 val path = layout?.backgroundImagePath
+                val useAsMask = layout?.useBackgroundImageAsMask == true
                 if (path != null) {
                     val file = File(context.filesDir, path)
                     withContext(Dispatchers.IO) {
@@ -690,26 +693,42 @@ class MirrorPresentation(
                                 val bitmap = BitmapFactory.decodeFile(file.absolutePath)
                                 withContext(Dispatchers.Main) {
                                     if (bitmap != null) {
-                                        container.background = BitmapDrawable(context.resources, bitmap)
+                                        if (useAsMask) {
+                                            container.setBackgroundColor(Color.BLACK)
+                                            multiCutoutContainer?.useAsMask = true
+                                            multiCutoutContainer?.bgBitmap = bitmap
+                                        } else {
+                                            container.background = BitmapDrawable(context.resources, bitmap)
+                                            multiCutoutContainer?.useAsMask = false
+                                            multiCutoutContainer?.bgBitmap = null
+                                        }
                                     } else {
                                         container.setBackgroundColor(Color.BLACK)
+                                        multiCutoutContainer?.useAsMask = false
+                                        multiCutoutContainer?.bgBitmap = null
                                     }
                                 }
                             } else {
                                 withContext(Dispatchers.Main) {
                                     container.setBackgroundColor(Color.BLACK)
+                                    multiCutoutContainer?.useAsMask = false
+                                    multiCutoutContainer?.bgBitmap = null
                                 }
                             }
                         } catch (e: Exception) {
                             AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
                             withContext(Dispatchers.Main) {
                                 container.setBackgroundColor(Color.BLACK)
+                                multiCutoutContainer?.useAsMask = false
+                                multiCutoutContainer?.bgBitmap = null
                             }
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
                         container.setBackgroundColor(Color.BLACK)
+                        multiCutoutContainer?.useAsMask = false
+                        multiCutoutContainer?.bgBitmap = null
                     }
                 }
             }
@@ -774,6 +793,16 @@ class MultiCutoutContainer(
             invalidate()
         }
     var frozenBitmap: Bitmap? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var bgBitmap: Bitmap? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var useAsMask: Boolean = false
         set(value) {
             field = value
             invalidate()
@@ -1097,6 +1126,12 @@ class MultiCutoutContainer(
                 drawChild(canvas, masterView, drawTime)
                 canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
                 canvas.restoreToCount(saveCount)
+            }
+
+            if (useAsMask && bgBitmap != null) {
+                val srcRect = Rect(0, 0, bgBitmap!!.width, bgBitmap!!.height)
+                val destRect = RectF(0f, 0f, parentW, parentH)
+                canvas.drawBitmap(bgBitmap!!, srcRect, destRect, null)
             }
         } finally {
             canvas.restoreToCount(overallSaveCount)

@@ -503,6 +503,7 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_choose">Choose Image</string>
     <string name="layout_settings_bg_image_change">Change Image</string>
     <string name="layout_settings_bg_image_remove">Remove Background Image</string>
+    <string name="layout_settings_bg_image_use_as_mask">Use as mask</string>
 
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>

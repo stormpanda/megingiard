@@ -304,17 +304,18 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialButtonColorNoMirror = ButtonColorStyle.ACCENTED,
                 initialButtonColorMirror = ButtonColorStyle.NEUTRAL,
                 initialBackgroundImagePath = null,
+                initialUseAsMask = false,
                 accentColor = colors.accent,
                 existingNames = profile.layouts.map { it.name },
-                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, bgChanged ->
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, useAsMask, bgChanged ->
                     val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
                     val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
                     val bottomW = ScreenCaptureManager.surfaceWidth.value
                     val bottomH = ScreenCaptureManager.surfaceHeight.value
                     val defaultCutout = if (bottomW > 0f && bottomH > 0f) {
-                        ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
+                         ScreenCutout.createDefault(sourceW, sourceH, bottomW, bottomH)
                     } else {
-                        ScreenCutout.createDefault(sourceW, sourceH)
+                         ScreenCutout.createDefault(sourceW, sourceH)
                     }
                     val newLayout = PadLayout(
                         id = newLayoutId,
@@ -323,6 +324,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         buttonColorNoMirror = noMirrorStyle,
                         buttonColorMirror = mirrorStyle,
                         backgroundImagePath = bgImagePath,
+                        useBackgroundImageAsMask = useAsMask,
                         backgroundImageVersion = if (bgChanged) 1 else 0,
                         mirrorCutouts = listOf(defaultCutout)
                     )
@@ -428,9 +430,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialButtonColorNoMirror = curLayout.buttonColorNoMirror,
                 initialButtonColorMirror = curLayout.buttonColorMirror,
                 initialBackgroundImagePath = curLayout.backgroundImagePath,
+                initialUseAsMask = curLayout.useBackgroundImageAsMask,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, bgChanged ->
+                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, useAsMask, bgChanged ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
@@ -438,6 +441,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                             buttonColorNoMirror = noMirrorStyle,
                             buttonColorMirror = mirrorStyle,
                             backgroundImagePath = bgImagePath,
+                            useBackgroundImageAsMask = useAsMask,
                             backgroundImageVersion = if (bgChanged) curLayout.backgroundImageVersion + 1 else curLayout.backgroundImageVersion
                         )
                     )
