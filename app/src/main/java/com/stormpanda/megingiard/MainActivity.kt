@@ -399,10 +399,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         enableEdgeToEdge()
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            hide(WindowInsetsCompat.Type.systemBars())
-        }
+        hideSystemBars()
         setContent {
             val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
@@ -727,6 +724,21 @@ class MainActivity : ComponentActivity() {
                 AppLog.i(TAG, "handleIncomingIntent: .mgrd URI received: $uri")
                 ConfigManager.setPendingUri(uri)
             }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        AppLog.d(TAG, "onWindowFocusChanged: hasFocus=$hasFocus")
+        if (hasFocus) {
+            hideSystemBars()
+        }
+    }
+
+    private fun hideSystemBars() {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
         }
     }
 }
