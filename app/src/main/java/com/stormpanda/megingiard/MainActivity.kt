@@ -399,7 +399,7 @@ class MainActivity : ComponentActivity() {
                 am.appTasks.firstOrNull()?.setExcludeFromRecents(exclude)
             }
         }
-        enableEdgeToEdge()
+        // enableEdgeToEdge()
         hideSystemBars()
         @Suppress("DEPRECATION")
         window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
