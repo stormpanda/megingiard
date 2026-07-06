@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.LocaleList
 import android.os.Process
 import android.view.Display
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -400,6 +401,12 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         hideSystemBars()
+        @Suppress("DEPRECATION")
+        window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
+            if (visibility and View.SYSTEM_UI_FLAG_FULLSCREEN == 0) {
+                hideSystemBars()
+            }
+        }
         setContent {
             val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
@@ -732,6 +739,9 @@ class MainActivity : ComponentActivity() {
         AppLog.d(TAG, "onWindowFocusChanged: hasFocus=$hasFocus")
         if (hasFocus) {
             hideSystemBars()
+            window.decorView.postDelayed({
+                hideSystemBars()
+            }, 300)
         }
     }
 
@@ -740,5 +750,14 @@ class MainActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         }
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+            or View.SYSTEM_UI_FLAG_FULLSCREEN
+        )
     }
 }
