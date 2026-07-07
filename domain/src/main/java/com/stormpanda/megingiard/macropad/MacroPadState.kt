@@ -378,7 +378,6 @@ object MacroPadState {
 
     fun updateLayout(layout: PadLayout) {
         val profile = activeProfile.value ?: return
-        AppLog.d(TAG, "updateLayout id=${layout.id} name='${layout.name}'")
         val withConfigured = if (!layout.mirrorConfigured) layout.copy(mirrorConfigured = true) else layout
         updateProfile(profile.copy(
             layouts = profile.layouts.map { if (it.id == withConfigured.id) withConfigured else it },

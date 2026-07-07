@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -404,6 +405,10 @@ private fun DraggableButton(
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
             .width(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .then(
+                if (btn.invisible) Modifier.graphicsLayer { alpha = 0.4f }
+                else Modifier
+            )
             .clip(chipShape)
             .drawWithContent {
                 val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
