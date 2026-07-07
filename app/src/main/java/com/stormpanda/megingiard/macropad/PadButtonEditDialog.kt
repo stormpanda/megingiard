@@ -361,7 +361,23 @@ internal fun ButtonEditDialog(
                             )
                         }
                     }
+                }
 
+                SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
+                ActionPicker(
+                    current        = action,
+                    accentColor    = accentColor,
+                    enableKeyboard = enableKeyboard,
+                    enableGamepad  = enableGamepad,
+                    enableMouse    = enableMouse,
+                    onEditMacro    = { macro ->
+                        actionBeforeEdit = action
+                        onEditMacro?.invoke(macro)
+                    },
+                    onChange       = ::onActionChanged,
+                )
+
+                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
                     // ── Shape + Size + Haptic side by side ──────────────────────────────────────────────
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -672,12 +688,8 @@ internal fun ButtonEditDialog(
                         }
                     }
 
-                Spacer(Modifier.height(16.dp))
                 AppDivider()
-                Spacer(Modifier.height(16.dp))
-
                 SectionLabel(stringResource(R.string.layout_settings_colors_section_title), accentColor)
-                Spacer(Modifier.height(12.dp))
 
                 ColorPickerRow(
                     label = stringResource(R.string.layout_settings_color_text),
@@ -689,8 +701,6 @@ internal fun ButtonEditDialog(
                     onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.TEXT }
                 )
 
-                Spacer(Modifier.height(16.dp))
-
                 ColorPickerRow(
                     label = stringResource(R.string.layout_settings_color_border),
                     option = buttonBorderColor,
@@ -700,8 +710,6 @@ internal fun ButtonEditDialog(
                     onWheelClick = { activeColorPickerTarget = ButtonColorPickerTarget.BORDER },
                     onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BORDER }
                 )
-
-                Spacer(Modifier.height(16.dp))
 
                 ColorPickerRow(
                     label = stringResource(R.string.layout_settings_color_bg),
@@ -713,23 +721,6 @@ internal fun ButtonEditDialog(
                     onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BG }
                 )
 
-                Spacer(Modifier.height(16.dp))
-                AppDivider()
-                Spacer(Modifier.height(16.dp))
-
-                SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
-                ActionPicker(
-                    current        = action,
-                    accentColor    = accentColor,
-                    enableKeyboard = enableKeyboard,
-                    enableGamepad  = enableGamepad,
-                    enableMouse    = enableMouse,
-                    onEditMacro    = { macro ->
-                        actionBeforeEdit = action
-                        onEditMacro?.invoke(macro)
-                    },
-                    onChange       = ::onActionChanged,
-                )
 
             }
         }
