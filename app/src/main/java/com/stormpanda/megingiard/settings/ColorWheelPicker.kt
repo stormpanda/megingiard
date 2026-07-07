@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -127,13 +128,14 @@ fun ColorWheelPicker(
                     textAlign = TextAlign.Center,
                     modifier  = Modifier.weight(1f),
                 )
+                val useDarkText = currentColor.luminance() > 0.5f && currentColor.alpha > 0.5f
                 Button(
                     onClick = { onColorSelected(currentColor) },
                     colors  = ButtonDefaults.buttonColors(containerColor = currentColor),
                 ) {
                     Text(
                         text  = stringResource(R.string.settings_color_apply),
-                        color = Color.White,
+                        color = if (useDarkText) Color.Black else Color.White,
                     )
                 }
             }
