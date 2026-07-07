@@ -130,8 +130,9 @@ internal fun LayoutSettingsEditor(
 
     BackHandler(onBack = onDismiss)
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize().blockPointerEvents(),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize().blockPointerEvents(),
         containerColor = colors.appBackground,
         topBar = {
             FullScreenTopBar(
@@ -364,8 +365,9 @@ internal fun LayoutSettingsEditor(
 
             Spacer(Modifier.height(40.dp))
         }
+    }
 
-        // Color Wheel overlays
+    // Color Wheel overlays
         val activeWheelTarget = activeColorPickerTarget
         if (activeWheelTarget != null) {
             val initialColor = when (activeWheelTarget) {
