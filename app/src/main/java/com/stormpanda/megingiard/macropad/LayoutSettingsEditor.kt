@@ -140,72 +140,71 @@ internal fun LayoutSettingsEditor(
                 onDismiss = onDismiss,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    HelpIconButton(onClick = { showHelpMenu = true })
-                    Spacer(Modifier.width(8.dp))
                     TextButton(
-
-                    onClick = {
-                        if (isConfirmEnabled) {
-                            isSaving = true
-                            scope.launch {
-                                var bgChanged = false
-                                val finalBgPath = withContext(Dispatchers.IO) {
-                                    val uri = pendingImageUri
-                                    if (uri != null) {
-                                        val backgroundsDir = File(context.filesDir, "backgrounds")
-                                        if (!backgroundsDir.exists()) {
-                                            backgroundsDir.mkdirs()
-                                        }
-                                        val destFile = File(backgroundsDir, "bg_$layoutId")
-                                        try {
-                                            context.contentResolver.openInputStream(uri)?.use { input ->
-                                                destFile.outputStream().use { output ->
-                                                    input.copyTo(output)
+                        onClick = {
+                            if (isConfirmEnabled) {
+                                isSaving = true
+                                scope.launch {
+                                    var bgChanged = false
+                                    val finalBgPath = withContext(Dispatchers.IO) {
+                                        val uri = pendingImageUri
+                                        if (uri != null) {
+                                            val backgroundsDir = File(context.filesDir, "backgrounds")
+                                            if (!backgroundsDir.exists()) {
+                                                backgroundsDir.mkdirs()
+                                            }
+                                            val destFile = File(backgroundsDir, "bg_$layoutId")
+                                            try {
+                                                context.contentResolver.openInputStream(uri)?.use { input ->
+                                                    destFile.outputStream().use { output ->
+                                                        input.copyTo(output)
+                                                    }
+                                                }
+                                                bgChanged = true
+                                                "backgrounds/bg_$layoutId"
+                                            } catch (e: Exception) {
+                                                AppLog.e(TAG, "Failed to copy background image Uri $uri", e)
+                                                null
+                                            }
+                                        } else if (currentBgPath == null) {
+                                            val backgroundsDir = File(context.filesDir, "backgrounds")
+                                            val destFile = File(backgroundsDir, "bg_$layoutId")
+                                            if (destFile.exists()) {
+                                                try {
+                                                    destFile.delete()
+                                                    bgChanged = true
+                                                } catch (e: Exception) {
+                                                    AppLog.e(TAG, "Failed to delete background file", e)
                                                 }
                                             }
-                                            bgChanged = true
-                                            "backgrounds/bg_$layoutId"
-                                        } catch (e: Exception) {
-                                            AppLog.e(TAG, "Failed to copy background image Uri $uri", e)
                                             null
+                                        } else {
+                                            currentBgPath
                                         }
-                                    } else if (currentBgPath == null) {
-                                        val backgroundsDir = File(context.filesDir, "backgrounds")
-                                        val destFile = File(backgroundsDir, "bg_$layoutId")
-                                        if (destFile.exists()) {
-                                            try {
-                                                destFile.delete()
-                                                bgChanged = true
-                                            } catch (e: Exception) {
-                                                AppLog.e(TAG, "Failed to delete background file", e)
-                                            }
-                                        }
-                                        null
-                                    } else {
-                                        currentBgPath
                                     }
+                                    onConfirm(
+                                        normalizedName,
+                                        textColorOption,
+                                        borderColorOption,
+                                        bgColorOption,
+                                        finalBgPath,
+                                        useAsMask,
+                                        bgChanged
+                                    )
+                                    isSaving = false
                                 }
-                                onConfirm(
-                                    normalizedName,
-                                    textColorOption,
-                                    borderColorOption,
-                                    bgColorOption,
-                                    finalBgPath,
-                                    useAsMask,
-                                    bgChanged
-                                )
-                                isSaving = false
                             }
-                        }
-                    },
-                    enabled = isConfirmEnabled
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_done),
-                        color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                        },
+                        enabled = isConfirmEnabled
+                    ) {
+                        Text(
+                            text = stringResource(R.string.macropad_editor_done),
+                            color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    HelpIconButton(onClick = { showHelpMenu = true })
                 }
             }
         }
