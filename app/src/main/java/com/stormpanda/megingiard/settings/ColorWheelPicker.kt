@@ -56,6 +56,7 @@ private val WHEEL_SIZE = 240.dp
 @Composable
 fun ColorWheelPicker(
     initialColor: Color,
+    showAlphaSlider: Boolean = false,
     onColorSelected: (Color) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -67,7 +68,15 @@ fun ColorWheelPicker(
     var sat by remember { mutableFloatStateOf(initHsv[1]) }
     var bri by remember { mutableFloatStateOf(initHsv[2]) }
 
-    val currentColor by remember { derivedStateOf { Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri))) } }
+    val initialAlpha = if (showAlphaSlider) initialColor.alpha.coerceIn(0.1f, 1f) else 1f
+    var alpha by remember { mutableFloatStateOf(initialAlpha) }
+
+    val currentColor by remember {
+        derivedStateOf {
+            val base = Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
+            if (showAlphaSlider) base.copy(alpha = alpha) else base
+        }
+    }
 
     val hueColors = remember {
         listOf(
@@ -208,11 +217,42 @@ fun ColorWheelPicker(
                     onValueChange = { bri = it },
                     valueRange = 0f..1f,
                     colors = SliderDefaults.colors(
-                        thumbColor = currentColor,
-                        activeTrackColor = currentColor
+                        thumbColor = currentColor.copy(alpha = 1f),
+                        activeTrackColor = currentColor.copy(alpha = 1f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+
+            // Opacity slider
+            if (showAlphaSlider) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.layout_settings_color_opacity),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "${(alpha * 100).toInt()}%",
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Slider(
+                        value = alpha,
+                        onValueChange = { alpha = it },
+                        valueRange = 0.1f..1.0f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = currentColor.copy(alpha = 1f),
+                            activeTrackColor = currentColor.copy(alpha = 1f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             } // end wheel+slider Column

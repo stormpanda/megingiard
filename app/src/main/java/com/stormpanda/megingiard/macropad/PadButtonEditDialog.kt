@@ -761,6 +761,7 @@ internal fun ButtonEditDialog(
             }
             ColorWheelPicker(
                 initialColor = initialColor,
+                showAlphaSlider = true,
                 onColorSelected = { selectedColor ->
                     val customOpt = ColorOption.Custom(selectedColor.toArgb())
                     when (activeWheelTarget) {

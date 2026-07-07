@@ -329,10 +329,12 @@ internal fun BackgroundPeekFace(accentColor: Color) {
 }
 
 internal fun resolveColorOption(option: ColorOption, accentColor: Color, defaultNeutral: Color): Color {
-    return when (option) {
+    val resolved = when (option) {
         ColorOption.Neutral -> defaultNeutral
         ColorOption.Accent -> accentColor
         is ColorOption.Custom -> Color(option.argb)
     }
+    val clampedAlpha = resolved.alpha.coerceIn(0.1f, 1f)
+    return resolved.copy(alpha = clampedAlpha)
 }
 

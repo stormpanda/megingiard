@@ -520,6 +520,7 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_recent_colors">Recently Used Colors</string>
     <string name="layout_settings_no_recent_colors">No recently used colors yet</string>
     <string name="layout_settings_color_layout_default">Layout Default</string>
+    <string name="layout_settings_color_opacity">Opacity</string>
 
 
     <!-- Help menu strings for Layout settings -->

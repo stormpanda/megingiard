@@ -433,6 +433,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_recent_colors">Kürzlich verwendete Farben</string>
     <string name="layout_settings_no_recent_colors">Noch keine kürzlich verwendeten Farben</string>
     <string name="layout_settings_color_layout_default">Layout-Standardwert</string>
+    <string name="layout_settings_color_opacity">Deckkraft</string>
 
 
     <!-- Help menu strings for Layout settings -->
