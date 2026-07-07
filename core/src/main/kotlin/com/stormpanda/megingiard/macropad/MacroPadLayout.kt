@@ -70,6 +70,26 @@ enum class TrackpointMode {
 enum class ButtonColorStyle { ACCENTED, NEUTRAL }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Custom button color options
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Serializable
+sealed class ColorOption {
+    @Serializable
+    @SerialName("neutral")
+    data object Neutral : ColorOption()
+
+    @Serializable
+    @SerialName("accent")
+    data object Accent : ColorOption()
+
+    @Serializable
+    @SerialName("custom")
+    data class Custom(val argb: Int) : ColorOption()
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Haptic feedback strength — used by PadButton
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -287,7 +307,11 @@ data class PadButton(
     val hapticCustomDurationMs: Int = 10,
     /** Amplitude for [HapticStrength.CUSTOM] pulses. Range: 5–100 in steps of 5. */
     val hapticCustomAmplitude: Int = 25,
+    val buttonTextColor: ColorOption? = null,
+    val buttonBorderColor: ColorOption? = null,
+    val buttonBgColor: ColorOption? = null,
 )
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PadLayout — a single button arrangement within a profile
@@ -336,12 +360,18 @@ data class PadLayout(
     val mirrorEdgeBlendWidth: Float = 0f,
     val mirrorMaxFps: Int = 60,
     val mirrorSmoothingStrength: Int = 85,
-    val buttonColorNoMirror: ButtonColorStyle = ButtonColorStyle.ACCENTED,
-    val buttonColorMirror: ButtonColorStyle = ButtonColorStyle.NEUTRAL,
+    @Deprecated("Use buttonTextColor, buttonBorderColor, buttonBgColor instead")
+    val buttonColorNoMirror: ButtonColorStyle? = null,
+    @Deprecated("Use buttonTextColor, buttonBorderColor, buttonBgColor instead")
+    val buttonColorMirror: ButtonColorStyle? = null,
     val backgroundImagePath: String? = null,
     val useBackgroundImageAsMask: Boolean = false,
     @Transient val backgroundImageVersion: Int = 0,
+    val buttonTextColor: ColorOption = ColorOption.Neutral,
+    val buttonBorderColor: ColorOption = ColorOption.Neutral,
+    val buttonBgColor: ColorOption = ColorOption.Neutral,
 )
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PadProfile — a named collection of layouts, macros, and device settings

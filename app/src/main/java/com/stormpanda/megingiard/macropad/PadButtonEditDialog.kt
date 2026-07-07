@@ -49,6 +49,19 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import java.util.Locale
 import java.util.UUID
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.style.TextAlign
+import com.stormpanda.megingiard.settings.ColorWheelPicker
+import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.AppDivider
+
 
 private const val TAG = "PadButtonEditDialog"
 private const val PBD_ICON_LAYOUT_NEXT = "arrow_forward"
@@ -154,9 +167,22 @@ internal fun ButtonEditDialog(
             }
         )
     }
+    var buttonTextColor by remember { mutableStateOf(button?.buttonTextColor) }
+    var buttonBorderColor by remember { mutableStateOf(button?.buttonBorderColor) }
+    var buttonBgColor by remember { mutableStateOf(button?.buttonBgColor) }
+
+    var activeColorPickerTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
+    var activePaletteDialogTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
+
+    val recentColors by MacroPadSettings.recentColors.collectAsState()
+    val globalAccentInt by SettingsManager.accentColor.collectAsState()
+    val globalAccentColor = Color(globalAccentInt)
+    val activeLayout = MacroPadState.activeLayout.collectAsState().value
+
     val colors            = LocalAppColors.current
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros = profile?.macros ?: emptyList()
+
 
     var actionBeforeEdit by remember { mutableStateOf<PadAction?>(null) }
 
@@ -243,6 +269,9 @@ internal fun ButtonEditDialog(
                                 hapticStrength        = hapticStrength,
                                 hapticCustomDurationMs = hapticCustomDurationMs,
                                 hapticCustomAmplitude  = hapticCustomAmplitude,
+                                buttonTextColor       = buttonTextColor,
+                                buttonBorderColor     = buttonBorderColor,
+                                buttonBgColor         = buttonBgColor,
                             ) ?: PadButton(
                                 id                    = UUID.randomUUID().toString(),
                                 label                 = label,
@@ -256,6 +285,9 @@ internal fun ButtonEditDialog(
                                 hapticStrength        = hapticStrength,
                                 hapticCustomDurationMs = hapticCustomDurationMs,
                                 hapticCustomAmplitude  = hapticCustomAmplitude,
+                                buttonTextColor       = buttonTextColor,
+                                buttonBorderColor     = buttonBorderColor,
+                                buttonBgColor         = buttonBgColor,
                             )
                             onConfirm(result)
                         }
@@ -640,6 +672,51 @@ internal fun ButtonEditDialog(
                         }
                     }
 
+                Spacer(Modifier.height(16.dp))
+                AppDivider()
+                Spacer(Modifier.height(16.dp))
+
+                SectionLabel(stringResource(R.string.layout_settings_colors_section_title), accentColor)
+                Spacer(Modifier.height(12.dp))
+
+                ColorPickerRow(
+                    label = stringResource(R.string.layout_settings_color_text),
+                    option = buttonTextColor,
+                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
+                    globalAccentColor = globalAccentColor,
+                    layoutDefaultOption = activeLayout?.buttonTextColor ?: ColorOption.Neutral,
+                    onWheelClick = { activeColorPickerTarget = ButtonColorPickerTarget.TEXT },
+                    onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.TEXT }
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                ColorPickerRow(
+                    label = stringResource(R.string.layout_settings_color_border),
+                    option = buttonBorderColor,
+                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
+                    globalAccentColor = globalAccentColor,
+                    layoutDefaultOption = activeLayout?.buttonBorderColor ?: ColorOption.Neutral,
+                    onWheelClick = { activeColorPickerTarget = ButtonColorPickerTarget.BORDER },
+                    onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BORDER }
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                ColorPickerRow(
+                    label = stringResource(R.string.layout_settings_color_bg),
+                    option = buttonBgColor,
+                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
+                    globalAccentColor = globalAccentColor,
+                    layoutDefaultOption = activeLayout?.buttonBgColor ?: ColorOption.Neutral,
+                    onWheelClick = { activeColorPickerTarget = ButtonColorPickerTarget.BG },
+                    onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BG }
+                )
+
+                Spacer(Modifier.height(16.dp))
+                AppDivider()
+                Spacer(Modifier.height(16.dp))
+
                 SectionLabel(stringResource(R.string.macropad_editor_action), accentColor)
                 ActionPicker(
                     current        = action,
@@ -669,6 +746,83 @@ internal fun ButtonEditDialog(
                 modifier       = Modifier.fillMaxSize(),
             )
         }
+        // Color Wheel overlays
+        val activeWheelTarget = activeColorPickerTarget
+        if (activeWheelTarget != null) {
+            val defaultNeutral = when (activeWheelTarget) {
+                ButtonColorPickerTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
+                ButtonColorPickerTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
+                ButtonColorPickerTarget.BG -> MP_AMBIENT_NEUTRAL_BG
+            }
+            val resolvedLayoutOption = when (activeWheelTarget) {
+                ButtonColorPickerTarget.TEXT -> activeLayout?.buttonTextColor ?: ColorOption.Neutral
+                ButtonColorPickerTarget.BORDER -> activeLayout?.buttonBorderColor ?: ColorOption.Neutral
+                ButtonColorPickerTarget.BG -> activeLayout?.buttonBgColor ?: ColorOption.Neutral
+            }
+            val initialColor = when (val opt = when (activeWheelTarget) {
+                ButtonColorPickerTarget.TEXT -> buttonTextColor
+                ButtonColorPickerTarget.BORDER -> buttonBorderColor
+                ButtonColorPickerTarget.BG -> buttonBgColor
+            } ?: resolvedLayoutOption) {
+                ColorOption.Neutral -> defaultNeutral
+                ColorOption.Accent -> globalAccentColor
+                is ColorOption.Custom -> Color(opt.argb)
+            }
+            ColorWheelPicker(
+                initialColor = initialColor,
+                onColorSelected = { selectedColor ->
+                    val customOpt = ColorOption.Custom(selectedColor.toArgb())
+                    when (activeWheelTarget) {
+                        ButtonColorPickerTarget.TEXT -> buttonTextColor = customOpt
+                        ButtonColorPickerTarget.BORDER -> buttonBorderColor = customOpt
+                        ButtonColorPickerTarget.BG -> buttonBgColor = customOpt
+                    }
+                    MacroPadSettings.addRecentColor(selectedColor.toArgb())
+                    activeColorPickerTarget = null
+                },
+                onDismiss = { activeColorPickerTarget = null }
+            )
+        }
+
+        // Palette Overlay Dialogs
+        val activePaletteTarget = activePaletteDialogTarget
+        if (activePaletteTarget != null) {
+            val defaultNeutralColor = when (activePaletteTarget) {
+                ButtonColorPickerTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
+                ButtonColorPickerTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
+                ButtonColorPickerTarget.BG -> MP_AMBIENT_NEUTRAL_BG
+            }
+            val resolvedLayoutOption = when (activePaletteTarget) {
+                ButtonColorPickerTarget.TEXT -> activeLayout?.buttonTextColor ?: ColorOption.Neutral
+                ButtonColorPickerTarget.BORDER -> activeLayout?.buttonBorderColor ?: ColorOption.Neutral
+                ButtonColorPickerTarget.BG -> activeLayout?.buttonBgColor ?: ColorOption.Neutral
+            }
+            val layoutDefaultColor = resolveColorOption(resolvedLayoutOption, globalAccentColor, defaultNeutralColor)
+
+            QuickColorSelectionDialog(
+                title = when (activePaletteTarget) {
+                    ButtonColorPickerTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
+                    ButtonColorPickerTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
+                    ButtonColorPickerTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
+                },
+                neutralColor = defaultNeutralColor,
+                accentColor = globalAccentColor,
+                layoutDefaultColor = layoutDefaultColor,
+                recentColors = recentColors,
+                onSelected = { opt ->
+                    when (activePaletteTarget) {
+                        ButtonColorPickerTarget.TEXT -> buttonTextColor = opt
+                        ButtonColorPickerTarget.BORDER -> buttonBorderColor = opt
+                        ButtonColorPickerTarget.BG -> buttonBgColor = opt
+                    }
+                    if (opt is ColorOption.Custom) {
+                        MacroPadSettings.addRecentColor(opt.argb)
+                    }
+                    activePaletteDialogTarget = null
+                },
+                onDismiss = { activePaletteDialogTarget = null }
+            )
+        }
     }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -679,3 +833,234 @@ internal fun ButtonEditDialog(
 internal fun SectionLabel(text: String, accentColor: Color) {
     Text(text, color = accentColor, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
 }
+
+private enum class ButtonColorPickerTarget { TEXT, BORDER, BG }
+
+@Composable
+private fun ColorPickerRow(
+    label: String,
+    option: ColorOption?,
+    defaultNeutralColor: Color,
+    globalAccentColor: Color,
+    layoutDefaultOption: ColorOption,
+    onWheelClick: () -> Unit,
+    onPaletteClick: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            color = colors.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val resolvedOption = option ?: layoutDefaultOption
+            val previewColor = when (resolvedOption) {
+                ColorOption.Neutral -> defaultNeutralColor
+                ColorOption.Accent -> globalAccentColor
+                is ColorOption.Custom -> Color(resolvedOption.argb)
+            }
+            // Circular color wheel button (click to open color wheel)
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(previewColor)
+                    .border(1.dp, colors.accentBorder, CircleShape)
+                    .clickable(onClick = onWheelClick)
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            // Palette button (click to open quick select dialog)
+            IconButton(
+                onClick = onPaletteClick,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(colors.surfaceVariant, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Palette,
+                    contentDescription = null,
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickColorSelectionDialog(
+    title: String,
+    neutralColor: Color,
+    accentColor: Color,
+    layoutDefaultColor: Color,
+    recentColors: List<Int>,
+    onSelected: (ColorOption?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onDismiss)
+            .blockPointerEvents(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .background(colors.surface, RoundedCornerShape(12.dp))
+                .clickable(enabled = true, onClick = {})
+                .padding(16.dp)
+        ) {
+            Text(
+                text = title,
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // System Styles
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Layout Default option
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                        .clickable { onSelected(null) }
+                        .padding(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(layoutDefaultColor)
+                            .border(1.dp, colors.divider, CircleShape)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.layout_settings_color_layout_default),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Neutral option
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                        .clickable { onSelected(ColorOption.Neutral) }
+                        .padding(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(neutralColor)
+                            .border(1.dp, colors.divider, CircleShape)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.layout_settings_color_neutral),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                // Accent option
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                        .clickable { onSelected(ColorOption.Accent) }
+                        .padding(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(accentColor)
+                            .border(1.dp, colors.divider, CircleShape)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.layout_settings_color_accent),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.layout_settings_recent_colors),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(Modifier.height(8.dp))
+
+            if (recentColors.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.layout_settings_no_recent_colors),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(5),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().height(80.dp)
+                ) {
+                    items(recentColors) { argb ->
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(argb))
+                                .border(1.dp, colors.divider, CircleShape)
+                                .clickable { onSelected(ColorOption.Custom(argb)) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                }
+            }
+        }
+    }
+}
+

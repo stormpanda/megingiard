@@ -153,7 +153,7 @@ Each button supports one of the following actions:
 - Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
 - Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable layout bar with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
 - Each layout chip, when more than one layout exists, has a delete action.
-- A new layout can be created as a **blank** layout. When creating a new layout, the Layout Settings edit dialog (`InlineLayoutSettingsOverlay`) is displayed immediately to configure the name, background image, and button colors.
+- A new layout can be created as a **blank** layout. When creating a new layout, the full-screen **Layout Settings Editor** (`LayoutSettingsEditor`) is displayed immediately to configure the name, background image, and default button colors.
 - Users can duplicate existing layouts to reuse their configuration, buttons, and cutouts (deep copy with new UUIDs).
 - Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all layouts** in the profile (via `withSyncedDeviceFlags()`).
 - Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). If a stored `PadProfile` does not contain a `layouts` list, a default layout named "Layout 1" is created on load, populated with the profile's top-level `buttons` list.
@@ -171,12 +171,12 @@ Each button supports one of the following actions:
 - **Dimming** (0–90%, default 0%): draws a semi-transparent black overlay on top of the mirror background.
 - A special **Background Peek** action (`PadAction.BackgroundPeek`): toggles hiding all buttons and dimming.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
-- **Per-layout button color style** (`PadLayout.buttonColorNoMirror` / `PadLayout.buttonColorMirror`): Each layout can independently configure the button color style for two states: when mirroring is inactive and when it is active (ambient overlay).
-  - `buttonColorNoMirror` — defaults to `ButtonColorStyle.ACCENTED`. Buttons use the active accent colour and `macroPadOnSurface` text token.
-  - `buttonColorMirror` — defaults to `ButtonColorStyle.NEUTRAL`. Buttons use a neutral white/grey palette (soft grey outline `#AAAAAA`, near-white text `#DDDDDD` at 90 % opacity) that is theme-independent.
-  - Both settings are exposed in the **Layout Settings** section of the layout editor (below the toolbar, above the button list) as dropdowns using the shared app dropdown styling.
-  - The neutral style is implemented via the `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. `MacroPadScreen` passes `neutralStyle = layout.buttonColorNoMirror == ButtonColorStyle.NEUTRAL`; `BackgroundMacroPadOverlay` passes `neutralStyle = layout.buttonColorMirror == ButtonColorStyle.NEUTRAL`.
-  - These settings are persisted as part of `PadLayout` and are included in config exports automatically.
+- **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and background.
+  - Colors are stored using the `ColorOption` schema, which supports **Neutral Style** (neutral theme-independent palette), **Accent Color** (dynamically resolved system accent color), or a **Custom Color** (fixed ARGB).
+  - Defaults are configured inside the full-screen **Layout Settings Editor** using color picker wheels and quick selection palettes featuring the 10 most recently used colors.
+  - **Button-level overrides**: Each button can override the layout-wide color defaults individually using the same `ColorOption` fields (`PadButton.buttonTextColor`, `PadButton.buttonBorderColor`, `PadButton.buttonBgColor`). A special `null` value (shown as **Layout Default**) reverts the button back to the layout-wide default behavior.
+  - Color options survive profile imports/exports and migrate legacy button color formats (`buttonColorNoMirror` / `buttonColorMirror`) automatically.
+
 
 ### FR-P9a: Custom Background Image
 

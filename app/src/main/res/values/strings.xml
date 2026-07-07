@@ -506,6 +506,38 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_use_as_mask">Use as mask</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Draw the background image on top of screen mirror cutouts. Useful for PNGs with transparency.</string>
 
+    <!-- Custom Layout Settings Buttons Colors -->
+    <string name="layout_settings_bg_section_title">Background</string>
+    <string name="layout_settings_colors_section_title">Button Color Defaults</string>
+    <string name="layout_settings_color_text">Text &amp; Icon Color</string>
+    <string name="layout_settings_color_border">Border Color</string>
+    <string name="layout_settings_color_bg">Background Color</string>
+    <string name="layout_settings_select_text_color">Select Text &amp; Icon Color</string>
+    <string name="layout_settings_select_border_color">Select Border Color</string>
+    <string name="layout_settings_select_bg_color">Select Background Color</string>
+    <string name="layout_settings_color_neutral">Neutral Style</string>
+    <string name="layout_settings_color_accent">Accent Color</string>
+    <string name="layout_settings_recent_colors">Recently Used Colors</string>
+    <string name="layout_settings_no_recent_colors">No recently used colors yet</string>
+    <string name="layout_settings_color_layout_default">Layout Default</string>
+
+
+    <!-- Help menu strings for Layout settings -->
+    <string name="help_layout_settings_title">Layout Settings Help</string>
+    <string name="help_layout_settings_intro">Configure this layout\'s appearance, background image, and default button colors.</string>
+    <string name="help_layout_settings_sec_properties">Properties</string>
+    <string name="help_layout_settings_name_title">Layout Name</string>
+    <string name="help_layout_settings_name_desc">Assign a unique name to this layout to identify it in the editor and quick menu.</string>
+    <string name="help_layout_settings_bg_title">Background Image</string>
+    <string name="help_layout_settings_bg_desc">Optionally display a custom image behind the buttons. Supported formats include JPG, PNG, and WebP.</string>
+    <string name="help_layout_settings_mask_title">Use as Mask</string>
+    <string name="help_layout_settings_mask_desc">Overlay the background image on top of screen mirror cutouts. This is perfect for custom console shells or frames with transparency.</string>
+    <string name="help_layout_settings_sec_colors">Button Colors</string>
+    <string name="help_layout_settings_colors_title">Custom Color Defaults</string>
+    <string name="help_layout_settings_colors_desc">Set default colors for all buttons in this layout (Text/Icon, Border, and Background). Buttons can override these defaults individually.</string>
+    <string name="help_layout_settings_palette_title">Quick Palette</string>
+    <string name="help_layout_settings_palette_desc">Tap the palette icon next to a color to choose from standard neutral/accent styles or recently selected custom colors.</string>
+
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>
     <string name="macropad_macro_list_new">New Macro</string>

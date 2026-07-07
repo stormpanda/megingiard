@@ -79,17 +79,90 @@ class ButtonColorStyleTest {
     // ── Backward-compatibility: legacy JSON without new fields ────────────
 
     @Test
-    fun `legacy PadLayout JSON without buttonColor fields deserializes with default ACCENTED no-mirror`() {
+    fun `legacy PadLayout JSON without buttonColor fields deserializes with null deprecated colors`() {
         // A JSON object that predates the buttonColorNoMirror / buttonColorMirror fields.
         val legacyJson = """{"id":"old-layout","name":"Legacy","enabled":true,"buttons":[]}"""
         val layout = json.decodeFromString<PadLayout>(legacyJson)
-        assertEquals(ButtonColorStyle.ACCENTED, layout.buttonColorNoMirror)
+        @Suppress("DEPRECATION")
+        assertEquals(null, layout.buttonColorNoMirror)
+        @Suppress("DEPRECATION")
+        assertEquals(null, layout.buttonColorMirror)
     }
 
     @Test
-    fun `legacy PadLayout JSON without buttonColor fields deserializes with default NEUTRAL mirror`() {
+    fun `legacy PadLayout JSON without color options deserializes with default NEUTRAL options`() {
         val legacyJson = """{"id":"old-layout","name":"Legacy","enabled":true,"buttons":[]}"""
         val layout = json.decodeFromString<PadLayout>(legacyJson)
-        assertEquals(ButtonColorStyle.NEUTRAL, layout.buttonColorMirror)
+        assertEquals(ColorOption.Neutral, layout.buttonTextColor)
+        assertEquals(ColorOption.Neutral, layout.buttonBorderColor)
+        assertEquals(ColorOption.Neutral, layout.buttonBgColor)
+    }
+
+    // ── ColorOption serialization ─────────────────────────────────────────
+
+    @Test
+    fun `ColorOption Neutral round-trip`() {
+        val encoded = json.encodeToString<ColorOption>(ColorOption.Neutral)
+        val decoded = json.decodeFromString<ColorOption>(encoded)
+        assertEquals(ColorOption.Neutral, decoded)
+    }
+
+    @Test
+    fun `ColorOption Accent round-trip`() {
+        val encoded = json.encodeToString<ColorOption>(ColorOption.Accent)
+        val decoded = json.decodeFromString<ColorOption>(encoded)
+        assertEquals(ColorOption.Accent, decoded)
+    }
+
+    @Test
+    fun `ColorOption Custom round-trip`() {
+        val custom = ColorOption.Custom(0xFFFF0000.toInt())
+        val encoded = json.encodeToString<ColorOption>(custom)
+        val decoded = json.decodeFromString<ColorOption>(encoded)
+        assertEquals(custom, decoded)
+    }
+
+    @Test
+    fun `PadButton with custom color options survives JSON round-trip`() {
+        val button = PadButton(
+            id = "btn-1",
+            label = "Color Btn",
+            posX = 0.2f,
+            posY = 0.3f,
+            action = PadAction.GamepadButton(1, "A"),
+            buttonTextColor = ColorOption.Custom(0xFF112233.toInt()),
+            buttonBorderColor = ColorOption.Neutral,
+            buttonBgColor = null, // Default layout fallback
+        )
+        val decoded = json.decodeFromString<PadButton>(json.encodeToString(button))
+        assertEquals(button, decoded)
+        assertEquals(ColorOption.Custom(0xFF112233.toInt()), decoded.buttonTextColor)
+        assertEquals(ColorOption.Neutral, decoded.buttonBorderColor)
+        assertEquals(null, decoded.buttonBgColor)
+    }
+
+    @Test
+    fun `legacy PadButton without color options deserializes with null defaults`() {
+        val buttonWithoutColors = PadButton(
+            id = "btn-old",
+            label = "Old",
+            posX = 0.1f,
+            posY = 0.1f,
+            action = PadAction.GamepadButton(1, "A"),
+        )
+        val jsonStr = json.encodeToString(buttonWithoutColors)
+        val legacyJson = jsonStr
+            .replace("\"buttonTextColor\":null,", "")
+            .replace("\"buttonBorderColor\":null,", "")
+            .replace("\"buttonBgColor\":null,", "")
+            .replace(",\"buttonTextColor\":null", "")
+            .replace(",\"buttonBorderColor\":null", "")
+            .replace(",\"buttonBgColor\":null", "")
+
+        val decoded = json.decodeFromString<PadButton>(legacyJson)
+        assertEquals(null, decoded.buttonTextColor)
+        assertEquals(null, decoded.buttonBorderColor)
+        assertEquals(null, decoded.buttonBgColor)
     }
 }
+

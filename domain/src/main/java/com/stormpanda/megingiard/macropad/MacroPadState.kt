@@ -167,15 +167,34 @@ object MacroPadState {
                 )
             } else {
                 val migratedLayouts = p.layouts.map { layout ->
-                    if (!layout.mirrorConfigured) {
+                    var current = layout
+                    var changed = false
+                    @Suppress("DEPRECATION")
+                    if (current.buttonColorNoMirror != null || current.buttonColorMirror != null) {
                         needsSave = true
-                        layout.copy(mirrorConfigured = true)
+                        changed = true
+                        @Suppress("DEPRECATION")
+                        val isAccented = current.buttonColorNoMirror == ButtonColorStyle.ACCENTED
+                        current = current.copy(
+                            buttonTextColor = ColorOption.Neutral,
+                            buttonBorderColor = if (isAccented) ColorOption.Accent else ColorOption.Neutral,
+                            buttonBgColor = if (isAccented) ColorOption.Accent else ColorOption.Neutral,
+                            buttonColorNoMirror = null,
+                            buttonColorMirror = null
+                        )
+                    }
+                    if (!current.mirrorConfigured) {
+                        needsSave = true
+                        current.copy(mirrorConfigured = true)
+                    } else if (changed) {
+                        current
                     } else {
                         layout
                     }
                 }
                 p = p.copy(layouts = migratedLayouts)
             }
+
 
             p
         }

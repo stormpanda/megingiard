@@ -181,6 +181,7 @@ internal fun PadCanvas(
             val targetLayoutId = layout?.id
             DraggableButton(
                 btn            = btn,
+                layout         = layout!!,
                 canvasSize     = canvasSize,
                 accentColor    = accentColor,
                 enableKeyboard = profile.enableKeyboard,
@@ -214,6 +215,7 @@ internal fun PadCanvas(
 @Composable
 private fun DraggableButton(
     btn:               PadButton,
+    layout:            PadLayout,
     canvasSize:        IntSize,
     accentColor:       Color,
     enableKeyboard:    Boolean,
@@ -226,6 +228,15 @@ private fun DraggableButton(
     onPositionChanged: (Float, Float) -> Unit,
 ) {
     val colors = LocalAppColors.current
+
+    val resolvedBgColorOption = btn.buttonBgColor ?: layout.buttonBgColor
+    val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
+    val resolvedTextColorOption = btn.buttonTextColor ?: layout.buttonTextColor
+
+    val effectiveBg = resolveColorOption(resolvedBgColorOption, accentColor, MP_AMBIENT_NEUTRAL_BG)
+    val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
+
     // rememberUpdatedState lets the pointerInput closure (keyed only on btn.id +
     // canvasSize) see the live btn even though its lambda is NOT restarted when
     // btn.posX/posY change between drags.
@@ -301,10 +312,10 @@ private fun DraggableButton(
             .drawWithContent {
                 val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
                 val bgBrush = Brush.radialGradient(
-                    0.00f to accentColor.copy(alpha = 0f),
-                    0.50f to accentColor.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.25f),
-                    0.75f to accentColor.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.5625f),
-                    1.00f to accentColor.copy(alpha = PC_BTN_GRADIENT_OUTER),
+                    0.00f to effectiveBg.copy(alpha = 0f),
+                    0.50f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.25f),
+                    0.75f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.5625f),
+                    1.00f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER),
                     center = Offset(size.width / 2f, size.height / 2f),
                     radius = halfDiag,
                 )
@@ -330,7 +341,7 @@ private fun DraggableButton(
             }
             .then(
                 if (isIconOnly) Modifier
-                else Modifier.border(1.dp, accentColor, chipShape)
+                else Modifier.border(1.dp, effectiveBorder, chipShape)
             )
             .then(
                 if (isLocked) Modifier
@@ -364,7 +375,7 @@ private fun DraggableButton(
             )
     ) {
         if (btn.action is PadAction.TrackpointMove) {
-            Text("●", color = accentColor, style = MaterialTheme.typography.bodyMedium)
+            Text("●", color = effectiveTextTint, style = MaterialTheme.typography.bodyMedium)
         } else if (btn.action is PadAction.ScrollWheel) {
             // Show mini scroll icon in editor chip
             Column(
@@ -372,11 +383,11 @@ private fun DraggableButton(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = colors.macroPadOnSurface, modifier = Modifier.size(14.dp))
-                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = colors.macroPadOnSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = effectiveTextTint, modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = effectiveTextTint.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                 Spacer(Modifier.height(2.dp))
-                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.macroPadOnSurface.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
-                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = colors.macroPadOnSurface, modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = effectiveTextTint.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = effectiveTextTint, modifier = Modifier.size(14.dp))
             }
         } else {
             val iconName = btn.iconName
@@ -384,11 +395,11 @@ private fun DraggableButton(
                 MaterialSymbol(
                     name = iconName,
                     size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                    tint = colors.macroPadOnSurface,
+                    tint = effectiveTextTint,
                     filled = btn.iconFilled,
                 )
             } else {
-                Text(btn.label, color = colors.macroPadOnSurface, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(btn.label, color = effectiveTextTint, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -592,3 +603,5 @@ private fun radialPointCount(radiusPx: Float, buttonUnitPx: Float): Int {
     val rounded4 = ((raw + 2) / 4) * 4
     return maxOf(PC_RADIAL_MIN_POINTS, rounded4)
 }
+
+

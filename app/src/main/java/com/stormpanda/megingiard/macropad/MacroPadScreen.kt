@@ -124,7 +124,6 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 profile     = p,
                 layout      = l,
                 accentColor = colors.accent,
-                neutralStyle = l.buttonColorNoMirror == ButtonColorStyle.NEUTRAL,
                 onDisabledActionFeedback = { reason ->
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
@@ -134,6 +133,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                     AppLog.d(TAG, "show disabled action feedback: $reason")
                 },
             )
+
         }
 
         val reason = disabledFeedback
@@ -177,7 +177,6 @@ internal fun PadSurface(
     accentColor: Color,
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
-    neutralStyle: Boolean = false,
     onDisabledActionFeedback: (DisabledReason) -> Unit = {},
 ) {
     val viewModel: MacroPadViewModel = viewModel()
@@ -344,11 +343,11 @@ internal fun PadSurface(
                     (btn.action as PadAction.Macro).macroId in runningMacroIds
                 PadButton(
                     btn              = btn,
+                    layout           = layout,
                     isPressed        = isPressed,
                     canvasSize       = canvasSizeState.value,
                     accentColor      = accentColor,
                     isDeviceDisabled = isDeviceDisabled,
-                    neutralStyle     = neutralStyle,
                     isRunning        = isRunning,
                 )
             }

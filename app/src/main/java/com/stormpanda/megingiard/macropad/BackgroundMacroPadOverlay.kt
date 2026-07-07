@@ -254,8 +254,8 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                         accentColor = colors.accent,
                         isPeekActive = isPeekActive,
                         transparentBackground = true,
-                        neutralStyle = l.buttonColorMirror == ButtonColorStyle.NEUTRAL,
                     )
+
                 }
             }
         }
