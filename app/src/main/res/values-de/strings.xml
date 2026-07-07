@@ -422,6 +422,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Custom Layout Settings Buttons Colors -->
     <string name="layout_settings_bg_section_title">Hintergrund</string>
     <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
+    <string name="button_settings_colors_section_title">Tastenfarben</string>
     <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
     <string name="layout_settings_color_border">Rahmenfarbe</string>
     <string name="layout_settings_color_bg">Hintergrundfarbe</string>

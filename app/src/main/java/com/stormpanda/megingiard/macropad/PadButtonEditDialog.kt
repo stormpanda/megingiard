@@ -132,6 +132,7 @@ internal fun ButtonEditDialog(
     modifier:       Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val activeLayout = MacroPadState.activeLayout.collectAsState().value
     val initAction = button?.action
         ?: initialAction
         ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
@@ -171,7 +172,7 @@ internal fun ButtonEditDialog(
     var buttonTextColor by remember { mutableStateOf(button?.buttonTextColor) }
     var buttonBorderColor by remember { mutableStateOf(button?.buttonBorderColor) }
     var buttonBgColor by remember { mutableStateOf(button?.buttonBgColor) }
-    var invisible by remember { mutableStateOf(button?.invisible ?: false) }
+    var invisible by remember { mutableStateOf(button?.invisible ?: (activeLayout?.invisibleButtons ?: false)) }
 
     var activeColorPickerTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
     var activePaletteDialogTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
@@ -179,7 +180,6 @@ internal fun ButtonEditDialog(
     val recentColors by MacroPadSettings.recentColors.collectAsState()
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
-    val activeLayout = MacroPadState.activeLayout.collectAsState().value
 
     val colors            = LocalAppColors.current
     val profile by MacroPadState.activeProfile.collectAsState()
@@ -693,7 +693,7 @@ internal fun ButtonEditDialog(
                     }
 
                 AppDivider()
-                SectionLabel(stringResource(R.string.layout_settings_colors_section_title), accentColor)
+                SectionLabel(stringResource(R.string.button_settings_colors_section_title), accentColor)
 
                 ColorPickerRow(
                     label = stringResource(R.string.layout_settings_color_text),

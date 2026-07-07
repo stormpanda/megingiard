@@ -509,6 +509,7 @@ Open Settings to create a layout.</string>
     <!-- Custom Layout Settings Buttons Colors -->
     <string name="layout_settings_bg_section_title">Background</string>
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
+    <string name="button_settings_colors_section_title">Button Color</string>
     <string name="layout_settings_color_text">Text &amp; Icon Color</string>
     <string name="layout_settings_color_border">Border Color</string>
     <string name="layout_settings_color_bg">Background Color</string>

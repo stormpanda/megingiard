@@ -106,7 +106,7 @@ internal fun PadButton(
     isDeviceDisabled: Boolean,
     isRunning:        Boolean = false,
 ) {
-    if (layout.invisibleButtons || btn.invisible) {
+    if (btn.invisible) {
         return
     }
 
