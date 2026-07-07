@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -170,6 +171,7 @@ internal fun ButtonEditDialog(
     var buttonTextColor by remember { mutableStateOf(button?.buttonTextColor) }
     var buttonBorderColor by remember { mutableStateOf(button?.buttonBorderColor) }
     var buttonBgColor by remember { mutableStateOf(button?.buttonBgColor) }
+    var invisible by remember { mutableStateOf(button?.invisible ?: false) }
 
     var activeColorPickerTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
     var activePaletteDialogTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
@@ -272,6 +274,7 @@ internal fun ButtonEditDialog(
                                 buttonTextColor       = buttonTextColor,
                                 buttonBorderColor     = buttonBorderColor,
                                 buttonBgColor         = buttonBgColor,
+                                invisible             = invisible,
                             ) ?: PadButton(
                                 id                    = UUID.randomUUID().toString(),
                                 label                 = label,
@@ -288,6 +291,7 @@ internal fun ButtonEditDialog(
                                 buttonTextColor       = buttonTextColor,
                                 buttonBorderColor     = buttonBorderColor,
                                 buttonBgColor         = buttonBgColor,
+                                invisible             = invisible,
                             )
                             onConfirm(result)
                         }
@@ -721,6 +725,28 @@ internal fun ButtonEditDialog(
                     onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BG }
                 )
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.layout_settings_invisible_buttons),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = stringResource(R.string.layout_settings_invisible_buttons_desc),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Switch(
+                        checked = invisible,
+                        onCheckedChange = { invisible = it }
+                    )
+                }
 
             }
         }

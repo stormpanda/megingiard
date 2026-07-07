@@ -87,6 +87,7 @@ class ButtonColorStyleTest {
         assertEquals(null, layout.buttonColorNoMirror)
         @Suppress("DEPRECATION")
         assertEquals(null, layout.buttonColorMirror)
+        assertEquals(false, layout.invisibleButtons)
     }
 
     @Test
@@ -157,12 +158,14 @@ class ButtonColorStyleTest {
             .replace("\"buttonBgColor\":null,", "")
             .replace(",\"buttonTextColor\":null", "")
             .replace(",\"buttonBorderColor\":null", "")
-            .replace(",\"buttonBgColor\":null", "")
+            .replace(",\"invisible\":false", "")
+            .replace("\"invisible\":false,", "")
 
         val decoded = json.decodeFromString<PadButton>(legacyJson)
         assertEquals(null, decoded.buttonTextColor)
         assertEquals(null, decoded.buttonBorderColor)
         assertEquals(null, decoded.buttonBgColor)
+        assertEquals(false, decoded.invisible)
     }
 }
 

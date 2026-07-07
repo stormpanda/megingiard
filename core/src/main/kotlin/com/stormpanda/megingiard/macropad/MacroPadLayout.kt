@@ -310,6 +310,7 @@ data class PadButton(
     val buttonTextColor: ColorOption? = null,
     val buttonBorderColor: ColorOption? = null,
     val buttonBgColor: ColorOption? = null,
+    val invisible: Boolean = false,
 )
 
 
@@ -370,6 +371,7 @@ data class PadLayout(
     val buttonTextColor: ColorOption = ColorOption.Neutral,
     val buttonBorderColor: ColorOption = ColorOption.Neutral,
     val buttonBgColor: ColorOption = ColorOption.Neutral,
+    val invisibleButtons: Boolean = false,
 )
 
 

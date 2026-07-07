@@ -106,6 +106,10 @@ internal fun PadButton(
     isDeviceDisabled: Boolean,
     isRunning:        Boolean = false,
 ) {
+    if (layout.invisibleButtons || btn.invisible) {
+        return
+    }
+
     val density = LocalDensity.current
     val colors  = LocalAppColors.current
 

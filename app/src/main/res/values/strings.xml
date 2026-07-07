@@ -521,6 +521,8 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_no_recent_colors">No recently used colors yet</string>
     <string name="layout_settings_color_layout_default">Layout Default</string>
     <string name="layout_settings_color_opacity">Opacity</string>
+    <string name="layout_settings_invisible_buttons">Invisible Buttons</string>
+    <string name="layout_settings_invisible_buttons_desc">Makes buttons invisible while using the layout. Keeps them visible while editing.</string>
 
 
     <!-- Help menu strings for Layout settings -->

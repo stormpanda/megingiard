@@ -87,9 +87,10 @@ internal fun LayoutSettingsEditor(
     initialButtonBgColor: ColorOption,
     initialBackgroundImagePath: String?,
     initialUseAsMask: Boolean,
+    initialInvisibleButtons: Boolean = false,
     accentColor: Color,
     existingNames: List<String>,
-    onConfirm: (String, ColorOption, ColorOption, ColorOption, String?, Boolean, Boolean) -> Unit,
+    onConfirm: (String, ColorOption, ColorOption, ColorOption, String?, Boolean, Boolean, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -104,6 +105,7 @@ internal fun LayoutSettingsEditor(
     var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
     var currentBgPath by remember { mutableStateOf(initialBackgroundImagePath) }
     var useAsMask by remember { mutableStateOf(initialUseAsMask) }
+    var invisibleButtons by remember { mutableStateOf(initialInvisibleButtons) }
 
     var activeColorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
     var activePaletteDialogTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
@@ -189,6 +191,7 @@ internal fun LayoutSettingsEditor(
                                         bgColorOption,
                                         finalBgPath,
                                         useAsMask,
+                                        invisibleButtons,
                                         bgChanged
                                     )
                                     isSaving = false
@@ -361,6 +364,31 @@ internal fun LayoutSettingsEditor(
                 onWheelClick = { activeColorPickerTarget = ColorPickerTarget.BG },
                 onPaletteClick = { activePaletteDialogTarget = ColorPickerTarget.BG }
             )
+
+            Spacer(Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.layout_settings_invisible_buttons),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.layout_settings_invisible_buttons_desc),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(
+                    checked = invisibleButtons,
+                    onCheckedChange = { invisibleButtons = it }
+                )
+            }
 
             Spacer(Modifier.height(40.dp))
         }
