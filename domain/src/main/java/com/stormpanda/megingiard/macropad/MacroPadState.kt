@@ -169,16 +169,13 @@ object MacroPadState {
                 val migratedLayouts = p.layouts.map { layout ->
                     var current = layout
                     var changed = false
-                    @Suppress("DEPRECATION")
                     if (current.buttonColorNoMirror != null || current.buttonColorMirror != null) {
                         needsSave = true
                         changed = true
-                        @Suppress("DEPRECATION")
-                        val isAccented = current.buttonColorNoMirror == ButtonColorStyle.ACCENTED
                         current = current.copy(
                             buttonTextColor = ColorOption.Neutral,
-                            buttonBorderColor = if (isAccented) ColorOption.Accent else ColorOption.Neutral,
-                            buttonBgColor = if (isAccented) ColorOption.Accent else ColorOption.Neutral,
+                            buttonBorderColor = ColorOption.Neutral,
+                            buttonBgColor = ColorOption.Neutral,
                             buttonColorNoMirror = null,
                             buttonColorMirror = null
                         )
