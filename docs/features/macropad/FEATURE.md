@@ -33,6 +33,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - The grid mode cycles **Off → Rectangular → Radial → Off** via a single toggle button located in the editor toolbar row (to the right of the "Add Button" and "Macros…" chips), above the canvas preview.
 - When a grid is active, dragged buttons **magnetically snap** to the nearest grid intersection point. When the grid is off, buttons position freely.
 - Grid mode is **local editor state** — it is not persisted and resets to Off each time the editor opens.
+- While editing the unlocked button layout, the button that was touched or dragged last MUST display four drag handles (using the `"drag_pan"` Material Symbol) placed outside its Top, Bottom, Left, and Right edges with a 4 dp padding. The handles are interactive; dragging from any of the handles moves the button in sync, and they are sized at 16 dp to ensure they do not overlap or obfuscate the button layout.
 
 ### FR-P3: Action Types
 
@@ -174,6 +175,11 @@ Each button supports one of the following actions:
 - **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and background.
   - Colors are stored using the `ColorOption` schema, which supports **Neutral Style** (neutral theme-independent palette), **Accent Color** (dynamically resolved system accent color), or a **Custom Color** (fixed ARGB).
   - Defaults are configured inside the full-screen **Layout Settings Editor** using color picker wheels and quick selection palettes featuring the 10 most recently used colors.
+  - **Opacity Slider**: The custom color picker wheel incorporates an opacity/alpha slider that operates in the 10% to 100% range (`0.1f..1.0f`). Any values parsed or configured are clamped to this range.
+  - **Luminance-aware Apply Button**: The "Apply" button inside the color picker dynamically changes its text color to black or white based on the luminance and transparency of the currently picked color, ensuring maximum readability.
+  - **Invisible Buttons**: Both the layout settings editor and the button editor include an "Invisible Buttons" switch toggle.
+    - Layout-level `invisibleButtons` acts as a default template option: when active, newly created buttons in that layout will default to having their individual `invisible` property enabled.
+    - Button-level `invisible` property controls the visibility of the button in Use Mode. When true, the button is completely hidden (visually transparent) but remains fully interactive under touch input. In editing mode, the button remains visible so it can be customized and repositioned.
   - **Button-level overrides**: Each button can override the layout-wide color defaults individually using the same `ColorOption` fields (`PadButton.buttonTextColor`, `PadButton.buttonBorderColor`, `PadButton.buttonBgColor`). A special `null` value (shown as **Layout Default**) reverts the button back to the layout-wide default behavior.
   - Color options survive profile imports/exports and migrate legacy button color formats (`buttonColorNoMirror` / `buttonColorMirror`) automatically.
 
@@ -423,6 +429,10 @@ PadProfile
         ├── name: String
         ├── enabled: Boolean    (deprecated / unused)
         ├── buttons: List<PadButton>
+        ├── buttonTextColor: ColorOption
+        ├── buttonBorderColor: ColorOption
+        ├── buttonBgColor: ColorOption
+        ├── invisibleButtons: Boolean      (default false — template option for new buttons)
         ├── ambientDim: Float              (0–0.9, default 0)
         ├── ambientVignetteEnabled: Boolean (default false)
         ├── ambientVignetteShape: VignetteShape (RADIAL/LETTERBOX/PILLARBOX/TOP/BOTTOM/LEFT/RIGHT)
@@ -437,6 +447,10 @@ PadProfile
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
         ├── buttonShape: ButtonShape (SQUARE | CIRCLE | ICON_ONLY)
+        ├── buttonTextColor: ColorOption?  (override, null = layout default)
+        ├── buttonBorderColor: ColorOption? (override, null = layout default)
+        ├── buttonBgColor: ColorOption?    (override, null = layout default)
+        ├── invisible: Boolean             (default false — hidden in use mode, visible in edit mode)
         ├── action: PadAction   (sealed)
         │     KeyboardKey(keycode, label)
         │     GamepadButton(btnCode, label)
