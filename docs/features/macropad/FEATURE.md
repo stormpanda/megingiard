@@ -172,7 +172,7 @@ Each button supports one of the following actions:
 - **Dimming** (0–90%, default 0%): draws a semi-transparent black overlay on top of the mirror background.
 - A special **Background Peek** action (`PadAction.BackgroundPeek`): toggles hiding all buttons and dimming.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
-- **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and background.
+- **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and fading color.
   - Colors are stored using the `ColorOption` schema, which supports **Neutral Style** (neutral theme-independent palette), **Accent Color** (dynamically resolved system accent color), or a **Custom Color** (fixed ARGB).
   - Defaults are configured inside the full-screen **Layout Settings Editor** using color picker wheels and quick selection palettes featuring the 10 most recently used colors.
   - **Opacity Slider**: The custom color picker wheel incorporates an opacity/alpha slider that operates in the 10% to 100% range (`0.1f..1.0f`). Any values parsed or configured are clamped to this range.
@@ -180,7 +180,7 @@ Each button supports one of the following actions:
   - **Invisible Buttons**: Both the layout settings editor and the button editor include an "Invisible Buttons" switch toggle.
     - Layout-level `invisibleButtons` acts as a default template option: when active, newly created buttons in that layout will default to having their individual `invisible` property enabled.
     - Button-level `invisible` property controls the visibility of the button in Use Mode. When true, the button is completely hidden (visually transparent) but remains fully interactive under touch input. In editing mode, the button remains visible (with the button body rendered at 40% opacity and overlaid with a small crossed-out eye in the top right corner at 100% opacity for clear distinction) so it can be customized and repositioned.
-  - **Button-level overrides**: Each button can override the layout-wide color defaults individually using the same `ColorOption` fields (`PadButton.buttonTextColor`, `PadButton.buttonBorderColor`, `PadButton.buttonBgColor`). A special `null` value (shown as **Layout Default**) reverts the button back to the layout-wide default behavior.
+  - **Button-level overrides**: Each button can override the layout-wide color defaults individually using the same `ColorOption` fields (`PadButton.buttonTextColor`, `PadButton.buttonBorderColor`, `PadButton.buttonBgColor` for fading color). A special `null` value (shown as **Layout Default**) reverts the button back to the layout-wide default behavior.
   - Color options survive profile imports/exports and migrate legacy button color formats (`buttonColorNoMirror` / `buttonColorMirror`) automatically.
 
 
