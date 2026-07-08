@@ -407,45 +407,6 @@ private fun DraggableButton(
             .width(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
             .height(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
             .then(
-                if (btn.invisible) Modifier.graphicsLayer { alpha = 0.4f }
-                else Modifier
-            )
-            .clip(chipShape)
-            .drawWithContent {
-                val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
-                val bgBrush = Brush.radialGradient(
-                    0.00f to effectiveBg.copy(alpha = 0f),
-                    0.50f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.25f),
-                    0.75f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.5625f),
-                    1.00f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER),
-                    center = Offset(size.width / 2f, size.height / 2f),
-                    radius = halfDiag,
-                )
-                if (isIconOnly) {
-                    drawContent()
-                } else {
-                    if (isDeviceDisabled) {
-                        val p = Paint().apply {
-                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                            this.alpha = ED_BTN_DISABLED_ALPHA
-                        }
-                        drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
-                        drawRect(color = PC_BTN_BACKING_COLOR)
-                        drawRect(brush = bgBrush)
-                        drawContent()
-                        drawContext.canvas.restore()
-                    } else {
-                        drawRect(color = PC_BTN_BACKING_COLOR)
-                        drawRect(brush = bgBrush)
-                        drawContent()
-                    }
-                }
-            }
-            .then(
-                if (isIconOnly) Modifier
-                else Modifier.border(1.dp, effectiveBorder, chipShape)
-            )
-            .then(
                 if (isLocked) Modifier
                 else Modifier.pointerInput(btn.id, canvasSize) {
                     detectDragGestures(
@@ -491,32 +452,77 @@ private fun DraggableButton(
                 }
             )
     ) {
-        if (btn.action is PadAction.TrackpointMove) {
-            Text("●", color = effectiveTextTint, style = MaterialTheme.typography.bodyMedium)
-        } else if (btn.action is PadAction.ScrollWheel) {
-            // Show mini scroll icon in editor chip
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = effectiveTextTint, modifier = Modifier.size(14.dp))
-                Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = effectiveTextTint.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
-                Spacer(Modifier.height(2.dp))
-                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = effectiveTextTint.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
-                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = effectiveTextTint, modifier = Modifier.size(14.dp))
-            }
-        } else {
-            val iconName = btn.iconName
-            if (iconName != null) {
-                MaterialSymbol(
-                    name = iconName,
-                    size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                    tint = effectiveTextTint,
-                    filled = btn.iconFilled,
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (btn.invisible) Modifier.graphicsLayer { alpha = 0.4f }
+                    else Modifier
                 )
+                .clip(chipShape)
+                .drawWithContent {
+                    val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
+                    val bgBrush = Brush.radialGradient(
+                        0.00f to effectiveBg.copy(alpha = 0f),
+                        0.50f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.25f),
+                        0.75f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.5625f),
+                        1.00f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER),
+                        center = Offset(size.width / 2f, size.height / 2f),
+                        radius = halfDiag,
+                    )
+                    if (isIconOnly) {
+                        drawContent()
+                    } else {
+                        if (isDeviceDisabled) {
+                            val p = Paint().apply {
+                                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+                                this.alpha = ED_BTN_DISABLED_ALPHA
+                            }
+                            drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                            drawRect(color = PC_BTN_BACKING_COLOR)
+                            drawRect(brush = bgBrush)
+                            drawContent()
+                            drawContext.canvas.restore()
+                        } else {
+                            drawRect(color = PC_BTN_BACKING_COLOR)
+                            drawRect(brush = bgBrush)
+                            drawContent()
+                        }
+                    }
+                }
+                .then(
+                    if (isIconOnly) Modifier
+                    else Modifier.border(1.dp, effectiveBorder, chipShape)
+                )
+        ) {
+            if (btn.action is PadAction.TrackpointMove) {
+                Text("●", color = effectiveTextTint, style = MaterialTheme.typography.bodyMedium)
+            } else if (btn.action is PadAction.ScrollWheel) {
+                // Show mini scroll icon in editor chip
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = effectiveTextTint, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = effectiveTextTint.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.height(2.dp))
+                    Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = effectiveTextTint.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
+                    Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = effectiveTextTint, modifier = Modifier.size(14.dp))
+                }
             } else {
-                Text(btn.label, color = effectiveTextTint, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val iconName = btn.iconName
+                if (iconName != null) {
+                    MaterialSymbol(
+                        name = iconName,
+                        size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                        tint = effectiveTextTint,
+                        filled = btn.iconFilled,
+                    )
+                } else {
+                    Text(btn.label, color = effectiveTextTint, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
         if (btn.invisible) {
