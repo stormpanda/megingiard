@@ -1,8 +1,16 @@
 package com.stormpanda.megingiard.ui
 
+import android.app.ActivityOptions
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import android.view.Display
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -18,7 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -33,6 +43,7 @@ import kotlinx.coroutines.withContext
 private const val TAG = "PrivdPromptDialog"
 private const val GETPROP_TIMEOUT_MS = 2000L
 private val PROMPT_SPACER_HEIGHT = 12.dp
+private val BUTTON_SPACER_WIDTH = 8.dp
 
 @Composable
 fun PrivdReconnectPromptDialog(
@@ -41,6 +52,7 @@ fun PrivdReconnectPromptDialog(
     onDone: () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val context = LocalContext.current
     val state by PrivdManager.state.collectAsState()
     val lastError by PrivdManager.lastError.collectAsState()
     var isWirelessDebuggingActive by remember { mutableStateOf<Boolean?>(null) }
@@ -172,18 +184,74 @@ fun PrivdReconnectPromptDialog(
         },
         dismissButton = {
             if (state != PrivdState.RUNNING) {
-                TextButton(
-                    onClick = {
-                        AppLog.d(TAG, "Privd reconnect prompt dialog skip clicked")
-                        onSkip()
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = colors.onSurfaceSecondary,
-                    )
-                ) {
-                    Text(stringResource(R.string.privd_reconnect_prompt_skip))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        onClick = {
+                            AppLog.d(TAG, "Privd reconnect prompt dialog skip clicked")
+                            onSkip()
+                        },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = colors.onSurfaceSecondary,
+                        )
+                    ) {
+                        Text(stringResource(R.string.privd_reconnect_prompt_skip))
+                    }
+                    if (isWirelessDebuggingActive == false) {
+                        Spacer(Modifier.width(BUTTON_SPACER_WIDTH))
+                        TextButton(
+                            onClick = {
+                                AppLog.d(TAG, "Privd reconnect prompt dialog settings clicked")
+                                openDeveloperSettings(context)
+                            },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = colors.accent,
+                            )
+                        ) {
+                            Text(stringResource(R.string.privd_reconnect_prompt_settings))
+                        }
+                    }
                 }
             }
         }
     )
 }
+
+private fun openDeveloperSettings(context: Context) {
+    val devOptionsEnabled = Settings.Global.getInt(
+        context.contentResolver,
+        Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+        0
+    ) != 0
+
+    val intentsToTry = if (devOptionsEnabled) {
+        listOf(
+            Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
+                component = ComponentName(
+                    "com.android.settings",
+                    "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging"
+                )
+            },
+            Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+            Intent(Settings.ACTION_SETTINGS)
+        )
+    } else {
+        listOf(
+            Intent(Settings.ACTION_SETTINGS)
+        )
+    }
+
+    val options = ActivityOptions.makeBasic().apply {
+        setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+    }
+
+    for (intent in intentsToTry) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(intent, options.toBundle())
+            break
+        } catch (e: Exception) {
+            // Fallback to next intent in the list
+        }
+    }
+}
+

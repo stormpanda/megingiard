@@ -346,6 +346,8 @@ Open Settings to create a layout.</string>
     <string name="privd_reconnect_prompt_title">Re-enable Privileged Mode</string>
     <string name="privd_reconnect_prompt_skip">Skip</string>
     <string name="privd_reconnect_prompt_done">Done</string>
+    <string name="privd_reconnect_prompt_settings">Developer Settings</string>
+
 
 
 

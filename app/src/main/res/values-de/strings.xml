@@ -299,6 +299,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_reconnect_prompt_title">Privilegierten Modus reaktivieren</string>
     <string name="privd_reconnect_prompt_skip">Überspringen</string>
     <string name="privd_reconnect_prompt_done">Fertig</string>
+    <string name="privd_reconnect_prompt_settings">Entwicklereinstellungen</string>
+
 
 
 

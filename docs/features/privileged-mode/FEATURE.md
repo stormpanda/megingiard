@@ -57,8 +57,9 @@ every device since Android 11 (API 30).
 ### FR-PV7: Reconnection Prompt Modal on App Start
 
 - If Privileged Mode has been previously set up (saved ADB credentials exist) but the connection fails on app start (e.g. because Wireless Debugging was disabled after reboot), the app shows a modal dialog prompting the user to re-enable Privileged Mode.
-- The modal uses the same wording as the global settings "call to action" texts with the same color coding, and has a Connect button to retry and a Skip button to dismiss.
+- The modal uses the same wording as the global settings "call to action" texts with the same color coding, and has a Connect button to retry and a Skip button to dismiss. If Wireless Debugging is disabled, it also displays a "Developer Settings" button to open the system developer settings directly on the main display.
 - A toggle in Global Settings allows users to enable/disable showing this prompt dialog on app start (default: true/enabled).
+
 
 ### FR-PV5: No Always-Connected Requirement
 
@@ -217,13 +218,10 @@ The results are presented to the user as clear, localized guidance messages in t
 - **Wireless Debugging Active, Disconnected:** "Wireless Debugging is active. Tap Connect to start Privileged Mode."
 - **Connecting:** "Connecting to daemon..."
 
-### Reconnection Prompt Dialog
-
-If the auto-connection sequence fails on app start (state becomes `FAILED`) but saved credentials exist (`hasCredentials == true`), a reconnection prompt dialog is shown to the user on startup (provided the "Show reconnect prompt" setting is enabled). 
-
-This dialog uses the same wording and colors as the settings status messages. It has two actions:
+This dialog uses the same wording and colors as the settings status messages. It has three actions:
 1. **Connect:** Triggers a background retry connect sequence.
 2. **Skip:** Dismisses the dialog for this app run session.
+3. **Developer Settings:** A shortcut button that opens the system's Developer Options / Wireless Debugging screen on the main display. This button is only shown when Wireless Debugging is inactive (`isWirelessDebuggingActive == false`).
 
 Opening the Global Settings screen also automatically suppresses/skips the dialog to avoid overlapping layouts.
 
