@@ -180,7 +180,6 @@ fun QuickMenu(
                     onProfileSelected = { profile ->
                         AppLog.d(TAG, "profile selected: ${profile.id}")
                         MacroPadState.setActiveProfileId(profile.id)
-                        onDismiss()
                     },
                 )
 
@@ -196,7 +195,6 @@ fun QuickMenu(
                     onLayoutSelected = { layoutId ->
                         AppLog.d(TAG, "layout selected: $layoutId")
                         MacroPadState.setActiveLayoutId(layoutId)
-                        onDismiss()
                     },
                 )
 
