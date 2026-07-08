@@ -189,10 +189,10 @@ Each button supports one of the following actions:
 - Users can choose a **custom background image** to be displayed behind the MacroPad buttons.
 - The configuration is situated in the **Layout Settings** overlay of the layout editor.
 - Tapping "Choose Image" opens the system document picker (`image/*`).
-- When a background image is selected, a slightly dimmed thumbnail preview of the image is shown to the left of the delete icon, with a magnifier icon overlaid on it. Tapping this thumbnail opens a larger preview of the image in a modal dialog.
+- When a background image is selected, a slightly dimmed thumbnail preview of the image is shown to the left of the delete icon, with a crop icon overlaid on it. Tapping this thumbnail opens an interactive crop selector dialog in the aspect ratio of the secondary display where the user can drag to pan and pinch to zoom the background image.
 - To prevent permissions from expiring and keep layouts self-contained, the chosen image is copied to the app's internal files directory as `backgrounds/bg_<layoutId>`.
-- The `backgroundImagePath` parameter in `PadLayout` stores a relative path (e.g. `backgrounds/bg_<layoutId>`) to maintain portability and compatibility with Megingiard's profile import/export features.
-- In both **Use Mode** (`PadSurface`) and **Layout Editor** (`PadCanvas`), the image is loaded asynchronously off the main thread (`Dispatchers.IO`) and rendered centered with crop scaling (`ContentScale.Crop`) behind the buttons.
+- The `backgroundImagePath` parameter in `PadLayout` stores a relative path (e.g. `backgrounds/bg_<layoutId>`) along with `bgImageScale`, `bgImageOffsetX`, and `bgImageOffsetY` crop properties to maintain portability and compatibility with Megingiard's profile import/export features.
+- In **Use Mode** (`PadSurface`), **Layout Editor** (`PadCanvas`), and **Mirror Presentation** (`MirrorPresentation`), the image is loaded asynchronously and rendered applying the layout's background image crop settings (scale and translations) behind the buttons.
 - **Use as Mask**: The layout settings overlay includes a "Use as mask" toggle (visible only when an image is selected). When enabled (`useBackgroundImageAsMask = true`), the background image is layered *on top* of the screen mirroring cutouts but *below* the MacroPad buttons. This allows the mirrored screen regions to show through any transparent/semi-transparent windows of the background image, serving as a custom overlay frame.
 - When a layout is deleted or its background image is removed/cleared, the associated image file on disk is deleted.
 - When a profile is deleted, all background image files for its layouts are deleted.

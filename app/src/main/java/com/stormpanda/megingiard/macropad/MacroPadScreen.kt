@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -326,7 +327,14 @@ internal fun PadSurface(
                     bitmap = bgBitmap!!,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = layout.bgImageScale
+                            scaleY = layout.bgImageScale
+                            translationX = layout.bgImageOffsetX * size.width
+                            translationY = layout.bgImageOffsetY * size.height
+                        }
                 )
             }
 

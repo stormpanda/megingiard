@@ -168,7 +168,14 @@ internal fun PadCanvas(
                 bitmap = bgBitmap!!,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = layout?.bgImageScale ?: 1f
+                        scaleY = layout?.bgImageScale ?: 1f
+                        translationX = (layout?.bgImageOffsetX ?: 0f) * size.width
+                        translationY = (layout?.bgImageOffsetY ?: 0f) * size.height
+                    }
             )
         }
         // Grid overlay — drawn behind buttons

@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.macropad
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.content.Context
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.material3.AlertDialog
@@ -14,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,9 +36,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -98,6 +109,8 @@ private val LSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
 private const val LSE_PREVIEW_MODAL_BG_ALPHA = 0.6f
 private val LSE_PREVIEW_IMAGE_ROUNDING = 8.dp
 private val LSE_SPACING_16 = 16.dp
+private const val LSE_CROP_MIN_SCALE = 1f
+private const val LSE_CROP_MAX_SCALE = 5f
 
 @Composable
 internal fun LayoutSettingsEditor(
@@ -110,14 +123,18 @@ internal fun LayoutSettingsEditor(
     initialBackgroundImagePath: String?,
     initialUseAsMask: Boolean,
     initialInvisibleButtons: Boolean = false,
+    initialBgImageScale: Float = 1f,
+    initialBgImageOffsetX: Float = 0f,
+    initialBgImageOffsetY: Float = 0f,
     accentColor: Color,
     existingNames: List<String>,
-    onConfirm: (String, ColorOption, ColorOption, ColorOption, String?, Boolean, Boolean, Boolean) -> Unit,
+    onConfirm: (String, ColorOption, ColorOption, ColorOption, String?, Boolean, Boolean, Boolean, Float, Float, Float) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val windowManager = remember { context.getSystemService(Context.WINDOW_SERVICE) as WindowManager }
 
     var nameText by remember { mutableStateOf(initialName) }
     var textColorOption by remember { mutableStateOf(initialButtonTextColor) }
@@ -128,6 +145,17 @@ internal fun LayoutSettingsEditor(
     var currentBgPath by remember { mutableStateOf(initialBackgroundImagePath) }
     var useAsMask by remember { mutableStateOf(initialUseAsMask) }
     var invisibleButtons by remember { mutableStateOf(initialInvisibleButtons) }
+
+    var bgScale by remember { mutableFloatStateOf(initialBgImageScale) }
+    var bgOffsetX by remember { mutableFloatStateOf(initialBgImageOffsetX) }
+    var bgOffsetY by remember { mutableFloatStateOf(initialBgImageOffsetY) }
+
+    val bounds = remember { windowManager.currentWindowMetrics.bounds }
+    val aspectRatio = remember(bounds) {
+        val w = bounds.width().toFloat()
+        val h = bounds.height().toFloat()
+        if (h > 0f) w / h else 16f / 9f
+    }
 
     var previewBitmap by remember(pendingImageUri, currentBgPath) { mutableStateOf<ImageBitmap?>(null) }
     var showPreviewModal by remember { mutableStateOf(false) }
@@ -183,6 +211,9 @@ internal fun LayoutSettingsEditor(
         if (uri != null) {
             pendingImageUri = uri
             currentBgPath = null
+            bgScale = 1f
+            bgOffsetX = 0f
+            bgOffsetY = 0f
         }
     }
 
@@ -252,7 +283,10 @@ internal fun LayoutSettingsEditor(
                                         finalBgPath,
                                         useAsMask,
                                         invisibleButtons,
-                                        bgChanged
+                                        bgChanged,
+                                        bgScale,
+                                        bgOffsetX,
+                                        bgOffsetY
                                     )
                                     isSaving = false
                                 }
@@ -346,7 +380,7 @@ internal fun LayoutSettingsEditor(
                                         .alpha(LSE_THUMBNAIL_DIM_ALPHA)
                                 )
                                 Icon(
-                                    imageVector = Icons.Rounded.Search,
+                                    imageVector = Icons.Rounded.Crop,
                                     contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
                                     tint = Color.White,
                                     modifier = Modifier.size(LSE_MAGNIFIER_ICON_SIZE)
@@ -354,12 +388,15 @@ internal fun LayoutSettingsEditor(
                             }
                         }
                         Spacer(Modifier.width(8.dp))
-
+ 
                         IconButton(
                             onClick = {
                                 pendingImageUri = null
                                 currentBgPath = null
                                 useAsMask = false
+                                bgScale = 1f
+                                bgOffsetX = 0f
+                                bgOffsetY = 0f
                             }
                         ) {
                             Icon(
@@ -560,8 +597,18 @@ internal fun LayoutSettingsEditor(
         )
 
         if (showPreviewModal && previewBitmap != null) {
-            ImagePreviewDialog(
+            ImageCropDialog(
                 bitmap = previewBitmap!!,
+                aspectRatio = aspectRatio,
+                initialScale = bgScale,
+                initialOffsetX = bgOffsetX,
+                initialOffsetY = bgOffsetY,
+                onConfirmCrop = { scale, ox, oy ->
+                    bgScale = scale
+                    bgOffsetX = ox
+                    bgOffsetY = oy
+                    showPreviewModal = false
+                },
                 onDismiss = { showPreviewModal = false }
             )
         }
@@ -572,6 +619,9 @@ internal fun LayoutSettingsEditor(
                 onImageSelected = { uri ->
                     pendingImageUri = uri
                     currentBgPath = null
+                    bgScale = 1f
+                    bgOffsetX = 0f
+                    bgOffsetY = 0f
                 },
                 onDismiss = { showScrapeDialog = false },
                 accentColor = accentColor
@@ -864,12 +914,54 @@ private fun LayoutSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
     }
 }
 
+private fun getMaxOffsets(
+    containerSize: IntSize,
+    imageSize: IntSize,
+    scale: Float
+): Pair<Float, Float> {
+    if (containerSize.width <= 0 || containerSize.height <= 0 || imageSize.width <= 0 || imageSize.height <= 0) {
+        return 0f to 0f
+    }
+    val cw = containerSize.width.toFloat()
+    val ch = containerSize.height.toFloat()
+    val iw = imageSize.width.toFloat()
+    val ih = imageSize.height.toFloat()
+
+    val scaleBase = maxOf(cw / iw, ch / ih)
+    val wFull = iw * scaleBase * scale
+    val hFull = ih * scaleBase * scale
+
+    val maxTx = ((wFull - cw) / 2f).coerceAtLeast(0f)
+    val maxTy = ((hFull - ch) / 2f).coerceAtLeast(0f)
+
+    return maxTx to maxTy
+}
+
 @Composable
-private fun ImagePreviewDialog(
+private fun ImageCropDialog(
     bitmap: ImageBitmap,
+    aspectRatio: Float,
+    initialScale: Float,
+    initialOffsetX: Float,
+    initialOffsetY: Float,
+    onConfirmCrop: (scale: Float, offsetX: Float, offsetY: Float) -> Unit,
     onDismiss: () -> Unit
 ) {
     val colors = LocalAppColors.current
+
+    var scale by remember { mutableFloatStateOf(initialScale) }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    var offsetXState by remember { mutableFloatStateOf(0f) }
+    var offsetYState by remember { mutableFloatStateOf(0f) }
+    var isInitialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(containerSize) {
+        if (containerSize.width > 0 && containerSize.height > 0 && !isInitialized) {
+            offsetXState = initialOffsetX * containerSize.width
+            offsetYState = initialOffsetY * containerSize.height
+            isInitialized = true
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -893,7 +985,7 @@ private fun ImagePreviewDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.layout_settings_bg_image_preview_dialog_title),
+                    text = stringResource(R.string.layout_settings_crop_image_title),
                     color = colors.onSurface,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
@@ -909,14 +1001,83 @@ private fun ImagePreviewDialog(
 
             Spacer(Modifier.height(LSE_SPACING_16))
 
-            Image(
-                bitmap = bitmap,
-                contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .aspectRatio(aspectRatio)
                     .clip(RoundedCornerShape(LSE_PREVIEW_IMAGE_ROUNDING))
-                    .align(Alignment.CenterHorizontally)
+                    .clipToBounds()
+                    .background(Color.Black)
+                    .onSizeChanged { containerSize = it }
+                    .pointerInput(bitmap, isInitialized) {
+                        if (!isInitialized) return@pointerInput
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            val imageSize = IntSize(bitmap.width, bitmap.height)
+                            val newScale = (scale * zoom).coerceIn(LSE_CROP_MIN_SCALE, LSE_CROP_MAX_SCALE)
+                            scale = newScale
+
+                            val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, newScale)
+                            offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
+                            offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
+                        }
+                    }
+            ) {
+                if (isInitialized && containerSize.width > 0 && containerSize.height > 0) {
+                    val imageSize = IntSize(bitmap.width, bitmap.height)
+                    val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, scale)
+                    val clampedX = offsetXState.coerceIn(-maxTx, maxTx)
+                    val clampedY = offsetYState.coerceIn(-maxTy, maxTy)
+
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = clampedX,
+                                translationY = clampedY
+                            )
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.layout_settings_crop_image_instructions),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 12.dp)
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_cancel),
+                        color = colors.onSurfaceSecondary
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
+                        val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
+                        onConfirmCrop(scale, finalOffsetX, finalOffsetY)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_done),
+                        color = colors.onAccent
+                    )
+                }
+            }
         }
     }
 }
