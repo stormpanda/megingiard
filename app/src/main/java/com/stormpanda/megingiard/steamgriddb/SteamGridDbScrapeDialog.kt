@@ -37,6 +37,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -92,6 +93,7 @@ internal fun SteamGridDbScrapeDialog(
 
     var isLoadingImages by remember { mutableStateOf(false) }
     var imagesList by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
+    var selectedImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
 
     var isDownloading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -103,6 +105,7 @@ internal fun SteamGridDbScrapeDialog(
         if (searchQuery.isBlank()) return
         isSearchingGames = true
         selectedGame = null
+        selectedImage = null
         imagesList = emptyList()
         errorMessage = null
         scope.launch {
@@ -135,6 +138,7 @@ internal fun SteamGridDbScrapeDialog(
 
     fun loadImagesForGame(gameId: Int, type: String) {
         isLoadingImages = true
+        selectedImage = null
         errorMessage = null
         scope.launch {
             SteamGridDbClient.fetchImages(gameId, type, apiKey)
@@ -167,8 +171,34 @@ internal fun SteamGridDbScrapeDialog(
             title = stringResource(R.string.steamgriddb_scrape_dialog_title),
             onDismiss = onDismiss,
         ) {
-            // Trailing action in top bar (close / confirm is cancel-only, select is done via clicking grid items)
-            Spacer(Modifier.width(48.dp))
+            TextButton(
+                onClick = {
+                    val currentSelectedImage = selectedImage
+                    if (currentSelectedImage != null) {
+                        isDownloading = true
+                        scope.launch {
+                            val cacheDir = context.cacheDir
+                            SteamGridDbClient.downloadImageToTempFile(currentSelectedImage.url, cacheDir)
+                                .onSuccess { tempFile ->
+                                    onImageSelected(Uri.fromFile(tempFile))
+                                    isDownloading = false
+                                    onDismiss()
+                                }
+                                .onFailure { err ->
+                                    errorMessage = err.message
+                                    isDownloading = false
+                                }
+                        }
+                    }
+                },
+                enabled = selectedImage != null && !isDownloading
+            ) {
+                Text(
+                    text = stringResource(R.string.macropad_macro_editor_save),
+                    color = if (selectedImage != null && !isDownloading) colors.accent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -389,6 +419,7 @@ internal fun SteamGridDbScrapeDialog(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     rowImages.forEach { image ->
+                                        val isSelected = selectedImage?.id == image.id
                                         Box(
                                             modifier = Modifier
                                                 .weight(1f)
@@ -402,22 +433,13 @@ internal fun SteamGridDbScrapeDialog(
                                                 )
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .background(colors.surface)
-                                                .border(1.dp, colors.accentBorder, RoundedCornerShape(8.dp))
+                                                .border(
+                                                    width = if (isSelected) 3.dp else 1.dp,
+                                                    color = if (isSelected) accentColor else colors.accentBorder,
+                                                    shape = RoundedCornerShape(8.dp)
+                                                )
                                                 .clickable {
-                                                    isDownloading = true
-                                                    scope.launch {
-                                                        val cacheDir = context.cacheDir
-                                                        SteamGridDbClient.downloadImageToTempFile(image.url, cacheDir)
-                                                            .onSuccess { tempFile ->
-                                                                onImageSelected(Uri.fromFile(tempFile))
-                                                                isDownloading = false
-                                                                onDismiss()
-                                                            }
-                                                            .onFailure { err ->
-                                                                errorMessage = err.message
-                                                                isDownloading = false
-                                                            }
-                                                    }
+                                                    selectedImage = if (isSelected) null else image
                                                 }
                                         ) {
                                             SteamGridDbImageThumbnail(
