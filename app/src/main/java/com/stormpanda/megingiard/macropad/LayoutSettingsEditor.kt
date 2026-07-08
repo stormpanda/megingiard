@@ -40,6 +40,13 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Pinch
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
@@ -954,6 +961,18 @@ private fun ImageCropDialog(
     var offsetXState by remember { mutableFloatStateOf(0f) }
     var offsetYState by remember { mutableFloatStateOf(0f) }
     var isInitialized by remember { mutableStateOf(false) }
+    var hasInteracted by remember { mutableStateOf(false) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pinchIconTransition")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pinchIconAlpha"
+    )
 
     LaunchedEffect(containerSize) {
         if (containerSize.width > 0 && containerSize.height > 0 && !isInitialized) {
@@ -1030,6 +1049,7 @@ private fun ImageCropDialog(
                     .pointerInput(bitmap, isInitialized) {
                         if (!isInitialized) return@pointerInput
                         detectTransformGestures { _, pan, zoom, _ ->
+                            hasInteracted = true
                             val imageSize = IntSize(bitmap.width, bitmap.height)
                             val newScale = (scale * zoom).coerceIn(LSE_CROP_MIN_SCALE, LSE_CROP_MAX_SCALE)
                             scale = newScale
@@ -1038,7 +1058,8 @@ private fun ImageCropDialog(
                             offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
                             offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
                         }
-                    }
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 if (isInitialized && containerSize.width > 0 && containerSize.height > 0) {
                     val imageSize = IntSize(bitmap.width, bitmap.height)
@@ -1059,6 +1080,26 @@ private fun ImageCropDialog(
                                 translationY = clampedY
                             )
                     )
+                }
+
+                if (!hasInteracted) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Pinch,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .graphicsLayer {
+                                    this.alpha = alpha
+                                }
+                        )
+                    }
                 }
             }
 
