@@ -92,6 +92,9 @@ object SettingsManager {
     private val _overlayFadeOut = MutableStateFlow(false)
     val overlayFadeOut: StateFlow<Boolean> = _overlayFadeOut.asStateFlow()
 
+    private val _steamGridDbApiToken = MutableStateFlow("")
+    val steamGridDbApiToken: StateFlow<String> = _steamGridDbApiToken.asStateFlow()
+
 
     private val _showWelcomeTutorial = MutableStateFlow(true)
     val showWelcomeTutorial: StateFlow<Boolean> = _showWelcomeTutorial.asStateFlow()
@@ -167,6 +170,7 @@ object SettingsManager {
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
                     _overlayFadeOut.value = prefs[KEY_OVERLAY_FADE_OUT] ?: false
+                    _steamGridDbApiToken.value = prefs[KEY_STEAMGRIDDB_API_TOKEN] ?: ""
 
                     _showWelcomeTutorial.value = prefs[KEY_SHOW_WELCOME_TUTORIAL] ?: true
                     _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
@@ -312,6 +316,18 @@ object SettingsManager {
         scope.launch {
             dataStore.edit { prefs ->
                 prefs[KEY_OVERLAY_FADE_OUT] = value
+            }
+        }
+    }
+
+    fun setSteamGridDbApiToken(value: String) {
+        AppLog.d(TAG, "setSteamGridDbApiToken(redacted)")
+        _steamGridDbApiToken.value = value
+        scope.launch {
+            if (::dataStore.isInitialized) {
+                dataStore.edit { prefs ->
+                    prefs[KEY_STEAMGRIDDB_API_TOKEN] = value
+                }
             }
         }
     }

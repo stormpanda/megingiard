@@ -959,4 +959,28 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
     <string name="quick_menu_tutorial_body">Swipe the quick menu bar indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.\n\nNote: You can configure the bar to fade out automatically in Global Settings (Appearance) if you prefer a cleaner look. This behavior is disabled by default.</string>
 
+    <!-- SteamGridDB integration -->
+    <string name="settings_steamgriddb_token">SteamGridDB API Token</string>
+    <string name="settings_steamgriddb_token_desc">Required to scrape background images from steamgriddb.com. Generate one in your Profile Preferences on their website.</string>
+    <string name="settings_steamgriddb_token_placeholder">Enter your API key here</string>
+    <string name="layout_settings_bg_image_scrape">Scrape</string>
+    <string name="steamgriddb_token_missing_title">API Token Required</string>
+    <string name="steamgriddb_token_missing_message">SteamGridDB scraping requires an API token. Please create an API key in your SteamGridDB account preferences and add it in Megingiard\'s Global Settings.</string>
+    <string name="steamgriddb_token_missing_go_settings">Go to Settings</string>
+    <string name="steamgriddb_scrape_search_label">Search Game</string>
+    <string name="steamgriddb_scrape_search_placeholder">e.g. Half-Life 2</string>
+    <string name="steamgriddb_scrape_type_grid">Grid</string>
+    <string name="steamgriddb_scrape_type_hero">Hero</string>
+    <string name="steamgriddb_scrape_type_logo">Logo</string>
+    <string name="steamgriddb_scrape_type_icon">Icon</string>
+    <string name="steamgriddb_scrape_search_btn">Search</string>
+    <string name="steamgriddb_scrape_searching_games">Searching games...</string>
+    <string name="steamgriddb_scrape_loading_images">Loading images...</string>
+    <string name="steamgriddb_scrape_no_games_found">No games found.</string>
+    <string name="steamgriddb_scrape_no_images_found">No images found for this type.</string>
+    <string name="steamgriddb_scrape_select_game">Select Game:</string>
+    <string name="steamgriddb_scrape_error">Error: %1$s</string>
+    <string name="steamgriddb_scrape_dialog_title">SteamGridDB Scraper</string>
+    <string name="steamgriddb_scrape_downloading">Downloading image...</string>
+
 </resources>

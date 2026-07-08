@@ -198,6 +198,19 @@ Each button supports one of the following actions:
 - When a profile is deleted, all background image files for its layouts are deleted.
 - Creating a layout from a template layout (deep copy) automatically duplicates the background image file under the new layout's ID, ensuring that layouts do not share dependencies on the same file.
 
+### FR-P9b: SteamGridDB Image Scraper
+
+- Users can scrape background images directly from [SteamGridDB](https://www.steamgriddb.com/) using their API v2.
+- A **"Scrape"** button is provided next to the background image "Choose" button in the Layout Settings Editor.
+- When clicked, Megingiard checks if a SteamGridDB API key is configured.
+  - If **no key is configured**, a warning dialog appears directing the user to create a token on SteamGridDB and providing a button that opens the **Global Settings Screen** directly.
+  - If a key is configured, the **SteamGridDB Scraper** dialog opens.
+- The scraper dialog automatically performs an autocomplete search for games matching the layout's name as the initial query.
+- The user can modify the search query, search for games manually, select a matching game, and switch between four asset types: **Grid**, **Hero**, **Logo**, and **Icon**.
+- Tapping on a preview thumbnail downloads the chosen image asynchronously, copies it to the internal files folder, and sets it as the layout's background image.
+- A **SteamGridDB API-Token** field is provided in the **Global Settings Screen** under the General section to allow users to input and persist their API key via DataStore.
+
+
 ### FR-P10: Optional Button Icons
 
 - Any button MAY be assigned an optional **icon** from the bundled **Material Symbols Rounded** icon font.

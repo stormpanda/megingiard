@@ -61,6 +61,12 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
+import com.stormpanda.megingiard.settings.GlobalSettingsScreen
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import android.graphics.LinearGradient
@@ -361,6 +367,7 @@ class MirrorPresentation(
                         val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
                         val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
                         val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+                        val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
                         val density = LocalDensity.current
                         val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
                         val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
@@ -564,6 +571,17 @@ class MirrorPresentation(
                             }
 
                             ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
+
+                            AnimatedVisibility(
+                                visible  = isGlobalSettingsOpen,
+                                enter    = slideInVertically { it } + fadeIn(),
+                                exit     = slideOutVertically { it } + fadeOut(),
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                GlobalSettingsScreen(
+                                    onBack = { AppStateManager.setGlobalSettingsOpen(false) }
+                                )
+                            }
                         }
                     }
                 }

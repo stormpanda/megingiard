@@ -64,6 +64,7 @@ import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.QuickMenuBar
@@ -98,6 +99,7 @@ fun MainAppScreen() {
     val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
+    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
@@ -257,6 +259,17 @@ fun MainAppScreen() {
             // are open because those modals render their own full-screen chrome.
             if (!isEditorActive && !isBackgroundSettingsActive) {
                 QuickMenuBar()
+            }
+
+            AnimatedVisibility(
+                visible  = isGlobalSettingsOpen,
+                enter    = slideInVertically { it } + fadeIn(),
+                exit     = slideOutVertically { it } + fadeOut(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                GlobalSettingsScreen(
+                    onBack = { AppStateManager.setGlobalSettingsOpen(false) }
+                )
             }
         }
 

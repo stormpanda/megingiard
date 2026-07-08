@@ -215,6 +215,14 @@ object AppStateManager {
         _selectedCutoutId.value = id
     }
 
+    private val _isGlobalSettingsOpen = MutableStateFlow(false)
+    val isGlobalSettingsOpen: StateFlow<Boolean> = _isGlobalSettingsOpen.asStateFlow()
+
+    fun setGlobalSettingsOpen(open: Boolean) {
+        AppLog.d(TAG, "setGlobalSettingsOpen($open)")
+        _isGlobalSettingsOpen.value = open
+    }
+
 
     private var wasViewportEditActiveBeforeSettings = false
 
@@ -259,7 +267,8 @@ object AppStateManager {
         _isViewportEditActive,
         _isBackgroundSettingsActive,
         MacroPadState.isPeekActive,
-    ) { kb, ms, vp, amb, peek -> kb || ms || vp || amb || peek }
+        _isGlobalSettingsOpen,
+    ) { array: Array<Boolean> -> array.any { it } }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setFullscreenKeyboardActive(active: Boolean, layout: KbLayout = KbLayout.QWERTZ) {
@@ -321,6 +330,7 @@ object AppStateManager {
         _isFullscreenMouseActive.value = false
         _isViewportEditActive.value = false
         _isBackgroundSettingsActive.value = false
+        _isGlobalSettingsOpen.value = false
         _isAmbientPreviewActive.value = false
         _ambientPreviewConfig.value = null
         _activeCropCutoutId.value = null

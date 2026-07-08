@@ -103,7 +103,7 @@ fun QuickMenu(
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
-    var showGlobalSettings by remember { mutableStateOf(false) }
+    val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
@@ -219,23 +219,13 @@ fun QuickMenu(
                         label    = stringResource(R.string.quick_menu_global_settings),
                         icon     = Icons.Rounded.Settings,
                         colors   = colors,
-                        onClick  = { showGlobalSettings = true },
+                        onClick  = { AppStateManager.setGlobalSettingsOpen(true) },
                         modifier = Modifier.weight(1f),
                     )
                     HelpIconButton(onClick = { showQuickMenuHelp = true })
                 }
             }
         }
-    }
-
-    // ── Global Settings full-screen overlay ───────────────────────────────
-    AnimatedVisibility(
-        visible = showGlobalSettings,
-        enter = slideInVertically { it } + fadeIn(),
-        exit  = slideOutVertically { it } + fadeOut(),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        GlobalSettingsScreen(onBack = { showGlobalSettings = false })
     }
 
     QuickMenuHelpModal(
