@@ -1,9 +1,11 @@
 package com.stormpanda.megingiard.macropad
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,8 +28,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -38,6 +42,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,8 +51,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -76,6 +84,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "LayoutSettingsEditor"
+
+private val LSE_THUMBNAIL_SIZE = 40.dp
+private val LSE_THUMBNAIL_ROUNDING = 6.dp
+private const val LSE_THUMBNAIL_DIM_ALPHA = 0.7f
+private val LSE_MAGNIFIER_ICON_SIZE = 18.dp
+private const val LSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.85f
+private val LSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
+private const val LSE_PREVIEW_MODAL_BG_ALPHA = 0.6f
+private val LSE_PREVIEW_IMAGE_ROUNDING = 8.dp
+private val LSE_SPACING_16 = 16.dp
 
 @Composable
 internal fun LayoutSettingsEditor(
@@ -106,6 +124,42 @@ internal fun LayoutSettingsEditor(
     var currentBgPath by remember { mutableStateOf(initialBackgroundImagePath) }
     var useAsMask by remember { mutableStateOf(initialUseAsMask) }
     var invisibleButtons by remember { mutableStateOf(initialInvisibleButtons) }
+
+    var previewBitmap by remember(pendingImageUri, currentBgPath) { mutableStateOf<ImageBitmap?>(null) }
+    var showPreviewModal by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pendingImageUri, currentBgPath) {
+        if (pendingImageUri != null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openInputStream(pendingImageUri!!).use { input ->
+                        val decoded = BitmapFactory.decodeStream(input)
+                        previewBitmap = decoded?.asImageBitmap()
+                    }
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to decode pending image uri $pendingImageUri", e)
+                    previewBitmap = null
+                }
+            }
+        } else if (currentBgPath != null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val file = File(context.filesDir, currentBgPath!!)
+                    if (file.exists()) {
+                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        previewBitmap = decoded?.asImageBitmap()
+                    } else {
+                        previewBitmap = null
+                    }
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to decode current background image $currentBgPath", e)
+                    previewBitmap = null
+                }
+            }
+        } else {
+            previewBitmap = null
+        }
+    }
 
     var activeColorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
     var activePaletteDialogTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
@@ -269,6 +323,32 @@ internal fun LayoutSettingsEditor(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (pendingImageUri != null || currentBgPath != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(LSE_THUMBNAIL_SIZE)
+                                .clip(RoundedCornerShape(LSE_THUMBNAIL_ROUNDING))
+                                .background(colors.surfaceVariant)
+                                .clickable(enabled = previewBitmap != null) { showPreviewModal = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            previewBitmap?.let { bmp ->
+                                Image(
+                                    bitmap = bmp,
+                                    contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .alpha(LSE_THUMBNAIL_DIM_ALPHA)
+                                )
+                                Icon(
+                                    imageVector = Icons.Rounded.Search,
+                                    contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(LSE_MAGNIFIER_ICON_SIZE)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+
                         IconButton(
                             onClick = {
                                 pendingImageUri = null
@@ -455,6 +535,13 @@ internal fun LayoutSettingsEditor(
             visible = showHelpMenu,
             onDismiss = { showHelpMenu = false }
         )
+
+        if (showPreviewModal && previewBitmap != null) {
+            ImagePreviewDialog(
+                bitmap = previewBitmap!!,
+                onDismiss = { showPreviewModal = false }
+            )
+        }
     }
 }
 
@@ -696,3 +783,61 @@ private fun LayoutSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         )
     }
 }
+
+@Composable
+private fun ImagePreviewDialog(
+    bitmap: ImageBitmap,
+    onDismiss: () -> Unit
+) {
+    val colors = LocalAppColors.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = LSE_PREVIEW_MODAL_BG_ALPHA))
+            .clickable(onClick = onDismiss)
+            .blockPointerEvents(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(LSE_PREVIEW_MODAL_WIDTH_FRACTION)
+                .background(colors.surface, RoundedCornerShape(LSE_PREVIEW_MODAL_CORNER_RADIUS))
+                .clickable(enabled = true, onClick = {})
+                .padding(LSE_SPACING_16),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.layout_settings_bg_image_preview_dialog_title),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.macropad_editor_cancel),
+                        tint = colors.onSurfaceSecondary
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(LSE_SPACING_16))
+
+            Image(
+                bitmap = bitmap,
+                contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(LSE_PREVIEW_IMAGE_ROUNDING))
+                    .align(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+

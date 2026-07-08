@@ -189,6 +189,7 @@ Each button supports one of the following actions:
 - Users can choose a **custom background image** to be displayed behind the MacroPad buttons.
 - The configuration is situated in the **Layout Settings** overlay of the layout editor.
 - Tapping "Choose Image" opens the system document picker (`image/*`).
+- When a background image is selected, a slightly dimmed thumbnail preview of the image is shown to the left of the delete icon, with a magnifier icon overlaid on it. Tapping this thumbnail opens a larger preview of the image in a modal dialog.
 - To prevent permissions from expiring and keep layouts self-contained, the chosen image is copied to the app's internal files directory as `backgrounds/bg_<layoutId>`.
 - The `backgroundImagePath` parameter in `PadLayout` stores a relative path (e.g. `backgrounds/bg_<layoutId>`) to maintain portability and compatibility with Megingiard's profile import/export features.
 - In both **Use Mode** (`PadSurface`) and **Layout Editor** (`PadCanvas`), the image is loaded asynchronously off the main thread (`Dispatchers.IO`) and rendered centered with crop scaling (`ContentScale.Crop`) behind the buttons.
