@@ -23,6 +23,7 @@ internal val KEY_EXCLUDE_FROM_RECENTS = booleanPreferencesKey("exclude_from_rece
 internal val KEY_ACCENT_COLOR = intPreferencesKey("accent_color")
 internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 internal val KEY_OVERLAY_FADE_OUT = booleanPreferencesKey("overlay_fade_out")
+internal val KEY_STEAMGRIDDB_API_TOKEN = stringPreferencesKey("steamgriddb_api_token")
 
 
 // Mirror touch projection settings
@@ -99,7 +100,7 @@ internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_OVERLAY_FADE_OUT, KEY_THEME_MODE,
     KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
-    KEY_AUTO_SWITCH_PROFILES, KEY_EXCLUDE_FROM_RECENTS,
+    KEY_AUTO_SWITCH_PROFILES, KEY_EXCLUDE_FROM_RECENTS, KEY_STEAMGRIDDB_API_TOKEN,
 )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_PINCH_WHILE_PROJECTING,

@@ -4,6 +4,10 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
+import com.stormpanda.megingiard.AppStateManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -127,6 +131,8 @@ internal fun LayoutSettingsEditor(
 
     var previewBitmap by remember(pendingImageUri, currentBgPath) { mutableStateOf<ImageBitmap?>(null) }
     var showPreviewModal by remember { mutableStateOf(false) }
+    var showScrapeDialog by remember { mutableStateOf(false) }
+    var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(pendingImageUri, currentBgPath) {
         if (pendingImageUri != null) {
@@ -377,6 +383,23 @@ internal fun LayoutSettingsEditor(
                             color = colors.onAccent
                         )
                     }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val token = SettingsManager.steamGridDbApiToken.value
+                            if (token.isBlank()) {
+                                showApiTokenMissingDialog = true
+                            } else {
+                                showScrapeDialog = true
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.layout_settings_bg_image_scrape),
+                            color = colors.onAccent
+                        )
+                    }
                 }
             }
 
@@ -540,6 +563,63 @@ internal fun LayoutSettingsEditor(
             ImagePreviewDialog(
                 bitmap = previewBitmap!!,
                 onDismiss = { showPreviewModal = false }
+            )
+        }
+
+        if (showScrapeDialog) {
+            SteamGridDbScrapeDialog(
+                initialSearchQuery = nameText,
+                onImageSelected = { uri ->
+                    pendingImageUri = uri
+                    currentBgPath = null
+                },
+                onDismiss = { showScrapeDialog = false },
+                accentColor = accentColor
+            )
+        }
+
+        if (showApiTokenMissingDialog) {
+            AlertDialog(
+                onDismissRequest = { showApiTokenMissingDialog = false },
+                title = {
+                    Text(
+                        text = stringResource(R.string.steamgriddb_token_missing_title),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.steamgriddb_token_missing_message),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showApiTokenMissingDialog = false
+                            AppStateManager.setGlobalSettingsOpen(true)
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.steamgriddb_token_missing_go_settings),
+                            color = colors.accent,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showApiTokenMissingDialog = false }) {
+                        Text(
+                            text = stringResource(R.string.settings_color_cancel),
+                            color = colors.onSurfaceSecondary
+                        )
+                    }
+                },
+                containerColor = colors.surface,
+                shape = RoundedCornerShape(12.dp)
             )
         }
     }

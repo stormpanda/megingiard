@@ -52,6 +52,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val overlayFadeOut: StateFlow<Boolean> = SettingsManager.overlayFadeOut
     val appLanguage: StateFlow<AppLanguage> = SettingsManager.appLanguage
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
+    val steamGridDbApiToken: StateFlow<String> = SettingsManager.steamGridDbApiToken
     
     val showWelcomeTutorial: StateFlow<Boolean> = SettingsManager.showWelcomeTutorial
     val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
@@ -78,6 +79,7 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setOverlayFadeOut(value: Boolean) = SettingsManager.setOverlayFadeOut(value)
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
+    fun setSteamGridDbApiToken(value: String) = SettingsManager.setSteamGridDbApiToken(value)
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
 
     fun setShowWelcomeTutorial(value: Boolean) = SettingsManager.setShowWelcomeTutorial(value)

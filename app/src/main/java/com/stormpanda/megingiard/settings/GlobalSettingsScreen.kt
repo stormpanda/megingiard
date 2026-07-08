@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,6 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import android.app.ActivityOptions
+import androidx.compose.ui.text.font.FontWeight
+import com.stormpanda.megingiard.ui.AppTextField
 import android.view.Display
 import android.content.Intent
 import android.net.Uri
@@ -98,6 +101,7 @@ fun GlobalSettingsScreen(
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
+    val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
@@ -221,6 +225,12 @@ fun GlobalSettingsScreen(
                             description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
                             checked = gamepadSwapFaceButtons,
                             onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                        )
+                        AppDivider()
+                        SteamGridDbTokenRow(
+                            token = steamGridDbApiToken,
+                            onTokenChanged = { viewModel.setSteamGridDbApiToken(it) },
+                            accentColor = effectiveAccent,
                         )
                     }
                 }
@@ -753,6 +763,44 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         HelpEntry(
             label = stringResource(R.string.settings_save_log_report),
             description = stringResource(R.string.help_settings_save_log_desc),
+        )
+    }
+}
+
+@Composable
+private fun SteamGridDbTokenRow(
+    token: String,
+    onTokenChanged: (String) -> Unit,
+    accentColor: Color,
+) {
+    val colors = LocalAppColors.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.settings_steamgriddb_token),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = stringResource(R.string.settings_steamgriddb_token_desc),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        AppTextField(
+            value = token,
+            onValueChange = onTokenChanged,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.settings_steamgriddb_token_placeholder),
+                    color = colors.onSurfaceSecondary
+                )
+            },
+            singleLine = true
         )
     }
 }
