@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -516,6 +517,20 @@ private fun DraggableButton(
                 )
             } else {
                 Text(btn.label, color = effectiveTextTint, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (btn.invisible) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                MaterialSymbol(
+                    name = "visibility_off",
+                    size = 14.dp,
+                    tint = effectiveTextTint,
+                )
             }
         }
     }
