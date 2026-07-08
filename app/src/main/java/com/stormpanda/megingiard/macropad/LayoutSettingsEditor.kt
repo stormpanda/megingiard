@@ -984,17 +984,35 @@ private fun ImageCropDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_cancel),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
                 Text(
                     text = stringResource(R.string.layout_settings_crop_image_title),
                     color = colors.onSurface,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
                 )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.macropad_editor_cancel),
-                        tint = colors.onSurfaceSecondary
+
+                TextButton(
+                    onClick = {
+                        val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
+                        val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
+                        onConfirmCrop(scale, finalOffsetX, finalOffsetY)
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.macropad_editor_done),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
@@ -1049,35 +1067,8 @@ private fun ImageCropDialog(
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 12.dp)
+                modifier = Modifier.padding(top = 12.dp)
             )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_cancel),
-                        color = colors.onSurfaceSecondary
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
-                        val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
-                        onConfirmCrop(scale, finalOffsetX, finalOffsetY)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.accent)
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_done),
-                        color = colors.onAccent
-                    )
-                }
-            }
         }
     }
 }
