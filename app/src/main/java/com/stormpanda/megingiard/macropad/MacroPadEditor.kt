@@ -297,17 +297,19 @@ fun MacroPadEditor(onDone: () -> Unit) {
         // New layout (name input + visibility + background + button colors)
         if (showNewLayoutDialog && profile != null) {
             val newLayoutId = remember(showNewLayoutDialog) { UUID.randomUUID().toString() }
-            InlineLayoutSettingsOverlay(
+            LayoutSettingsEditor(
                 title = stringResource(R.string.settings_macropad_new_layout),
                 layoutId = newLayoutId,
                 initialName = "",
-                initialButtonColorNoMirror = ButtonColorStyle.ACCENTED,
-                initialButtonColorMirror = ButtonColorStyle.NEUTRAL,
+                initialButtonTextColor = ColorOption.Neutral,
+                initialButtonBorderColor = ColorOption.Neutral,
+                initialButtonBgColor = ColorOption.Neutral,
                 initialBackgroundImagePath = null,
                 initialUseAsMask = false,
+                initialInvisibleButtons = false,
                 accentColor = colors.accent,
                 existingNames = profile.layouts.map { it.name },
-                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, useAsMask, bgChanged ->
+                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged ->
                     val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
                     val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
                     val bottomW = ScreenCaptureManager.surfaceWidth.value
@@ -321,10 +323,12 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         id = newLayoutId,
                         name = name,
                         enabled = true,
-                        buttonColorNoMirror = noMirrorStyle,
-                        buttonColorMirror = mirrorStyle,
+                        buttonTextColor = textCol,
+                        buttonBorderColor = borderCol,
+                        buttonBgColor = bgCol,
                         backgroundImagePath = bgImagePath,
                         useBackgroundImageAsMask = useAsMask,
+                        invisibleButtons = invisibleBtns,
                         backgroundImageVersion = if (bgChanged) 1 else 0,
                         mirrorCutouts = listOf(defaultCutout)
                     )
@@ -334,6 +338,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 onDismiss = { showNewLayoutDialog = false }
             )
         }
+
 
         // Delete layout confirmation
         if (layoutPendingDelete != null) {
@@ -420,28 +425,32 @@ fun MacroPadEditor(onDone: () -> Unit) {
             )
         }
 
-        // Edit layout overlay (in-tree input overlay — no Dialog window)
+        // Edit layout overlay
         if (showEditLayoutDialog && activeLayout != null) {
             val curLayout = activeLayout!!
-            InlineLayoutSettingsOverlay(
+            LayoutSettingsEditor(
                 title = stringResource(R.string.macropad_editor_title),
                 layoutId = curLayout.id,
                 initialName = curLayout.name,
-                initialButtonColorNoMirror = curLayout.buttonColorNoMirror,
-                initialButtonColorMirror = curLayout.buttonColorMirror,
+                initialButtonTextColor = curLayout.buttonTextColor,
+                initialButtonBorderColor = curLayout.buttonBorderColor,
+                initialButtonBgColor = curLayout.buttonBgColor,
                 initialBackgroundImagePath = curLayout.backgroundImagePath,
                 initialUseAsMask = curLayout.useBackgroundImageAsMask,
+                initialInvisibleButtons = curLayout.invisibleButtons,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, noMirrorStyle, mirrorStyle, bgImagePath, useAsMask, bgChanged ->
+                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
                             enabled = true,
-                            buttonColorNoMirror = noMirrorStyle,
-                            buttonColorMirror = mirrorStyle,
+                            buttonTextColor = textCol,
+                            buttonBorderColor = borderCol,
+                            buttonBgColor = bgCol,
                             backgroundImagePath = bgImagePath,
                             useBackgroundImageAsMask = useAsMask,
+                            invisibleButtons = invisibleBtns,
                             backgroundImageVersion = if (bgChanged) curLayout.backgroundImageVersion + 1 else curLayout.backgroundImageVersion
                         )
                     )
@@ -450,6 +459,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 onDismiss = { showEditLayoutDialog = false }
             )
         }
+
 
         // Render ReorderProfilesOverlay
         AnimatedVisibility(

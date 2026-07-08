@@ -73,6 +73,9 @@ object MacroPadSettings {
     /** Dead zone radius for the right analog stick during physical gamepad recording (0.0–1.0). */
     val deadzoneRight: StateFlow<Float> = _deadzoneRight.asStateFlow()
 
+    private val _recentColors = MutableStateFlow<List<Int>>(emptyList())
+    val recentColors: StateFlow<List<Int>> = _recentColors.asStateFlow()
+
     internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
         this.dataStore = dataStore
         this.scope = scope
@@ -94,9 +97,17 @@ object MacroPadSettings {
         _deadzoneLeft.value  = prefs[KEY_PRIVD_DEADZONE_LEFT]  ?: PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
 
+        val colorsStr = prefs[KEY_MACROPAD_RECENT_COLORS] ?: ""
+        _recentColors.value = if (colorsStr.isBlank()) {
+            emptyList()
+        } else {
+            colorsStr.split(",").mapNotNull { it.toIntOrNull() }
+        }
+
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
         val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
+
         if (hasLoadedOnce && macropadProfilesJson == lastLoadedProfilesJson && activeId == lastLoadedActiveProfileId) {
             return
         }
@@ -153,6 +164,23 @@ object MacroPadSettings {
         _deadzoneRight.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_DEADZONE_RIGHT] = value } }
     }
+
+    fun addRecentColor(color: Int) {
+        val current = _recentColors.value.toMutableList()
+        current.remove(color)
+        current.add(0, color)
+        if (current.size > 10) {
+            current.removeAt(current.lastIndex)
+        }
+        _recentColors.value = current
+        val colorsStr = current.joinToString(",")
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[KEY_MACROPAD_RECENT_COLORS] = colorsStr
+            }
+        }
+    }
+
 
     /**
      * Schedules a MacroPad data persist. Rapid consecutive calls are coalesced — only the last

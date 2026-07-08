@@ -33,6 +33,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - The grid mode cycles **Off → Rectangular → Radial → Off** via a single toggle button located in the editor toolbar row (to the right of the "Add Button" and "Macros…" chips), above the canvas preview.
 - When a grid is active, dragged buttons **magnetically snap** to the nearest grid intersection point. When the grid is off, buttons position freely.
 - Grid mode is **local editor state** — it is not persisted and resets to Off each time the editor opens.
+- While editing the unlocked button layout, the button that was touched or dragged last MUST display four drag handles (using the `"drag_pan"` Material Symbol) placed outside its Top, Bottom, Left, and Right edges with a 4 dp padding. The handles are interactive; dragging from any of the handles moves the button in sync, and they are sized at 16 dp to ensure they do not overlap or obfuscate the button layout.
 
 ### FR-P3: Action Types
 
@@ -153,7 +154,7 @@ Each button supports one of the following actions:
 - Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
 - Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable layout bar with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
 - Each layout chip, when more than one layout exists, has a delete action.
-- A new layout can be created as a **blank** layout. When creating a new layout, the Layout Settings edit dialog (`InlineLayoutSettingsOverlay`) is displayed immediately to configure the name, background image, and button colors.
+- A new layout can be created as a **blank** layout. When creating a new layout, the full-screen **Layout Settings Editor** (`LayoutSettingsEditor`) is displayed immediately to configure the name, background image, and default button colors.
 - Users can duplicate existing layouts to reuse their configuration, buttons, and cutouts (deep copy with new UUIDs).
 - Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all layouts** in the profile (via `withSyncedDeviceFlags()`).
 - Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). If a stored `PadProfile` does not contain a `layouts` list, a default layout named "Layout 1" is created on load, populated with the profile's top-level `buttons` list.
@@ -171,12 +172,17 @@ Each button supports one of the following actions:
 - **Dimming** (0–90%, default 0%): draws a semi-transparent black overlay on top of the mirror background.
 - A special **Background Peek** action (`PadAction.BackgroundPeek`): toggles hiding all buttons and dimming.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
-- **Per-layout button color style** (`PadLayout.buttonColorNoMirror` / `PadLayout.buttonColorMirror`): Each layout can independently configure the button color style for two states: when mirroring is inactive and when it is active (ambient overlay).
-  - `buttonColorNoMirror` — defaults to `ButtonColorStyle.ACCENTED`. Buttons use the active accent colour and `macroPadOnSurface` text token.
-  - `buttonColorMirror` — defaults to `ButtonColorStyle.NEUTRAL`. Buttons use a neutral white/grey palette (soft grey outline `#AAAAAA`, near-white text `#DDDDDD` at 90 % opacity) that is theme-independent.
-  - Both settings are exposed in the **Layout Settings** section of the layout editor (below the toolbar, above the button list) as dropdowns using the shared app dropdown styling.
-  - The neutral style is implemented via the `neutralStyle: Boolean` parameter on `PadButton` and `PadSurface`. `MacroPadScreen` passes `neutralStyle = layout.buttonColorNoMirror == ButtonColorStyle.NEUTRAL`; `BackgroundMacroPadOverlay` passes `neutralStyle = layout.buttonColorMirror == ButtonColorStyle.NEUTRAL`.
-  - These settings are persisted as part of `PadLayout` and are included in config exports automatically.
+- **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and fading color.
+  - Colors are stored using the `ColorOption` schema, which supports **Neutral Style** (neutral theme-independent palette), **Accent Color** (dynamically resolved system accent color), or a **Custom Color** (fixed ARGB).
+  - Defaults are configured inside the full-screen **Layout Settings Editor** using color picker wheels and quick selection palettes featuring the 10 most recently used colors.
+  - **Opacity Slider**: The custom color picker wheel incorporates an opacity/alpha slider that operates in the 10% to 100% range (`0.1f..1.0f`). Any values parsed or configured are clamped to this range.
+  - **Luminance-aware Apply Button**: The "Apply" button inside the color picker dynamically changes its text color to black or white based on the luminance and transparency of the currently picked color, ensuring maximum readability.
+  - **Invisible Buttons**: Both the layout settings editor and the button editor include an "Invisible Buttons" switch toggle.
+    - Layout-level `invisibleButtons` acts as a default template option: when active, newly created buttons in that layout will default to having their individual `invisible` property enabled.
+    - Button-level `invisible` property controls the visibility of the button in Use Mode. When true, the button is completely hidden (visually transparent) but remains fully interactive under touch input. In editing mode, the button remains visible (with the button body rendered at 40% opacity and overlaid with a small crossed-out eye in the top right corner at 100% opacity for clear distinction) so it can be customized and repositioned.
+  - **Button-level overrides**: Each button can override the layout-wide color defaults individually using the same `ColorOption` fields (`PadButton.buttonTextColor`, `PadButton.buttonBorderColor`, `PadButton.buttonBgColor` for fading color). A special `null` value (shown as **Layout Default**) reverts the button back to the layout-wide default behavior.
+  - Color options survive profile imports/exports and migrate legacy button color formats (`buttonColorNoMirror` / `buttonColorMirror`) automatically.
+
 
 ### FR-P9a: Custom Background Image
 
@@ -423,6 +429,10 @@ PadProfile
         ├── name: String
         ├── enabled: Boolean    (deprecated / unused)
         ├── buttons: List<PadButton>
+        ├── buttonTextColor: ColorOption
+        ├── buttonBorderColor: ColorOption
+        ├── buttonBgColor: ColorOption
+        ├── invisibleButtons: Boolean      (default false — template option for new buttons)
         ├── ambientDim: Float              (0–0.9, default 0)
         ├── ambientVignetteEnabled: Boolean (default false)
         ├── ambientVignetteShape: VignetteShape (RADIAL/LETTERBOX/PILLARBOX/TOP/BOTTOM/LEFT/RIGHT)
@@ -437,6 +447,10 @@ PadProfile
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── buttonSize: ButtonSize (SIZE_1X1 | SIZE_2X1 | SIZE_1X2 | SIZE_2X2)
         ├── buttonShape: ButtonShape (SQUARE | CIRCLE | ICON_ONLY)
+        ├── buttonTextColor: ColorOption?  (override, null = layout default)
+        ├── buttonBorderColor: ColorOption? (override, null = layout default)
+        ├── buttonBgColor: ColorOption?    (override, null = layout default)
+        ├── invisible: Boolean             (default false — hidden in use mode, visible in edit mode)
         ├── action: PadAction   (sealed)
         │     KeyboardKey(keycode, label)
         │     GamepadButton(btnCode, label)

@@ -67,6 +67,9 @@ internal val KEY_SKIP_GAMEPAD_RECORD_DIALOG = booleanPreferencesKey("skip_gamepa
 // MacroPad — gamepad face-button label swap (display only, keycodes unchanged)
 internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
 
+// MacroPad — 10 most recently used colors (stored as comma-separated ARGB integers)
+internal val KEY_MACROPAD_RECENT_COLORS = stringPreferencesKey("macropad_recent_colors")
+
 // Privileged Mode — show ADB reconnect prompt on app start when connection fails
 internal val KEY_PRIVD_SHOW_ADB_PROMPT = booleanPreferencesKey("privd_show_adb_prompt")
 
@@ -113,10 +116,12 @@ private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
     KEY_MACROPAD_AMBIENT_DIM,
     KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
     KEY_GAMEPAD_SWAP_FACE_BUTTONS,
+    KEY_MACROPAD_RECENT_COLORS,
     KEY_PRIVD_SHOW_ADB_PROMPT,
     KEY_PRIVD_DEADZONE_LEFT,
     KEY_PRIVD_DEADZONE_RIGHT,
 )
+
 
 internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(
     "global" to GLOBAL_KEYS,

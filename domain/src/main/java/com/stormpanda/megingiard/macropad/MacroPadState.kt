@@ -167,15 +167,31 @@ object MacroPadState {
                 )
             } else {
                 val migratedLayouts = p.layouts.map { layout ->
-                    if (!layout.mirrorConfigured) {
+                    var current = layout
+                    var changed = false
+                    if (current.buttonColorNoMirror != null || current.buttonColorMirror != null) {
                         needsSave = true
-                        layout.copy(mirrorConfigured = true)
+                        changed = true
+                        current = current.copy(
+                            buttonTextColor = ColorOption.Neutral,
+                            buttonBorderColor = ColorOption.Neutral,
+                            buttonBgColor = ColorOption.Neutral,
+                            buttonColorNoMirror = null,
+                            buttonColorMirror = null
+                        )
+                    }
+                    if (!current.mirrorConfigured) {
+                        needsSave = true
+                        current.copy(mirrorConfigured = true)
+                    } else if (changed) {
+                        current
                     } else {
                         layout
                     }
                 }
                 p = p.copy(layouts = migratedLayouts)
             }
+
 
             p
         }
@@ -362,7 +378,6 @@ object MacroPadState {
 
     fun updateLayout(layout: PadLayout) {
         val profile = activeProfile.value ?: return
-        AppLog.d(TAG, "updateLayout id=${layout.id} name='${layout.name}'")
         val withConfigured = if (!layout.mirrorConfigured) layout.copy(mirrorConfigured = true) else layout
         updateProfile(profile.copy(
             layouts = profile.layouts.map { if (it.id == withConfigured.id) withConfigured else it },

@@ -86,10 +86,11 @@ private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_
 // Neutral (theme-independent) ambient button style — intentionally NOT derived from AppColors;
 // these are muted, always-dim values designed to look unobtrusive on any background color and
 // are identical across all palettes (Dark / Light / Cyberpunk).
-private val MP_AMBIENT_NEUTRAL_BG     = Color.White
-private val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
-private val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
-private val MP_BTN_BACKING_COLOR      = Color(0x80121212)
+internal val MP_AMBIENT_NEUTRAL_BG     = Color.White
+internal val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
+internal val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
+internal val MP_BTN_BACKING_COLOR      = Color(0x80121212)
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Individual pad button
@@ -98,20 +99,29 @@ private val MP_BTN_BACKING_COLOR      = Color(0x80121212)
 @Composable
 internal fun PadButton(
     btn:              PadButton,
+    layout:           PadLayout,
     isPressed:        Boolean,
     canvasSize:       IntSize,
     accentColor:      Color,
     isDeviceDisabled: Boolean,
-    neutralStyle:     Boolean = false,
     isRunning:        Boolean = false,
 ) {
+    if (btn.invisible) {
+        return
+    }
+
     val density = LocalDensity.current
     val colors  = LocalAppColors.current
 
-    val effectiveBg           = if (neutralStyle) MP_AMBIENT_NEUTRAL_BG     else accentColor
-    val effectiveBorder       = if (neutralStyle) MP_AMBIENT_NEUTRAL_BORDER else accentColor
-    val effectiveContentAccent = if (neutralStyle) MP_AMBIENT_NEUTRAL_TEXT  else accentColor
-    val effectiveTextTint     = if (neutralStyle) MP_AMBIENT_NEUTRAL_TEXT   else colors.macroPadOnSurface
+    val resolvedBgColorOption = btn.buttonBgColor ?: layout.buttonBgColor
+    val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
+    val resolvedTextColorOption = btn.buttonTextColor ?: layout.buttonTextColor
+
+    val effectiveBg = resolveColorOption(resolvedBgColorOption, accentColor, MP_AMBIENT_NEUTRAL_BG)
+    val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val effectiveContentAccent = effectiveTextTint
+
 
     val alphaTarget  = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
@@ -321,3 +331,14 @@ internal fun BackgroundPeekFace(accentColor: Color) {
         modifier = Modifier.size(24.dp),
     )
 }
+
+internal fun resolveColorOption(option: ColorOption, accentColor: Color, defaultNeutral: Color): Color {
+    val resolved = when (option) {
+        ColorOption.Neutral -> defaultNeutral
+        ColorOption.Accent -> accentColor
+        is ColorOption.Custom -> Color(option.argb)
+    }
+    val clampedAlpha = resolved.alpha.coerceIn(0.1f, 1f)
+    return resolved.copy(alpha = clampedAlpha)
+}
+

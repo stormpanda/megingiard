@@ -418,6 +418,41 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_bg_image_remove">Hintergrundbild entfernen</string>
     <string name="layout_settings_bg_image_use_as_mask">Als Maske verwenden</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
+    <!-- Custom Layout Settings Buttons Colors -->
+    <string name="layout_settings_bg_section_title">Hintergrund</string>
+    <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
+    <string name="button_settings_colors_section_title">Tastenfarben</string>
+    <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
+    <string name="layout_settings_color_border">Rahmenfarbe</string>
+    <string name="layout_settings_color_bg">Verlaufsfarbe</string>
+    <string name="layout_settings_select_text_color">Text- &amp; Symbolfarbe wählen</string>
+    <string name="layout_settings_select_border_color">Rahmenfarbe wählen</string>
+    <string name="layout_settings_select_bg_color">Verlaufsfarbe wählen</string>
+    <string name="layout_settings_color_neutral">Neutraler Stil</string>
+    <string name="layout_settings_color_accent">Akzentfarbe</string>
+    <string name="layout_settings_recent_colors">Kürzlich verwendete Farben</string>
+    <string name="layout_settings_no_recent_colors">Noch keine kürzlich verwendeten Farben</string>
+    <string name="layout_settings_color_layout_default">Layout-Standardwert</string>
+    <string name="layout_settings_color_opacity">Deckkraft</string>
+    <string name="layout_settings_invisible_buttons">Unsichtbare Tasten</string>
+    <string name="layout_settings_invisible_buttons_desc">Macht die Tasten unsichtbar, während das Layout verwendet wird. Im Editor bleiben sie sichtbar.</string>
+ 
+ 
+    <!-- Help menu strings for Layout settings -->
+    <string name="help_layout_settings_title">Layout-Einstellungen Hilfe</string>
+    <string name="help_layout_settings_intro">Konfiguriere das Aussehen, das Hintergrundbild und die Standard-Tastenfarben dieses Layouts.</string>
+    <string name="help_layout_settings_sec_properties">Eigenschaften</string>
+    <string name="help_layout_settings_name_title">Layoutname</string>
+    <string name="help_layout_settings_name_desc">Weise diesem Layout einen eindeutigen Namen zu, um es im Editor und im Schnellmenü zu identifizieren.</string>
+    <string name="help_layout_settings_bg_title">Hintergrundbild</string>
+    <string name="help_layout_settings_bg_desc">Zeige optional ein benutzerdefiniertes Bild hinter den Tasten an. Unterstützte Formate sind JPG, PNG und WebP.</string>
+    <string name="help_layout_settings_mask_title">Als Maske verwenden</string>
+    <string name="help_layout_settings_mask_desc">Lege das Hintergrundbild über die gespiegelten Bildausschnitte. Ideal für eigene Konsolengehäuse oder transparente Rahmen.</string>
+    <string name="help_layout_settings_sec_colors">Tastenfarben</string>
+    <string name="help_layout_settings_colors_title">Standardfarben</string>
+    <string name="help_layout_settings_colors_desc">Setze Standardfarben für alle Tasten in diesem Layout (Text/Symbol, Rahmen und Verlaufsfarbe). Tasten können diese Werte einzeln überschreiben.</string>
+    <string name="help_layout_settings_palette_title">Schnellpalette</string>
+    <string name="help_layout_settings_palette_desc">Tippe auf das Palette-Symbol neben einer Farbe, um standardmäßige neutrale/Akzent-Stile oder kürzlich genutzte Farben auszuwählen.</string>
 
     <!-- Makro-Listenverwaltung -->
     <string name="macropad_macro_list_title">Makros</string>
