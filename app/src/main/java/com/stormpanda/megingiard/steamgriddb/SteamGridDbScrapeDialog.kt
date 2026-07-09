@@ -21,11 +21,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Search
@@ -99,7 +102,9 @@ internal fun SteamGridDbScrapeDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val apiKey = SettingsManager.steamGridDbApiToken.value
-    val scrollState = rememberScrollState()
+    val gridState = rememberLazyGridState()
+    // Cache keyed on (gameId, type) to avoid redundant authenticated API calls within a session
+    val imagesCache = remember { HashMap<Pair<Int, String>, List<SteamGridDbImage>>() }
 
     fun searchGames() {
         if (searchQuery.isBlank()) return
@@ -117,16 +122,24 @@ internal fun SteamGridDbScrapeDialog(
                         // Automatically select the first match and fetch its images
                         val firstGame = games.first()
                         selectedGame = firstGame
-                        isLoadingImages = true
-                        SteamGridDbClient.fetchImages(firstGame.id, selectedType, apiKey)
-                            .onSuccess { images ->
-                                imagesList = images
-                                isLoadingImages = false
-                            }
-                            .onFailure { err ->
-                                errorMessage = err.message
-                                isLoadingImages = false
-                            }
+                        val cacheKey = firstGame.id to selectedType
+                        val cached = imagesCache[cacheKey]
+                        if (cached != null) {
+                            AppLog.d(TAG, "searchGames auto-fetch: cache hit for gameId=${firstGame.id} type=$selectedType")
+                            imagesList = cached
+                        } else {
+                            isLoadingImages = true
+                            SteamGridDbClient.fetchImages(firstGame.id, selectedType, apiKey)
+                                .onSuccess { images ->
+                                    imagesCache[cacheKey] = images
+                                    imagesList = images
+                                    isLoadingImages = false
+                                }
+                                .onFailure { err ->
+                                    errorMessage = err.message
+                                    isLoadingImages = false
+                                }
+                        }
                     }
                 }
                 .onFailure { err ->
@@ -137,12 +150,20 @@ internal fun SteamGridDbScrapeDialog(
     }
 
     fun loadImagesForGame(gameId: Int, type: String) {
-        isLoadingImages = true
         selectedImage = null
         errorMessage = null
+        val cacheKey = gameId to type
+        val cached = imagesCache[cacheKey]
+        if (cached != null) {
+            AppLog.d(TAG, "loadImagesForGame: cache hit for gameId=$gameId type=$type (${cached.size} images)")
+            imagesList = cached
+            return
+        }
+        isLoadingImages = true
         scope.launch {
             SteamGridDbClient.fetchImages(gameId, type, apiKey)
                 .onSuccess { images ->
+                    imagesCache[cacheKey] = images
                     imagesList = images
                     isLoadingImages = false
                 }
@@ -202,264 +223,304 @@ internal fun SteamGridDbScrapeDialog(
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(16.dp)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                state = gridState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Search Input Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AppTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = {
-                            Text(
-                                text = stringResource(R.string.steamgriddb_scrape_search_placeholder),
-                                color = colors.onSurfaceSecondary
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Search,
-                                contentDescription = null,
-                                tint = colors.onSurfaceSecondary
-                            )
-                        },
-                        singleLine = true
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Button(
-                        onClick = { searchGames() },
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                        enabled = searchQuery.isNotBlank() && !isSearchingGames
-                    ) {
-                        Text(text = stringResource(R.string.steamgriddb_scrape_search_btn), color = colors.onAccent)
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // Type selector chips
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    listOf("grids", "heroes", "logos", "icons").forEach { type ->
-                        val isSelected = selectedType == type
-                        val label = when (type) {
-                            "grids" -> stringResource(R.string.steamgriddb_scrape_type_grid)
-                            "heroes" -> stringResource(R.string.steamgriddb_scrape_type_hero)
-                            "logos" -> stringResource(R.string.steamgriddb_scrape_type_logo)
-                            else -> stringResource(R.string.steamgriddb_scrape_type_icon)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) accentColor else colors.surface)
-                                .border(1.dp, if (isSelected) accentColor else colors.accentBorder, RoundedCornerShape(8.dp))
-                                .clickable {
-                                    selectedType = type
-                                    if (selectedGame != null) {
-                                        loadImagesForGame(selectedGame!!.id, type)
-                                    }
-                                }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (isSelected) colors.onAccent else colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // Game results list
-                if (isSearchingGames) {
+                // ── Search row ──────────────────────────────────────────────────────────
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = accentColor, strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.steamgriddb_scrape_searching_games),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodyMedium
+                        AppTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_scrape_search_placeholder),
+                                    color = colors.onSurfaceSecondary
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.Search,
+                                    contentDescription = null,
+                                    tint = colors.onSurfaceSecondary
+                                )
+                            },
+                            singleLine = true
                         )
-                    }
-                } else if (gamesList.isNotEmpty()) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.steamgriddb_scrape_select_game),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(bottom = 8.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Button(
+                            onClick = { searchGames() },
+                            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                            enabled = searchQuery.isNotBlank() && !isSearchingGames
                         ) {
-                            items(gamesList) { game ->
-                                val isSelectedGame = selectedGame?.id == game.id
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSelectedGame) accentColor.copy(alpha = 0.15f) else colors.surface)
-                                        .border(
-                                            1.dp,
-                                            if (isSelectedGame) accentColor else colors.accentBorder,
-                                            RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable {
-                                            selectedGame = game
-                                            loadImagesForGame(game.id, selectedType)
+                            Text(text = stringResource(R.string.steamgriddb_scrape_search_btn), color = colors.onAccent)
+                        }
+                    }
+                }
+
+                // ── Type selector chips ─────────────────────────────────────────────────
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf("grids", "heroes", "logos", "icons").forEach { type ->
+                            val isSelected = selectedType == type
+                            val label = when (type) {
+                                "grids" -> stringResource(R.string.steamgriddb_scrape_type_grid)
+                                "heroes" -> stringResource(R.string.steamgriddb_scrape_type_hero)
+                                "logos" -> stringResource(R.string.steamgriddb_scrape_type_logo)
+                                else -> stringResource(R.string.steamgriddb_scrape_type_icon)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) accentColor else colors.surface)
+                                    .border(1.dp, if (isSelected) accentColor else colors.accentBorder, RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        selectedType = type
+                                        if (selectedGame != null) {
+                                            loadImagesForGame(selectedGame!!.id, type)
                                         }
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (isSelected) colors.onAccent else colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ── Game search results ─────────────────────────────────────────────────
+                if (isSearchingGames || gamesList.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            if (isSearchingGames) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
                                 ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = accentColor,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(Modifier.width(8.dp))
                                     Text(
-                                        text = game.name,
-                                        color = if (isSelectedGame) colors.onSurface else colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isSelectedGame) FontWeight.SemiBold else FontWeight.Normal
+                                        text = stringResource(R.string.steamgriddb_scrape_searching_games),
+                                        color = colors.onSurfaceSecondary,
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-                AppDivider()
-                Spacer(Modifier.height(12.dp))
-
-                // Main Content Area: images or states
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .let {
-                            if (isDownloading || isLoadingImages || errorMessage != null ||
-                                (gamesList.isEmpty() && searchQuery.isNotBlank() && !isSearchingGames) ||
-                                (imagesList.isEmpty() && selectedGame != null)) {
-                                it.height(300.dp)
                             } else {
-                                it
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isDownloading) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = accentColor)
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                text = stringResource(R.string.steamgriddb_scrape_downloading),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    } else if (isLoadingImages) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = accentColor)
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                text = stringResource(R.string.steamgriddb_scrape_loading_images),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    } else if (errorMessage != null) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Rounded.Warning,
-                                contentDescription = null,
-                                tint = colors.error,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = stringResource(R.string.steamgriddb_scrape_error, errorMessage ?: ""),
-                                color = colors.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    } else if (gamesList.isEmpty() && searchQuery.isNotBlank() && !isSearchingGames) {
-                        Text(
-                            text = stringResource(R.string.steamgriddb_scrape_no_games_found),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    } else if (imagesList.isEmpty() && selectedGame != null) {
-                        Text(
-                            text = stringResource(R.string.steamgriddb_scrape_no_images_found),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    } else {
-                        val chunkedImages = remember(imagesList) { imagesList.chunked(2) }
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            chunkedImages.forEach { rowImages ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_scrape_select_game),
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(bottom = 8.dp)
                                 ) {
-                                    rowImages.forEach { image ->
-                                        val isSelected = selectedImage?.id == image.id
+                                    items(gamesList) { game ->
+                                        val isSelectedGame = selectedGame?.id == game.id
                                         Box(
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .aspectRatio(
-                                                    when (selectedType) {
-                                                        "grids" -> 0.66f
-                                                        "heroes" -> 1.77f
-                                                        "logos" -> 1f
-                                                        else -> 1f
-                                                    }
-                                                )
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(colors.surface)
+                                                .background(
+                                                    if (isSelectedGame) accentColor.copy(alpha = 0.15f)
+                                                    else colors.surface
+                                                )
                                                 .border(
-                                                    width = if (isSelected) 3.dp else 1.dp,
-                                                    color = if (isSelected) accentColor else colors.accentBorder,
-                                                    shape = RoundedCornerShape(8.dp)
+                                                    1.dp,
+                                                    if (isSelectedGame) accentColor else colors.accentBorder,
+                                                    RoundedCornerShape(8.dp)
                                                 )
                                                 .clickable {
-                                                    selectedImage = if (isSelected) null else image
+                                                    selectedGame = game
+                                                    loadImagesForGame(game.id, selectedType)
                                                 }
+                                                .padding(horizontal = 14.dp, vertical = 8.dp)
                                         ) {
-                                            SteamGridDbImageThumbnail(
-                                                url = image.thumb.ifBlank { image.url },
-                                                contentDescription = "SteamGridDB Image",
-                                                modifier = Modifier.fillMaxSize()
+                                            Text(
+                                                text = game.name,
+                                                color = if (isSelectedGame) colors.onSurface else colors.onSurfaceSecondary,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isSelectedGame) FontWeight.SemiBold else FontWeight.Normal
                                             )
                                         }
                                     }
-                                    if (rowImages.size < 2) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                // ── Divider ─────────────────────────────────────────────────────────────
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        Spacer(Modifier.height(4.dp))
+                        AppDivider()
+                        Spacer(Modifier.height(4.dp))
+                    }
+                }
+
+                // ── Status states (full-width) or lazy image grid ───────────────────────
+                if (isDownloading) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = accentColor)
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_scrape_downloading),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                } else if (isLoadingImages) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = accentColor)
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_scrape_loading_images),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                } else if (errorMessage != null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Warning,
+                                    contentDescription = null,
+                                    tint = colors.error,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_scrape_error, errorMessage ?: ""),
+                                    color = colors.error,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                } else if (gamesList.isEmpty() && searchQuery.isNotBlank() && !isSearchingGames) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.steamgriddb_scrape_no_games_found),
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                } else if (imagesList.isEmpty() && selectedGame != null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.steamgriddb_scrape_no_images_found),
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                } else {
+                    // One item per image — LazyVerticalGrid handles 2-column layout and
+                    // only composes/downloads thumbnails that are currently visible.
+                    items(imagesList) { image ->
+                        val isSelected = selectedImage?.id == image.id
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(
+                                    when (selectedType) {
+                                        "grids" -> 0.66f
+                                        "heroes" -> 1.77f
+                                        else -> 1f
+                                    }
+                                )
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(colors.surface)
+                                .border(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color = if (isSelected) accentColor else colors.accentBorder,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable {
+                                    selectedImage = if (isSelected) null else image
+                                }
+                        ) {
+                            SteamGridDbImageThumbnail(
+                                url = image.thumb.ifBlank { image.url },
+                                contentDescription = "SteamGridDB Image",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+
+                // Bottom padding so FAB doesn't obscure the last row
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Spacer(Modifier.height(72.dp))
+                }
             }
 
-            val showBackToTop by remember { derivedStateOf { scrollState.value > 400 } }
+            val showBackToTop by remember { derivedStateOf { gridState.firstVisibleItemIndex > 3 } }
             if (showBackToTop) {
                 Box(
                     modifier = Modifier
@@ -469,7 +530,7 @@ internal fun SteamGridDbScrapeDialog(
                     FloatingActionButton(
                         onClick = {
                             scope.launch {
-                                scrollState.animateScrollTo(0)
+                                gridState.animateScrollToItem(0)
                             }
                         },
                         containerColor = accentColor,
