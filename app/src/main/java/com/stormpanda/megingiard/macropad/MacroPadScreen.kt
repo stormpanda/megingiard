@@ -46,10 +46,11 @@ import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -322,12 +323,38 @@ internal fun PadSurface(
                 }
         ) {
             if (bgBitmap != null && !transparentBackground) {
-                Image(
-                    bitmap = bgBitmap!!,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val cw = size.width
+                    val ch = size.height
+                    val iw = bgBitmap!!.width.toFloat()
+                    val ih = bgBitmap!!.height.toFloat()
+                    if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                        val userScale = layout.bgImageScale
+                        val ox = layout.bgImageOffsetX
+                        val oy = layout.bgImageOffsetY
+
+                        val scaleBase = maxOf(cw / iw, ch / ih)
+                        val ws = iw * scaleBase
+                        val hs = ih * scaleBase
+
+                        val maxTx = ((ws * userScale - cw) / 2f).coerceAtLeast(0f)
+                        val maxTy = ((hs * userScale - ch) / 2f).coerceAtLeast(0f)
+                        val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
+                        val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
+
+                        drawImage(
+                            image = bgBitmap!!,
+                            dstOffset = IntOffset(
+                                ((cw - ws * userScale) / 2f + clampedX).toInt(),
+                                ((ch - hs * userScale) / 2f + clampedY).toInt()
+                            ),
+                            dstSize = IntSize(
+                                (ws * userScale).toInt(),
+                                (hs * userScale).toInt()
+                            )
+                        )
+                    }
+                }
             }
 
             // Render buttons (filtered by peek state)

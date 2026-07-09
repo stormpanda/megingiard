@@ -309,7 +309,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialInvisibleButtons = false,
                 accentColor = colors.accent,
                 existingNames = profile.layouts.map { it.name },
-                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged ->
+                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged, bgScale, bgOffsetX, bgOffsetY ->
                     val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
                     val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
                     val bottomW = ScreenCaptureManager.surfaceWidth.value
@@ -330,6 +330,9 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         useBackgroundImageAsMask = useAsMask,
                         invisibleButtons = invisibleBtns,
                         backgroundImageVersion = if (bgChanged) 1 else 0,
+                        bgImageScale = bgScale,
+                        bgImageOffsetX = bgOffsetX,
+                        bgImageOffsetY = bgOffsetY,
                         mirrorCutouts = listOf(defaultCutout)
                     )
                     MacroPadState.addLayout(newLayout)
@@ -438,9 +441,12 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialBackgroundImagePath = curLayout.backgroundImagePath,
                 initialUseAsMask = curLayout.useBackgroundImageAsMask,
                 initialInvisibleButtons = curLayout.invisibleButtons,
+                initialBgImageScale = curLayout.bgImageScale,
+                initialBgImageOffsetX = curLayout.bgImageOffsetX,
+                initialBgImageOffsetY = curLayout.bgImageOffsetY,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged ->
+                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged, bgScale, bgOffsetX, bgOffsetY ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
@@ -451,7 +457,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
                             backgroundImagePath = bgImagePath,
                             useBackgroundImageAsMask = useAsMask,
                             invisibleButtons = invisibleBtns,
-                            backgroundImageVersion = if (bgChanged) curLayout.backgroundImageVersion + 1 else curLayout.backgroundImageVersion
+                            backgroundImageVersion = if (bgChanged) curLayout.backgroundImageVersion + 1 else curLayout.backgroundImageVersion,
+                            bgImageScale = bgScale,
+                            bgImageOffsetX = bgOffsetX,
+                            bgImageOffsetY = bgOffsetY
                         )
                     )
                     showEditLayoutDialog = false

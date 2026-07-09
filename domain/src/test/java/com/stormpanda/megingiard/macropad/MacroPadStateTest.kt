@@ -585,4 +585,42 @@ class MacroPadStateTest {
         // Then it is preserved in state
         assertEquals(true, MacroPadState.activeLayout.value?.useBackgroundImageAsMask)
     }
+
+    @Test
+    fun `updateLayout preserves and updates bgImageScale and offsets`() {
+        val p1Id = UUID.randomUUID().toString()
+        val layoutId = "layout-1"
+        val l1 = PadLayout(
+            id = layoutId,
+            name = "Lay1",
+            bgImageScale = 1f,
+            bgImageOffsetX = 0f,
+            bgImageOffsetY = 0f
+        )
+        val p1 = PadProfile(
+            id = p1Id,
+            name = "P1",
+            layouts = listOf(l1),
+            activeLayoutId = layoutId
+        )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // Verify initially default
+        assertEquals(1f, MacroPadState.activeLayout.value?.bgImageScale)
+        assertEquals(0f, MacroPadState.activeLayout.value?.bgImageOffsetX)
+        assertEquals(0f, MacroPadState.activeLayout.value?.bgImageOffsetY)
+
+        // When updating the layout with custom crop params
+        val updatedLayout = l1.copy(
+            bgImageScale = 2.5f,
+            bgImageOffsetX = 0.2f,
+            bgImageOffsetY = -0.1f
+        )
+        MacroPadState.updateLayout(updatedLayout)
+
+        // Then it is preserved in state
+        assertEquals(2.5f, MacroPadState.activeLayout.value?.bgImageScale)
+        assertEquals(0.2f, MacroPadState.activeLayout.value?.bgImageOffsetX)
+        assertEquals(-0.1f, MacroPadState.activeLayout.value?.bgImageOffsetY)
+    }
 }

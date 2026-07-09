@@ -372,6 +372,9 @@ data class PadLayout(
     val buttonBorderColor: ColorOption = ColorOption.Neutral,
     val buttonBgColor: ColorOption = ColorOption.Neutral,
     val invisibleButtons: Boolean = false,
+    val bgImageScale: Float = 1f,
+    val bgImageOffsetX: Float = 0f,
+    val bgImageOffsetY: Float = 0f,
 )
 
 
