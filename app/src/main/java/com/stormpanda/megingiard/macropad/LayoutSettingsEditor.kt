@@ -51,7 +51,6 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.material3.Button
@@ -84,6 +83,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -1067,19 +1068,29 @@ private fun ImageCropDialog(
                     val clampedX = offsetXState.coerceIn(-maxTx, maxTx)
                     val clampedY = offsetYState.coerceIn(-maxTy, maxTy)
 
-                    Image(
-                        bitmap = bitmap,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer(
-                                scaleX = scale,
-                                scaleY = scale,
-                                translationX = clampedX,
-                                translationY = clampedY
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val cw = size.width
+                        val ch = size.height
+                        val iw = bitmap.width.toFloat()
+                        val ih = bitmap.height.toFloat()
+                        if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                            val scaleBase = maxOf(cw / iw, ch / ih)
+                            val ws = iw * scaleBase
+                            val hs = ih * scaleBase
+                            
+                            drawImage(
+                                image = bitmap,
+                                dstOffset = IntOffset(
+                                    ((cw - ws * scale) / 2f + clampedX).toInt(),
+                                    ((ch - hs * scale) / 2f + clampedY).toInt()
+                                ),
+                                dstSize = IntSize(
+                                    (ws * scale).toInt(),
+                                    (hs * scale).toInt()
+                                )
                             )
-                    )
+                        }
+                    }
                 }
 
                 if (!hasInteracted) {

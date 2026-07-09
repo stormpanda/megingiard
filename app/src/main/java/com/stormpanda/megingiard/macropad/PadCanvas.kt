@@ -55,11 +55,9 @@ import com.stormpanda.megingiard.AppLog
 import android.graphics.BitmapFactory
 import android.content.Context
 import android.view.WindowManager
-import androidx.compose.foundation.Image
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -164,19 +162,38 @@ internal fun PadCanvas(
 
     Box(modifier = padModifier) {
         if (bgBitmap != null) {
-            Image(
-                bitmap = bgBitmap!!,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        scaleX = layout?.bgImageScale ?: 1f
-                        scaleY = layout?.bgImageScale ?: 1f
-                        translationX = (layout?.bgImageOffsetX ?: 0f) * size.width
-                        translationY = (layout?.bgImageOffsetY ?: 0f) * size.height
-                    }
-            )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cw = size.width
+                val ch = size.height
+                val iw = bgBitmap!!.width.toFloat()
+                val ih = bgBitmap!!.height.toFloat()
+                if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                    val scale = layout?.bgImageScale ?: 1f
+                    val ox = layout?.bgImageOffsetX ?: 0f
+                    val oy = layout?.bgImageOffsetY ?: 0f
+                    
+                    val scaleBase = maxOf(cw / iw, ch / ih)
+                    val ws = iw * scaleBase
+                    val hs = ih * scaleBase
+                    
+                    val maxTx = ((ws * scale - cw) / 2f).coerceAtLeast(0f)
+                    val maxTy = ((hs * scale - ch) / 2f).coerceAtLeast(0f)
+                    val clampedX = (ox * cw).coerceIn(-maxTx, maxTx)
+                    val clampedY = (oy * ch).coerceIn(-maxTy, maxTy)
+                    
+                    drawImage(
+                        image = bgBitmap!!,
+                        dstOffset = IntOffset(
+                            ((cw - ws * scale) / 2f + clampedX).toInt(),
+                            ((ch - hs * scale) / 2f + clampedY).toInt()
+                        ),
+                        dstSize = IntSize(
+                            (ws * scale).toInt(),
+                            (hs * scale).toInt()
+                        )
+                    )
+                }
+            }
         }
         // Grid overlay — drawn behind buttons
         if (gridMode != GridMode.OFF && canvasSize.width > 0 && canvasSize.height > 0) {
