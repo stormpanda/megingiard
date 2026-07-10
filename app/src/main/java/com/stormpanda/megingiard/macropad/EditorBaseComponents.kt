@@ -149,14 +149,6 @@ internal fun EditorToolbar(
             onClick     = onAddButton,
             modifier    = Modifier.weight(1f),
         )
-        // Background Button ("Background")
-        EditorActionChip(
-            label       = bgLabel,
-            icon        = Icons.Rounded.Wallpaper,
-            accentColor = accentColor,
-            onClick     = onManageBackground,
-            modifier    = Modifier.weight(1f),
-        )
         // Grid toggle ("Grid", accent color all the time)
         EditorActionChip(
             label       = gridLabel,
@@ -165,12 +157,20 @@ internal fun EditorToolbar(
             onClick     = onGridModeChange,
             modifier    = Modifier.weight(1f),
         )
-        // Unlock / Lock button (4th button)
+        // Unlock / Lock button
         EditorActionChip(
             label       = lockLabel,
             icon        = lockIcon,
             accentColor = accentColor,
             onClick     = onToggleCanvasLock,
+            modifier    = Modifier.weight(1f),
+        )
+        // Background Button ("Background")
+        EditorActionChip(
+            label       = bgLabel,
+            icon        = Icons.Rounded.Wallpaper,
+            accentColor = accentColor,
+            onClick     = onManageBackground,
             modifier    = Modifier.weight(1f),
         )
     }
