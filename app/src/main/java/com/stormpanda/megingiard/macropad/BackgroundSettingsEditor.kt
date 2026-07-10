@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -283,8 +284,9 @@ internal fun BackgroundSettingsEditor(
                 // 1. Preview Frame
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .height(previewHeight)
+                        .aspectRatio(aspectRatio)
+                        .align(Alignment.CenterHorizontally)
                         .clip(RoundedCornerShape(8.dp))
                         .background(colors.surfaceVariant)
                         .border(1.dp, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
@@ -292,32 +294,12 @@ internal fun BackgroundSettingsEditor(
                 ) {
                     val bitmap = previewBitmap
                     if (bitmap != null) {
-                        Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
-                            val cw = size.width
-                            val ch = size.height
-                            val iw = bitmap.width.toFloat()
-                            val ih = bitmap.height.toFloat()
-                            if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                                val scaleBase = maxOf(cw / iw, ch / ih)
-                                val ws = iw * scaleBase
-                                val hs = ih * scaleBase
-                                
-                                val clampedX = bgOffsetX * cw
-                                val clampedY = bgOffsetY * ch
-                                
-                                drawImage(
-                                    image = bitmap,
-                                    dstOffset = IntOffset(
-                                        ((cw - ws * bgScale) / 2f + clampedX).toInt(),
-                                        ((ch - hs * bgScale) / 2f + clampedY).toInt()
-                                    ),
-                                    dstSize = IntSize(
-                                        (ws * bgScale).toInt(),
-                                        (hs * bgScale).toInt()
-                                    )
-                                )
-                            }
-                        }
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     } else {
                         Icon(
                             imageVector = Icons.Rounded.Image,
