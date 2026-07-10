@@ -821,6 +821,13 @@ class MultiCutoutContainer(
     private val srcHeight: Int
 ) : FrameLayout(context) {
     private val bgDimPaint = Paint()
+    private var performanceFrameCount = 0
+    private var performanceTotalDrawTimeNs = 0L
+    private var performanceMaxDrawTimeNs = 0L
+    private var performanceSlowFrameCount = 0
+    private var performanceJankFrameCount = 0
+    private val bgSrcRect = Rect()
+    private val bgDestRect = RectF()
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
@@ -1041,6 +1048,7 @@ class MultiCutoutContainer(
     }
 
     override fun dispatchDraw(canvas: Canvas) {
+        val startTime = android.os.SystemClock.elapsedRealtimeNanos()
         val masterView = if (childCount > 0) getChildAt(0) else null
         if (masterView == null && (!isFrozen || frozenBitmap == null)) return
 
@@ -1056,7 +1064,7 @@ class MultiCutoutContainer(
 
         var masterViewDrawn = false
 
-        val overallSaveCount = canvas.saveLayer(0f, 0f, parentW, parentH, null)
+        val overallSaveCount = canvas.save()
         try {
             val bg = bgBitmap
             if (!useAsMask && bg != null) {
@@ -1075,10 +1083,10 @@ class MultiCutoutContainer(
                 canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
                 canvas.scale(scale, scale)
                 
-                val srcRect = Rect(0, 0, bg.width, bg.height)
-                val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                bgSrcRect.set(0, 0, bg.width, bg.height)
+                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
                 val paint = if (bgImageDim > 0f) bgDimPaint else null
-                canvas.drawBitmap(bg, srcRect, destRect, paint)
+                canvas.drawBitmap(bg, bgSrcRect, bgDestRect, paint)
                 canvas.restore()
             }
 
@@ -1087,7 +1095,11 @@ class MultiCutoutContainer(
             // within this layer. When the layer is restored to the parent canvas it
             // uses the default SRC_OVER composite so cutouts alpha-blend correctly
             // on top of the background image instead of being added to it.
-            val cutoutsLayerSaveCount = canvas.saveLayer(0f, 0f, parentW, parentH, null)
+            val cutoutsLayerSaveCount = if (edgeBlending) {
+                canvas.saveLayer(0f, 0f, parentW, parentH, null)
+            } else {
+                canvas.save()
+            }
 
             for (cutout in cutouts) {
                 val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
@@ -1261,14 +1273,40 @@ class MultiCutoutContainer(
                 canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
                 canvas.scale(scale, scale)
                 
-                val srcRect = Rect(0, 0, mask.width, mask.height)
-                val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                bgSrcRect.set(0, 0, mask.width, mask.height)
+                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
                 val paint = if (bgImageDim > 0f) bgDimPaint else null
-                canvas.drawBitmap(mask, srcRect, destRect, paint)
+                canvas.drawBitmap(mask, bgSrcRect, bgDestRect, paint)
                 canvas.restore()
             }
         } finally {
             canvas.restoreToCount(overallSaveCount)
+        }
+
+        val durationNs = android.os.SystemClock.elapsedRealtimeNanos() - startTime
+        performanceFrameCount++
+        performanceTotalDrawTimeNs += durationNs
+        if (durationNs > performanceMaxDrawTimeNs) {
+            performanceMaxDrawTimeNs = durationNs
+        }
+        val durationMs = durationNs / 1_000_000f
+        if (durationMs > 16.6f) {
+            performanceSlowFrameCount++
+        }
+        if (durationMs > 33.3f) {
+            performanceJankFrameCount++
+        }
+
+        if (performanceFrameCount >= 60) {
+            val avgMs = (performanceTotalDrawTimeNs / 60f) / 1_000_000f
+            val maxMs = performanceMaxDrawTimeNs / 1_000_000f
+            AppLog.d(TAG, "MultiCutoutContainer rendering metrics (Last 60 frames): Avg: ${"%.2f".format(avgMs)}ms, Max: ${"%.2f".format(maxMs)}ms, Slow Frames (>16.6ms): $performanceSlowFrameCount, Jank Frames (>33.3ms): $performanceJankFrameCount")
+            
+            performanceFrameCount = 0
+            performanceTotalDrawTimeNs = 0L
+            performanceMaxDrawTimeNs = 0L
+            performanceSlowFrameCount = 0
+            performanceJankFrameCount = 0
         }
     }
 }
