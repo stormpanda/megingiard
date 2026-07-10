@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -100,6 +101,7 @@ internal fun SteamGridDbScrapeDialog(
 
     var isDownloading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var pendingErrorDialog by remember { mutableStateOf<Throwable?>(null) }
 
     val apiKey = SettingsManager.steamGridDbApiToken.value
     val gridState = rememberLazyGridState()
@@ -138,6 +140,7 @@ internal fun SteamGridDbScrapeDialog(
                                 .onFailure { err ->
                                     errorMessage = err.message
                                     isLoadingImages = false
+                                    pendingErrorDialog = err
                                 }
                         }
                     }
@@ -145,6 +148,7 @@ internal fun SteamGridDbScrapeDialog(
                 .onFailure { err ->
                     errorMessage = err.message
                     isSearchingGames = false
+                    pendingErrorDialog = err
                 }
         }
     }
@@ -170,6 +174,7 @@ internal fun SteamGridDbScrapeDialog(
                 .onFailure { err ->
                     errorMessage = err.message
                     isLoadingImages = false
+                    pendingErrorDialog = err
                 }
         }
     }
@@ -208,6 +213,7 @@ internal fun SteamGridDbScrapeDialog(
                                 .onFailure { err ->
                                     errorMessage = err.message
                                     isDownloading = false
+                                    pendingErrorDialog = err
                                 }
                         }
                     }
@@ -544,6 +550,51 @@ internal fun SteamGridDbScrapeDialog(
                         )
                     }
                 }
+            }
+
+            val currentError = pendingErrorDialog
+            if (currentError != null) {
+                val (titleRes, messageRes) = when (currentError) {
+                    is SteamGridDbException.Offline -> {
+                        R.string.steamgriddb_error_offline_title to R.string.steamgriddb_error_offline_message
+                    }
+                    is SteamGridDbException.RateLimited -> {
+                        R.string.steamgriddb_error_rate_limited_title to R.string.steamgriddb_error_rate_limited_message
+                    }
+                    is SteamGridDbException.ServiceUnavailable -> {
+                        R.string.steamgriddb_error_unreachable_title to R.string.steamgriddb_error_unreachable_message
+                    }
+                    else -> {
+                        R.string.steamgriddb_error_generic_title to R.string.steamgriddb_error_generic_message
+                    }
+                }
+                AlertDialog(
+                    containerColor = colors.surface,
+                    onDismissRequest = { pendingErrorDialog = null },
+                    title = {
+                        Text(
+                            text = stringResource(titleRes),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = stringResource(messageRes),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { pendingErrorDialog = null }) {
+                            Text(
+                                text = stringResource(R.string.steamgriddb_error_dismiss),
+                                color = colors.accent,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                )
             }
         }
     }
