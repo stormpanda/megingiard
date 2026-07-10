@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -619,6 +621,11 @@ private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             description = stringResource(R.string.help_editor_add_profile_desc),
         )
         HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+            label = stringResource(R.string.help_editor_profile_macros_label),
+            description = stringResource(R.string.help_editor_profile_macros_desc),
+        )
+        HelpEntry(
             icon = Icons.Rounded.MoreVert,
             label = stringResource(R.string.help_editor_profile_options_label),
             description = stringResource(R.string.help_editor_profile_options_desc),
@@ -646,11 +653,6 @@ private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             icon = Icons.Rounded.Add,
             label = stringResource(R.string.help_editor_toolbar_button_label),
             description = stringResource(R.string.help_editor_toolbar_button_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.help_editor_toolbar_macros_label),
-            description = stringResource(R.string.help_editor_toolbar_macros_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Grid4x4,
@@ -778,11 +780,33 @@ private fun EditorBody(
                 },
                 onReorderProfiles = onReorderProfiles,
                 onDeleteProfile = onDeleteProfile,
+                onManageMacros  = onManageMacros,
                 modifier        = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
-                    .padding(vertical = MPE_PADDING),
+                    .padding(top = MPE_PADDING, bottom = 4.dp),
             )
+        }
+
+        // 2b. Profile Action Toolbar (Macros button row)
+        item(key = "profile_toolbar") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .padding(horizontal = MPE_PADDING)
+                    .padding(top = 4.dp, bottom = MPE_PADDING),
+                horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EditorActionChip(
+                    label       = stringResource(R.string.macropad_editor_manage_macros),
+                    icon        = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                    accentColor = accentColor,
+                    onClick     = onManageMacros,
+                    modifier    = Modifier.weight(1f),
+                )
+            }
         }
 
         // 3. Layout section header
@@ -824,11 +848,11 @@ private fun EditorBody(
                 modifier       = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
-                    .padding(vertical = MPE_PADDING),
+                    .padding(top = MPE_PADDING, bottom = 4.dp),
             )
         }
 
-        // 3. Action toolbar (Add Button / Macros… / Grid toggle)
+        // 3. Action toolbar (Add Button / Grid toggle)
         item(key = "toolbar") {
             EditorToolbar(
                 profile          = profile,
@@ -836,7 +860,6 @@ private fun EditorBody(
                 gridMode         = gridMode,
                 isCanvasLocked   = isCanvasLocked,
                 onToggleCanvasLock = onToggleCanvasLock,
-                onManageMacros   = onManageMacros,
                 onAddButton      = onAddButton,
                 onGridModeChange = {
                     gridMode = when (gridMode) {
@@ -848,7 +871,7 @@ private fun EditorBody(
                 modifier         = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
-                    .padding(top = MPE_PADDING / 2, bottom = MPE_PADDING),
+                    .padding(top = 4.dp, bottom = MPE_PADDING),
             )
         }
 

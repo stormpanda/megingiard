@@ -118,7 +118,6 @@ internal fun EditorToolbar(
     gridMode:         GridMode,
     isCanvasLocked:   Boolean,
     onToggleCanvasLock: () -> Unit,
-    onManageMacros:   () -> Unit,
     onAddButton:      () -> Unit,
     onGridModeChange: () -> Unit,
     modifier:         Modifier = Modifier,
@@ -147,14 +146,6 @@ internal fun EditorToolbar(
             onClick     = onAddButton,
             modifier    = Modifier.weight(1f),
         )
-        // Manage Macros
-        EditorActionChip(
-            label       = stringResource(R.string.macropad_editor_manage_macros),
-            icon        = Icons.Rounded.Edit,
-            accentColor = accentColor,
-            onClick     = onManageMacros,
-            modifier    = Modifier.weight(1f),
-        )
         // Grid toggle ("Grid", accent color all the time)
         EditorActionChip(
             label       = gridLabel,
@@ -163,7 +154,7 @@ internal fun EditorToolbar(
             onClick     = onGridModeChange,
             modifier    = Modifier.weight(1f),
         )
-        // Unlock / Lock button (4th button)
+        // Unlock / Lock button (3rd button)
         EditorActionChip(
             label       = lockLabel,
             icon        = lockIcon,

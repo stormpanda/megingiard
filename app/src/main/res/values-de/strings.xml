@@ -792,8 +792,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_editor_section_toolbar">Toolbar</string>
     <string name="help_editor_toolbar_button_label">Taste</string>
     <string name="help_editor_toolbar_button_desc">Platziert eine neue Makro-Schaltfläche auf der Arbeitsfläche. Danach kannst du sie bei entsperrter Fläche beliebig verschieben.</string>
-    <string name="help_editor_toolbar_macros_label">Makros…</string>
-    <string name="help_editor_toolbar_macros_desc">Öffnet die Makroliste für dieses Profil, um wiederverwendbare Makros zu erstellen, zu bearbeiten und zu verwalten.</string>
+    <string name="help_editor_profile_macros_label">Makros…</string>
+    <string name="help_editor_profile_macros_desc">Öffnet die Makroliste für dieses Profil, um wiederverwendbare Makros zu erstellen, zu bearbeiten und zu verwalten.</string>
     <string name="help_editor_toolbar_grid_label">Raster</string>
     <string name="help_editor_toolbar_grid_desc">Wechselt zwischen Raster-Modi: Aus → Rechteckig → Radial. Bei aktivem Raster rasten Schaltflächen beim Verschieben an Rasterpositionen ein.</string>
     <string name="help_editor_toolbar_lock_label">Sperren / Entsperren</string>

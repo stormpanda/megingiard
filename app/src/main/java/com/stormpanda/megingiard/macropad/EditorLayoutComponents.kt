@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -52,6 +53,7 @@ internal fun EditorProfileChipsBar(
     onDuplicateProfile: () -> Unit,
     onReorderProfiles: () -> Unit,
     onDeleteProfile: () -> Unit,
+    onManageMacros: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -95,6 +97,10 @@ internal fun EditorProfileChipsBar(
                 onDismissRequest = { menuExpanded = false },
                 modifier = Modifier.background(colors.surface),
             ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.macropad_editor_manage_macros), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
+                    onClick = { menuExpanded = false; onManageMacros() }
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.macropad_editor_title_edit_profile), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
                     onClick = { menuExpanded = false; onEditProfile() }
