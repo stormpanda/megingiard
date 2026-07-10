@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.os.Bundle
 import androidx.compose.ui.graphics.Color as ComposeColor
 import com.stormpanda.megingiard.AppLog
@@ -875,10 +877,11 @@ class MultiCutoutContainer(
     private fun updateBgDimPaint() {
         val dim = bgImageDim
         if (dim > 0f) {
-            bgDimPaint.colorFilter = PorterDuffColorFilter(
-                Color.argb((dim * 255).toInt(), 0, 0, 0),
-                PorterDuff.Mode.SRC_ATOP
-            )
+            val scale = 1f - dim
+            val matrix = ColorMatrix().apply {
+                setScale(scale, scale, scale, 1f)
+            }
+            bgDimPaint.colorFilter = ColorMatrixColorFilter(matrix)
         } else {
             bgDimPaint.colorFilter = null
         }

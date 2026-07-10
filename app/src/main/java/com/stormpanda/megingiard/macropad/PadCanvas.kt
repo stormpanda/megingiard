@@ -156,7 +156,13 @@ internal fun PadCanvas(
     val bgImageDimFilter = remember(layout?.backgroundImageDim) {
         val dim = layout?.backgroundImageDim ?: 0f
         if (dim > 0f) {
-            ColorFilter.tint(Color.Black.copy(alpha = dim), BlendMode.SrcAtop)
+            val scale = 1f - dim
+            ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+                scale, 0f,    0f,    0f, 0f,
+                0f,    scale, 0f,    0f, 0f,
+                0f,    0f,    scale, 0f, 0f,
+                0f,    0f,    0f,    1f, 0f
+            )))
         } else null
     }
 

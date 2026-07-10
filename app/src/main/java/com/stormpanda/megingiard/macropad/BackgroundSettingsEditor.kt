@@ -70,6 +70,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -154,7 +155,13 @@ internal fun BackgroundSettingsEditor(
 
     val bgImageDimFilter = remember(bgImageDim) {
         if (bgImageDim > 0f) {
-            ColorFilter.tint(Color.Black.copy(alpha = bgImageDim), BlendMode.SrcAtop)
+            val scale = 1f - bgImageDim
+            ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+                scale, 0f,    0f,    0f, 0f,
+                0f,    scale, 0f,    0f, 0f,
+                0f,    0f,    scale, 0f, 0f,
+                0f,    0f,    0f,    1f, 0f
+            )))
         } else null
     }
 
