@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BitmapUtils
 import android.graphics.BitmapFactory
 import android.content.Context
 import android.view.WindowManager
@@ -135,10 +136,11 @@ internal fun PadCanvas(
         val path = layout?.backgroundImagePath
         if (path != null) {
             val file = File(context.filesDir, path)
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             withContext(Dispatchers.IO) {
                 try {
                     if (file.exists()) {
-                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                         bgBitmap = decoded?.asImageBitmap()
                     } else {
                         bgBitmap = null

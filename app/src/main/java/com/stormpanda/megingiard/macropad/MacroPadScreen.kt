@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.macropad.HapticStrength
@@ -196,10 +197,11 @@ internal fun PadSurface(
         val path = layout.backgroundImagePath
         if (path != null) {
             val file = File(context.filesDir, path)
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             withContext(Dispatchers.IO) {
                 try {
                     if (file.exists()) {
-                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                         bgBitmap = decoded?.asImageBitmap()
                     } else {
                         bgBitmap = null

@@ -11,6 +11,7 @@ import android.graphics.ColorMatrixColorFilter
 import android.os.Bundle
 import androidx.compose.ui.graphics.Color as ComposeColor
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BitmapUtils
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.BitmapFactory
 import java.io.File
@@ -703,10 +704,11 @@ class MirrorPresentation(
                 val dim = layout?.backgroundImageDim ?: 0f
                 if (path != null) {
                     val file = File(context.filesDir, path)
+                    val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
                     withContext(Dispatchers.IO) {
                         try {
                             if (file.exists()) {
-                                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                                val bitmap = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                                 withContext(Dispatchers.Main) {
                                     if (bitmap != null) {
                                         multiCutoutContainer?.bgImageScale = scale

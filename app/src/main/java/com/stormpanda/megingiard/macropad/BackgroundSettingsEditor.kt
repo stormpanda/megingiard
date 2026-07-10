@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
@@ -181,23 +182,23 @@ internal fun BackgroundSettingsEditor(
 
     LaunchedEffect(pendingImageUri, currentBgPath) {
         if (pendingImageUri != null) {
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             withContext(Dispatchers.IO) {
                 try {
-                    context.contentResolver.openInputStream(pendingImageUri!!).use { input ->
-                        val decoded = BitmapFactory.decodeStream(input)
-                        previewBitmap = decoded?.asImageBitmap()
-                    }
+                    val decoded = BitmapUtils.decodeScaledBitmapFromUri(context, pendingImageUri!!, targetW, targetH)
+                    previewBitmap = decoded?.asImageBitmap()
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to decode pending image uri $pendingImageUri", e)
                     previewBitmap = null
                 }
             }
         } else if (currentBgPath != null) {
+            val file = File(context.filesDir, currentBgPath!!)
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             withContext(Dispatchers.IO) {
                 try {
-                    val file = File(context.filesDir, currentBgPath!!)
                     if (file.exists()) {
-                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                         previewBitmap = decoded?.asImageBitmap()
                     } else {
                         previewBitmap = null
