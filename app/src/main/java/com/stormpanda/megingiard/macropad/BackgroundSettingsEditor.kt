@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,7 +38,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Pinch
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -68,10 +71,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -95,10 +100,7 @@ import java.io.File
 
 private const val TAG = "BackgroundSettingsEditor"
 
-private val BSE_THUMBNAIL_SIZE = 40.dp
-private val BSE_THUMBNAIL_ROUNDING = 6.dp
-private const val BSE_THUMBNAIL_DIM_ALPHA = 0.7f
-private val BSE_MAGNIFIER_ICON_SIZE = 18.dp
+
 private const val BSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.85f
 private val BSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
 private const val BSE_PREVIEW_MODAL_BG_ALPHA = 0.6f
@@ -274,112 +276,152 @@ internal fun BackgroundSettingsEditor(
             ) {
                 Spacer(Modifier.height(16.dp))
 
-                // Background Image Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                val configuration = LocalConfiguration.current
+                val screenHeight = configuration.screenHeightDp.dp
+                val previewHeight = screenHeight * 0.4f
+
+                // 1. Preview Frame
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(previewHeight)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(colors.surfaceVariant)
+                        .border(1.dp, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.layout_settings_bg_image_title),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        val statusText = when {
-                            pendingImageUri != null -> stringResource(R.string.layout_settings_bg_image_pending)
-                            currentBgPath != null -> stringResource(R.string.layout_settings_bg_image_active)
-                            else -> stringResource(R.string.layout_settings_bg_image_none)
-                        }
-                        Text(
-                            text = statusText,
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (pendingImageUri != null || currentBgPath != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(BSE_THUMBNAIL_SIZE)
-                                    .clip(RoundedCornerShape(BSE_THUMBNAIL_ROUNDING))
-                                    .background(colors.surfaceVariant)
-                                    .clickable(enabled = previewBitmap != null) { showPreviewModal = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                previewBitmap?.let { bmp ->
-                                    Image(
-                                        bitmap = bmp,
-                                        contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .alpha(BSE_THUMBNAIL_DIM_ALPHA)
+                    val bitmap = previewBitmap
+                    if (bitmap != null) {
+                        Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                            val cw = size.width
+                            val ch = size.height
+                            val iw = bitmap.width.toFloat()
+                            val ih = bitmap.height.toFloat()
+                            if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                                val scaleBase = maxOf(cw / iw, ch / ih)
+                                val ws = iw * scaleBase
+                                val hs = ih * scaleBase
+                                
+                                val clampedX = bgOffsetX * cw
+                                val clampedY = bgOffsetY * ch
+                                
+                                drawImage(
+                                    image = bitmap,
+                                    dstOffset = IntOffset(
+                                        ((cw - ws * bgScale) / 2f + clampedX).toInt(),
+                                        ((ch - hs * bgScale) / 2f + clampedY).toInt()
+                                    ),
+                                    dstSize = IntSize(
+                                        (ws * bgScale).toInt(),
+                                        (hs * bgScale).toInt()
                                     )
-                                    Icon(
-                                        imageVector = Icons.Rounded.Crop,
-                                        contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(BSE_MAGNIFIER_ICON_SIZE)
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(8.dp))
-
-                            IconButton(
-                                onClick = {
-                                    pendingImageUri = null
-                                    currentBgPath = null
-                                    useAsMask = false
-                                    bgScale = 1f
-                                    bgOffsetX = 0f
-                                    bgOffsetY = 0f
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Delete,
-                                    contentDescription = stringResource(R.string.layout_settings_bg_image_remove),
-                                    tint = colors.error
                                 )
                             }
-                            Spacer(Modifier.width(8.dp))
                         }
-                        Button(
-                            onClick = { launcher.launch("image/*") },
-                            colors = ButtonDefaults.buttonColors(containerColor = accentColor)
-                        ) {
-                            Text(
-                                text = if (pendingImageUri != null || currentBgPath != null) {
-                                    stringResource(R.string.layout_settings_bg_image_change)
-                                } else {
-                                    stringResource(R.string.layout_settings_bg_image_choose)
-                                },
-                                color = colors.onAccent
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                val token = SettingsManager.steamGridDbApiToken.value
-                                if (token.isBlank()) {
-                                    showApiTokenMissingDialog = true
-                                } else {
-                                    showScrapeDialog = true
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = accentColor)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.layout_settings_bg_image_scrape),
-                                color = colors.onAccent
-                            )
-                        }
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.Image,
+                            contentDescription = stringResource(R.string.layout_settings_bg_image_none),
+                            tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            modifier = Modifier.size(48.dp)
+                        )
                     }
                 }
 
+                Spacer(Modifier.height(16.dp))
+
+                // 2. Action row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Crop button
+                    Button(
+                        onClick = { showPreviewModal = true },
+                        enabled = previewBitmap != null,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.surfaceVariant,
+                            contentColor = colors.onSurface
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.layout_settings_bg_image_crop), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+
+                    // Delete button
+                    Button(
+                        onClick = {
+                            pendingImageUri = null
+                            currentBgPath = null
+                            useAsMask = false
+                            bgScale = 1f
+                            bgOffsetX = 0f
+                            bgOffsetY = 0f
+                        },
+                        enabled = previewBitmap != null,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.error.copy(alpha = 0.15f),
+                            contentColor = colors.error
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.macropad_editor_delete_button), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+
+                    // Choose / Change Image
+                    Button(
+                        onClick = { launcher.launch("image/*") },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accentColor,
+                            contentColor = colors.onAccent
+                        ),
+                        modifier = Modifier.weight(1.2f)
+                    ) {
+                        Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = if (previewBitmap != null) {
+                                stringResource(R.string.layout_settings_bg_image_change)
+                            } else {
+                                stringResource(R.string.layout_settings_bg_image_choose)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // Scrape from SteamGridDB
+                    Button(
+                        onClick = {
+                            val token = SettingsManager.steamGridDbApiToken.value
+                            if (token.isBlank()) {
+                                showApiTokenMissingDialog = true
+                            } else {
+                                showScrapeDialog = true
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = accentColor,
+                            contentColor = colors.onAccent
+                        ),
+                        modifier = Modifier.weight(1.2f)
+                    ) {
+                        Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.layout_settings_bg_image_scrape), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // 3. Mask option
                 if (pendingImageUri != null || currentBgPath != null) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,

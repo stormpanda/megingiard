@@ -422,6 +422,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
     <string name="layout_settings_bg_image_preview_desc">Hintergrundbild-Vorschau</string>
     <string name="layout_settings_bg_image_preview_dialog_title">Hintergrundbild-Vorschau</string>
+    <string name="layout_settings_bg_image_crop">Zuschneiden</string>
     <string name="layout_settings_crop_image_title">Hintergrundbild zuschneiden</string>
     <string name="layout_settings_crop_image_instructions">Ziehen zum Verschieben • Zoomen durch Auf-/Zuziehen</string>
     <!-- Custom Layout Settings Buttons Colors -->
