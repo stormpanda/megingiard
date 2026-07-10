@@ -449,6 +449,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Help menu strings for Layout settings -->
     <string name="help_layout_settings_title">Layout-Einstellungen Hilfe</string>
     <string name="help_layout_settings_intro">Konfiguriere das Aussehen, das Hintergrundbild und die Standard-Tastenfarben dieses Layouts.</string>
+    <string name="help_layout_settings_intro_no_bg">Konfiguriere das Aussehen, den Namen und die Standard-Tastenfarben dieses Layouts.</string>
     <string name="help_layout_settings_sec_properties">Eigenschaften</string>
     <string name="help_layout_settings_name_title">Layoutname</string>
     <string name="help_layout_settings_name_desc">Weise diesem Layout einen eindeutigen Namen zu, um es im Editor und im Schnellmenü zu identifizieren.</string>
@@ -461,6 +462,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_layout_settings_colors_desc">Setze Standardfarben für alle Tasten in diesem Layout (Text/Symbol, Rahmen und Verlaufsfarbe). Tasten können diese Werte einzeln überschreiben.</string>
     <string name="help_layout_settings_palette_title">Schnellpalette</string>
     <string name="help_layout_settings_palette_desc">Tippe auf das Palette-Symbol neben einer Farbe, um standardmäßige neutrale/Akzent-Stile oder kürzlich genutzte Farben auszuwählen.</string>
+
+    <!-- Help menu strings for Background settings -->
+    <string name="help_bg_settings_intro">Konfiguriere das Hintergrundbild, die Dimmung, das Scrapen und die Masken-Überlagerung des Layouts.</string>
+    <string name="help_bg_settings_dimming_title">Dimmung</string>
+    <string name="help_bg_settings_dimming_desc">Dimme das Hintergrundbild mit dem Schieberegler. Der Bereich reicht von 0% (keine Dimmung) bis 90% (maximale Dimmung), damit Tasten gut lesbar bleiben.</string>
+    <string name="help_bg_settings_crop_title">Zuschneiden &amp; Verschieben</string>
+    <string name="help_bg_settings_crop_desc">Schneide und skaliere das Bild per Zieh- und Zoomgesten zu, um es an das Dual-Screen-Seitenverhältnis anzupassen.</string>
 
     <!-- Makro-Listenverwaltung -->
     <string name="macropad_macro_list_title">Makros</string>

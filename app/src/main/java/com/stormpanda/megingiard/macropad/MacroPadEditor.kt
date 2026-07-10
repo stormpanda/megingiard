@@ -475,7 +475,6 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialBgImageOffsetX = curLayout.bgImageOffsetX,
                 initialBgImageOffsetY = curLayout.bgImageOffsetY,
                 initialBackgroundImageDim = curLayout.backgroundImageDim,
-                accentColor = colors.accent,
                 onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim ->
                     MacroPadState.updateLayout(
                         curLayout.copy(

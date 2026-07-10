@@ -606,12 +606,14 @@ class MirrorCoordinateTransformTest {
             id = "layout-test",
             name = "Test Layout",
             mirrorMaxFps = 45,
-            mirrorSmoothingStrength = 80
+            mirrorSmoothingStrength = 80,
+            backgroundImageDim = 0.65f
         )
         val jsonString = Json.encodeToString(original)
         val decoded = Json.decodeFromString<PadLayout>(jsonString)
         assertEquals(45, decoded.mirrorMaxFps)
         assertEquals(80, decoded.mirrorSmoothingStrength)
+        assertEquals(0.65f, decoded.backgroundImageDim)
     }
 
     @Test
@@ -625,6 +627,7 @@ class MirrorCoordinateTransformTest {
         val decoded = Json.decodeFromString<PadLayout>(legacyJson)
         assertEquals(60, decoded.mirrorMaxFps)
         assertEquals(85, decoded.mirrorSmoothingStrength)
+        assertEquals(0f, decoded.backgroundImageDim)
     }
 
     @Test

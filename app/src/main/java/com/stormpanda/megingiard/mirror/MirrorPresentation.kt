@@ -1059,7 +1059,7 @@ class MultiCutoutContainer(
                 val paint = if (bgImageDim > 0f) {
                     Paint().apply {
                         colorFilter = PorterDuffColorFilter(
-                            android.graphics.Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
+                            Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
                             PorterDuff.Mode.SRC_ATOP
                         )
                     }
@@ -1252,7 +1252,7 @@ class MultiCutoutContainer(
                 val paint = if (bgImageDim > 0f) {
                     Paint().apply {
                         colorFilter = PorterDuffColorFilter(
-                            android.graphics.Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
+                            Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
                             PorterDuff.Mode.SRC_ATOP
                         )
                     }

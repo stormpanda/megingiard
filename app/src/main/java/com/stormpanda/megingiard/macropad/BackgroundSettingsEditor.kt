@@ -106,14 +106,22 @@ import kotlin.math.roundToInt
 
 private const val TAG = "BackgroundSettingsEditor"
 
-
 private const val BSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.85f
 private val BSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
 private const val BSE_PREVIEW_MODAL_BG_ALPHA = 0.6f
 private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
-private val BSE_SPACING_16 = 16.dp
 private const val BSE_CROP_MIN_SCALE = 1f
 private const val BSE_CROP_MAX_SCALE = 5f
+
+private val BSE_SPACING_8 = 8.dp
+private val BSE_SPACING_12 = 12.dp
+private val BSE_SPACING_16 = 16.dp
+private val BSE_SPACING_40 = 40.dp
+private val BSE_ICON_SIZE_18 = 18.dp
+private val BSE_ICON_SIZE_40 = 40.dp
+private val BSE_ICON_SIZE_48 = 48.dp
+private val BSE_ICON_SIZE_72 = 72.dp
+private val BSE_BORDER_WIDTH_1 = 1.dp
 
 @Composable
 internal fun BackgroundSettingsEditor(
@@ -126,11 +134,11 @@ internal fun BackgroundSettingsEditor(
     initialBgImageOffsetX: Float = 0f,
     initialBgImageOffsetY: Float = 0f,
     initialBackgroundImageDim: Float = 0f,
-    accentColor: Color,
     onConfirm: (bgImagePath: String?, useAsMask: Boolean, bgChanged: Boolean, bgScale: Float, bgOffsetX: Float, bgOffsetY: Float, bgImageDim: Float) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val accentColor = colors.accent
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val windowManager = remember { context.getSystemService(Context.WINDOW_SERVICE) as WindowManager }
@@ -270,7 +278,7 @@ internal fun BackgroundSettingsEditor(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(BSE_SPACING_8))
                         HelpIconButton(onClick = { showHelpMenu = true })
                     }
                 }
@@ -280,10 +288,10 @@ internal fun BackgroundSettingsEditor(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = BSE_SPACING_16)
                     .verticalScroll(rememberScrollState())
             ) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(BSE_SPACING_16))
 
                 val configuration = LocalConfiguration.current
                 val screenHeight = configuration.screenHeightDp.dp
@@ -292,7 +300,7 @@ internal fun BackgroundSettingsEditor(
                 // 1. Preview and Action Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Left: Preview Frame
@@ -300,9 +308,9 @@ internal fun BackgroundSettingsEditor(
                         modifier = Modifier
                             .height(previewHeight)
                             .aspectRatio(aspectRatio)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
                             .background(colors.surfaceVariant)
-                            .border(1.dp, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                            .border(BSE_BORDER_WIDTH_1, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING)),
                         contentAlignment = Alignment.Center
                     ) {
                         val bitmap = previewBitmap
@@ -321,7 +329,7 @@ internal fun BackgroundSettingsEditor(
                                 imageVector = Icons.Rounded.Image,
                                 contentDescription = stringResource(R.string.layout_settings_bg_image_none),
                                 tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(BSE_ICON_SIZE_48)
                             )
                         }
                     }
@@ -331,7 +339,7 @@ internal fun BackgroundSettingsEditor(
                         modifier = Modifier
                             .weight(1f)
                             .height(previewHeight),
-                        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+                        verticalArrangement = Arrangement.spacedBy(BSE_SPACING_8, Alignment.CenterVertically)
                     ) {
                         // 1. Scrape from SteamGridDB
                         Button(
@@ -349,8 +357,8 @@ internal fun BackgroundSettingsEditor(
                             ),
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         ) {
-                            Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
+                            Spacer(Modifier.width(BSE_SPACING_8))
                             Text(stringResource(R.string.layout_settings_bg_image_scrape), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
 
@@ -363,8 +371,8 @@ internal fun BackgroundSettingsEditor(
                             ),
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         ) {
-                            Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
+                            Spacer(Modifier.width(BSE_SPACING_8))
                             Text(
                                 text = stringResource(R.string.layout_settings_bg_image_browse_local),
                                 maxLines = 1,
@@ -382,8 +390,8 @@ internal fun BackgroundSettingsEditor(
                             ),
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         ) {
-                            Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
+                            Spacer(Modifier.width(BSE_SPACING_8))
                             Text(stringResource(R.string.layout_settings_bg_image_crop), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
 
@@ -404,18 +412,18 @@ internal fun BackgroundSettingsEditor(
                             ),
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         ) {
-                            Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
+                            Spacer(Modifier.width(BSE_SPACING_8))
                             Text(stringResource(R.string.macropad_editor_delete_button), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(BSE_SPACING_16))
 
                 // 3. Mask option
                 if (pendingImageUri != null || currentBgPath != null) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(BSE_SPACING_8))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -439,11 +447,11 @@ internal fun BackgroundSettingsEditor(
                         )
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(BSE_SPACING_16))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16)
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -471,7 +479,7 @@ internal fun BackgroundSettingsEditor(
                     }
                 }
 
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.height(BSE_SPACING_40))
             }
         }
 
@@ -553,7 +561,7 @@ internal fun BackgroundSettingsEditor(
                     }
                 },
                 containerColor = colors.surface,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS)
             )
         }
     }
@@ -733,7 +741,7 @@ private fun ImageCropDialog(
                 if (!hasInteracted) {
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(BSE_ICON_SIZE_72)
                             .background(Color.Black.copy(alpha = 0.5f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -742,7 +750,7 @@ private fun ImageCropDialog(
                             contentDescription = null,
                             tint = Color.White,
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(BSE_ICON_SIZE_40)
                                 .graphicsLayer {
                                     this.alpha = alpha
                                 }
@@ -756,7 +764,7 @@ private fun ImageCropDialog(
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 12.dp)
+                modifier = Modifier.padding(top = BSE_SPACING_12)
             )
         }
     }
@@ -769,12 +777,20 @@ private fun BackgroundSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit)
         title = stringResource(R.string.layout_settings_bg_section_title),
         onDismiss = onDismiss
     ) {
-        HelpIntro(stringResource(R.string.help_layout_settings_intro))
+        HelpIntro(stringResource(R.string.help_bg_settings_intro))
 
         HelpSection(stringResource(R.string.help_layout_settings_sec_properties))
         HelpEntry(
             label = stringResource(R.string.help_layout_settings_bg_title),
             description = stringResource(R.string.help_layout_settings_bg_desc)
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_bg_settings_dimming_title),
+            description = stringResource(R.string.help_bg_settings_dimming_desc)
+        )
+        HelpEntry(
+            label = stringResource(R.string.help_bg_settings_crop_title),
+            description = stringResource(R.string.help_bg_settings_crop_desc)
         )
         HelpEntry(
             label = stringResource(R.string.help_layout_settings_mask_title),

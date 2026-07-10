@@ -562,7 +562,7 @@ private fun LayoutSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
         title = stringResource(R.string.help_layout_settings_title),
         onDismiss = onDismiss
     ) {
-        HelpIntro(stringResource(R.string.help_layout_settings_intro))
+        HelpIntro(stringResource(R.string.help_layout_settings_intro_no_bg))
 
         HelpSection(stringResource(R.string.help_layout_settings_sec_properties))
         HelpEntry(

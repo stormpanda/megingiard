@@ -535,6 +535,7 @@ Open Settings to create a layout.</string>
     <!-- Help menu strings for Layout settings -->
     <string name="help_layout_settings_title">Layout Settings Help</string>
     <string name="help_layout_settings_intro">Configure this layout\'s appearance, background image, and default button colors.</string>
+    <string name="help_layout_settings_intro_no_bg">Configure this layout\'s appearance, name, and default button colors.</string>
     <string name="help_layout_settings_sec_properties">Properties</string>
     <string name="help_layout_settings_name_title">Layout Name</string>
     <string name="help_layout_settings_name_desc">Assign a unique name to this layout to identify it in the editor and quick menu.</string>
@@ -547,6 +548,13 @@ Open Settings to create a layout.</string>
     <string name="help_layout_settings_colors_desc">Set default colors for all buttons in this layout (Text/Icon, Border, and Fading Color). Buttons can override these defaults individually.</string>
     <string name="help_layout_settings_palette_title">Quick Palette</string>
     <string name="help_layout_settings_palette_desc">Tap the palette icon next to a color to choose from standard neutral/accent styles or recently selected custom colors.</string>
+
+    <!-- Help menu strings for Background settings -->
+    <string name="help_bg_settings_intro">Configure this layout\'s background image settings, dimming, scraping, and mask options.</string>
+    <string name="help_bg_settings_dimming_title">Dimming</string>
+    <string name="help_bg_settings_dimming_desc">Dim the background image using the slider. Dimming ranges from 0% (no dimming) to 90% (maximum dimming) to keep buttons visible.</string>
+    <string name="help_bg_settings_crop_title">Crop &amp; Pan</string>
+    <string name="help_bg_settings_crop_desc">Crop and scale the image using drag to pan and pinch to zoom gestures to fit it to the dual-screen aspect ratio.</string>
 
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>

@@ -201,7 +201,7 @@ Each button supports one of the following actions:
 ### FR-P9b: SteamGridDB Image Scraper
 
 - Users can scrape background images directly from [SteamGridDB](https://www.steamgriddb.com/) using their API v2.
-- A **"Scrape"** button is provided next to the background image "Choose" button in the Background Settings Editor.
+- A **"Scrape from SteamGridDB"** button is provided next to the **"Browse local images"** button in the Background Settings Editor.
 - When clicked, Megingiard checks if a SteamGridDB API key is configured.
   - If **no key is configured**, a warning dialog appears directing the user to create a token on SteamGridDB and providing a button that opens the **Global Settings Screen** directly.
   - If a key is configured, the **SteamGridDB Scraper** dialog opens.
