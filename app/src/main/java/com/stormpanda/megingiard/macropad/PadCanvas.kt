@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -190,7 +191,10 @@ internal fun PadCanvas(
                         dstSize = IntSize(
                             (ws * scale).toInt(),
                             (hs * scale).toInt()
-                        )
+                        ),
+                        colorFilter = if ((layout?.backgroundImageDim ?: 0f) > 0f) {
+                            ColorFilter.tint(Color.Black.copy(alpha = layout!!.backgroundImageDim), BlendMode.SrcAtop)
+                        } else null
                     )
                 }
             }

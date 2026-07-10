@@ -427,6 +427,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_crop_image_instructions">Ziehen zum Verschieben • Zoomen durch Auf-/Zuziehen</string>
     <!-- Custom Layout Settings Buttons Colors -->
     <string name="layout_settings_bg_section_title">Hintergrund</string>
+    <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
     <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
     <string name="button_settings_colors_section_title">Tastenfarben</string>
     <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>

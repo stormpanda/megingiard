@@ -211,6 +211,14 @@ Each button supports one of the following actions:
 - A **SteamGridDB API-Token** field is provided in the **Global Settings Screen** under the General section to allow users to input and persist their API key via DataStore.
 
 
+### FR-P9c: Background Image Dimming
+
+- Users can dim the background image using a slider in the background settings overlay.
+- Dimming ranges from **0%** (no dimming) up to **90%** (maximum dimming) to prevent complete obscurity.
+- Transparent and semi-transparent PNG images are fully supported: dimming is applied using a `SrcAtop` blending tint color filter. This ensures that only the non-transparent/colored pixels of the image are dimmed, and the transparent background/cutout regions remain completely unaffected.
+- Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), the active **MacroPad Screen** (`MacroPadScreen`), and the secondary display **Screen Mirror Overlay** (`MirrorPresentation`).
+
+
 ### FR-P10: Optional Button Icons
 
 - Any button MAY be assigned an optional **icon** from the bundled **Material Symbols Rounded** icon font.

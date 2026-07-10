@@ -513,6 +513,7 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_crop_image_title">Crop Background Image</string>
     <string name="layout_settings_crop_image_instructions">Drag to pan • Pinch to zoom</string>
     <string name="layout_settings_bg_section_title">Background</string>
+    <string name="layout_settings_bg_image_dimming_title">Dimming</string>
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
     <string name="button_settings_colors_section_title">Button Color</string>
     <string name="layout_settings_color_text">Text &amp; Icon Color</string>

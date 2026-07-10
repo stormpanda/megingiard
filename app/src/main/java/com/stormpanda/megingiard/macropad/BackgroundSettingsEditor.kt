@@ -48,6 +48,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,7 +67,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -98,6 +102,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.roundToInt
 
 private const val TAG = "BackgroundSettingsEditor"
 
@@ -120,8 +125,9 @@ internal fun BackgroundSettingsEditor(
     initialBgImageScale: Float = 1f,
     initialBgImageOffsetX: Float = 0f,
     initialBgImageOffsetY: Float = 0f,
+    initialBackgroundImageDim: Float = 0f,
     accentColor: Color,
-    onConfirm: (bgImagePath: String?, useAsMask: Boolean, bgChanged: Boolean, bgScale: Float, bgOffsetX: Float, bgOffsetY: Float) -> Unit,
+    onConfirm: (bgImagePath: String?, useAsMask: Boolean, bgChanged: Boolean, bgScale: Float, bgOffsetX: Float, bgOffsetY: Float, bgImageDim: Float) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -136,6 +142,7 @@ internal fun BackgroundSettingsEditor(
     var bgScale by remember { mutableFloatStateOf(initialBgImageScale) }
     var bgOffsetX by remember { mutableFloatStateOf(initialBgImageOffsetX) }
     var bgOffsetY by remember { mutableFloatStateOf(initialBgImageOffsetY) }
+    var bgImageDim by remember { mutableFloatStateOf(initialBackgroundImageDim) }
 
     val bounds = remember { windowManager.currentWindowMetrics.bounds }
     val aspectRatio = remember(bounds) {
@@ -250,7 +257,7 @@ internal fun BackgroundSettingsEditor(
                                                 currentBgPath
                                             }
                                         }
-                                        onConfirm(finalBgPath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY)
+                                        onConfirm(finalBgPath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim)
                                         isSaving = false
                                     }
                                 }
@@ -304,6 +311,9 @@ internal fun BackgroundSettingsEditor(
                                 bitmap = bitmap,
                                 contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
                                 contentScale = ContentScale.Fit,
+                                colorFilter = if (bgImageDim > 0f) {
+                                    ColorFilter.tint(Color.Black.copy(alpha = bgImageDim), BlendMode.SrcAtop)
+                                } else null,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
@@ -426,6 +436,37 @@ internal fun BackgroundSettingsEditor(
                         Switch(
                             checked = useAsMask,
                             onCheckedChange = { useAsMask = it }
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.layout_settings_bg_image_dimming_title),
+                                color = colors.onSurface,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = "${(bgImageDim * 100).roundToInt()}%",
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Slider(
+                            value = bgImageDim,
+                            onValueChange = { bgImageDim = it },
+                            valueRange = 0f..0.9f,
+                            modifier = Modifier.weight(1.5f),
+                            colors = SliderDefaults.colors(
+                                thumbColor = accentColor,
+                                activeTrackColor = accentColor,
+                                inactiveTrackColor = colors.divider
+                            )
                         )
                     }
                 }

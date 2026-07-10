@@ -73,6 +73,7 @@ import android.graphics.LinearGradient
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.PorterDuffXfermode
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -697,6 +698,7 @@ class MirrorPresentation(
                 val scale = layout?.bgImageScale ?: 1f
                 val ox = layout?.bgImageOffsetX ?: 0f
                 val oy = layout?.bgImageOffsetY ?: 0f
+                val dim = layout?.backgroundImageDim ?: 0f
                 if (path != null) {
                     val file = File(context.filesDir, path)
                     withContext(Dispatchers.IO) {
@@ -708,6 +710,7 @@ class MirrorPresentation(
                                         multiCutoutContainer?.bgImageScale = scale
                                         multiCutoutContainer?.bgImageOffsetX = ox
                                         multiCutoutContainer?.bgImageOffsetY = oy
+                                        multiCutoutContainer?.bgImageDim = dim
                                         if (useAsMask) {
                                             container.setBackgroundColor(Color.BLACK)
                                             container.background = null
@@ -725,6 +728,7 @@ class MirrorPresentation(
                                         multiCutoutContainer?.bgImageScale = 1f
                                         multiCutoutContainer?.bgImageOffsetX = 0f
                                         multiCutoutContainer?.bgImageOffsetY = 0f
+                                        multiCutoutContainer?.bgImageDim = 0f
                                         multiCutoutContainer?.useAsMask = false
                                         multiCutoutContainer?.bgBitmap = null
                                     }
@@ -736,6 +740,7 @@ class MirrorPresentation(
                                     multiCutoutContainer?.bgImageScale = 1f
                                     multiCutoutContainer?.bgImageOffsetX = 0f
                                     multiCutoutContainer?.bgImageOffsetY = 0f
+                                    multiCutoutContainer?.bgImageDim = 0f
                                     multiCutoutContainer?.useAsMask = false
                                     multiCutoutContainer?.bgBitmap = null
                                 }
@@ -748,6 +753,7 @@ class MirrorPresentation(
                                 multiCutoutContainer?.bgImageScale = 1f
                                 multiCutoutContainer?.bgImageOffsetX = 0f
                                 multiCutoutContainer?.bgImageOffsetY = 0f
+                                multiCutoutContainer?.bgImageDim = 0f
                                 multiCutoutContainer?.useAsMask = false
                                 multiCutoutContainer?.bgBitmap = null
                             }
@@ -760,6 +766,7 @@ class MirrorPresentation(
                         multiCutoutContainer?.bgImageScale = 1f
                         multiCutoutContainer?.bgImageOffsetX = 0f
                         multiCutoutContainer?.bgImageOffsetY = 0f
+                        multiCutoutContainer?.bgImageDim = 0f
                         multiCutoutContainer?.useAsMask = false
                         multiCutoutContainer?.bgBitmap = null
                     }
@@ -851,6 +858,11 @@ class MultiCutoutContainer(
             invalidate()
         }
     var bgImageOffsetY: Float = 0f
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var bgImageDim: Float = 0f
         set(value) {
             field = value
             invalidate()
@@ -1044,7 +1056,15 @@ class MultiCutoutContainer(
                 
                 val srcRect = Rect(0, 0, bg.width, bg.height)
                 val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                canvas.drawBitmap(bg, srcRect, destRect, null)
+                val paint = if (bgImageDim > 0f) {
+                    Paint().apply {
+                        colorFilter = PorterDuffColorFilter(
+                            android.graphics.Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
+                            PorterDuff.Mode.SRC_ATOP
+                        )
+                    }
+                } else null
+                canvas.drawBitmap(bg, srcRect, destRect, paint)
                 canvas.restore()
             }
 
@@ -1229,7 +1249,15 @@ class MultiCutoutContainer(
                 
                 val srcRect = Rect(0, 0, mask.width, mask.height)
                 val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                canvas.drawBitmap(mask, srcRect, destRect, null)
+                val paint = if (bgImageDim > 0f) {
+                    Paint().apply {
+                        colorFilter = PorterDuffColorFilter(
+                            android.graphics.Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
+                            PorterDuff.Mode.SRC_ATOP
+                        )
+                    }
+                } else null
+                canvas.drawBitmap(mask, srcRect, destRect, paint)
                 canvas.restore()
             }
         } finally {

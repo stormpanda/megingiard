@@ -48,6 +48,8 @@ import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
@@ -351,7 +353,10 @@ internal fun PadSurface(
                             dstSize = IntSize(
                                 (ws * userScale).toInt(),
                                 (hs * userScale).toInt()
-                            )
+                            ),
+                            colorFilter = if (layout.backgroundImageDim > 0f) {
+                                ColorFilter.tint(Color.Black.copy(alpha = layout.backgroundImageDim), BlendMode.SrcAtop)
+                            } else null
                         )
                     }
                 }
