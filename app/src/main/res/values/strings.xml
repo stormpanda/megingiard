@@ -968,7 +968,8 @@ Open Settings to create a layout.</string>
     <string name="settings_steamgriddb_token">SteamGridDB API Token</string>
     <string name="settings_steamgriddb_token_desc">Required to scrape background images from steamgriddb.com. Generate one in your Profile Preferences on their website.</string>
     <string name="settings_steamgriddb_token_placeholder">Enter your API key here</string>
-    <string name="layout_settings_bg_image_scrape">Scrape</string>
+    <string name="layout_settings_bg_image_scrape">Scrape from SteamGridDB</string>
+    <string name="layout_settings_bg_image_browse_local">Browse local images</string>
     <string name="steamgriddb_token_missing_title">API Token Required</string>
     <string name="steamgriddb_token_missing_message">SteamGridDB scraping requires an API token. Please create an API key in your SteamGridDB account preferences and add it in Megingiard\'s Global Settings.</string>
     <string name="steamgriddb_token_missing_go_settings">Go to Settings</string>

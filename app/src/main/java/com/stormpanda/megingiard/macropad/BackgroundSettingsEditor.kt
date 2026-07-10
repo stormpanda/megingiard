@@ -114,6 +114,7 @@ private const val BSE_CROP_MAX_SCALE = 5f
 internal fun BackgroundSettingsEditor(
     title: String,
     layoutId: String,
+    layoutName: String,
     initialBackgroundImagePath: String?,
     initialUseAsMask: Boolean,
     initialBgImageScale: Float = 1f,
@@ -343,7 +344,7 @@ internal fun BackgroundSettingsEditor(
                             Text(stringResource(R.string.layout_settings_bg_image_scrape), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
 
-                        // 2. Choose / Change Image
+                        // 2. Browse local images
                         Button(
                             onClick = { launcher.launch("image/*") },
                             colors = ButtonDefaults.buttonColors(
@@ -355,17 +356,28 @@ internal fun BackgroundSettingsEditor(
                             Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = if (previewBitmap != null) {
-                                    stringResource(R.string.layout_settings_bg_image_change)
-                                } else {
-                                    stringResource(R.string.layout_settings_bg_image_choose)
-                                },
+                                text = stringResource(R.string.layout_settings_bg_image_browse_local),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
 
-                        // 3. Delete button
+                        // 3. Crop button
+                        Button(
+                            onClick = { showPreviewModal = true },
+                            enabled = previewBitmap != null,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.surfaceVariant,
+                                contentColor = colors.onSurface
+                            ),
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        ) {
+                            Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.layout_settings_bg_image_crop), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+
+                        // 4. Delete button
                         Button(
                             onClick = {
                                 pendingImageUri = null
@@ -385,21 +397,6 @@ internal fun BackgroundSettingsEditor(
                             Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.macropad_editor_delete_button), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-
-                        // 4. Crop button
-                        Button(
-                            onClick = { showPreviewModal = true },
-                            enabled = previewBitmap != null,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.surfaceVariant,
-                                contentColor = colors.onSurface
-                            ),
-                            modifier = Modifier.fillMaxWidth().weight(1f)
-                        ) {
-                            Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.layout_settings_bg_image_crop), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -461,7 +458,7 @@ internal fun BackgroundSettingsEditor(
 
         if (showScrapeDialog) {
             SteamGridDbScrapeDialog(
-                initialSearchQuery = "",
+                initialSearchQuery = layoutName,
                 onImageSelected = { uri ->
                     pendingImageUri = uri
                     currentBgPath = null

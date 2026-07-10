@@ -975,7 +975,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_steamgriddb_token">SteamGridDB API-Token</string>
     <string name="settings_steamgriddb_token_desc">Erforderlich, um Hintergrundbilder von steamgriddb.com zu laden (Scrapen). Erstelle ein API-Token in deinen Profileinstellungen auf deren Website.</string>
     <string name="settings_steamgriddb_token_placeholder">Gib deinen API-Schlüssel hier ein</string>
-    <string name="layout_settings_bg_image_scrape">Scrape</string>
+    <string name="layout_settings_bg_image_scrape">Von SteamGridDB abrufen</string>
+    <string name="layout_settings_bg_image_browse_local">Lokale Bilder durchsuchen</string>
     <string name="steamgriddb_token_missing_title">API-Token erforderlich</string>
     <string name="steamgriddb_token_missing_message">Das Laden von SteamGridDB erfordert ein API-Token. Bitte erstelle einen API-Schlüssel in deinen SteamGridDB-Kontoeinstellungen und füge ihn in den globalen Einstellungen von Megingiard hinzu.</string>
     <string name="steamgriddb_token_missing_go_settings">Einstellungen öffnen</string>
