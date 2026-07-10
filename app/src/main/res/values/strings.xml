@@ -509,9 +509,11 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Draw the background image on top of screen mirror cutouts. Useful for PNGs with transparency.</string>
     <string name="layout_settings_bg_image_preview_desc">Preview background image</string>
     <string name="layout_settings_bg_image_preview_dialog_title">Background Image Preview</string>
+    <string name="layout_settings_bg_image_crop">Crop</string>
     <string name="layout_settings_crop_image_title">Crop Background Image</string>
     <string name="layout_settings_crop_image_instructions">Drag to pan • Pinch to zoom</string>
     <string name="layout_settings_bg_section_title">Background</string>
+    <string name="layout_settings_bg_image_dimming_title">Dimming</string>
     <string name="layout_settings_colors_section_title">Button Color Defaults</string>
     <string name="button_settings_colors_section_title">Button Color</string>
     <string name="layout_settings_color_text">Text &amp; Icon Color</string>
@@ -533,6 +535,7 @@ Open Settings to create a layout.</string>
     <!-- Help menu strings for Layout settings -->
     <string name="help_layout_settings_title">Layout Settings Help</string>
     <string name="help_layout_settings_intro">Configure this layout\'s appearance, background image, and default button colors.</string>
+    <string name="help_layout_settings_intro_no_bg">Configure this layout\'s appearance, name, and default button colors.</string>
     <string name="help_layout_settings_sec_properties">Properties</string>
     <string name="help_layout_settings_name_title">Layout Name</string>
     <string name="help_layout_settings_name_desc">Assign a unique name to this layout to identify it in the editor and quick menu.</string>
@@ -545,6 +548,13 @@ Open Settings to create a layout.</string>
     <string name="help_layout_settings_colors_desc">Set default colors for all buttons in this layout (Text/Icon, Border, and Fading Color). Buttons can override these defaults individually.</string>
     <string name="help_layout_settings_palette_title">Quick Palette</string>
     <string name="help_layout_settings_palette_desc">Tap the palette icon next to a color to choose from standard neutral/accent styles or recently selected custom colors.</string>
+
+    <!-- Help menu strings for Background settings -->
+    <string name="help_bg_settings_intro">Configure this layout\'s background image settings, dimming, scraping, and mask options.</string>
+    <string name="help_bg_settings_dimming_title">Dimming</string>
+    <string name="help_bg_settings_dimming_desc">Dim the background image using the slider. Dimming ranges from 0% (no dimming) to 90% (maximum dimming) to keep buttons visible.</string>
+    <string name="help_bg_settings_crop_title">Crop &amp; Pan</string>
+    <string name="help_bg_settings_crop_desc">Crop and scale the image using drag to pan and pinch to zoom gestures to fit it to the dual-screen aspect ratio.</string>
 
     <!-- MacroListEditor -->
     <string name="macropad_macro_list_title">Macros</string>
@@ -785,6 +795,8 @@ Open Settings to create a layout.</string>
     <string name="help_editor_section_toolbar">Toolbar</string>
     <string name="help_editor_toolbar_button_label">Button</string>
     <string name="help_editor_toolbar_button_desc">Places a new macro button on the canvas. After tapping, you can drag it to any position while the canvas is unlocked.</string>
+    <string name="help_editor_toolbar_background_label">Background</string>
+    <string name="help_editor_toolbar_background_desc">Opens the background image configuration where you can choose or remove a background image, scrape covers from SteamGridDB, crop/scale the image, or toggle mask mode.</string>
     <string name="help_editor_profile_macros_label">Macros…</string>
     <string name="help_editor_profile_macros_desc">Opens the Macros list for this profile, where you can create, edit, and organise reusable macro sequences.</string>
     <string name="help_editor_toolbar_grid_label">Grid</string>
@@ -965,7 +977,8 @@ Open Settings to create a layout.</string>
     <string name="settings_steamgriddb_token">SteamGridDB API Token</string>
     <string name="settings_steamgriddb_token_desc">Required to scrape background images from steamgriddb.com. Generate one in your Profile Preferences on their website.</string>
     <string name="settings_steamgriddb_token_placeholder">Enter your API key here</string>
-    <string name="layout_settings_bg_image_scrape">Scrape</string>
+    <string name="layout_settings_bg_image_scrape">Scrape from SteamGridDB</string>
+    <string name="layout_settings_bg_image_browse_local">Browse local images</string>
     <string name="steamgriddb_token_missing_title">API Token Required</string>
     <string name="steamgriddb_token_missing_message">SteamGridDB scraping requires an API token. Please create an API key in your SteamGridDB account preferences and add it in Megingiard\'s Global Settings.</string>
     <string name="steamgriddb_token_missing_go_settings">Go to Settings</string>

@@ -106,6 +106,7 @@ fun QuickMenu(
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
 
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(),

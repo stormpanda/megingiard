@@ -375,6 +375,7 @@ data class PadLayout(
     val bgImageScale: Float = 1f,
     val bgImageOffsetX: Float = 0f,
     val bgImageOffsetY: Float = 0f,
+    val backgroundImageDim: Float = 0f,
 )
 
 

@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BitmapUtils
 import android.graphics.BitmapFactory
 import android.content.Context
 import android.view.WindowManager
@@ -134,10 +136,11 @@ internal fun PadCanvas(
         val path = layout?.backgroundImagePath
         if (path != null) {
             val file = File(context.filesDir, path)
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             withContext(Dispatchers.IO) {
                 try {
                     if (file.exists()) {
-                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                         bgBitmap = decoded?.asImageBitmap()
                     } else {
                         bgBitmap = null
@@ -150,6 +153,19 @@ internal fun PadCanvas(
         } else {
             bgBitmap = null
         }
+    }
+
+    val bgImageDimFilter = remember(layout?.backgroundImageDim) {
+        val dim = layout?.backgroundImageDim ?: 0f
+        if (dim > 0f) {
+            val scale = 1f - dim
+            ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+                scale, 0f,    0f,    0f, 0f,
+                0f,    scale, 0f,    0f, 0f,
+                0f,    0f,    scale, 0f, 0f,
+                0f,    0f,    0f,    1f, 0f
+            )))
+        } else null
     }
 
     val padModifier = Modifier
@@ -190,7 +206,8 @@ internal fun PadCanvas(
                         dstSize = IntSize(
                             (ws * scale).toInt(),
                             (hs * scale).toInt()
-                        )
+                        ),
+                        colorFilter = bgImageDimFilter
                     )
                 }
             }

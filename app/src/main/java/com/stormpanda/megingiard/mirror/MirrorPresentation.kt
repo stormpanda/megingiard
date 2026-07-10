@@ -6,9 +6,12 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.os.Bundle
 import androidx.compose.ui.graphics.Color as ComposeColor
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BitmapUtils
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.BitmapFactory
 import java.io.File
@@ -73,6 +76,7 @@ import android.graphics.LinearGradient
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.PorterDuffXfermode
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -697,17 +701,20 @@ class MirrorPresentation(
                 val scale = layout?.bgImageScale ?: 1f
                 val ox = layout?.bgImageOffsetX ?: 0f
                 val oy = layout?.bgImageOffsetY ?: 0f
+                val dim = layout?.backgroundImageDim ?: 0f
                 if (path != null) {
                     val file = File(context.filesDir, path)
+                    val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
                     withContext(Dispatchers.IO) {
                         try {
                             if (file.exists()) {
-                                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                                val bitmap = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                                 withContext(Dispatchers.Main) {
                                     if (bitmap != null) {
                                         multiCutoutContainer?.bgImageScale = scale
                                         multiCutoutContainer?.bgImageOffsetX = ox
                                         multiCutoutContainer?.bgImageOffsetY = oy
+                                        multiCutoutContainer?.bgImageDim = dim
                                         if (useAsMask) {
                                             container.setBackgroundColor(Color.BLACK)
                                             container.background = null
@@ -725,6 +732,7 @@ class MirrorPresentation(
                                         multiCutoutContainer?.bgImageScale = 1f
                                         multiCutoutContainer?.bgImageOffsetX = 0f
                                         multiCutoutContainer?.bgImageOffsetY = 0f
+                                        multiCutoutContainer?.bgImageDim = 0f
                                         multiCutoutContainer?.useAsMask = false
                                         multiCutoutContainer?.bgBitmap = null
                                     }
@@ -736,6 +744,7 @@ class MirrorPresentation(
                                     multiCutoutContainer?.bgImageScale = 1f
                                     multiCutoutContainer?.bgImageOffsetX = 0f
                                     multiCutoutContainer?.bgImageOffsetY = 0f
+                                    multiCutoutContainer?.bgImageDim = 0f
                                     multiCutoutContainer?.useAsMask = false
                                     multiCutoutContainer?.bgBitmap = null
                                 }
@@ -748,6 +757,7 @@ class MirrorPresentation(
                                 multiCutoutContainer?.bgImageScale = 1f
                                 multiCutoutContainer?.bgImageOffsetX = 0f
                                 multiCutoutContainer?.bgImageOffsetY = 0f
+                                multiCutoutContainer?.bgImageDim = 0f
                                 multiCutoutContainer?.useAsMask = false
                                 multiCutoutContainer?.bgBitmap = null
                             }
@@ -760,6 +770,7 @@ class MirrorPresentation(
                         multiCutoutContainer?.bgImageScale = 1f
                         multiCutoutContainer?.bgImageOffsetX = 0f
                         multiCutoutContainer?.bgImageOffsetY = 0f
+                        multiCutoutContainer?.bgImageDim = 0f
                         multiCutoutContainer?.useAsMask = false
                         multiCutoutContainer?.bgBitmap = null
                     }
@@ -809,6 +820,9 @@ class MultiCutoutContainer(
     private val srcWidth: Int,
     private val srcHeight: Int
 ) : FrameLayout(context) {
+    private val bgDimPaint = Paint()
+    private val bgSrcRect = Rect()
+    private val bgDestRect = RectF()
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
@@ -855,6 +869,27 @@ class MultiCutoutContainer(
             field = value
             invalidate()
         }
+    var bgImageDim: Float = 0f
+        set(value) {
+            if (field != value) {
+                field = value
+                updateBgDimPaint()
+                invalidate()
+            }
+        }
+
+    private fun updateBgDimPaint() {
+        val dim = bgImageDim
+        if (dim > 0f) {
+            val scale = 1f - dim
+            val matrix = ColorMatrix().apply {
+                setScale(scale, scale, scale, 1f)
+            }
+            bgDimPaint.colorFilter = ColorMatrixColorFilter(matrix)
+        } else {
+            bgDimPaint.colorFilter = null
+        }
+    }
     var viewportScale: Float = 1f
         set(value) {
             field = value
@@ -1023,7 +1058,7 @@ class MultiCutoutContainer(
 
         var masterViewDrawn = false
 
-        val overallSaveCount = canvas.saveLayer(0f, 0f, parentW, parentH, null)
+        val overallSaveCount = canvas.save()
         try {
             val bg = bgBitmap
             if (!useAsMask && bg != null) {
@@ -1042,9 +1077,10 @@ class MultiCutoutContainer(
                 canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
                 canvas.scale(scale, scale)
                 
-                val srcRect = Rect(0, 0, bg.width, bg.height)
-                val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                canvas.drawBitmap(bg, srcRect, destRect, null)
+                bgSrcRect.set(0, 0, bg.width, bg.height)
+                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                val paint = if (bgImageDim > 0f) bgDimPaint else null
+                canvas.drawBitmap(bg, bgSrcRect, bgDestRect, paint)
                 canvas.restore()
             }
 
@@ -1053,7 +1089,11 @@ class MultiCutoutContainer(
             // within this layer. When the layer is restored to the parent canvas it
             // uses the default SRC_OVER composite so cutouts alpha-blend correctly
             // on top of the background image instead of being added to it.
-            val cutoutsLayerSaveCount = canvas.saveLayer(0f, 0f, parentW, parentH, null)
+            val cutoutsLayerSaveCount = if (edgeBlending) {
+                canvas.saveLayer(0f, 0f, parentW, parentH, null)
+            } else {
+                canvas.save()
+            }
 
             for (cutout in cutouts) {
                 val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
@@ -1227,9 +1267,10 @@ class MultiCutoutContainer(
                 canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
                 canvas.scale(scale, scale)
                 
-                val srcRect = Rect(0, 0, mask.width, mask.height)
-                val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                canvas.drawBitmap(mask, srcRect, destRect, null)
+                bgSrcRect.set(0, 0, mask.width, mask.height)
+                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                val paint = if (bgImageDim > 0f) bgDimPaint else null
+                canvas.drawBitmap(mask, bgSrcRect, bgDestRect, paint)
                 canvas.restore()
             }
         } finally {

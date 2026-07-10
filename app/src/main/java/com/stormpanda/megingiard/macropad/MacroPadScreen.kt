@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.macropad.HapticStrength
@@ -48,6 +49,9 @@ import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntOffset
@@ -186,19 +190,19 @@ internal fun PadSurface(
     val context      = LocalContext.current
     val vibrator     = remember { context.getSystemService(Vibrator::class.java) }
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
-    val isQuickMenuOpen      by viewModel.isQuickMenuOpen.collectAsState()
-    val isQuickMenuOpenState  = rememberUpdatedState(isQuickMenuOpen)
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
+
 
     var bgBitmap by remember(layout.backgroundImagePath, layout.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(layout.backgroundImagePath, layout.backgroundImageVersion) {
         val path = layout.backgroundImagePath
         if (path != null) {
             val file = File(context.filesDir, path)
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             withContext(Dispatchers.IO) {
                 try {
                     if (file.exists()) {
-                        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                         bgBitmap = decoded?.asImageBitmap()
                     } else {
                         bgBitmap = null
@@ -211,6 +215,19 @@ internal fun PadSurface(
         } else {
             bgBitmap = null
         }
+    }
+
+    val bgImageDimFilter = remember(layout.backgroundImageDim) {
+        val dim = layout.backgroundImageDim
+        if (dim > 0f) {
+            val scale = 1f - dim
+            ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+                scale, 0f,    0f,    0f, 0f,
+                0f,    scale, 0f,    0f, 0f,
+                0f,    0f,    scale, 0f, 0f,
+                0f,    0f,    0f,    1f, 0f
+            )))
+        } else null
     }
 
     // Create hit-test engine with density-aware dp→px converter and haptic callback
@@ -259,7 +276,7 @@ internal fun PadSurface(
                                 val h       = canvasSize.height.toFloat().coerceAtLeast(1f)
 
                                 // Block input while quick menu overlay is open
-                                if (isQuickMenuOpenState.value && event.type != PointerEventType.Release) {
+                                if (viewModel.isQuickMenuOpen.value && event.type != PointerEventType.Release) {
                                     event.changes.forEach { it.consume() }
                                     continue
                                 }
@@ -351,7 +368,8 @@ internal fun PadSurface(
                             dstSize = IntSize(
                                 (ws * userScale).toInt(),
                                 (hs * userScale).toInt()
-                            )
+                            ),
+                            colorFilter = bgImageDimFilter
                         )
                     }
                 }

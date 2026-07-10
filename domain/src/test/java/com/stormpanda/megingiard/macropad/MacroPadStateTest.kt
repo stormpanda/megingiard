@@ -587,6 +587,30 @@ class MacroPadStateTest {
     }
 
     @Test
+    fun `updateLayout preserves and updates backgroundImageDim`() {
+        val p1Id = UUID.randomUUID().toString()
+        val layoutId = "layout-1"
+        val l1 = PadLayout(id = layoutId, name = "Lay1", backgroundImageDim = 0f)
+        val p1 = PadProfile(
+            id = p1Id,
+            name = "P1",
+            layouts = listOf(l1),
+            activeLayoutId = layoutId
+        )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // Verify initially 0f
+        assertEquals(0f, MacroPadState.activeLayout.value?.backgroundImageDim)
+
+        // When updating the layout with backgroundImageDim = 0.5f
+        val updatedLayout = l1.copy(backgroundImageDim = 0.5f)
+        MacroPadState.updateLayout(updatedLayout)
+
+        // Then it is preserved in state
+        assertEquals(0.5f, MacroPadState.activeLayout.value?.backgroundImageDim)
+    }
+
+    @Test
     fun `updateLayout preserves and updates bgImageScale and offsets`() {
         val p1Id = UUID.randomUUID().toString()
         val layoutId = "layout-1"

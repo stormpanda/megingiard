@@ -422,10 +422,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="layout_settings_bg_image_use_as_mask_desc">Hintergrundbild über den gespiegelten Bildausschnitten anzeigen. Nützlich für PNGs mit Transparenz.</string>
     <string name="layout_settings_bg_image_preview_desc">Hintergrundbild-Vorschau</string>
     <string name="layout_settings_bg_image_preview_dialog_title">Hintergrundbild-Vorschau</string>
+    <string name="layout_settings_bg_image_crop">Zuschneiden</string>
     <string name="layout_settings_crop_image_title">Hintergrundbild zuschneiden</string>
     <string name="layout_settings_crop_image_instructions">Ziehen zum Verschieben • Zoomen durch Auf-/Zuziehen</string>
     <!-- Custom Layout Settings Buttons Colors -->
     <string name="layout_settings_bg_section_title">Hintergrund</string>
+    <string name="layout_settings_bg_image_dimming_title">Dimmung</string>
     <string name="layout_settings_colors_section_title">Tastenfarben-Standardwerte</string>
     <string name="button_settings_colors_section_title">Tastenfarben</string>
     <string name="layout_settings_color_text">Text- &amp; Symbolfarbe</string>
@@ -447,6 +449,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Help menu strings for Layout settings -->
     <string name="help_layout_settings_title">Layout-Einstellungen Hilfe</string>
     <string name="help_layout_settings_intro">Konfiguriere das Aussehen, das Hintergrundbild und die Standard-Tastenfarben dieses Layouts.</string>
+    <string name="help_layout_settings_intro_no_bg">Konfiguriere das Aussehen, den Namen und die Standard-Tastenfarben dieses Layouts.</string>
     <string name="help_layout_settings_sec_properties">Eigenschaften</string>
     <string name="help_layout_settings_name_title">Layoutname</string>
     <string name="help_layout_settings_name_desc">Weise diesem Layout einen eindeutigen Namen zu, um es im Editor und im Schnellmenü zu identifizieren.</string>
@@ -459,6 +462,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_layout_settings_colors_desc">Setze Standardfarben für alle Tasten in diesem Layout (Text/Symbol, Rahmen und Verlaufsfarbe). Tasten können diese Werte einzeln überschreiben.</string>
     <string name="help_layout_settings_palette_title">Schnellpalette</string>
     <string name="help_layout_settings_palette_desc">Tippe auf das Palette-Symbol neben einer Farbe, um standardmäßige neutrale/Akzent-Stile oder kürzlich genutzte Farben auszuwählen.</string>
+
+    <!-- Help menu strings for Background settings -->
+    <string name="help_bg_settings_intro">Konfiguriere das Hintergrundbild, die Dimmung, das Scrapen und die Masken-Überlagerung des Layouts.</string>
+    <string name="help_bg_settings_dimming_title">Dimmung</string>
+    <string name="help_bg_settings_dimming_desc">Dimme das Hintergrundbild mit dem Schieberegler. Der Bereich reicht von 0% (keine Dimmung) bis 90% (maximale Dimmung), damit Tasten gut lesbar bleiben.</string>
+    <string name="help_bg_settings_crop_title">Zuschneiden &amp; Verschieben</string>
+    <string name="help_bg_settings_crop_desc">Schneide und skaliere das Bild per Zieh- und Zoomgesten zu, um es an das Dual-Screen-Seitenverhältnis anzupassen.</string>
 
     <!-- Makro-Listenverwaltung -->
     <string name="macropad_macro_list_title">Makros</string>
@@ -792,6 +802,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_editor_section_toolbar">Toolbar</string>
     <string name="help_editor_toolbar_button_label">Taste</string>
     <string name="help_editor_toolbar_button_desc">Platziert eine neue Makro-Schaltfläche auf der Arbeitsfläche. Danach kannst du sie bei entsperrter Fläche beliebig verschieben.</string>
+    <string name="help_editor_toolbar_background_label">Hintergrund</string>
+    <string name="help_editor_toolbar_background_desc">Öffnet die Hintergrundbildeinstellungen, um ein Hintergrundbild auszuwählen oder zu entfernen, Cover von SteamGridDB zu laden, das Bild zuzuschneiden/skalieren oder den Maskenmodus zu aktivieren.</string>
     <string name="help_editor_profile_macros_label">Makros…</string>
     <string name="help_editor_profile_macros_desc">Öffnet die Makroliste für dieses Profil, um wiederverwendbare Makros zu erstellen, zu bearbeiten und zu verwalten.</string>
     <string name="help_editor_toolbar_grid_label">Raster</string>
@@ -972,7 +984,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_steamgriddb_token">SteamGridDB API-Token</string>
     <string name="settings_steamgriddb_token_desc">Erforderlich, um Hintergrundbilder von steamgriddb.com zu laden (Scrapen). Erstelle ein API-Token in deinen Profileinstellungen auf deren Website.</string>
     <string name="settings_steamgriddb_token_placeholder">Gib deinen API-Schlüssel hier ein</string>
-    <string name="layout_settings_bg_image_scrape">Scrape</string>
+    <string name="layout_settings_bg_image_scrape">Von SteamGridDB abrufen</string>
+    <string name="layout_settings_bg_image_browse_local">Lokale Bilder durchsuchen</string>
     <string name="steamgriddb_token_missing_title">API-Token erforderlich</string>
     <string name="steamgriddb_token_missing_message">Das Laden von SteamGridDB erfordert ein API-Token. Bitte erstelle einen API-Schlüssel in deinen SteamGridDB-Kontoeinstellungen und füge ihn in den globalen Einstellungen von Megingiard hinzu.</string>
     <string name="steamgriddb_token_missing_go_settings">Einstellungen öffnen</string>
