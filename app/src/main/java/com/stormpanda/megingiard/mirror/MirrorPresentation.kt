@@ -821,11 +821,6 @@ class MultiCutoutContainer(
     private val srcHeight: Int
 ) : FrameLayout(context) {
     private val bgDimPaint = Paint()
-    private var performanceFrameCount = 0
-    private var performanceTotalDrawTimeNs = 0L
-    private var performanceMaxDrawTimeNs = 0L
-    private var performanceSlowFrameCount = 0
-    private var performanceJankFrameCount = 0
     private val bgSrcRect = Rect()
     private val bgDestRect = RectF()
     var cutouts: List<ScreenCutout> = emptyList()
@@ -1048,7 +1043,6 @@ class MultiCutoutContainer(
     }
 
     override fun dispatchDraw(canvas: Canvas) {
-        val startTime = android.os.SystemClock.elapsedRealtimeNanos()
         val masterView = if (childCount > 0) getChildAt(0) else null
         if (masterView == null && (!isFrozen || frozenBitmap == null)) return
 
@@ -1281,32 +1275,6 @@ class MultiCutoutContainer(
             }
         } finally {
             canvas.restoreToCount(overallSaveCount)
-        }
-
-        val durationNs = android.os.SystemClock.elapsedRealtimeNanos() - startTime
-        performanceFrameCount++
-        performanceTotalDrawTimeNs += durationNs
-        if (durationNs > performanceMaxDrawTimeNs) {
-            performanceMaxDrawTimeNs = durationNs
-        }
-        val durationMs = durationNs / 1_000_000f
-        if (durationMs > 16.6f) {
-            performanceSlowFrameCount++
-        }
-        if (durationMs > 33.3f) {
-            performanceJankFrameCount++
-        }
-
-        if (performanceFrameCount >= 60) {
-            val avgMs = (performanceTotalDrawTimeNs / 60f) / 1_000_000f
-            val maxMs = performanceMaxDrawTimeNs / 1_000_000f
-            AppLog.d(TAG, "MultiCutoutContainer rendering metrics (Last 60 frames): Avg: ${"%.2f".format(avgMs)}ms, Max: ${"%.2f".format(maxMs)}ms, Slow Frames (>16.6ms): $performanceSlowFrameCount, Jank Frames (>33.3ms): $performanceJankFrameCount")
-            
-            performanceFrameCount = 0
-            performanceTotalDrawTimeNs = 0L
-            performanceMaxDrawTimeNs = 0L
-            performanceSlowFrameCount = 0
-            performanceJankFrameCount = 0
         }
     }
 }

@@ -29,7 +29,6 @@ import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,11 +106,6 @@ fun QuickMenu(
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
 
-    val recompositions = remember { object { var count = 0 } }
-    recompositions.count++
-    SideEffect {
-        AppLog.d(TAG, "QuickMenu recomposed! Total count: ${recompositions.count}")
-    }
 
     AnimatedVisibility(
         visible = visible,

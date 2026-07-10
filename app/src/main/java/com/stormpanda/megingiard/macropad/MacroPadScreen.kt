@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -193,11 +192,6 @@ internal fun PadSurface(
     val canvasSizeState = remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
-    val recompositions = remember { object { var count = 0 } }
-    recompositions.count++
-    SideEffect {
-        AppLog.d(TAG, "PadSurface recomposed! Total count: ${recompositions.count}")
-    }
 
     var bgBitmap by remember(layout.backgroundImagePath, layout.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(layout.backgroundImagePath, layout.backgroundImageVersion) {
