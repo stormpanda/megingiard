@@ -816,6 +816,7 @@ class MultiCutoutContainer(
     private val srcWidth: Int,
     private val srcHeight: Int
 ) : FrameLayout(context) {
+    private val bgDimPaint = Paint()
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
@@ -864,9 +865,24 @@ class MultiCutoutContainer(
         }
     var bgImageDim: Float = 0f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                updateBgDimPaint()
+                invalidate()
+            }
         }
+
+    private fun updateBgDimPaint() {
+        val dim = bgImageDim
+        if (dim > 0f) {
+            bgDimPaint.colorFilter = PorterDuffColorFilter(
+                Color.argb((dim * 255).toInt(), 0, 0, 0),
+                PorterDuff.Mode.SRC_ATOP
+            )
+        } else {
+            bgDimPaint.colorFilter = null
+        }
+    }
     var viewportScale: Float = 1f
         set(value) {
             field = value
@@ -1056,14 +1072,7 @@ class MultiCutoutContainer(
                 
                 val srcRect = Rect(0, 0, bg.width, bg.height)
                 val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                val paint = if (bgImageDim > 0f) {
-                    Paint().apply {
-                        colorFilter = PorterDuffColorFilter(
-                            Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
-                            PorterDuff.Mode.SRC_ATOP
-                        )
-                    }
-                } else null
+                val paint = if (bgImageDim > 0f) bgDimPaint else null
                 canvas.drawBitmap(bg, srcRect, destRect, paint)
                 canvas.restore()
             }
@@ -1249,14 +1258,7 @@ class MultiCutoutContainer(
                 
                 val srcRect = Rect(0, 0, mask.width, mask.height)
                 val destRect = RectF(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-                val paint = if (bgImageDim > 0f) {
-                    Paint().apply {
-                        colorFilter = PorterDuffColorFilter(
-                            Color.argb((bgImageDim * 255).toInt(), 0, 0, 0),
-                            PorterDuff.Mode.SRC_ATOP
-                        )
-                    }
-                } else null
+                val paint = if (bgImageDim > 0f) bgDimPaint else null
                 canvas.drawBitmap(mask, srcRect, destRect, paint)
                 canvas.restore()
             }

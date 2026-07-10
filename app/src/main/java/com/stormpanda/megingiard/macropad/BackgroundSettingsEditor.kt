@@ -152,6 +152,12 @@ internal fun BackgroundSettingsEditor(
     var bgOffsetY by remember { mutableFloatStateOf(initialBgImageOffsetY) }
     var bgImageDim by remember { mutableFloatStateOf(initialBackgroundImageDim) }
 
+    val bgImageDimFilter = remember(bgImageDim) {
+        if (bgImageDim > 0f) {
+            ColorFilter.tint(Color.Black.copy(alpha = bgImageDim), BlendMode.SrcAtop)
+        } else null
+    }
+
     val bounds = remember { windowManager.currentWindowMetrics.bounds }
     val aspectRatio = remember(bounds) {
         val w = bounds.width().toFloat()
@@ -319,9 +325,7 @@ internal fun BackgroundSettingsEditor(
                                 bitmap = bitmap,
                                 contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
                                 contentScale = ContentScale.Fit,
-                                colorFilter = if (bgImageDim > 0f) {
-                                    ColorFilter.tint(Color.Black.copy(alpha = bgImageDim), BlendMode.SrcAtop)
-                                } else null,
+                                colorFilter = bgImageDimFilter,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {

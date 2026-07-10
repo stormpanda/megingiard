@@ -153,6 +153,13 @@ internal fun PadCanvas(
         }
     }
 
+    val bgImageDimFilter = remember(layout?.backgroundImageDim) {
+        val dim = layout?.backgroundImageDim ?: 0f
+        if (dim > 0f) {
+            ColorFilter.tint(Color.Black.copy(alpha = dim), BlendMode.SrcAtop)
+        } else null
+    }
+
     val padModifier = Modifier
         .width(padWidth)
         .height(padHeight)
@@ -192,9 +199,7 @@ internal fun PadCanvas(
                             (ws * scale).toInt(),
                             (hs * scale).toInt()
                         ),
-                        colorFilter = if ((layout?.backgroundImageDim ?: 0f) > 0f) {
-                            ColorFilter.tint(Color.Black.copy(alpha = layout!!.backgroundImageDim), BlendMode.SrcAtop)
-                        } else null
+                        colorFilter = bgImageDimFilter
                     )
                 }
             }

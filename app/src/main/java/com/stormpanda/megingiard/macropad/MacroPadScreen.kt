@@ -215,6 +215,12 @@ internal fun PadSurface(
         }
     }
 
+    val bgImageDimFilter = remember(layout.backgroundImageDim) {
+        if (layout.backgroundImageDim > 0f) {
+            ColorFilter.tint(Color.Black.copy(alpha = layout.backgroundImageDim), BlendMode.SrcAtop)
+        } else null
+    }
+
     // Create hit-test engine with density-aware dp→px converter and haptic callback
     val engine = remember(profile, layout) {
         viewModel.createHitTestEngine(
@@ -354,9 +360,7 @@ internal fun PadSurface(
                                 (ws * userScale).toInt(),
                                 (hs * userScale).toInt()
                             ),
-                            colorFilter = if (layout.backgroundImageDim > 0f) {
-                                ColorFilter.tint(Color.Black.copy(alpha = layout.backgroundImageDim), BlendMode.SrcAtop)
-                            } else null
+                            colorFilter = bgImageDimFilter
                         )
                     }
                 }
