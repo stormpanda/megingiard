@@ -281,121 +281,126 @@ internal fun BackgroundSettingsEditor(
                 val screenHeight = configuration.screenHeightDp.dp
                 val previewHeight = screenHeight * 0.4f
 
-                // 1. Preview Frame
-                Box(
-                    modifier = Modifier
-                        .height(previewHeight)
-                        .aspectRatio(aspectRatio)
-                        .align(Alignment.CenterHorizontally)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(colors.surfaceVariant)
-                        .border(1.dp, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val bitmap = previewBitmap
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Rounded.Image,
-                            contentDescription = stringResource(R.string.layout_settings_bg_image_none),
-                            tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // 2. Action row
+                // 1. Preview and Action Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Crop button
-                    Button(
-                        onClick = { showPreviewModal = true },
-                        enabled = previewBitmap != null,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.surfaceVariant,
-                            contentColor = colors.onSurface
-                        ),
-                        modifier = Modifier.weight(1f)
+                    // Left: Preview Frame
+                    Box(
+                        modifier = Modifier
+                            .height(previewHeight)
+                            .aspectRatio(aspectRatio)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(colors.surfaceVariant)
+                            .border(1.dp, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.layout_settings_bg_image_crop), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val bitmap = previewBitmap
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Rounded.Image,
+                                contentDescription = stringResource(R.string.layout_settings_bg_image_none),
+                                tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
                     }
 
-                    // Delete button
-                    Button(
-                        onClick = {
-                            pendingImageUri = null
-                            currentBgPath = null
-                            useAsMask = false
-                            bgScale = 1f
-                            bgOffsetX = 0f
-                            bgOffsetY = 0f
-                        },
-                        enabled = previewBitmap != null,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.error.copy(alpha = 0.15f),
-                            contentColor = colors.error
-                        ),
-                        modifier = Modifier.weight(1f)
+                    // Right: Column of buttons
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(previewHeight),
+                        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
                     ) {
-                        Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.macropad_editor_delete_button), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-
-                    // Choose / Change Image
-                    Button(
-                        onClick = { launcher.launch("image/*") },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = accentColor,
-                            contentColor = colors.onAccent
-                        ),
-                        modifier = Modifier.weight(1.2f)
-                    ) {
-                        Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = if (previewBitmap != null) {
-                                stringResource(R.string.layout_settings_bg_image_change)
-                            } else {
-                                stringResource(R.string.layout_settings_bg_image_choose)
+                        // 1. Scrape from SteamGridDB
+                        Button(
+                            onClick = {
+                                val token = SettingsManager.steamGridDbApiToken.value
+                                if (token.isBlank()) {
+                                    showApiTokenMissingDialog = true
+                                } else {
+                                    showScrapeDialog = true
+                                }
                             },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = accentColor,
+                                contentColor = colors.onAccent
+                            ),
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        ) {
+                            Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.layout_settings_bg_image_scrape), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
 
-                    // Scrape from SteamGridDB
-                    Button(
-                        onClick = {
-                            val token = SettingsManager.steamGridDbApiToken.value
-                            if (token.isBlank()) {
-                                showApiTokenMissingDialog = true
-                            } else {
-                                showScrapeDialog = true
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = accentColor,
-                            contentColor = colors.onAccent
-                        ),
-                        modifier = Modifier.weight(1.2f)
-                    ) {
-                        Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.layout_settings_bg_image_scrape), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        // 2. Choose / Change Image
+                        Button(
+                            onClick = { launcher.launch("image/*") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = accentColor,
+                                contentColor = colors.onAccent
+                            ),
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        ) {
+                            Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (previewBitmap != null) {
+                                    stringResource(R.string.layout_settings_bg_image_change)
+                                } else {
+                                    stringResource(R.string.layout_settings_bg_image_choose)
+                                },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        // 3. Delete button
+                        Button(
+                            onClick = {
+                                pendingImageUri = null
+                                currentBgPath = null
+                                useAsMask = false
+                                bgScale = 1f
+                                bgOffsetX = 0f
+                                bgOffsetY = 0f
+                            },
+                            enabled = previewBitmap != null,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.error.copy(alpha = 0.15f),
+                                contentColor = colors.error
+                            ),
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        ) {
+                            Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.macropad_editor_delete_button), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+
+                        // 4. Crop button
+                        Button(
+                            onClick = { showPreviewModal = true },
+                            enabled = previewBitmap != null,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.surfaceVariant,
+                                contentColor = colors.onSurface
+                            ),
+                            modifier = Modifier.fillMaxWidth().weight(1f)
+                        ) {
+                            Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.layout_settings_bg_image_crop), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
 
