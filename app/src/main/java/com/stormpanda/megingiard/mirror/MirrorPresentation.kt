@@ -1048,6 +1048,13 @@ class MultiCutoutContainer(
                 canvas.restore()
             }
 
+            // Isolate all cutout rendering in a transparent intermediate layer.
+            // ADD blending between adjacent cutouts (edge overlap) happens entirely
+            // within this layer. When the layer is restored to the parent canvas it
+            // uses the default SRC_OVER composite so cutouts alpha-blend correctly
+            // on top of the background image instead of being added to it.
+            val cutoutsLayerSaveCount = canvas.saveLayer(0f, 0f, parentW, parentH, null)
+
             for (cutout in cutouts) {
                 val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
                 val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
@@ -1198,6 +1205,10 @@ class MultiCutoutContainer(
                 canvas.drawRect(0f, 0f, 1f, 1f, maskPaint)
                 canvas.restoreToCount(saveCount)
             }
+
+            // Restore the cutouts intermediate layer — all ADD-blended cutout pixels
+            // are now composited (SRC_OVER) on top of the background as a unit.
+            canvas.restoreToCount(cutoutsLayerSaveCount)
 
             val mask = bgBitmap
             if (useAsMask && mask != null) {
