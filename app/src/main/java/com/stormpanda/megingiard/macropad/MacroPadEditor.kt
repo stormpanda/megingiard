@@ -780,7 +780,6 @@ private fun EditorBody(
                 },
                 onReorderProfiles = onReorderProfiles,
                 onDeleteProfile = onDeleteProfile,
-                onManageMacros  = onManageMacros,
                 modifier        = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)
