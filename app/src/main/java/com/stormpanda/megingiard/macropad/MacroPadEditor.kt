@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -134,6 +135,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var showNewLayoutDialog      by remember { mutableStateOf(false) }
     var layoutPendingDelete      by remember { mutableStateOf<PadLayout?>(null) }
     var showEditLayoutDialog     by remember { mutableStateOf(false) }
+    var showBackgroundSettingsDialog by remember { mutableStateOf(false) }
     var showReorderProfilesOverlay by remember { mutableStateOf(false) }
     var showReorderLayoutsOverlay by remember { mutableStateOf(false) }
     var isCanvasLocked            by remember { mutableStateOf(true) }
@@ -147,7 +149,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
         editingButtonActive || buttonPendingDelete != null ||
         showNewLayoutDialog || layoutPendingDelete != null ||
         showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm ||
-        showEditLayoutDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay ||
+        showEditLayoutDialog || showBackgroundSettingsDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay ||
         showCopyLayoutProfileDialog || showCopyButtonLayoutDialog
     BackHandler(enabled = anyOverlayVisible) {
         when {
@@ -161,6 +163,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             showRenameProfileDialog  -> showRenameProfileDialog = false
             showDeleteProfileConfirm -> showDeleteProfileConfirm = false
             showEditLayoutDialog     -> showEditLayoutDialog = false
+            showBackgroundSettingsDialog -> showBackgroundSettingsDialog = false
             showReorderProfilesOverlay -> showReorderProfilesOverlay = false
             showReorderLayoutsOverlay -> showReorderLayoutsOverlay = false
             showCopyLayoutProfileDialog -> showCopyLayoutProfileDialog = false
@@ -217,6 +220,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     onReorderLayouts        = { showReorderLayoutsOverlay = true },
                     isCanvasLocked          = isCanvasLocked,
                     onToggleCanvasLock      = { isCanvasLocked = !isCanvasLocked },
+                    onManageBackground      = { showBackgroundSettingsDialog = true },
                     modifier                = Modifier.padding(innerPadding),
                 )
             }
@@ -306,12 +310,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialButtonTextColor = ColorOption.Neutral,
                 initialButtonBorderColor = ColorOption.Neutral,
                 initialButtonBgColor = ColorOption.Neutral,
-                initialBackgroundImagePath = null,
-                initialUseAsMask = false,
                 initialInvisibleButtons = false,
                 accentColor = colors.accent,
                 existingNames = profile.layouts.map { it.name },
-                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged, bgScale, bgOffsetX, bgOffsetY ->
+                onConfirm = { name, textCol, borderCol, bgCol, invisibleBtns ->
                     val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
                     val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
                     val bottomW = ScreenCaptureManager.surfaceWidth.value
@@ -328,13 +330,13 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         buttonTextColor = textCol,
                         buttonBorderColor = borderCol,
                         buttonBgColor = bgCol,
-                        backgroundImagePath = bgImagePath,
-                        useBackgroundImageAsMask = useAsMask,
+                        backgroundImagePath = null,
+                        useBackgroundImageAsMask = false,
                         invisibleButtons = invisibleBtns,
-                        backgroundImageVersion = if (bgChanged) 1 else 0,
-                        bgImageScale = bgScale,
-                        bgImageOffsetX = bgOffsetX,
-                        bgImageOffsetY = bgOffsetY,
+                        backgroundImageVersion = 0,
+                        bgImageScale = 1f,
+                        bgImageOffsetX = 0f,
+                        bgImageOffsetY = 0f,
                         mirrorCutouts = listOf(defaultCutout)
                     )
                     MacroPadState.addLayout(newLayout)
@@ -440,15 +442,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 initialButtonTextColor = curLayout.buttonTextColor,
                 initialButtonBorderColor = curLayout.buttonBorderColor,
                 initialButtonBgColor = curLayout.buttonBgColor,
-                initialBackgroundImagePath = curLayout.backgroundImagePath,
-                initialUseAsMask = curLayout.useBackgroundImageAsMask,
                 initialInvisibleButtons = curLayout.invisibleButtons,
-                initialBgImageScale = curLayout.bgImageScale,
-                initialBgImageOffsetX = curLayout.bgImageOffsetX,
-                initialBgImageOffsetY = curLayout.bgImageOffsetY,
                 accentColor = colors.accent,
                 existingNames = profile?.layouts?.filter { it.id != curLayout.id }?.map { it.name } ?: emptyList(),
-                onConfirm = { name, textCol, borderCol, bgCol, bgImagePath, useAsMask, invisibleBtns, bgChanged, bgScale, bgOffsetX, bgOffsetY ->
+                onConfirm = { name, textCol, borderCol, bgCol, invisibleBtns ->
                     MacroPadState.updateLayout(
                         curLayout.copy(
                             name = name,
@@ -456,18 +453,41 @@ fun MacroPadEditor(onDone: () -> Unit) {
                             buttonTextColor = textCol,
                             buttonBorderColor = borderCol,
                             buttonBgColor = bgCol,
+                            invisibleButtons = invisibleBtns
+                        )
+                    )
+                    showEditLayoutDialog = false
+                },
+                onDismiss = { showEditLayoutDialog = false }
+            )
+        }
+
+        // Background settings overlay
+        if (showBackgroundSettingsDialog && activeLayout != null) {
+            val curLayout = activeLayout!!
+            BackgroundSettingsEditor(
+                title = stringResource(R.string.layout_settings_bg_section_title),
+                layoutId = curLayout.id,
+                initialBackgroundImagePath = curLayout.backgroundImagePath,
+                initialUseAsMask = curLayout.useBackgroundImageAsMask,
+                initialBgImageScale = curLayout.bgImageScale,
+                initialBgImageOffsetX = curLayout.bgImageOffsetX,
+                initialBgImageOffsetY = curLayout.bgImageOffsetY,
+                accentColor = colors.accent,
+                onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY ->
+                    MacroPadState.updateLayout(
+                        curLayout.copy(
                             backgroundImagePath = bgImagePath,
                             useBackgroundImageAsMask = useAsMask,
-                            invisibleButtons = invisibleBtns,
                             backgroundImageVersion = if (bgChanged) curLayout.backgroundImageVersion + 1 else curLayout.backgroundImageVersion,
                             bgImageScale = bgScale,
                             bgImageOffsetX = bgOffsetX,
                             bgImageOffsetY = bgOffsetY
                         )
                     )
-                    showEditLayoutDialog = false
+                    showBackgroundSettingsDialog = false
                 },
-                onDismiss = { showEditLayoutDialog = false }
+                onDismiss = { showBackgroundSettingsDialog = false }
             )
         }
 
@@ -655,6 +675,11 @@ private fun MacroPadEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             description = stringResource(R.string.help_editor_toolbar_button_desc),
         )
         HelpEntry(
+            icon = Icons.Rounded.Wallpaper,
+            label = stringResource(R.string.help_editor_toolbar_background_label),
+            description = stringResource(R.string.help_editor_toolbar_background_desc),
+        )
+        HelpEntry(
             icon = Icons.Rounded.Grid4x4,
             label = stringResource(R.string.help_editor_toolbar_grid_label),
             description = stringResource(R.string.help_editor_toolbar_grid_desc),
@@ -712,6 +737,7 @@ private fun EditorBody(
     onReorderLayouts:        () -> Unit,
     isCanvasLocked:          Boolean,
     onToggleCanvasLock:      () -> Unit,
+    onManageBackground:      () -> Unit,
     modifier:                Modifier = Modifier,
 ) {
     val colors     = LocalAppColors.current
@@ -867,6 +893,7 @@ private fun EditorBody(
                         GridMode.RADIAL      -> GridMode.OFF
                     }
                 },
+                onManageBackground = onManageBackground,
                 modifier         = Modifier
                     .background(colors.surface)
                     .padding(horizontal = MPE_PADDING)

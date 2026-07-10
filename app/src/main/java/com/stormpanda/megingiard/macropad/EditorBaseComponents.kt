@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.TripOrigin
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -120,6 +121,7 @@ internal fun EditorToolbar(
     onToggleCanvasLock: () -> Unit,
     onAddButton:      () -> Unit,
     onGridModeChange: () -> Unit,
+    onManageBackground: () -> Unit,
     modifier:         Modifier = Modifier,
 ) {
     val gridIcon = when (gridMode) {
@@ -129,6 +131,7 @@ internal fun EditorToolbar(
     }
     val gridLabel = stringResource(R.string.macropad_editor_grid_toggle)
     val buttonLabel = stringResource(R.string.macropad_editor_toolbar_button)
+    val bgLabel = stringResource(R.string.layout_settings_bg_section_title)
 
     val lockIcon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen
     val lockLabel = if (isCanvasLocked) stringResource(R.string.macropad_editor_unlock) else stringResource(R.string.macropad_editor_lock)
@@ -146,6 +149,14 @@ internal fun EditorToolbar(
             onClick     = onAddButton,
             modifier    = Modifier.weight(1f),
         )
+        // Background Button ("Background")
+        EditorActionChip(
+            label       = bgLabel,
+            icon        = Icons.Rounded.Wallpaper,
+            accentColor = accentColor,
+            onClick     = onManageBackground,
+            modifier    = Modifier.weight(1f),
+        )
         // Grid toggle ("Grid", accent color all the time)
         EditorActionChip(
             label       = gridLabel,
@@ -154,7 +165,7 @@ internal fun EditorToolbar(
             onClick     = onGridModeChange,
             modifier    = Modifier.weight(1f),
         )
-        // Unlock / Lock button (3rd button)
+        // Unlock / Lock button (4th button)
         EditorActionChip(
             label       = lockLabel,
             icon        = lockIcon,

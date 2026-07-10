@@ -785,6 +785,8 @@ Open Settings to create a layout.</string>
     <string name="help_editor_section_toolbar">Toolbar</string>
     <string name="help_editor_toolbar_button_label">Button</string>
     <string name="help_editor_toolbar_button_desc">Places a new macro button on the canvas. After tapping, you can drag it to any position while the canvas is unlocked.</string>
+    <string name="help_editor_toolbar_background_label">Background</string>
+    <string name="help_editor_toolbar_background_desc">Opens the background image configuration where you can choose or remove a background image, scrape covers from SteamGridDB, crop/scale the image, or toggle mask mode.</string>
     <string name="help_editor_profile_macros_label">Macros…</string>
     <string name="help_editor_profile_macros_desc">Opens the Macros list for this profile, where you can create, edit, and organise reusable macro sequences.</string>
     <string name="help_editor_toolbar_grid_label">Grid</string>

@@ -154,7 +154,7 @@ Each button supports one of the following actions:
 - Exactly **one layout is active** at a time within the active profile. Layout switching is performed via the current layout navigation controls in the MacroPad UI.
 - Layouts can be **created, renamed, and deleted** in the editor. The editor toolbar shows a horizontally scrollable layout bar with shared selectable chips for each layout. Long-press drag reorders layouts within the profile.
 - Each layout chip, when more than one layout exists, has a delete action.
-- A new layout can be created as a **blank** layout. When creating a new layout, the full-screen **Layout Settings Editor** (`LayoutSettingsEditor`) is displayed immediately to configure the name, background image, and default button colors.
+- A new layout can be created as a **blank** layout. When creating a new layout, the full-screen **Layout Settings Editor** (`LayoutSettingsEditor`) is displayed immediately to configure the name and default button colors. Background configurations are managed separately via the Background toolbar button.
 - Users can duplicate existing layouts to reuse their configuration, buttons, and cutouts (deep copy with new UUIDs).
 - Device flags (`enableKeyboard`, `enableGamepad`, `enableMouse`) are derived from the **union of all buttons across all layouts** in the profile (via `withSyncedDeviceFlags()`).
 - Layouts are persisted as part of `PadProfile` (serialised via `kotlinx.serialization`). If a stored `PadProfile` does not contain a `layouts` list, a default layout named "Layout 1" is created on load, populated with the profile's top-level `buttons` list.
@@ -201,7 +201,7 @@ Each button supports one of the following actions:
 ### FR-P9b: SteamGridDB Image Scraper
 
 - Users can scrape background images directly from [SteamGridDB](https://www.steamgriddb.com/) using their API v2.
-- A **"Scrape"** button is provided next to the background image "Choose" button in the Layout Settings Editor.
+- A **"Scrape"** button is provided next to the background image "Choose" button in the Background Settings Editor.
 - When clicked, Megingiard checks if a SteamGridDB API key is configured.
   - If **no key is configured**, a warning dialog appears directing the user to create a token on SteamGridDB and providing a button that opens the **Global Settings Screen** directly.
   - If a key is configured, the **SteamGridDB Scraper** dialog opens.
@@ -620,10 +620,11 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 `MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition), controlled by UI state in the hosting screen. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation, selection, and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile, new layout, edit layout, and profile/layout selection for copies) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`, `InlineLayoutSettingsOverlay`, `ReorderProfilesOverlay`, `ReorderLayoutsOverlay`, `InlineProfileSelectionOverlay`, `InlineLayoutSelectionOverlay`) instead of `AlertDialog`, unified using a common `InlineDialogOverlay` container to ensure a consistent appearance, scrim interaction, and input blocking. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor features horizontally scrollable chip rows for both profile and layout selection (`EditorProfileChipsBar` and `EditorLayoutChipsBar`). Next to each row of chips is a "..." menu button that opens a contextual dropdown menu, enabling actions such as editing properties, duplicating, copying, deleting (when more than one item exists), and initiating full-screen drag-reordering (`ReorderProfilesOverlay` or `ReorderLayoutsOverlay`). In the profiles section, a dedicated **"Macros…"** button row (represented by an `EditorActionChip` using a playlist-play icon) is rendered directly below the profiles chips bar to manage the profile's macro library. The vertical margin between the chips and their action buttons is closely grouped for both layout and profile sections. If a profile or layout is the only one in existence, it cannot be deleted; the delete option in the "..." dropdown menu is disabled and styled with `0.38f` alpha. The Add button (plus icon) has been moved into the right-hand side of the Profile, Layout, and Buttons section separators as a premium clickable `Row` showing "+ Add", colored with the active accent color. Layout chips support drag-reordering via long press. The layout-level settings (the two button color options: no-mirror and mirror styles) are configured directly inside `InlineLayoutSettingsOverlay` rather than in the main list, and are saved atomically upon confirmation.
 
-The editor list features an action toolbar (`EditorToolbar`) containing three compact action chips:
-1. **Button** (replaces "Add Button") — opens the button configuration dialog.
-2. **Grid** (replaces "Show Grid", styled with the active accent color at all times) — toggles grid snapping modes (`OFF`, `RECTANGULAR`, `RADIAL`).
-3. **Unlock / Lock** — controls layout canvas editing. By default, the layout canvas is **locked** so that buttons cannot be accidentally moved or dragged. Tapping "Unlock" (displays a locked lock icon) changes the wording to "Lock" (displays an unlocked lock icon), enabling real-time drag-repositioning of buttons on the canvas.
+The editor list features an action toolbar (`EditorToolbar`) containing four compact action chips:
+1. **Button** — opens the button configuration dialog.
+2. **Background** — opens the dedicated background settings editor overlay to choose or delete background images, scrape cover art from SteamGridDB, crop/scale the background, or toggle mask mode.
+3. **Grid** (styled with the active accent color at all times) — toggles grid snapping modes (`OFF`, `RECTANGULAR`, `RADIAL`).
+4. **Unlock / Lock** — controls layout canvas editing. By default, the layout canvas is **locked** so that buttons cannot be accidentally moved or dragged. Tapping "Unlock" (displays a locked lock icon) changes the wording to "Lock" (displays an unlocked lock icon), enabling real-time drag-repositioning of buttons on the canvas.
 
 The editor list is scrollable via `LazyColumn`.
 
