@@ -252,15 +252,18 @@ internal fun BackgroundSettingsEditor(
                                                     backgroundsDir.mkdirs()
                                                 }
                                                 val destFile = File(backgroundsDir, "bg_$layoutId")
-                                                try {
-                                                    context.contentResolver.openInputStream(pending).use { input ->
-                                                        destFile.outputStream().use { output ->
-                                                            input?.copyTo(output)
-                                                        }
-                                                    }
+                                                val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
+                                                val saved = BitmapUtils.saveScaledWebp(
+                                                    context = context,
+                                                    srcUri = pending,
+                                                    srcFile = null,
+                                                    destFile = destFile,
+                                                    targetW = targetW,
+                                                    targetH = targetH
+                                                )
+                                                if (saved) {
                                                     "backgrounds/bg_$layoutId"
-                                                } catch (e: Exception) {
-                                                    AppLog.e(TAG, "Failed to copy background image Uri $pending", e)
+                                                } else {
                                                     null
                                                 }
                                             } else if (currentBgPath == null && initialBackgroundImagePath != null) {

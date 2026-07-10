@@ -65,6 +65,33 @@ object BitmapUtils {
         }
     }
 
+    fun saveScaledWebp(
+        context: Context,
+        srcUri: Uri?,
+        srcFile: File?,
+        destFile: File,
+        targetW: Int,
+        targetH: Int
+    ): Boolean {
+        return try {
+            val bitmap = when {
+                srcUri != null -> decodeScaledBitmapFromUri(context, srcUri, targetW, targetH)
+                srcFile != null && srcFile.exists() -> decodeScaledBitmap(srcFile, targetW, targetH)
+                else -> null
+            }
+            if (bitmap == null) return false
+
+            destFile.outputStream().use { output ->
+                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 85, output)
+            }
+            bitmap.recycle()
+            true
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to save scaled WebP image", e)
+            false
+        }
+    }
+
     private fun calculateInSampleSize(srcW: Int, srcH: Int, targetW: Int, targetH: Int): Int {
         var inSampleSize = 1
         if (srcW > targetW || srcH > targetH) {
