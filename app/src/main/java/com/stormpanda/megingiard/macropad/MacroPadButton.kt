@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -205,6 +206,33 @@ internal fun PadButton(
     val left = btn.posX * w - chipWidthPx / 2f
     val top  = btn.posY * h - chipHeightPx / 2f
 
+    val rippleStroke = remember(density) {
+        Stroke(width = with(density) { 2.dp.toPx() })
+    }
+
+    val disabledPaint = remember {
+        Paint().apply {
+            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+            this.alpha = MP_BTN_DISABLED_ALPHA
+        }
+    }
+
+    val btnWidthDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols
+    val btnHeightDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows
+    val bgBrush = remember(effectiveBg, alpha, btnWidthDp, btnHeightDp, density) {
+        val wPx = with(density) { btnWidthDp.toPx() }
+        val hPx = with(density) { btnHeightDp.toPx() }
+        val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
+        Brush.radialGradient(
+            0.00f to effectiveBg.copy(alpha = 0f),
+            0.50f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.25f),
+            0.75f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.5625f),
+            1.00f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE),
+            center = Offset(wPx / 2f, hPx / 2f),
+            radius = halfDiag,
+        )
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -220,30 +248,17 @@ internal fun PadButton(
                         color = effectiveContentAccent.copy(alpha = rippleAlpha),
                         radius = currentRadius,
                         center = Offset(size.width / 2f, size.height / 2f),
-                        style = Stroke(width = 2.dp.toPx())
+                        style = rippleStroke
                     )
                 }
             }
             .clip(chipShape)
             .drawWithContent {
-                val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
-                val bgBrush = Brush.radialGradient(
-                    0.00f to effectiveBg.copy(alpha = 0f),
-                    0.50f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.25f),
-                    0.75f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.5625f),
-                    1.00f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE),
-                    center = Offset(size.width / 2f, size.height / 2f),
-                    radius = halfDiag,
-                )
                 if (isIconOnly) {
                     drawContent()
                 } else {
                     if (isDeviceDisabled) {
-                        val p = Paint().apply {
-                            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                            this.alpha = MP_BTN_DISABLED_ALPHA
-                        }
-                        drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
+                        drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), disabledPaint)
                         drawRect(color = MP_BTN_BACKING_COLOR)
                         drawRect(brush = bgBrush)
                         drawContent()

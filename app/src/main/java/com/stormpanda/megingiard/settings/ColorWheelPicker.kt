@@ -91,6 +91,16 @@ fun ColorWheelPicker(
         )
     }
 
+    val sweepBrush = remember(hueColors) {
+        Brush.sweepGradient(colors = hueColors)
+    }
+
+    val radialBrush = remember {
+        Brush.radialGradient(colors = listOf(Color.White, Color.Transparent))
+    }
+
+    val drawHsvArray = remember { FloatArray(3) }
+
     // Full-screen scrim + centred card rendered in-tree (no Dialog window).
     // Works in Activity context and inside a Presentation window.
     BackHandler(onBack = onDismiss)
@@ -178,16 +188,12 @@ fun ColorWheelPicker(
 
                 // Hue sweep gradient
                 drawCircle(
-                    brush = Brush.sweepGradient(hueColors, center = center),
+                    brush = sweepBrush,
                     radius = radius
                 )
                 // Saturation: white center fading to transparent edge
                 drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color.White, Color.Transparent),
-                        center = center,
-                        radius = radius
-                    ),
+                    brush = radialBrush,
                     radius = radius
                 )
                 // Brightness: black overlay
@@ -200,8 +206,11 @@ fun ColorWheelPicker(
                 val selY = center.y + sin(selAngleRad) * selDist
                 val dotCenter = Offset(selX, selY)
                 drawCircle(color = Color.White, radius = 10.dp.toPx(), center = dotCenter)
+                drawHsvArray[0] = hue
+                drawHsvArray[1] = sat
+                drawHsvArray[2] = bri
                 drawCircle(
-                    color = Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri))),
+                    color = Color(AndroidColor.HSVToColor(drawHsvArray)),
                     radius = 7.dp.toPx(),
                     center = dotCenter
                 )
