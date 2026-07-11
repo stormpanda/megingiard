@@ -48,8 +48,6 @@ internal val EBC_PREVIEW_DEFAULT_SIZE = 60.dp
 private const val EBC_PREVIEW_BG_ALPHA = 0.25f
 private const val EBC_PREVIEW_GRADIENT_SCALE = 2.8f
 private val EBC_PREVIEW_ICON_SIZE = 44.dp
-private val EBC_PREVIEW_BORDER_WIDTH = 1.dp
-private val EBC_PREVIEW_SCRIM_COLOR = Color(0x80121212)
 
 @Composable
 internal fun EditorSectionHeader(

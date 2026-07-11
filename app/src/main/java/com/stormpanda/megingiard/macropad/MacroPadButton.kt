@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,18 +33,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -54,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 private const val TAG = "MacroPadButton"
 
@@ -66,7 +57,6 @@ internal val MP_BUTTON_UNIT_DP      = 60.dp   // 1×1 = this size on-screen; mat
 
 private const val MP_BTN_PRESSED_ALPHA    = 0.80f
 private const val MP_BTN_NORMAL_ALPHA     = 0.25f
-private const val MP_BTN_DISABLED_ALPHA   = 0.38f
 
 // Pulsing animation for running macros: alpha cycles between low and high.
 private const val MP_BTN_RUNNING_PULSE_LOW  = 0.30f
@@ -90,7 +80,6 @@ private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_
 internal val MP_AMBIENT_NEUTRAL_BG     = Color.White
 internal val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
 internal val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
-internal val MP_BTN_BACKING_COLOR      = Color(0x80121212)
 
 
 // ─────────────────────────────────────────────────────────────────────────────

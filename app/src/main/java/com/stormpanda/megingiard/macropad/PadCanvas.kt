@@ -32,16 +32,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -82,7 +79,6 @@ private val ED_BUTTON_UNIT_DP      = 60.dp
 private val ED_BTN_SQUARE_RADIUS   = 4.dp
 // Reuse the shared screen padding so the editor canvas remains pixel-identical to use mode.
 private val PC_SCREEN_PADDING      = MP_SCREEN_PADDING
-private const val ED_BTN_DISABLED_ALPHA = 0.38f
 private const val ED_EDGE_MARGIN        = 0.05f
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
@@ -100,7 +96,6 @@ private const val PC_RADIAL_EXTRA_RINGS = 3
 
 // Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
 private const val PC_BTN_GRADIENT_OUTER    = 0.9f
-private val PC_BTN_BACKING_COLOR           = Color(0x80121212)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid mode
