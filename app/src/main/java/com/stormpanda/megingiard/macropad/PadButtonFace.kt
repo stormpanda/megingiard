@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -68,6 +69,7 @@ internal fun PadButtonFace(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
+            .size(width, height)
             .clip(shape)
             .drawWithContent {
                 if (isIconOnly) {
