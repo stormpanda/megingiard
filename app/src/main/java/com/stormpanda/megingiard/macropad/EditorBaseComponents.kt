@@ -49,6 +49,13 @@ import java.util.Locale
 
 private const val TAG = "EditorBaseComponents"
 
+internal val EBC_PREVIEW_DEFAULT_SIZE = 60.dp
+private const val EBC_PREVIEW_BG_ALPHA = 0.25f
+private const val EBC_PREVIEW_GRADIENT_SCALE = 2.8f
+private val EBC_PREVIEW_ICON_SIZE = 44.dp
+private val EBC_PREVIEW_BORDER_WIDTH = 1.dp
+private val EBC_PREVIEW_SCRIM_COLOR = Color(0x80121212)
+
 @Composable
 internal fun EditorSectionHeader(
     @StringRes textRes: Int,
@@ -191,11 +198,9 @@ internal fun SwordsButtonPreview(
     borderColor: Color,
     bgColor: Color,
     modifier: Modifier = Modifier,
-    size: Dp = 60.dp,
+    size: Dp = EBC_PREVIEW_DEFAULT_SIZE,
 ) {
     val density = LocalDensity.current
-    val alpha = 0.25f
-    val gradientScale = 2.8f // 0.7f / 0.25f
 
     val bgBrush = remember(bgColor, density) {
         val wPx = with(density) { size.toPx() }
@@ -203,9 +208,9 @@ internal fun SwordsButtonPreview(
         val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
         Brush.radialGradient(
             0.00f to bgColor.copy(alpha = 0f),
-            0.50f to bgColor.copy(alpha = alpha * gradientScale * 0.25f),
-            0.75f to bgColor.copy(alpha = alpha * gradientScale * 0.5625f),
-            1.00f to bgColor.copy(alpha = alpha * gradientScale),
+            0.50f to bgColor.copy(alpha = EBC_PREVIEW_BG_ALPHA * EBC_PREVIEW_GRADIENT_SCALE * 0.25f),
+            0.75f to bgColor.copy(alpha = EBC_PREVIEW_BG_ALPHA * EBC_PREVIEW_GRADIENT_SCALE * 0.5625f),
+            1.00f to bgColor.copy(alpha = EBC_PREVIEW_BG_ALPHA * EBC_PREVIEW_GRADIENT_SCALE),
             center = Offset(wPx / 2f, hPx / 2f),
             radius = halfDiag,
         )
@@ -216,16 +221,16 @@ internal fun SwordsButtonPreview(
             .size(size)
             .clip(CircleShape)
             .drawWithContent {
-                drawRect(color = Color(0x80121212))
+                drawRect(color = EBC_PREVIEW_SCRIM_COLOR)
                 drawRect(brush = bgBrush)
                 drawContent()
             }
-            .border(1.dp, borderColor, CircleShape),
+            .border(EBC_PREVIEW_BORDER_WIDTH, borderColor, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         MaterialSymbol(
             name = "swords",
-            size = 44.dp,
+            size = EBC_PREVIEW_ICON_SIZE,
             tint = textColor,
             filled = true
         )

@@ -76,6 +76,8 @@ private const val PBD_ICON_FULLSCREEN_KEYBOARD = "keyboard"
 private const val PBD_ICON_MACRO = "smart_button"
 private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
 private const val PBD_ICON_BACKGROUND_PEEK = "visibility"
+private val PBD_PREVIEW_BUTTON_SIZE = 60.dp
+private val PBD_RECENT_COLORS_GRID_HEIGHT = 128.dp
 
 /**
  * Maps a [PadAction] type to its localised label string resource.
@@ -824,7 +826,7 @@ internal fun ButtonEditDialog(
                         textColor = if (activeWheelTarget == ButtonColorPickerTarget.TEXT) liveColor else currentText,
                         borderColor = if (activeWheelTarget == ButtonColorPickerTarget.BORDER) liveColor else currentBorder,
                         bgColor = if (activeWheelTarget == ButtonColorPickerTarget.BG) liveColor else currentBg,
-                        size = 60.dp
+                        size = PBD_PREVIEW_BUTTON_SIZE
                     )
                 }
             )
@@ -890,7 +892,7 @@ internal fun ButtonEditDialog(
                         textColor = if (activePaletteTarget == ButtonColorPickerTarget.TEXT) resolved else currentText,
                         borderColor = if (activePaletteTarget == ButtonColorPickerTarget.BORDER) resolved else currentBorder,
                         bgColor = if (activePaletteTarget == ButtonColorPickerTarget.BG) resolved else currentBg,
-                        size = 60.dp
+                        size = PBD_PREVIEW_BUTTON_SIZE
                     )
                 }
             )
@@ -1018,7 +1020,7 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(PBD_PREVIEW_BUTTON_SIZE),
                         contentAlignment = Alignment.Center
                     ) {
                         preview(null)
@@ -1042,7 +1044,7 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(PBD_PREVIEW_BUTTON_SIZE),
                         contentAlignment = Alignment.Center
                     ) {
                         preview(ColorOption.Neutral)
@@ -1066,7 +1068,7 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(PBD_PREVIEW_BUTTON_SIZE),
                         contentAlignment = Alignment.Center
                     ) {
                         preview(ColorOption.Accent)
@@ -1103,12 +1105,12 @@ private fun QuickColorSelectionDialog(
                     columns = GridCells.Fixed(5),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(128.dp)
+                    modifier = Modifier.fillMaxWidth().height(PBD_RECENT_COLORS_GRID_HEIGHT)
                 ) {
                     items(recentColors) { argb ->
                         Box(
                             modifier = Modifier
-                                .size(60.dp)
+                                .size(PBD_PREVIEW_BUTTON_SIZE)
                                 .clickable { onSelected(ColorOption.Custom(argb)) },
                             contentAlignment = Alignment.Center
                         ) {

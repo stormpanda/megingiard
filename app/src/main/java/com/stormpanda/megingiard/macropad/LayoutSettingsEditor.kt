@@ -119,6 +119,8 @@ private val LSE_PREVIEW_IMAGE_ROUNDING = 8.dp
 private val LSE_SPACING_16 = 16.dp
 private const val LSE_CROP_MIN_SCALE = 1f
 private const val LSE_CROP_MAX_SCALE = 5f
+private val LSE_PREVIEW_BUTTON_SIZE = 60.dp
+private val LSE_RECENT_COLORS_GRID_HEIGHT = 128.dp
 
 @Composable
 internal fun LayoutSettingsEditor(
@@ -322,7 +324,7 @@ internal fun LayoutSettingsEditor(
                         textColor = if (activeWheelTarget == ColorPickerTarget.TEXT) liveColor else currentText,
                         borderColor = if (activeWheelTarget == ColorPickerTarget.BORDER) liveColor else currentBorder,
                         bgColor = if (activeWheelTarget == ColorPickerTarget.BG) liveColor else currentBg,
-                        size = 60.dp
+                        size = LSE_PREVIEW_BUTTON_SIZE
                     )
                 }
             )
@@ -368,7 +370,7 @@ internal fun LayoutSettingsEditor(
                         textColor = if (activePaletteTarget == ColorPickerTarget.TEXT) resolved else currentText,
                         borderColor = if (activePaletteTarget == ColorPickerTarget.BORDER) resolved else currentBorder,
                         bgColor = if (activePaletteTarget == ColorPickerTarget.BG) resolved else currentBg,
-                        size = 60.dp
+                        size = LSE_PREVIEW_BUTTON_SIZE
                     )
                 }
             )
@@ -495,7 +497,7 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
                         contentAlignment = Alignment.Center
                     ) {
                         preview(ColorOption.Neutral)
@@ -518,7 +520,7 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
                         contentAlignment = Alignment.Center
                     ) {
                         preview(ColorOption.Accent)
@@ -554,12 +556,12 @@ private fun QuickColorSelectionDialog(
                     columns = GridCells.Fixed(5),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(128.dp)
+                    modifier = Modifier.fillMaxWidth().height(LSE_RECENT_COLORS_GRID_HEIGHT)
                 ) {
                     items(recentColors) { argb ->
                         Box(
                             modifier = Modifier
-                                .size(60.dp)
+                                .size(LSE_PREVIEW_BUTTON_SIZE)
                                 .clickable { onSelected(ColorOption.Custom(argb)) },
                             contentAlignment = Alignment.Center
                         ) {

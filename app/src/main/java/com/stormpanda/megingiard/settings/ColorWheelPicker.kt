@@ -55,6 +55,7 @@ private const val TAG = "ColorWheelPicker"
 
 private val PICKER_CORNER = 16.dp
 private val WHEEL_SIZE = 240.dp
+private val CWP_PREVIEW_SPACER_WIDTH = 24.dp
 
 @Composable
 fun ColorWheelPicker(
@@ -227,7 +228,7 @@ fun ColorWheelPicker(
                 }
 
                 if (preview != null) {
-                    Spacer(Modifier.width(24.dp))
+                    Spacer(Modifier.width(CWP_PREVIEW_SPACER_WIDTH))
                     preview(currentColor)
                 }
             }
