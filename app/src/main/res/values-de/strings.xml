@@ -204,10 +204,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_grid_off">Raster aus</string>
     <string name="macropad_editor_grid_rectangular">Rechteckiges Raster</string>
     <string name="macropad_editor_grid_radial">Radiales Raster</string>
-    <string name="macropad_editor_grid_toggle">Raster</string>
-    <string name="macropad_editor_toolbar_button">Taste</string>
-    <string name="macropad_editor_unlock">Entsperren</string>
-    <string name="macropad_editor_lock">Sperren</string>
+    <string name="macropad_editor_grid_toggle">Raster ändern</string>
+    <string name="macropad_editor_toolbar_button">Taste hinzufügen</string>
+    <string name="macropad_editor_unlock">Tasten entsperren</string>
+    <string name="macropad_editor_lock">Tasten sperren</string>
+    <string name="macropad_editor_change_background">Hintergrund ändern</string>
 
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Tastaturtaste</string>

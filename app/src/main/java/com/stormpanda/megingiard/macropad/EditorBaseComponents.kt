@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -144,48 +145,61 @@ internal fun EditorToolbar(
         }
     val gridLabel = stringResource(R.string.macropad_editor_grid_toggle)
     val buttonLabel = stringResource(R.string.macropad_editor_toolbar_button)
-    val bgLabel = stringResource(R.string.layout_settings_bg_section_title)
+    val bgLabel = stringResource(R.string.macropad_editor_change_background)
 
     val lockIcon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen
     val lockLabel = if (isCanvasLocked) stringResource(R.string.macropad_editor_unlock) else stringResource(R.string.macropad_editor_lock)
 
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
     ) {
-        // Add Button ("Button")
-        EditorActionChip(
-            label = buttonLabel,
-            icon = Icons.Rounded.Add,
-            accentColor = accentColor,
-            onClick = onAddButton,
-            modifier = Modifier.weight(1f),
-        )
-        // Grid toggle ("Grid", accent color all the time)
-        EditorActionChip(
-            label = gridLabel,
-            icon = gridIcon,
-            accentColor = accentColor,
-            onClick = onGridModeChange,
-            modifier = Modifier.weight(1f),
-        )
-        // Unlock / Lock button
-        EditorActionChip(
-            label = lockLabel,
-            icon = lockIcon,
-            accentColor = accentColor,
-            onClick = onToggleCanvasLock,
-            modifier = Modifier.weight(1f),
-        )
-        // Background Button ("Background")
-        EditorActionChip(
-            label = bgLabel,
-            icon = Icons.Rounded.Wallpaper,
-            accentColor = accentColor,
-            onClick = onManageBackground,
-            modifier = Modifier.weight(1f),
-        )
+        // First row: Add and Background buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Add Button ("Add Button")
+            EditorActionChip(
+                label = buttonLabel,
+                icon = Icons.Rounded.Add,
+                accentColor = accentColor,
+                onClick = onAddButton,
+                modifier = Modifier.weight(1f),
+            )
+            // Background Button ("Change Background")
+            EditorActionChip(
+                label = bgLabel,
+                icon = Icons.Rounded.Wallpaper,
+                accentColor = accentColor,
+                onClick = onManageBackground,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        // Second row: Unlock and Grid buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Unlock / Lock button
+            EditorActionChip(
+                label = lockLabel,
+                icon = lockIcon,
+                accentColor = accentColor,
+                onClick = onToggleCanvasLock,
+                modifier = Modifier.weight(1f),
+            )
+            // Grid toggle ("Change Grid", accent color all the time)
+            EditorActionChip(
+                label = gridLabel,
+                icon = gridIcon,
+                accentColor = accentColor,
+                onClick = onGridModeChange,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
