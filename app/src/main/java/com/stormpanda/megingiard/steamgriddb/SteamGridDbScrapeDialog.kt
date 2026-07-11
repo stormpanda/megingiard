@@ -69,12 +69,30 @@ import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
-private const val TAG = "SteamGridDbScrapeDialog"
+private const val TAG = "SteamGridDbScrapeDlg"
+
+private const val TYPE_GRIDS = "grids"
+private const val TYPE_HEROES = "heroes"
+private const val TYPE_LOGOS = "logos"
+private const val TYPE_ICONS = "icons"
+
+private const val GRID_ASPECT_RATIO_GRID = 0.66f
+private const val GRID_ASPECT_RATIO_HERO = 1.77f
+private const val GRID_ASPECT_RATIO_DEFAULT = 1.0f
+
+private const val THUMB_CONNECT_TIMEOUT_MS = 5000
+private const val THUMB_READ_TIMEOUT_MS = 8000
+
+private const val BACK_TO_TOP_THRESHOLD = 3
+private val STATUS_BOX_HEIGHT = 300.dp
+private val SELECTION_ALPHA = 0.15f
+private val DISABLE_ALPHA = 0.5f
 
 @Composable
 internal fun SteamGridDbScrapeDialog(
@@ -84,12 +102,16 @@ internal fun SteamGridDbScrapeDialog(
     accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
+    LaunchedEffect(Unit) {
+        AppLog.i(TAG, "SteamGridDbScrapeDialog initialized with query: $initialSearchQuery")
+    }
+
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
     var searchQuery by remember { mutableStateOf(initialSearchQuery) }
-    var selectedType by remember { mutableStateOf("grids") } // grids, heroes, logos, icons
+    var selectedType by remember { mutableStateOf(TYPE_GRIDS) } // grids, heroes, logos, icons
 
     var isSearchingGames by remember { mutableStateOf(false) }
     var gamesList by remember { mutableStateOf<List<SteamGridDbGame>>(emptyList()) }
@@ -103,6 +125,9 @@ internal fun SteamGridDbScrapeDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var pendingErrorDialog by remember { mutableStateOf<Throwable?>(null) }
 
+    // Track active loading job to cancel and prevent race conditions
+    var activeFetchJob by remember { mutableStateOf<Job?>(null) }
+
     val apiKey = SettingsManager.steamGridDbApiToken.value
     val gridState = rememberLazyGridState()
     // Cache keyed on (gameId, type) to avoid redundant authenticated API calls within a session
@@ -110,14 +135,17 @@ internal fun SteamGridDbScrapeDialog(
 
     fun searchGames() {
         if (searchQuery.isBlank()) return
+        AppLog.i(TAG, "Starting search for games matching: $searchQuery")
+        activeFetchJob?.cancel()
         isSearchingGames = true
         selectedGame = null
         selectedImage = null
         imagesList = emptyList()
         errorMessage = null
-        scope.launch {
+        activeFetchJob = scope.launch {
             SteamGridDbClient.searchGames(searchQuery, apiKey)
                 .onSuccess { games ->
+                    AppLog.d(TAG, "searchGames success: found ${games.size} games")
                     gamesList = games
                     isSearchingGames = false
                     if (games.isNotEmpty()) {
@@ -131,6 +159,7 @@ internal fun SteamGridDbScrapeDialog(
                             imagesList = cached
                         } else {
                             isLoadingImages = true
+                            AppLog.i(TAG, "searchGames auto-fetch: loading images for gameId=${firstGame.id} type=$selectedType")
                             SteamGridDbClient.fetchImages(firstGame.id, selectedType, apiKey)
                                 .onSuccess { images ->
                                     imagesCache[cacheKey] = images
@@ -138,6 +167,7 @@ internal fun SteamGridDbScrapeDialog(
                                     isLoadingImages = false
                                 }
                                 .onFailure { err ->
+                                    AppLog.w(TAG, "searchGames auto-fetch failure: ${err.message}")
                                     errorMessage = err.message
                                     isLoadingImages = false
                                     pendingErrorDialog = err
@@ -146,6 +176,7 @@ internal fun SteamGridDbScrapeDialog(
                     }
                 }
                 .onFailure { err ->
+                    AppLog.w(TAG, "searchGames failure: ${err.message}")
                     errorMessage = err.message
                     isSearchingGames = false
                     pendingErrorDialog = err
@@ -163,15 +194,19 @@ internal fun SteamGridDbScrapeDialog(
             imagesList = cached
             return
         }
+        activeFetchJob?.cancel()
         isLoadingImages = true
-        scope.launch {
+        AppLog.i(TAG, "loadImagesForGame: fetching images for gameId=$gameId type=$type")
+        activeFetchJob = scope.launch {
             SteamGridDbClient.fetchImages(gameId, type, apiKey)
                 .onSuccess { images ->
+                    AppLog.d(TAG, "loadImagesForGame success: loaded ${images.size} images")
                     imagesCache[cacheKey] = images
                     imagesList = images
                     isLoadingImages = false
                 }
                 .onFailure { err ->
+                    AppLog.w(TAG, "loadImagesForGame failure: ${err.message}")
                     errorMessage = err.message
                     isLoadingImages = false
                     pendingErrorDialog = err
@@ -186,7 +221,10 @@ internal fun SteamGridDbScrapeDialog(
         }
     }
 
-    BackHandler(onBack = onDismiss)
+    BackHandler(onBack = {
+        AppLog.i(TAG, "Dialog dismissed via BackHandler")
+        onDismiss()
+    })
 
     Column(
         modifier = modifier
@@ -195,22 +233,28 @@ internal fun SteamGridDbScrapeDialog(
     ) {
         FullScreenTopBar(
             title = stringResource(R.string.steamgriddb_scrape_dialog_title),
-            onDismiss = onDismiss,
+            onDismiss = {
+                AppLog.i(TAG, "Dialog dismissed via TopBar dismiss button")
+                onDismiss()
+            },
         ) {
             TextButton(
                 onClick = {
                     val currentSelectedImage = selectedImage
                     if (currentSelectedImage != null) {
                         isDownloading = true
+                        AppLog.i(TAG, "Starting download for image URL: ${currentSelectedImage.url}")
                         scope.launch {
                             val cacheDir = context.cacheDir
                             SteamGridDbClient.downloadImageToTempFile(currentSelectedImage.url, cacheDir)
                                 .onSuccess { tempFile ->
+                                    AppLog.i(TAG, "Download successful, file saved to: ${tempFile.absolutePath}")
                                     onImageSelected(Uri.fromFile(tempFile))
                                     isDownloading = false
                                     onDismiss()
                                 }
                                 .onFailure { err ->
+                                    AppLog.e(TAG, "Failed to download image: ${err.message}", err)
                                     errorMessage = err.message
                                     isDownloading = false
                                     pendingErrorDialog = err
@@ -222,7 +266,7 @@ internal fun SteamGridDbScrapeDialog(
             ) {
                 Text(
                     text = stringResource(R.string.macropad_macro_editor_save),
-                    color = if (selectedImage != null && !isDownloading) colors.accent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                    color = if (selectedImage != null && !isDownloading) colors.accent else colors.onSurfaceSecondary.copy(alpha = DISABLE_ALPHA),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -279,12 +323,12 @@ internal fun SteamGridDbScrapeDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        listOf("grids", "heroes", "logos", "icons").forEach { type ->
+                        listOf(TYPE_GRIDS, TYPE_HEROES, TYPE_LOGOS, TYPE_ICONS).forEach { type ->
                             val isSelected = selectedType == type
                             val label = when (type) {
-                                "grids" -> stringResource(R.string.steamgriddb_scrape_type_grid)
-                                "heroes" -> stringResource(R.string.steamgriddb_scrape_type_hero)
-                                "logos" -> stringResource(R.string.steamgriddb_scrape_type_logo)
+                                TYPE_GRIDS -> stringResource(R.string.steamgriddb_scrape_type_grid)
+                                TYPE_HEROES -> stringResource(R.string.steamgriddb_scrape_type_hero)
+                                TYPE_LOGOS -> stringResource(R.string.steamgriddb_scrape_type_logo)
                                 else -> stringResource(R.string.steamgriddb_scrape_type_icon)
                             }
                             Box(
@@ -355,7 +399,7 @@ internal fun SteamGridDbScrapeDialog(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .background(
-                                                    if (isSelectedGame) accentColor.copy(alpha = 0.15f)
+                                                    if (isSelectedGame) accentColor.copy(alpha = SELECTION_ALPHA)
                                                     else colors.surface
                                                 )
                                                 .border(
@@ -398,7 +442,7 @@ internal fun SteamGridDbScrapeDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(300.dp),
+                                .height(STATUS_BOX_HEIGHT),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -417,7 +461,7 @@ internal fun SteamGridDbScrapeDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(300.dp),
+                                .height(STATUS_BOX_HEIGHT),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -436,7 +480,7 @@ internal fun SteamGridDbScrapeDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(300.dp),
+                                .height(STATUS_BOX_HEIGHT),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -460,7 +504,7 @@ internal fun SteamGridDbScrapeDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(300.dp),
+                                .height(STATUS_BOX_HEIGHT),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -475,7 +519,7 @@ internal fun SteamGridDbScrapeDialog(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(300.dp),
+                                .height(STATUS_BOX_HEIGHT),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -495,9 +539,9 @@ internal fun SteamGridDbScrapeDialog(
                                 .fillMaxWidth()
                                 .aspectRatio(
                                     when (selectedType) {
-                                        "grids" -> 0.66f
-                                        "heroes" -> 1.77f
-                                        else -> 1f
+                                        TYPE_GRIDS -> GRID_ASPECT_RATIO_GRID
+                                        TYPE_HEROES -> GRID_ASPECT_RATIO_HERO
+                                        else -> GRID_ASPECT_RATIO_DEFAULT
                                     }
                                 )
                                 .clip(RoundedCornerShape(8.dp))
@@ -513,7 +557,7 @@ internal fun SteamGridDbScrapeDialog(
                         ) {
                             SteamGridDbImageThumbnail(
                                 url = image.thumb.ifBlank { image.url },
-                                contentDescription = "SteamGridDB Image",
+                                contentDescription = null, // decorative image, screen readers can ignore
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -526,7 +570,7 @@ internal fun SteamGridDbScrapeDialog(
                 }
             }
 
-            val showBackToTop by remember { derivedStateOf { gridState.firstVisibleItemIndex > 3 } }
+            val showBackToTop by remember { derivedStateOf { gridState.firstVisibleItemIndex > BACK_TO_TOP_THRESHOLD } }
             if (showBackToTop) {
                 Box(
                     modifier = Modifier
@@ -570,7 +614,11 @@ internal fun SteamGridDbScrapeDialog(
                 }
                 AlertDialog(
                     containerColor = colors.surface,
-                    onDismissRequest = { pendingErrorDialog = null },
+                    onDismissRequest = {
+                        AppLog.d(TAG, "Dismissing error dialog")
+                        pendingErrorDialog = null
+                        errorMessage = null // Reset error text state on dialog dismissal
+                    },
                     title = {
                         Text(
                             text = stringResource(titleRes),
@@ -586,7 +634,11 @@ internal fun SteamGridDbScrapeDialog(
                         )
                     },
                     confirmButton = {
-                        TextButton(onClick = { pendingErrorDialog = null }) {
+                        TextButton(onClick = {
+                            AppLog.d(TAG, "Confirm dismissing error dialog")
+                            pendingErrorDialog = null
+                            errorMessage = null // Reset error text state on dialog dismissal
+                        }) {
                             Text(
                                 text = stringResource(R.string.steamgriddb_error_dismiss),
                                 color = colors.accent,
@@ -614,27 +666,30 @@ private fun SteamGridDbImageThumbnail(
     LaunchedEffect(url) {
         isLoading = true
         isError = false
-        withContext(Dispatchers.IO) {
+        val decoded = withContext(Dispatchers.IO) {
             try {
                 val connection = URL(url).openConnection() as HttpURLConnection
-                connection.connectTimeout = 5000
-                connection.readTimeout = 8000
+                connection.connectTimeout = THUMB_CONNECT_TIMEOUT_MS
+                connection.readTimeout = THUMB_READ_TIMEOUT_MS
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     connection.inputStream.use { input ->
-                        val decoded = BitmapFactory.decodeStream(input)
-                        bitmap = decoded?.asImageBitmap()
+                        BitmapFactory.decodeStream(input)
                     }
                 } else {
-                    isError = true
+                    null
                 }
             } catch (e: Exception) {
-                AppLog.e("ThumbLoader", "Failed to load thumb $url", e)
-                isError = true
-            } finally {
-                isLoading = false
+                AppLog.e(TAG, "Failed to load thumb $url", e)
+                null
             }
         }
+        if (decoded != null) {
+            bitmap = decoded.asImageBitmap()
+        } else {
+            isError = true
+        }
+        isLoading = false
     }
 
     Box(
