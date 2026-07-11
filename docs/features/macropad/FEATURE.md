@@ -208,6 +208,11 @@ Each button supports one of the following actions:
 - The scraper dialog automatically performs an autocomplete search for games matching the layout's name as the initial query.
 - The user can modify the search query, search for games manually, select a matching game, and switch between four asset types: **Grid**, **Hero**, **Logo**, and **Icon**.
 - Tapping on a preview thumbnail downloads the chosen image asynchronously, copies it to the internal files folder, and sets it as the layout's background image.
+- **Scraper Error Handling**: If any network request to SteamGridDB fails while the scraping dialog is open (searching, loading images, or downloading a selected image), a dismissible `AlertDialog` is displayed to the user explaining the specific error:
+  - **Being offline**: Informs the user they are offline and should check their connection.
+  - **Being rate limited**: Informs the user that the rate limit was exceeded.
+  - **SteamGridDB unreachable**: Informs the user that the service is down or unreachable.
+  - **Other errors**: Handled with a generic error message.
 - A **SteamGridDB API-Token** field is provided in the **Global Settings Screen** under the General section to allow users to input and persist their API key via DataStore.
 
 

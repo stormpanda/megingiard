@@ -7,14 +7,41 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
+import java.net.ConnectException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.URLEncoder
+import java.net.UnknownHostException
 
 private const val TAG = "SteamGridDbClient"
 private const val BASE_URL = "https://www.steamgriddb.com/api/v2"
 private const val TIMEOUT_CONNECT_MS = 8000
 private const val TIMEOUT_READ_MS = 10000
+
+sealed class SteamGridDbException(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    object Offline : SteamGridDbException("Device is offline")
+    object RateLimited : SteamGridDbException("Rate limit exceeded")
+    object ServiceUnavailable : SteamGridDbException("SteamGridDB is unreachable")
+    class ApiError(message: String) : SteamGridDbException(message)
+    class Unknown(cause: Throwable) : SteamGridDbException("An unknown error occurred", cause)
+}
+
+internal fun mapHttpError(responseCode: Int, errorText: String): SteamGridDbException {
+    return when (responseCode) {
+        429 -> SteamGridDbException.RateLimited
+        502, 503, 504 -> SteamGridDbException.ServiceUnavailable
+        else -> SteamGridDbException.ApiError("HTTP error $responseCode: $errorText")
+    }
+}
+
+internal fun mapNetworkError(e: Exception): SteamGridDbException {
+    return when (e) {
+        is UnknownHostException -> SteamGridDbException.Offline
+        is ConnectException, is SocketTimeoutException -> SteamGridDbException.ServiceUnavailable
+        else -> SteamGridDbException.Unknown(e)
+    }
+}
 
 @Serializable
 data class SteamGridDbResponse<T>(
@@ -61,6 +88,8 @@ object SteamGridDbClient {
             } else {
                 throw Exception("API returned success=false")
             }
+        }.recoverCatching { err ->
+            throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
         }
     }
 
@@ -80,6 +109,8 @@ object SteamGridDbClient {
             } else {
                 throw Exception("API returned success=false")
             }
+        }.recoverCatching { err ->
+            throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
         }
     }
 
@@ -103,11 +134,11 @@ object SteamGridDbClient {
             } else {
                 val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                 AppLog.w(TAG, "Failed to download image from $imageUrl, response code: $responseCode, error: $errorText")
-                Result.failure(Exception("HTTP error $responseCode downloading image"))
+                Result.failure(mapHttpError(responseCode, errorText))
             }
         } catch (e: Exception) {
             AppLog.e(TAG, "Error downloading image $imageUrl", e)
-            Result.failure(e)
+            Result.failure(mapNetworkError(e))
         } finally {
             connection?.disconnect()
         }
@@ -131,13 +162,14 @@ object SteamGridDbClient {
             } else {
                 val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                 AppLog.w(TAG, "HTTP error $responseCode requesting $urlString: $errorText")
-                Result.failure(Exception("HTTP error $responseCode: $errorText"))
+                Result.failure(mapHttpError(responseCode, errorText))
             }
         } catch (e: Exception) {
             AppLog.e(TAG, "Network error requesting $urlString", e)
-            Result.failure(e)
+            Result.failure(mapNetworkError(e))
         } finally {
             connection?.disconnect()
         }
     }
 }
+

@@ -1004,5 +1004,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="steamgriddb_scrape_error">Fehler: %1$s</string>
     <string name="steamgriddb_scrape_dialog_title">SteamGridDB Scraper</string>
     <string name="steamgriddb_scrape_downloading">Bild wird heruntergeladen...</string>
+    <string name="steamgriddb_error_offline_title">Verbindung offline</string>
+    <string name="steamgriddb_error_offline_message">Du bist offline. Bitte überprüfe deine Internetverbindung und versuche es erneut.</string>
+    <string name="steamgriddb_error_rate_limited_title">Anfragen begrenzt</string>
+    <string name="steamgriddb_error_rate_limited_message">Anfragenlimit überschritten. Bitte versuche es später noch einmal.</string>
+    <string name="steamgriddb_error_unreachable_title">SteamGridDB nicht erreichbar</string>
+    <string name="steamgriddb_error_unreachable_message">SteamGridDB ist derzeit nicht erreichbar oder offline. Bitte versuche es später noch einmal.</string>
+    <string name="steamgriddb_error_generic_title">Fehler</string>
+    <string name="steamgriddb_error_generic_message">Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es noch einmal.</string>
+    <string name="steamgriddb_error_dismiss">OK</string>
 
 </resources>

@@ -997,5 +997,14 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_scrape_error">Error: %1$s</string>
     <string name="steamgriddb_scrape_dialog_title">SteamGridDB Scraper</string>
     <string name="steamgriddb_scrape_downloading">Downloading image...</string>
+    <string name="steamgriddb_error_offline_title">Connection Offline</string>
+    <string name="steamgriddb_error_offline_message">You are offline. Please check your internet connection and try again.</string>
+    <string name="steamgriddb_error_rate_limited_title">Rate Limited</string>
+    <string name="steamgriddb_error_rate_limited_message">Rate limit exceeded. Please try again later.</string>
+    <string name="steamgriddb_error_unreachable_title">SteamGridDB Unreachable</string>
+    <string name="steamgriddb_error_unreachable_message">SteamGridDB is currently unreachable or down. Please try again later.</string>
+    <string name="steamgriddb_error_generic_title">Error</string>
+    <string name="steamgriddb_error_generic_message">An unexpected error occurred. Please try again.</string>
+    <string name="steamgriddb_error_dismiss">OK</string>
 
 </resources>
