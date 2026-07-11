@@ -32,16 +32,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -82,7 +79,6 @@ private val ED_BUTTON_UNIT_DP      = 60.dp
 private val ED_BTN_SQUARE_RADIUS   = 4.dp
 // Reuse the shared screen padding so the editor canvas remains pixel-identical to use mode.
 private val PC_SCREEN_PADDING      = MP_SCREEN_PADDING
-private const val ED_BTN_DISABLED_ALPHA = 0.38f
 private const val ED_EDGE_MARGIN        = 0.05f
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
@@ -100,7 +96,6 @@ private const val PC_RADIAL_EXTRA_RINGS = 3
 
 // Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
 private const val PC_BTN_GRADIENT_OUTER    = 0.9f
-private val PC_BTN_BACKING_COLOR           = Color(0x80121212)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid mode
@@ -432,6 +427,9 @@ private fun DraggableButton(
 
     val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
+    val btnWidthDp = if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols
+    val btnHeightDp = if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows
+
     val chipShape = if (isTrackpoint) CircleShape else when (btn.buttonShape) {
         ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
         ButtonShape.CIRCLE -> when (btn.buttonSize) {
@@ -445,8 +443,8 @@ private fun DraggableButton(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .width(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.cols)
-            .height(if (isTrackpoint) ED_BUTTON_UNIT_DP * tpMultiplier else ED_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .width(btnWidthDp)
+            .height(btnHeightDp)
             .then(
                 if (isLocked) Modifier
                 else Modifier.pointerInput(btn.id, canvasSize) {
@@ -493,48 +491,21 @@ private fun DraggableButton(
                 }
             )
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
+        PadButtonFace(
+            width = btnWidthDp,
+            height = btnHeightDp,
+            shape = chipShape,
+            isIconOnly = isIconOnly,
+            isDeviceDisabled = isDeviceDisabled,
+            borderColor = effectiveBorder,
+            bgColor = effectiveBg,
+            bgAlpha = 0.25f,
+            gradientScale = PC_BTN_GRADIENT_OUTER / 0.25f,
             modifier = Modifier
                 .fillMaxSize()
                 .then(
                     if (btn.invisible) Modifier.graphicsLayer { alpha = 0.4f }
                     else Modifier
-                )
-                .clip(chipShape)
-                .drawWithContent {
-                    val halfDiag = sqrt(size.width * size.width + size.height * size.height) / 2f
-                    val bgBrush = Brush.radialGradient(
-                        0.00f to effectiveBg.copy(alpha = 0f),
-                        0.50f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.25f),
-                        0.75f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER * 0.5625f),
-                        1.00f to effectiveBg.copy(alpha = PC_BTN_GRADIENT_OUTER),
-                        center = Offset(size.width / 2f, size.height / 2f),
-                        radius = halfDiag,
-                    )
-                    if (isIconOnly) {
-                        drawContent()
-                    } else {
-                        if (isDeviceDisabled) {
-                            val p = Paint().apply {
-                                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                                this.alpha = ED_BTN_DISABLED_ALPHA
-                            }
-                            drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), p)
-                            drawRect(color = PC_BTN_BACKING_COLOR)
-                            drawRect(brush = bgBrush)
-                            drawContent()
-                            drawContext.canvas.restore()
-                        } else {
-                            drawRect(color = PC_BTN_BACKING_COLOR)
-                            drawRect(brush = bgBrush)
-                            drawContent()
-                        }
-                    }
-                }
-                .then(
-                    if (isIconOnly) Modifier
-                    else Modifier.border(1.dp, effectiveBorder, chipShape)
                 )
         ) {
             if (btn.action is PadAction.TrackpointMove) {

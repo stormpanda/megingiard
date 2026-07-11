@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,18 +33,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -54,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 private const val TAG = "MacroPadButton"
 
@@ -66,7 +57,6 @@ internal val MP_BUTTON_UNIT_DP      = 60.dp   // 1×1 = this size on-screen; mat
 
 private const val MP_BTN_PRESSED_ALPHA    = 0.80f
 private const val MP_BTN_NORMAL_ALPHA     = 0.25f
-private const val MP_BTN_DISABLED_ALPHA   = 0.38f
 
 // Pulsing animation for running macros: alpha cycles between low and high.
 private const val MP_BTN_RUNNING_PULSE_LOW  = 0.30f
@@ -90,7 +80,6 @@ private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_
 internal val MP_AMBIENT_NEUTRAL_BG     = Color.White
 internal val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
 internal val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
-internal val MP_BTN_BACKING_COLOR      = Color(0x80121212)
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,35 +199,15 @@ internal fun PadButton(
         Stroke(width = with(density) { 2.dp.toPx() })
     }
 
-    val disabledPaint = remember {
-        Paint().apply {
-            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-            this.alpha = MP_BTN_DISABLED_ALPHA
-        }
-    }
-
     val btnWidthDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols
     val btnHeightDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows
-    val bgBrush = remember(effectiveBg, alpha, btnWidthDp, btnHeightDp, density) {
-        val wPx = with(density) { btnWidthDp.toPx() }
-        val hPx = with(density) { btnHeightDp.toPx() }
-        val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
-        Brush.radialGradient(
-            0.00f to effectiveBg.copy(alpha = 0f),
-            0.50f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.25f),
-            0.75f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.5625f),
-            1.00f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE),
-            center = Offset(wPx / 2f, hPx / 2f),
-            radius = halfDiag,
-        )
-    }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .width(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
-            .height(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .width(btnWidthDp)
+            .height(btnHeightDp)
             .drawBehind {
                 if (isRunning && isIconOnly) {
                     val maxRadius = minOf(size.width, size.height) * 0.75f
@@ -251,60 +220,51 @@ internal fun PadButton(
                         style = rippleStroke
                     )
                 }
-            }
-            .clip(chipShape)
-            .drawWithContent {
-                if (isIconOnly) {
-                    drawContent()
-                } else {
-                    if (isDeviceDisabled) {
-                        drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), disabledPaint)
-                        drawRect(color = MP_BTN_BACKING_COLOR)
-                        drawRect(brush = bgBrush)
-                        drawContent()
-                        drawContext.canvas.restore()
-                    } else {
-                        drawRect(color = MP_BTN_BACKING_COLOR)
-                        drawRect(brush = bgBrush)
-                        drawContent()
-                    }
-                }
-            }
-            .then(
-                if (isIconOnly) Modifier
-                else Modifier.border(1.dp, effectiveBorder, chipShape)
-            ),
-    ) {
-        Box(
-            modifier = Modifier.graphicsLayer {
-                scaleX = contentScale
-                scaleY = contentScale
             },
-            contentAlignment = Alignment.Center
+    ) {
+        PadButtonFace(
+            width = btnWidthDp,
+            height = btnHeightDp,
+            shape = chipShape,
+            isIconOnly = isIconOnly,
+            isDeviceDisabled = isDeviceDisabled,
+            borderColor = effectiveBorder,
+            bgColor = effectiveBg,
+            bgAlpha = alpha,
+            gradientScale = MP_BTN_GRADIENT_SCALE,
+            modifier = Modifier.fillMaxSize()
         ) {
-            if (isTrackpoint) {
-                Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
-            } else if (btn.action is PadAction.ScrollWheel) {
-                ScrollWheelFace(accentColor = effectiveContentAccent)
-            } else if (btn.action is PadAction.BackgroundPeek) {
-                BackgroundPeekFace(accentColor = effectiveContentAccent)
-            } else {
-                val iconName = btn.iconName
-                if (iconName != null) {
-                    MaterialSymbol(
-                        name = iconName,
-                        size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                        tint = effectiveTextTint,
-                        filled = btn.iconFilled,
-                    )
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    scaleX = contentScale
+                    scaleY = contentScale
+                },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isTrackpoint) {
+                    Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
+                } else if (btn.action is PadAction.ScrollWheel) {
+                    ScrollWheelFace(accentColor = effectiveContentAccent)
+                } else if (btn.action is PadAction.BackgroundPeek) {
+                    BackgroundPeekFace(accentColor = effectiveContentAccent)
                 } else {
-                    Text(
-                        text     = btn.label,
-                        color    = effectiveTextTint,
-                        fontSize = (11 * btn.buttonSize.cols).sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    val iconName = btn.iconName
+                    if (iconName != null) {
+                        MaterialSymbol(
+                            name = iconName,
+                            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                            tint = effectiveTextTint,
+                            filled = btn.iconFilled,
+                        )
+                    } else {
+                        Text(
+                            text     = btn.label,
+                            color    = effectiveTextTint,
+                            fontSize = (11 * btn.buttonSize.cols).sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
