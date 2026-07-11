@@ -210,35 +210,15 @@ internal fun PadButton(
         Stroke(width = with(density) { 2.dp.toPx() })
     }
 
-    val disabledPaint = remember {
-        Paint().apply {
-            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-            this.alpha = MP_BTN_DISABLED_ALPHA
-        }
-    }
-
     val btnWidthDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols
     val btnHeightDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows
-    val bgBrush = remember(effectiveBg, alpha, btnWidthDp, btnHeightDp, density) {
-        val wPx = with(density) { btnWidthDp.toPx() }
-        val hPx = with(density) { btnHeightDp.toPx() }
-        val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
-        Brush.radialGradient(
-            0.00f to effectiveBg.copy(alpha = 0f),
-            0.50f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.25f),
-            0.75f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE * 0.5625f),
-            1.00f to effectiveBg.copy(alpha = alpha * MP_BTN_GRADIENT_SCALE),
-            center = Offset(wPx / 2f, hPx / 2f),
-            radius = halfDiag,
-        )
-    }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .width(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols)
-            .height(if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows)
+            .width(btnWidthDp)
+            .height(btnHeightDp)
             .drawBehind {
                 if (isRunning && isIconOnly) {
                     val maxRadius = minOf(size.width, size.height) * 0.75f
@@ -251,60 +231,51 @@ internal fun PadButton(
                         style = rippleStroke
                     )
                 }
-            }
-            .clip(chipShape)
-            .drawWithContent {
-                if (isIconOnly) {
-                    drawContent()
-                } else {
-                    if (isDeviceDisabled) {
-                        drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), disabledPaint)
-                        drawRect(color = MP_BTN_BACKING_COLOR)
-                        drawRect(brush = bgBrush)
-                        drawContent()
-                        drawContext.canvas.restore()
-                    } else {
-                        drawRect(color = MP_BTN_BACKING_COLOR)
-                        drawRect(brush = bgBrush)
-                        drawContent()
-                    }
-                }
-            }
-            .then(
-                if (isIconOnly) Modifier
-                else Modifier.border(1.dp, effectiveBorder, chipShape)
-            ),
-    ) {
-        Box(
-            modifier = Modifier.graphicsLayer {
-                scaleX = contentScale
-                scaleY = contentScale
             },
-            contentAlignment = Alignment.Center
+    ) {
+        PadButtonFace(
+            width = btnWidthDp,
+            height = btnHeightDp,
+            shape = chipShape,
+            isIconOnly = isIconOnly,
+            isDeviceDisabled = isDeviceDisabled,
+            borderColor = effectiveBorder,
+            bgColor = effectiveBg,
+            bgAlpha = alpha,
+            gradientScale = MP_BTN_GRADIENT_SCALE,
+            modifier = Modifier.fillMaxSize()
         ) {
-            if (isTrackpoint) {
-                Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
-            } else if (btn.action is PadAction.ScrollWheel) {
-                ScrollWheelFace(accentColor = effectiveContentAccent)
-            } else if (btn.action is PadAction.BackgroundPeek) {
-                BackgroundPeekFace(accentColor = effectiveContentAccent)
-            } else {
-                val iconName = btn.iconName
-                if (iconName != null) {
-                    MaterialSymbol(
-                        name = iconName,
-                        size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                        tint = effectiveTextTint,
-                        filled = btn.iconFilled,
-                    )
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    scaleX = contentScale
+                    scaleY = contentScale
+                },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isTrackpoint) {
+                    Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
+                } else if (btn.action is PadAction.ScrollWheel) {
+                    ScrollWheelFace(accentColor = effectiveContentAccent)
+                } else if (btn.action is PadAction.BackgroundPeek) {
+                    BackgroundPeekFace(accentColor = effectiveContentAccent)
                 } else {
-                    Text(
-                        text     = btn.label,
-                        color    = effectiveTextTint,
-                        fontSize = (11 * btn.buttonSize.cols).sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    val iconName = btn.iconName
+                    if (iconName != null) {
+                        MaterialSymbol(
+                            name = iconName,
+                            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                            tint = effectiveTextTint,
+                            filled = btn.iconFilled,
+                        )
+                    } else {
+                        Text(
+                            text     = btn.label,
+                            color    = effectiveTextTint,
+                            fontSize = (11 * btn.buttonSize.cols).sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
