@@ -57,10 +57,13 @@ private val WHEEL_SIZE = 240.dp
 @Composable
 fun ColorWheelPicker(
     initialColor: Color,
+    title: String = "",
     showAlphaSlider: Boolean = false,
     onColorSelected: (Color) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    preview: (@Composable (Color) -> Unit)? = null
 ) {
+    val pickerTitle = title.ifEmpty { stringResource(R.string.settings_accent_color_picker_title) }
     val initHsv = FloatArray(3)
     AndroidColor.colorToHSV(initialColor.toArgb(), initHsv)
 
@@ -132,7 +135,7 @@ fun ColorWheelPicker(
                     )
                 }
                 Text(
-                    text      = stringResource(R.string.settings_accent_color_picker_title),
+                    text      = pickerTitle,
                     color     = colors.onSurface,
                     style     = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
@@ -158,6 +161,10 @@ fun ColorWheelPicker(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+
+            if (preview != null) {
+                preview(currentColor)
+            }
 
             // HSV color wheel canvas
             Canvas(
